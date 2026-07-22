@@ -1935,6 +1935,160 @@ async def test_set_step_output_bindings_stale_revision_precedes_semantic_errors(
 
 
 @pytest.mark.asyncio
+async def test_set_step_output_bindings_stale_revision_precedes_missing_step(
+    tmp_path: Path,
+) -> None:
+    draft_api, _service, api = await _create_nested_output_binding_api(
+        tmp_path,
+        "stale-output-missing-step",
+    )
+    before = await draft_api.get_draft_workspace(
+        workspace_id="stale-output-missing-step",
+        include_draft=True,
+    )
+
+    result = await api.set_step_output_bindings(
+        workspace_id="stale-output-missing-step",
+        revision=2,
+        step_id="missing",
+        bindings=[],
+    )
+
+    after = await draft_api.get_draft_workspace(
+        workspace_id="stale-output-missing-step",
+        include_draft=True,
+    )
+    assert result["status"] == "conflict"
+    assert result["diagnostics"][0]["code"] == "revision_conflict"
+    assert after == before
+
+
+@pytest.mark.asyncio
+async def test_set_step_output_bindings_stale_revision_precedes_non_capability_step(
+    tmp_path: Path,
+) -> None:
+    draft_api, _service, api = await _create_nested_output_binding_api(
+        tmp_path,
+        "stale-output-non-capability",
+    )
+    await draft_api.patch_draft_workspace(
+        workspace_id="stale-output-non-capability",
+        revision=1,
+        patch=[{"op": "replace", "path": "/steps/render", "value": {"join": {}}}],
+    )
+    before = await draft_api.get_draft_workspace(
+        workspace_id="stale-output-non-capability",
+        include_draft=True,
+    )
+
+    result = await api.set_step_output_bindings(
+        workspace_id="stale-output-non-capability",
+        revision=1,
+        step_id="render",
+        bindings=[],
+    )
+
+    after = await draft_api.get_draft_workspace(
+        workspace_id="stale-output-non-capability",
+        include_draft=True,
+    )
+    assert result["status"] == "conflict"
+    assert result["diagnostics"][0]["code"] == "revision_conflict"
+    assert after == before
+
+
+@pytest.mark.asyncio
+async def test_set_step_output_bindings_stale_revision_precedes_duplicate_target(
+    tmp_path: Path,
+) -> None:
+    draft_api, _service, api = await _create_nested_output_binding_api(
+        tmp_path,
+        "stale-output-duplicate-target",
+    )
+    before = await draft_api.get_draft_workspace(
+        workspace_id="stale-output-duplicate-target",
+        include_draft=True,
+    )
+
+    result = await api.set_step_output_bindings(
+        workspace_id="stale-output-duplicate-target",
+        revision=2,
+        step_id="render",
+        bindings=[
+            OutputBinding(
+                source=LocalPath.parse("report.title"),
+                target=StatePath.parse("state.report.title"),
+            ),
+            OutputBinding(
+                source=LocalPath.parse("report.markdown"),
+                target=StatePath.parse("state.report.title"),
+            ),
+        ],
+    )
+
+    after = await draft_api.get_draft_workspace(
+        workspace_id="stale-output-duplicate-target",
+        include_draft=True,
+    )
+    assert result["status"] == "conflict"
+    assert result["diagnostics"][0]["code"] == "revision_conflict"
+    assert after == before
+
+
+@pytest.mark.asyncio
+async def test_set_step_output_bindings_stale_revision_precedes_incompatible_schema(
+    tmp_path: Path,
+) -> None:
+    draft_api, _service, api = await _create_nested_output_binding_api(
+        tmp_path,
+        "stale-output-incompatible-schema",
+    )
+    await draft_api.patch_draft_workspace(
+        workspace_id="stale-output-incompatible-schema",
+        revision=1,
+        patch=[
+            {
+                "op": "replace",
+                "path": "/state_schema",
+                "value": {
+                    "type": "object",
+                    "properties": {
+                        "report": {
+                            "type": "object",
+                            "properties": {"title": {"type": "integer"}},
+                        }
+                    },
+                },
+            }
+        ],
+    )
+    before = await draft_api.get_draft_workspace(
+        workspace_id="stale-output-incompatible-schema",
+        include_draft=True,
+    )
+
+    result = await api.set_step_output_bindings(
+        workspace_id="stale-output-incompatible-schema",
+        revision=1,
+        step_id="render",
+        bindings=[
+            OutputBinding(
+                source=LocalPath.parse("report.title"),
+                target=StatePath.parse("state.report.title"),
+            )
+        ],
+    )
+
+    after = await draft_api.get_draft_workspace(
+        workspace_id="stale-output-incompatible-schema",
+        include_draft=True,
+    )
+    assert result["status"] == "conflict"
+    assert result["diagnostics"][0]["code"] == "revision_conflict"
+    assert after == before
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize(
     ("bindings", "message"),
     [
