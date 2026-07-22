@@ -43,6 +43,9 @@ wf draft set-start <workspace_id> --revision <n> --step <step_id>
 wf draft set-contract <workspace_id> --revision <n> --state-schema-file state.schema.json --outcome ok --outcome error
 wf draft set-route <workspace_id> --revision <n> --step <step_id> --outcome <outcome> --to <target>
 wf draft set-input <workspace_id> --revision <n> --step <step_id> --map input.title=report.title
+wf draft set-input <workspace_id> --revision <n> --step <step_id> --value request.format='"markdown"'
+wf draft set-input <workspace_id> --revision <n> --step <step_id> --bindings-file bindings.json
+wf draft set-input <workspace_id> --revision <n> --step <step_id> --clear
 wf draft set-input <workspace_id> --revision <n> --step <step_id> --merge --map input.other=other
 wf draft set-output <workspace_id> --revision <n> --step <step_id> --map text=state.text
 wf draft set-output <workspace_id> --revision <n> --step <step_id> --merge --map other=state.other
@@ -78,7 +81,7 @@ reported in wrapper-hint notes; bind them explicitly only when the workflow
 should expose them. Use `wf draft bind --from input.x --to local.x` for an
 existing step when schema projection may be needed; it is safe if the schema
 field already exists. Use `wf draft set-input --merge --map input.x=x` for a
-pure input-map edit when the workflow schema is already declared.
+compatibility map-only edit when the workflow schema is already declared.
 
 `wf draft bind` names both endpoints explicitly, so local paths keep the
 `local.` root. `set-input` and `draft add capability --input` already imply the
@@ -120,9 +123,32 @@ Use `wf schema <name> --verbose` only when the complete JSON Schema is required;
 the default compact outline is preferred for agent context. `--full` is accepted
 as an alias for `--verbose`.
 
-For `draft set-input` and `draft set-output`, repeated `--map` flags in one
-command define the complete replacement map. If you split map edits across
-multiple commands, pass `--merge` or the later command replaces the earlier map.
+For `draft set-input`, repeated `--map` and `--value` flags define the complete
+ordered replacement list. Repeated graph sources are valid and preserve
+fan-out. Use `--bindings-file` for the canonical lossless JSON form, or
+`--clear` to replace the list with `[]`. `--merge` is compatibility-only and
+accepts map-only `--map` edits; compatibility map readers/writers cannot
+preserve repeated-source fan-out.
+
+Export, edit, restore, or clear canonical bindings as follows:
+
+```bash
+wf draft inspect WS --include-draft |
+  jq '.draft.steps.publish.input' > bindings.json
+
+wf draft set-input WS --revision 4 --step publish \
+  --map state.report.title=request.title \
+  --map state.report.markdown=request.body \
+  --value request.format='"markdown"'
+
+wf draft set-input WS --revision 5 --step publish \
+  --bindings-file bindings.json
+
+wf draft set-input WS --revision 6 --step publish --clear
+```
+
+For `draft set-output`, repeated `--map` flags still define the complete
+replacement map. Pass `--merge` only when deliberately using that map adapter.
 
 Prefer `draft bind` when a capability step binding also needs schema
 projection. Use `input/state -> local` for step inputs and `local ->

@@ -16,8 +16,10 @@ validated, runnable deployment.
 5. Inspect/patch/validate the workspace until valid.
    - Use focused CLI commands (`set-name`, `set-route`, `set-input`, `set-output`)
      for common edits.
-   - `set-input` and `set-output` replace full maps by default; pass `--merge`
-     only when adding or updating one entry across a later revision.
+   - `set-input` replaces its ordered canonical binding list; `set-output`
+     replaces its map. `set-input --merge` is compatibility-only and cannot
+     add literals or preserve canonical ordering and repeated-source fan-out;
+     existing literals are retained.
    - Before mapping into a new workflow input, state, or output field, prefer
      `wf draft bind --from ... --to ...` when it should mirror a capability
      local input/output property. It declares the matching schema and merges

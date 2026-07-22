@@ -805,6 +805,11 @@ stable.
   direct add/remove repair guidance.
 - Completed: repeated idempotent `wf draft bind input/state -> local` behavior
   is covered by regression tests.
+- Completed: capability-aware canonical step-input replacement now supports
+  structured assembly, literals, explicit null, fan-out, whole-payload
+  projection, local/remote CLI modes, JSON-RPC, and MCP. Compatibility map
+  merge remains available but intentionally lossy. Implementation plan:
+  [`atomic step input bindings`](historical/superpowers/plans/2026-07-22-atomic-step-input-bindings.md).
 
 Agent evaluation cohort status and policy:
 

@@ -14,16 +14,18 @@
 - [x] Capability-step authoring persists nested input targets but silently skips
   workflow input/state schema projection when a target has more than one path
   segment.
-- [ ] No atomic API/RPC/CLI helper assembles one structured node input from
-  multiple graph paths. The current focused path requires several
-  revision-checked edits and an intermediate state object, or a raw map/patch.
-- [ ] Focused draft authoring cannot add or update literal node-input bindings
+- [x] An atomic API/RPC/CLI helper assembles one structured node input from
+  multiple graph paths. Canonical replacement accepts several bindings in one
+  revision-checked edit without an intermediate state object or raw JSON Patch.
+- [x] Focused draft authoring can add or replace literal node-input bindings
   comparable to `WorkflowBuilder.use(input=[{"target": ..., "value": ...}])`
-  without raw JSON Patch.
+  through canonical API, RPC, MCP, and CLI surfaces.
 - [ ] Focused step input/output maps collapse valid canonical fan-out bindings.
   A source-to-target dictionary cannot represent one graph source feeding two
   local inputs, or one local output feeding two state targets; a later merge can
-  therefore rewrite a valid binding list into a lossy map.
+  therefore rewrite a valid binding list into a lossy map. Canonical step-input
+  replacement now preserves fan-out, but compatibility map readers/writers and
+  focused step-output maps remain lossy.
 - [ ] Focused workflow-output authoring cannot add or update literal output
   bindings even though `WorkflowDraft.output` accepts canonical value bindings.
 - [ ] Workflow output schema projection skips nested sources such as

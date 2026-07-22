@@ -284,9 +284,9 @@ expose it; the focused helper projects the workflow input schema:
 wf draft bind report_ws --revision 2 --step call --from input.path --to local.path
 ```
 
-Use `wf draft set-input --merge` instead when adding several explicit mappings
-for fields already declared in the workflow input or state schema.
-to an existing step input map.
+Use `wf draft set-input` with repeated `--map` flags when replacing several
+bindings for fields already declared in the workflow input or state schema.
+Add `--merge` only for a compatibility map-only edit to the existing list.
 
 List and inspect drafts:
 
@@ -332,7 +332,33 @@ wf draft compile concat_ws
 `input.title -> local.report.title`. Targets are rootless node-local paths:
 write `--map input.title=report.title`, not
 `--map input.title=local.report.title`. Existing single-field targets such as
-`input.text=text` remain valid.
+`input.text=text` remain valid. Repeating a graph source is allowed, so one
+source can populate multiple local targets without being collapsed into a map.
+
+Canonical input replacement supports path bindings, literal JSON values,
+ordered binding files, and clearing the complete list:
+
+```bash
+wf draft inspect WS --include-draft |
+  jq '.draft.steps.publish.input' > bindings.json
+
+wf draft set-input WS --revision 4 --step publish \
+  --map state.report.title=request.title \
+  --map state.report.markdown=request.body \
+  --value request.format='"markdown"'
+
+wf draft set-input WS --revision 5 --step publish \
+  --bindings-file bindings.json
+
+wf draft set-input WS --revision 6 --step publish --clear
+```
+
+Replacement is the default. `--bindings-file` is the canonical lossless form
+when binding order, literals, or repeated source paths matter. `--merge` is a
+compatibility-only option for map-only `--map` edits; it cannot be combined
+with `--value`, `--bindings-file`, or `--clear`. Existing literal bindings are
+retained, but merge cannot add literals or preserve canonical ordering and
+repeated-source fan-out.
 
 `set-output` maps node-local output fields to workflow state paths:
 `text=state.text` means `local.text -> state.text`.
@@ -345,10 +371,11 @@ For single-field `input.*` and `state.*` sources, the command projects missing
 top-level `output_schema` fields from the source schema. More complex or
 undeclared paths still rely on `wf draft validate` diagnostics.
 
-By default, `set-input`, `set-output`, and `set-workflow-output` replace the
-whole map for that step or output scope. Use repeated `--map` flags in one
-command when you know the complete map. Use `--merge` when adding or updating
-one entry across a later revision while preserving existing bindings.
+By default, `set-input` replaces the complete ordered input-binding list, while
+`set-output` and `set-workflow-output` replace their complete maps. Use repeated
+flags in one command when you know the complete replacement. Use `--merge` only
+for compatibility map edits; they cannot add literals or preserve canonical
+ordering and repeated-source fan-out.
 
 ### Bind A Step Path
 

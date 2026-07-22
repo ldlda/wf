@@ -52,7 +52,7 @@
 
 - Extends: `project_schema_path_to_schema_path` accepts an empty `source_parts` tuple to project the complete source schema for whole-payload target `.`.
 
-- [ ] **Step 1: Write failing schema-fragment tests**
+- [x] **Step 1: Write failing schema-fragment tests**
 
   Add tests covering an inline nested field, a selected `$ref` leaf that needs
   root `$defs`, the root fragment for `parts=()`, and a remote selected ref:
@@ -87,7 +87,7 @@
       assert schema_fragment_at_path(schema, ()) == schema
   ```
 
-- [ ] **Step 2: Write failing literal-validation tests**
+- [x] **Step 2: Write failing literal-validation tests**
 
   Pin valid/invalid strings, objects, arrays, and `null`, including a selected
   schema behind a local reference:
@@ -124,7 +124,7 @@
           )
   ```
 
-- [ ] **Step 3: Write a failing whole-schema projection test**
+- [x] **Step 3: Write a failing whole-schema projection test**
 
   ```python
   def test_project_schema_path_accepts_whole_source_schema() -> None:
@@ -142,7 +142,7 @@
       assert projected["properties"]["payload"]["required"] == ["title"]
   ```
 
-- [ ] **Step 4: Run the focused tests and confirm RED**
+- [x] **Step 4: Run the focused tests and confirm RED**
 
   Run:
 
@@ -153,7 +153,7 @@
   Expected: failures because the two public helpers do not exist and whole
   source projection rejects an empty source path.
 
-- [ ] **Step 5: Implement fragment selection and literal validation**
+- [x] **Step 5: Implement fragment selection and literal validation**
 
   Import JSON Schema's instance-validation error separately from schema errors,
   then add:
@@ -247,7 +247,7 @@
           target_defs[name] = deepcopy(definition)
   ```
 
-- [ ] **Step 6: Run focused tests and quality checks**
+- [x] **Step 6: Run focused tests and quality checks**
 
   Run:
 
@@ -260,7 +260,7 @@
 
   Expected: all pass with no diagnostics.
 
-- [ ] **Step 7: Commit Task 1**
+- [x] **Step 7: Commit Task 1**
 
   ```bash
   git add src/wf_api/schema_projection.py tests/wf_api/test_schema_projection.py
@@ -281,7 +281,7 @@
 - Consumes: `schema_fragment_at_path`, `validate_json_value_at_schema_path`, `project_schema_path_to_schema_path`, `has_overlapping_paths`, canonical `InputBinding` models.
 - Produces: `WorkflowApiSurface.set_step_input_bindings(...)` with the exact signature from the design spec.
 
-- [ ] **Step 1: Write failing structured-assembly and fan-out API tests**
+- [x] **Step 1: Write failing structured-assembly and fan-out API tests**
 
   Reuse the nested report capability fixture from the preceding nested-binding
   slice. Add one test that replaces a step input list with two nested path
@@ -319,7 +319,7 @@
   Add a separate fan-out assertion using the same `state.report.title` source
   for `request.title` and `audit.title`.
 
-- [ ] **Step 2: Write failing semantic-error and no-mutation tests**
+- [x] **Step 2: Write failing semantic-error and no-mutation tests**
 
   Add parameterized tests for missing target, duplicate target,
   ancestor/descendant overlap, invalid literal, unsupported remote target ref,
@@ -329,7 +329,7 @@
   Add stale-revision cases paired with missing target and invalid literal; both
   must return `revision_conflict` before those semantic errors.
 
-- [ ] **Step 3: Write failing projection, whole-payload, context, and no-op tests**
+- [x] **Step 3: Write failing projection, whole-payload, context, and no-op tests**
 
   Cover:
 
@@ -344,7 +344,7 @@
   binding that changes no workflow schema, explicit valid `null`, and an exact
   second replacement that leaves the revision unchanged.
 
-- [ ] **Step 4: Run API tests and confirm RED**
+- [x] **Step 4: Run API tests and confirm RED**
 
   Run:
 
@@ -354,7 +354,7 @@
 
   Expected: failures because the surface and implementation method do not exist.
 
-- [ ] **Step 5: Implement the semantic operation**
+- [x] **Step 5: Implement the semantic operation**
 
   Add imports for `InputPathBinding`, `InputValueBinding`,
   `has_overlapping_paths`, and the Task 1 schema helpers. Add this method to
@@ -516,7 +516,7 @@
       return patch
   ```
 
-- [ ] **Step 6: Add the protocol-neutral delegation**
+- [x] **Step 6: Add the protocol-neutral delegation**
 
   Add the exact method signature to `WorkflowApiSurface` and delegate from
   `WorkflowApi`:
@@ -538,7 +538,7 @@
       )
   ```
 
-- [ ] **Step 7: Run focused API and runtime tests**
+- [x] **Step 7: Run focused API and runtime tests**
 
   Run:
 
@@ -553,7 +553,7 @@
   asserting the handler receives `request.title`, `request.body`, and
   `request.format` in one object.
 
-- [ ] **Step 8: Commit Task 2**
+- [x] **Step 8: Commit Task 2**
 
   ```bash
   git add src/wf_api/draft_authoring.py src/wf_api/surface.py src/wf_api/service.py tests/wf_api/test_drafts_service.py
@@ -575,7 +575,7 @@
 - Consumes: `WorkflowApiSurface.set_step_input_bindings` from Task 2.
 - Produces: JSON-RPC method `workflow.draft_workspaces.set_step_input_bindings` and matching `RpcDraftClientMixin` method.
 
-- [ ] **Step 1: Write failing RPC model and application tests**
+- [x] **Step 1: Write failing RPC model and application tests**
 
   Add an application test that sends this request and then inspects the stored
   order:
@@ -601,7 +601,7 @@
   Add malformed union tests for a binding with both `path` and `value`, and one
   with neither.
 
-- [ ] **Step 2: Write a failing remote-client serialization test**
+- [x] **Step 2: Write a failing remote-client serialization test**
 
   ```python
   await client.set_step_input_bindings(
@@ -628,7 +628,7 @@
   )
   ```
 
-- [ ] **Step 3: Run transport tests and confirm RED**
+- [x] **Step 3: Run transport tests and confirm RED**
 
   Run:
 
@@ -639,7 +639,7 @@
   Expected: failures for the missing params model, method registration, and
   client method.
 
-- [ ] **Step 4: Implement the RPC params, method, and client**
+- [x] **Step 4: Implement the RPC params, method, and client**
 
   In `models.py`, reuse the core union:
 
@@ -674,7 +674,7 @@
 
   Add the client method using `model_dump(mode="json")` for every binding.
 
-- [ ] **Step 5: Run transport verification**
+- [x] **Step 5: Run transport verification**
 
   Run:
 
@@ -686,7 +686,7 @@
 
   Expected: all pass.
 
-- [ ] **Step 6: Commit Task 3**
+- [x] **Step 6: Commit Task 3**
 
   ```bash
   git add src/wf_transport_rpc_http tests/wf_transport_rpc_http/test_app.py tests/wf_transport_rpc_http/test_client.py
@@ -709,7 +709,7 @@
 - Consumes: Task 2 API method and existing `DraftInputBindings` alias.
 - Produces: MCP tool `wf.workflow.set_step_input_bindings`.
 
-- [ ] **Step 1: Write failing MCP request and handler tests**
+- [x] **Step 1: Write failing MCP request and handler tests**
 
   Add a request-model test proving path/value union parsing and explicit null.
   Add a workflow-surface test that calls the new tool handler with ordered
@@ -717,7 +717,7 @@
   for the tool name and that its request schema exposes `bindings` but no
   `merge`.
 
-- [ ] **Step 2: Run MCP tests and confirm RED**
+- [x] **Step 2: Run MCP tests and confirm RED**
 
   Run:
 
@@ -727,7 +727,7 @@
 
   Expected: failures because the request model and tool are absent.
 
-- [ ] **Step 3: Add the request model and tool**
+- [x] **Step 3: Add the request model and tool**
 
   Reuse the existing alias:
 
@@ -769,7 +769,7 @@
   Add the tool name to the proxy runtime allowlist next to
   `wf.workflow.set_step_input_map`. Keep the compatibility tool registered.
 
-- [ ] **Step 4: Run MCP verification**
+- [x] **Step 4: Run MCP verification**
 
   Run:
 
@@ -781,7 +781,7 @@
 
   Expected: all pass and the generated MCP schema contains the canonical union.
 
-- [ ] **Step 5: Commit Task 4**
+- [x] **Step 5: Commit Task 4**
 
   ```bash
   git add src/wf_mcp/workflow_surface src/wf_mcp/proxy/runtime.py tests/wf_mcp/workflow_surface/test_drafts.py tests/wf_mcp/server/test_config.py tests/wf_mcp/server/test_tools.py
@@ -803,7 +803,7 @@
 - Consumes: `WorkflowApiSurface.set_step_input_bindings` and the legacy `set_step_input_map` adapter.
 - Produces: canonical `wf draft set-input` replacement modes described by the spec.
 
-- [ ] **Step 1: Write failing parser tests**
+- [x] **Step 1: Write failing parser tests**
 
   Add tests for a list-preserving path parser that accepts duplicate sources,
   a literal parser that preserves explicit null and JSON strings containing
@@ -827,7 +827,7 @@
   assert values[1].value is None
   ```
 
-- [ ] **Step 2: Write failing command-mode tests**
+- [x] **Step 2: Write failing command-mode tests**
 
   Cover:
 
@@ -843,7 +843,7 @@
   Assert compact `typer.BadParameter` text and that handlers are not called on
   invalid combinations.
 
-- [ ] **Step 3: Run CLI tests and confirm RED**
+- [x] **Step 3: Run CLI tests and confirm RED**
 
   Run:
 
@@ -853,7 +853,7 @@
 
   Expected: failures for missing options, parsers, and handler delegation.
 
-- [ ] **Step 4: Implement canonical CLI parsers**
+- [x] **Step 4: Implement canonical CLI parsers**
 
   Keep `_parse_step_input_map_flags` unchanged for compatibility. Add list-based
   helpers using canonical models:
@@ -918,7 +918,7 @@
   seven current call sites. This keeps all Pydantic-to-Typer formatting in one
   helper rather than duplicating it.
 
-- [ ] **Step 5: Implement command mode selection**
+- [x] **Step 5: Implement command mode selection**
 
   Add `--value`, `--bindings-file`, and `--clear` options to `set-input`. Keep
   `--merge` but describe it as compatibility-only. Use explicit mode checks:
@@ -945,7 +945,7 @@
   file order, `[]`, or path flags followed by literal flags, and call
   `set_step_input_bindings`.
 
-- [ ] **Step 6: Add a real remote CLI round trip**
+- [x] **Step 6: Add a real remote CLI round trip**
 
   Extend `tests/wf_cli/test_remote_target.py` to start the local JSON-RPC app,
   create/inspect a draft, export the current input list to a test JSON file,
@@ -954,7 +954,7 @@
   `workflow.draft_workspaces.set_step_input_bindings` and the revision advances
   once.
 
-- [ ] **Step 7: Run CLI verification**
+- [x] **Step 7: Run CLI verification**
 
   Run:
 
@@ -967,7 +967,7 @@
   Expected: all pass. Run `uv run wf draft set-input --help` and verify the
   output distinguishes replacement modes from compatibility `--merge`.
 
-- [ ] **Step 8: Commit Task 5**
+- [x] **Step 8: Commit Task 5**
 
   ```bash
   git add src/wf_cli/commands/draft_options.py src/wf_cli/commands/draft_add.py src/wf_cli/commands/drafts.py tests/wf_cli/test_app.py tests/wf_cli/test_remote_target.py
@@ -990,7 +990,7 @@
 - Consumes: all completed behavior from Tasks 1-5.
 - Produces: current user/agent guidance and an archived completed plan.
 
-- [ ] **Step 1: Update user and agent documentation**
+- [x] **Step 1: Update user and agent documentation**
 
   Document these exact workflows:
 
@@ -1012,7 +1012,7 @@
   State plainly that replacement is default, `--bindings-file` is canonical,
   repeated source paths are allowed, and `--merge` is map-only compatibility.
 
-- [ ] **Step 2: Update issue and roadmap state narrowly**
+- [x] **Step 2: Update issue and roadmap state narrowly**
 
   In `ISSUES.md`, check:
 
@@ -1025,7 +1025,7 @@
 
   Add one completed roadmap entry linking to the historical plan path.
 
-- [ ] **Step 3: Run the complete focused verification matrix**
+- [x] **Step 3: Run the complete focused verification matrix**
 
   Run:
 
@@ -1051,7 +1051,7 @@
   Expected: all tests pass; Ruff and basedpyright report no errors. Existing
   third-party deprecation warnings may remain but must be reported.
 
-- [ ] **Step 4: Run independent review and fix valid findings**
+- [x] **Step 4: Run independent review and fix valid findings**
 
   Use the repository code-review workflow against the design spec and this
   plan. Require reviewers to check:
@@ -1068,7 +1068,7 @@
   Apply valid fixes and rerun the affected focused tests plus Ruff and
   basedpyright.
 
-- [ ] **Step 5: Complete and archive the plan**
+- [x] **Step 5: Complete and archive the plan**
 
   Check every completed task box, then move:
 
@@ -1079,7 +1079,7 @@
 
   Confirm all live links use the historical path.
 
-- [ ] **Step 6: Commit Task 6**
+- [x] **Step 6: Commit Task 6**
 
   ```bash
   git add docs/wf_cli.md skills/wf-cli/SKILL.md \
@@ -1089,7 +1089,7 @@
   git commit -m "docs: complete atomic step input bindings"
   ```
 
-- [ ] **Step 7: Confirm final repository state**
+- [x] **Step 7: Confirm final repository state**
 
   Run:
 

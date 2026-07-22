@@ -100,6 +100,9 @@ CLI equivalents:
 wf draft set-name <workspace_id> --revision <n> --name <name>
 wf draft set-route <workspace_id> --revision <n> --step <step_id> --outcome ok --to <target>
 wf draft set-input <workspace_id> --revision <n> --step <step_id> --map input.title=report.title
+wf draft set-input <workspace_id> --revision <n> --step <step_id> --value request.format='"markdown"'
+wf draft set-input <workspace_id> --revision <n> --step <step_id> --bindings-file bindings.json
+wf draft set-input <workspace_id> --revision <n> --step <step_id> --clear
 wf draft set-input <workspace_id> --revision <n> --step <step_id> --merge --map input.other=other
 wf draft set-output <workspace_id> --revision <n> --step <step_id> --map text=state.text
 wf draft set-output <workspace_id> --revision <n> --step <step_id> --merge --map other=state.other
@@ -124,21 +127,44 @@ fields are projected automatically from the source schema.
 `set-input` direction: `input.title=report.title` means graph source
 `input.title` maps to node-local target `local.report.title`. Targets are
 rootless node-local paths; never prefix the target with `local.`. Existing
-single-field targets such as `input.text=text` remain valid.
+single-field targets such as `input.text=text` remain valid. Repeated graph
+sources are allowed and preserve fan-out to distinct local targets.
+
+Canonical replacement can mix ordered path and literal bindings:
+
+```bash
+wf draft inspect WS --include-draft |
+  jq '.draft.steps.publish.input' > bindings.json
+
+wf draft set-input WS --revision 4 --step publish \
+  --map state.report.title=request.title \
+  --map state.report.markdown=request.body \
+  --value request.format='"markdown"'
+
+wf draft set-input WS --revision 5 --step publish \
+  --bindings-file bindings.json
+
+wf draft set-input WS --revision 6 --step publish --clear
+```
+
+Replacement is the default and `--bindings-file` is the canonical lossless
+form. `--merge` is retained only for compatibility map-only edits. Do not use
+it to add literals or when canonical ordering or repeated-source fan-out must
+survive. Existing literal bindings are retained during a map-only merge.
 
 `set-output` direction: `text=state.text` means node-local source `local.text`
 maps to graph target `state.text`.
 
-Without `--merge`, `set-input`, `set-output`, and `set-workflow-output` replace
-the whole map for that step or output scope. Use repeated `--map` flags in one
-command for a complete replacement. Use `--merge` only when adding/updating
-entries over multiple revisions.
+Without `--merge`, `set-input` replaces the whole ordered binding list;
+`set-output` and `set-workflow-output` replace their whole maps. Use repeated
+flags in one command for a complete replacement. Use `--merge` only for the
+compatibility map adapters.
 
 `bind input.title -> local.report.title` is schema-aware and idempotent when
 `input.title` is already declared. Bind names both rooted endpoints explicitly.
 Use it for repair hints or schema projection. Use
 `set-input --merge --map input.title=report.title` when you only need to update
-a step input map; that command already implies the local side.
+a compatibility step input map; that command already implies the local side.
 
 - `bind_draft`
 
