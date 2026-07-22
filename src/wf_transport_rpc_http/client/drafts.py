@@ -5,6 +5,7 @@ from typing import Any, Literal
 
 from wf_api.surface import RouteSource
 from wf_artifacts.drafts.models import DraftStep
+from wf_core.models.steps import InputBinding
 
 from .base import RpcCaller
 
@@ -179,6 +180,24 @@ class RpcDraftClientMixin:
                 "step_id": step_id,
                 "input_map": input_map,
                 "merge": merge,
+            },
+        )
+
+    async def set_step_input_bindings(
+        self: RpcCaller,
+        *,
+        workspace_id: str,
+        revision: int,
+        step_id: str,
+        bindings: Sequence[InputBinding],
+    ) -> dict[str, Any]:
+        return await self._call(
+            "workflow.draft_workspaces.set_step_input_bindings",
+            {
+                "workspace_id": workspace_id,
+                "revision": revision,
+                "step_id": step_id,
+                "bindings": [binding.model_dump(mode="json") for binding in bindings],
             },
         )
 

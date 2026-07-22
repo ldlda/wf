@@ -890,6 +890,75 @@ async def test_rpc_draft_workspace_focused_edit_methods(tmp_path) -> None:
     )
 
 
+async def test_rpc_set_step_input_bindings_preserves_canonical_order(tmp_path) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    app = create_rpc_app(server)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        await _rpc(
+            client,
+            "workflow.draft_workspaces.create_from_capability",
+            {
+                "workspace_id": "binding_ws",
+                "capability_name": "wf.std.concat",
+                "name": "binding_transport",
+            },
+        )
+        result = await _rpc(
+            client,
+            "workflow.draft_workspaces.set_step_input_bindings",
+            {
+                "workspace_id": "binding_ws",
+                "revision": 1,
+                "step_id": "call",
+                "bindings": [
+                    {"path": "input.items", "target": "items"},
+                    {"value": "\n", "target": "separator"},
+                ],
+            },
+        )
+        inspected = await _rpc(
+            client,
+            "workflow.draft_workspaces.get",
+            {"workspace_id": "binding_ws", "include_draft": True},
+        )
+
+    assert result["result"]["revision"] == 2
+    assert inspected["result"]["draft"]["steps"]["call"]["input"] == [
+        {"target": "items", "path": "input.items"},
+        {"target": "separator", "value": "\n"},
+    ]
+
+
+@pytest.mark.parametrize(
+    "binding",
+    [
+        {"path": "input.items", "value": [], "target": "items"},
+        {"target": "items"},
+    ],
+)
+async def test_rpc_set_step_input_bindings_rejects_malformed_union(
+    tmp_path,
+    binding: dict[str, Any],
+) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    app = create_rpc_app(server)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        rejected = await _rpc(
+            client,
+            "workflow.draft_workspaces.set_step_input_bindings",
+            {
+                "workspace_id": "missing_ws",
+                "revision": 1,
+                "step_id": "call",
+                "bindings": [binding],
+            },
+        )
+
+    assert rejected["error"]["code"] == -32602
+
+
 async def test_rpc_draft_workspace_set_workflow_output_map(tmp_path) -> None:
     server = build_local_static_workflow_server(tmp_path / "store")
     app = create_rpc_app(server)

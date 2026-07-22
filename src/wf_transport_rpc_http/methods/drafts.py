@@ -31,6 +31,7 @@ from ..models import (
     SetDraftNameParams,
     SetDraftRouteParams,
     SetDraftStartParams,
+    SetStepInputBindingsParams,
     SetStepInputMapParams,
     SetStepOutputMapParams,
     SetWorkflowOutputMapParams,
@@ -222,6 +223,23 @@ def register_methods(
                 step_id=params.step_id,
                 input_map=params.input_map,
                 merge=params.merge,
+            )
+        except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:
+            raise_workflow_rpc_error(exc)
+
+    @entrypoint.method(
+        name="workflow.draft_workspaces.set_step_input_bindings",
+        errors=[WorkflowRpcError],
+    )
+    async def workflow_draft_workspaces_set_step_input_bindings(
+        params: SetStepInputBindingsParams = RpcParams(),
+    ) -> dict[str, Any]:
+        try:
+            return await server.api.set_step_input_bindings(
+                workspace_id=params.workspace_id,
+                revision=params.revision,
+                step_id=params.step_id,
+                bindings=params.bindings,
             )
         except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:
             raise_workflow_rpc_error(exc)

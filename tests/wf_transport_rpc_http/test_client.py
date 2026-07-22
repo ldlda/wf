@@ -15,6 +15,7 @@ from wf_artifacts.drafts.models import (
     DraftStep,
 )
 from wf_core import END
+from wf_core.models.steps import InputPathBinding, InputValueBinding
 from wf_server import build_local_static_workflow_server
 from wf_transport_rpc_http import RpcWorkflowApiClient, create_rpc_app
 from wf_transport_rpc_http.client.drafts import RpcDraftClientMixin
@@ -687,6 +688,40 @@ async def test_rpc_client_draft_workspace_focused_edit_methods(tmp_path) -> None
     assert input_merged["revision"] == 6
     assert output_merged["revision"] == 7
     assert state_bound["revision"] == 8
+
+
+async def test_rpc_client_serializes_canonical_step_input_bindings() -> None:
+    calls: list[tuple[str, dict[str, object]]] = []
+
+    class Client(RpcDraftClientMixin):
+        async def _call(self, method: str, params: dict[str, object]):
+            calls.append((method, params))
+            return {"revision": 3}
+
+    client = Client()
+
+    await client.set_step_input_bindings(
+        workspace_id="client_ws",
+        revision=2,
+        step_id="call",
+        bindings=[
+            InputPathBinding(path="state.title", target="request.title"),
+            InputValueBinding(target="request.format", value="markdown"),
+        ],
+    )
+
+    assert calls[-1] == (
+        "workflow.draft_workspaces.set_step_input_bindings",
+        {
+            "workspace_id": "client_ws",
+            "revision": 2,
+            "step_id": "call",
+            "bindings": [
+                {"target": "request.title", "path": "state.title"},
+                {"target": "request.format", "value": "markdown"},
+            ],
+        },
+    )
 
 
 async def test_rpc_client_draft_remove_methods(tmp_path) -> None:
