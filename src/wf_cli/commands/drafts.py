@@ -549,16 +549,29 @@ def set_step_output_map(
         raise typer.BadParameter("provide --map, --bindings-file, or --clear")
     if selected_modes > 1:
         raise typer.BadParameter(
-            "--bindings-file and --clear cannot be combined with --map"
+            "--map, --bindings-file, and --clear are mutually exclusive"
         )
     if merge and (has_file or clear):
         raise typer.BadParameter(
             "--merge is supported only for compatibility map-only edits"
         )
 
-    context = load_cli_context(ctx)
     if merge:
         output_map = _parse_output_map_flags(mapping)
+        bindings = None
+    else:
+        output_map = None
+        bindings = (
+            parse_step_output_bindings_file(bindings_file)
+            if bindings_file is not None
+            else []
+            if clear
+            else parse_step_output_binding_flags(mapping)
+        )
+
+    context = load_cli_context(ctx)
+    if merge:
+        assert output_map is not None
         operation = context.handlers.set_step_output_map(
             workspace_id=workspace_id,
             revision=revision,
@@ -567,13 +580,7 @@ def set_step_output_map(
             merge=True,
         )
     else:
-        bindings = (
-            parse_step_output_bindings_file(bindings_file)
-            if bindings_file is not None
-            else []
-            if clear
-            else parse_step_output_binding_flags(mapping)
-        )
+        assert bindings is not None
         operation = context.handlers.set_step_output_bindings(
             workspace_id=workspace_id,
             revision=revision,

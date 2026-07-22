@@ -2012,16 +2012,54 @@ def test_wf_draft_set_output_clear_sends_empty_binding_list(monkeypatch) -> None
 
 
 @pytest.mark.parametrize(
+    ("mode_args", "expected_error"),
+    [
+        (["--map", "report..title=state.title"], "path"),
+        (["--bindings-file", "missing-bindings.json"], "cannot read"),
+    ],
+)
+def test_wf_draft_set_output_validates_selected_mode_before_context(
+    monkeypatch, mode_args: list[str], expected_error: str
+) -> None:
+    monkeypatch.setattr(
+        "wf_cli.commands.drafts.load_cli_context",
+        lambda _ctx: (_ for _ in ()).throw(AssertionError("context loaded")),
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "draft",
+            "set-output",
+            "report_ws",
+            "--revision",
+            "1",
+            "--step",
+            "render",
+            *mode_args,
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert "context loaded" not in result.output
+    assert expected_error in " ".join(result.output.split()).lower()
+
+
+@pytest.mark.parametrize(
     ("extra_args", "expected_error"),
     [
         ([], "provide --map, --bindings-file, or --clear"),
         (
             ["--bindings-file", "bindings.json", "--map", "value=state.value"],
-            "cannot be combined with --map",
+            "mutually exclusive",
         ),
         (
             ["--clear", "--map", "value=state.value"],
-            "cannot be combined with --map",
+            "mutually exclusive",
+        ),
+        (
+            ["--bindings-file", "bindings.json", "--clear"],
+            "mutually exclusive",
         ),
         (
             ["--merge", "--bindings-file", "bindings.json"],
