@@ -1158,8 +1158,8 @@ def test_wf_draft_focused_edit_commands_use_rpc_target(monkeypatch, tmp_path) ->
             "3",
             "--step",
             "call",
-            "--map",
-            "input.value=value",
+            "--value",
+            'value="seed"',
         ],
     )
     output_mapped = runner.invoke(
@@ -1228,7 +1228,7 @@ def test_wf_draft_focused_edit_commands_use_rpc_target(monkeypatch, tmp_path) ->
     assert draft["steps"]["call"]["input"] == [
         {
             "target": "value",
-            "path": "input.value",
+            "value": "seed",
         },
         {
             "target": "extra",
@@ -1433,6 +1433,7 @@ def test_wf_draft_set_input_preserves_nested_target_over_rpc(
             "call",
             "--map",
             "input.value=payload.value",
+            "--merge",
         ],
     )
     inspected = runner.invoke(
@@ -1446,6 +1447,87 @@ def test_wf_draft_set_input_preserves_nested_target_over_rpc(
     assert draft["steps"]["call"]["input"] == [
         {"target": "payload.value", "path": "input.value"}
     ]
+
+
+def test_wf_draft_set_input_replaces_canonical_bindings_over_rpc(
+    monkeypatch, tmp_path
+) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    _patch_rpc_client_to_server(monkeypatch, server)
+    rpc_methods: list[str] = []
+    original_call = RpcClientTransport._call
+
+    async def recording_call(
+        self: RpcClientTransport, method: str, params: dict[str, Any]
+    ) -> dict[str, Any]:
+        rpc_methods.append(method)
+        return await original_call(self, method, params)
+
+    monkeypatch.setattr(RpcClientTransport, "_call", recording_call)
+    config_path = tmp_path / "wf.json"
+    config_path.write_text('{"version": 1}', encoding="utf-8")
+    runner = CliRunner()
+    base_args = ["--config", str(config_path), "--url", "http://test/rpc"]
+    created = runner.invoke(
+        app,
+        [
+            *base_args,
+            "draft",
+            "create",
+            "filter_ws",
+            "--capability",
+            "wf.std.filter_items",
+            "--name",
+            "filter_items",
+        ],
+    )
+    initial = runner.invoke(
+        app,
+        [*base_args, "draft", "inspect", "filter_ws", "--include-draft"],
+    )
+    assert created.exit_code == 0, created.output
+    assert initial.exit_code == 0, initial.output
+
+    bindings_path = tmp_path / "input-bindings.json"
+    initial_bindings = json.loads(initial.output)["draft"]["steps"]["call"]["input"]
+    bindings_path.write_text(json.dumps(initial_bindings), encoding="utf-8")
+    assert json.loads(bindings_path.read_text(encoding="utf-8")) == initial_bindings
+
+    replacement = [
+        {"path": "input.key", "target": "key"},
+        {"path": "input.key", "target": "value"},
+        {"value": [], "target": "items"},
+    ]
+    bindings_path.write_text(json.dumps(replacement), encoding="utf-8")
+    replaced = runner.invoke(
+        app,
+        [
+            *base_args,
+            "draft",
+            "set-input",
+            "filter_ws",
+            "--revision",
+            "1",
+            "--step",
+            "call",
+            "--bindings-file",
+            str(bindings_path),
+        ],
+    )
+    inspected = runner.invoke(
+        app,
+        [*base_args, "draft", "inspect", "filter_ws", "--include-draft"],
+    )
+
+    assert replaced.exit_code == 0, replaced.output
+    assert json.loads(replaced.output)["revision"] == 2
+    assert inspected.exit_code == 0, inspected.output
+    assert json.loads(inspected.output)["draft"]["steps"]["call"]["input"] == [
+        {"target": "key", "path": "input.key"},
+        {"target": "value", "path": "input.key"},
+        {"target": "items", "value": []},
+    ]
+    assert rpc_methods.count("workflow.draft_workspaces.set_step_input_bindings") == 1
 
 
 def test_wf_draft_add_capability_uses_rpc_target(monkeypatch, tmp_path) -> None:

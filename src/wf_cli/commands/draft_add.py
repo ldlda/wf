@@ -42,6 +42,7 @@ from .draft_options import (
     _parse_step_input_map_flags,
     parse_json_file,
     route_source,
+    validation_error_as_bad_parameter,
 )
 
 app = typer.Typer(
@@ -81,11 +82,6 @@ def _submit_step(
             ),
         )
     )
-
-
-def _as_bad_parameter(exc: ValidationError) -> typer.BadParameter:
-    """Keep model validation failures on Click's concise input-error surface."""
-    return typer.BadParameter(str(exc))
 
 
 @app.command("capability")
@@ -270,7 +266,7 @@ def add_interrupt_step(
             )
         )
     except ValidationError as exc:
-        raise _as_bad_parameter(exc) from exc
+        raise validation_error_as_bad_parameter(exc) from exc
 
     _submit_step(
         ctx,
@@ -365,7 +361,7 @@ def add_foreach_step(
             )
         )
     except ValidationError as exc:
-        raise _as_bad_parameter(exc) from exc
+        raise validation_error_as_bad_parameter(exc) from exc
 
     _submit_step(
         ctx,
@@ -443,7 +439,7 @@ def add_end_step(
     try:
         step = DraftEndStep(end=DraftEndPayload(outcome=outcome))
     except ValidationError as exc:
-        raise _as_bad_parameter(exc) from exc
+        raise validation_error_as_bad_parameter(exc) from exc
     _submit_step(
         ctx,
         workspace_id=workspace_id,
@@ -494,7 +490,7 @@ def add_when_step(
             )
         )
     except ValidationError as exc:
-        raise _as_bad_parameter(exc) from exc
+        raise validation_error_as_bad_parameter(exc) from exc
     _submit_step(
         ctx,
         workspace_id=workspace_id,
@@ -543,7 +539,7 @@ def add_choose_step(
             choose=DraftChoosePayload(clauses=clauses, default=default)
         )
     except ValidationError as exc:
-        raise _as_bad_parameter(exc) from exc
+        raise validation_error_as_bad_parameter(exc) from exc
     _submit_step(
         ctx,
         workspace_id=workspace_id,
@@ -593,7 +589,7 @@ def add_match_step(
             match=DraftMatchPayload(value=value, cases=cases, default=default)
         )
     except ValidationError as exc:
-        raise _as_bad_parameter(exc) from exc
+        raise validation_error_as_bad_parameter(exc) from exc
     _submit_step(
         ctx,
         workspace_id=workspace_id,
@@ -724,7 +720,7 @@ def add_subgraph_step(
             )
         )
     except ValidationError as exc:
-        raise _as_bad_parameter(exc) from exc
+        raise validation_error_as_bad_parameter(exc) from exc
     _submit_step(
         ctx,
         workspace_id=workspace_id,

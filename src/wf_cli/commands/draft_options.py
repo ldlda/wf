@@ -5,9 +5,13 @@ from pathlib import Path
 from typing import Any
 
 import typer
+from pydantic import TypeAdapter, ValidationError
 
 from wf_api.surface import RouteSource
-from wf_core.paths import LocalPath, PathResolutionError, StatePath
+from wf_core.models.steps import InputBinding, InputPathBinding, InputValueBinding
+from wf_core.paths import GraphSourcePath, LocalPath, PathResolutionError, StatePath
+
+_INPUT_BINDINGS_ADAPTER = TypeAdapter(list[InputBinding])
 
 
 def _parse_assignment_flags(
@@ -85,6 +89,85 @@ def _parse_step_input_map_flags(
                 f"got {target!r}; use report.title or ."
             ) from exc
     return parsed
+
+
+def validation_error_as_bad_parameter(
+    exc: ValidationError,
+) -> typer.BadParameter:
+    """Keep Pydantic failures on Click's concise input-error surface."""
+    return typer.BadParameter(str(exc))
+
+
+def parse_step_input_binding_flags(
+    values: list[str] | None,
+) -> list[InputPathBinding]:
+    """Parse ordered canonical path bindings without collapsing source fan-out."""
+    bindings: list[InputPathBinding] = []
+    for item in values or []:
+        source, separator, target = item.partition("=")
+        if separator != "=" or not source or not target:
+            raise typer.BadParameter("--map must use GRAPH_SOURCE=LOCAL_TARGET")
+        if target.startswith("local."):
+            bare_target = target.removeprefix("local.")
+            raise typer.BadParameter(
+                "--map target must be a rootless node-local path; "
+                f"use {source}={bare_target}, not {source}={target}"
+            )
+        try:
+            source_path = GraphSourcePath.parse(source)
+        except PathResolutionError as exc:
+            raise typer.BadParameter(
+                f"--map source must be a graph source path: {exc}"
+            ) from exc
+        try:
+            target_path = LocalPath.parse(target)
+        except PathResolutionError as exc:
+            raise typer.BadParameter(
+                f"--map target must be a rootless node-local path: {exc}"
+            ) from exc
+        bindings.append(InputPathBinding(path=source_path, target=target_path))
+    return bindings
+
+
+def parse_step_input_value_flags(
+    values: list[str] | None,
+) -> list[InputValueBinding]:
+    """Parse ordered canonical literal bindings from LOCAL_TARGET=JSON flags."""
+    bindings: list[InputValueBinding] = []
+    for item in values or []:
+        target, separator, raw_value = item.partition("=")
+        if separator != "=" or not target:
+            raise typer.BadParameter("--value must use LOCAL_TARGET=JSON")
+        if target.startswith("local."):
+            raise typer.BadParameter(
+                "--value target must be a rootless node-local path"
+            )
+        try:
+            value = json.loads(raw_value)
+            bindings.append(
+                InputValueBinding(target=LocalPath.parse(target), value=value)
+            )
+        except json.JSONDecodeError as exc:
+            raise typer.BadParameter(
+                f"--value for {target!r} is invalid JSON: {exc.msg}"
+            ) from exc
+        except ValidationError as exc:
+            raise validation_error_as_bad_parameter(exc) from exc
+        except PathResolutionError as exc:
+            raise typer.BadParameter(
+                f"--value target must be a valid rootless local path: {exc}"
+            ) from exc
+    return bindings
+
+
+def parse_step_input_bindings_file(path: Path) -> list[InputBinding]:
+    """Read and validate an ordered canonical input-binding list."""
+    try:
+        return _INPUT_BINDINGS_ADAPTER.validate_python(
+            parse_json_file(path, option_name="--bindings-file")
+        )
+    except ValidationError as exc:
+        raise validation_error_as_bad_parameter(exc) from exc
 
 
 def _parse_route_flags(values: list[str] | None) -> dict[str, str]:

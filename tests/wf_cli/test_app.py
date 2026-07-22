@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from types import SimpleNamespace
 from typing import Any
 
@@ -8,7 +9,13 @@ import typer
 from typer.testing import CliRunner
 
 from wf_cli.app import app
-from wf_cli.commands.draft_options import parse_json_file, route_source
+from wf_cli.commands.draft_options import (
+    parse_json_file,
+    parse_step_input_binding_flags,
+    parse_step_input_bindings_file,
+    parse_step_input_value_flags,
+    route_source,
+)
 
 runner = CliRunner()
 
@@ -29,6 +36,59 @@ def test_draft_options_route_source_requires_an_incoming_step() -> None:
     assert incoming is not None
     assert incoming.step_id == "lookup"
     assert incoming.outcome == "ok"
+
+
+def test_draft_options_parse_step_input_bindings_preserves_source_fan_out() -> None:
+    bindings = parse_step_input_binding_flags(
+        ["state.title=request.title", "state.title=audit.title"]
+    )
+
+    assert [str(binding.path) for binding in bindings] == [
+        "state.title",
+        "state.title",
+    ]
+    assert [str(binding.target) for binding in bindings] == [
+        "request.title",
+        "audit.title",
+    ]
+
+
+def test_draft_options_parse_step_input_values_preserves_null_and_equals() -> None:
+    bindings = parse_step_input_value_flags(
+        ['request.format="markdown=compact"', "request.optional=null"]
+    )
+
+    assert bindings[0].value == "markdown=compact"
+    assert bindings[1].value is None
+
+
+def test_draft_options_parse_step_input_bindings_file_validates_union(
+    tmp_path,
+) -> None:
+    path = tmp_path / "bindings.json"
+    path.write_text(
+        json.dumps(
+            [
+                {"path": "input.items", "target": "items"},
+                {"value": ",", "target": "separator"},
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    bindings = parse_step_input_bindings_file(path)
+
+    assert [binding.model_dump(mode="json") for binding in bindings] == [
+        {"target": "items", "path": "input.items"},
+        {"target": "separator", "value": ","},
+    ]
+
+    path.write_text(
+        json.dumps([{"path": "input.items", "value": [], "target": "items"}]),
+        encoding="utf-8",
+    )
+    with pytest.raises(typer.BadParameter, match="validation errors"):
+        parse_step_input_bindings_file(path)
 
 
 def test_wf_help_lists_lifecycle_groups() -> None:
@@ -510,7 +570,7 @@ def test_wf_draft_map_help_explains_replace_merge_and_validate() -> None:
     input_help = " ".join(input_result.output.split())
     output_help = " ".join(output_result.output.split())
     workflow_output_help = " ".join(workflow_output_result.output.split())
-    assert "replaces the full input map" in input_help
+    assert "replace the complete ordered binding list" in input_help
     assert "Use --merge only" in input_help
     assert "draft validate" in input_help
     assert "input.text=text" in input_help
@@ -1498,7 +1558,7 @@ def test_wf_draft_set_input_accepts_nested_rootless_target(monkeypatch) -> None:
     calls: list[dict[str, Any]] = []
 
     class FakeHandlers:
-        async def set_step_input_map(self, **kwargs: Any) -> dict[str, Any]:
+        async def set_step_input_bindings(self, **kwargs: Any) -> dict[str, Any]:
             calls.append(kwargs)
             return {"revision": 2, "status": "valid"}
 
@@ -1521,7 +1581,214 @@ def test_wf_draft_set_input_accepts_nested_rootless_target(monkeypatch) -> None:
     )
 
     assert result.exit_code == 0, result.output
-    assert calls[0]["input_map"] == {"input.title": "report.title"}
+    assert [binding.model_dump(mode="json") for binding in calls[0]["bindings"]] == [
+        {"target": "report.title", "path": "input.title"}
+    ]
+
+
+def test_wf_draft_set_input_combines_path_and_literal_replacement(monkeypatch) -> None:
+    calls: list[dict[str, Any]] = []
+
+    class FakeHandlers:
+        async def set_step_input_bindings(self, **kwargs: Any) -> dict[str, Any]:
+            calls.append(kwargs)
+            return {"revision": 2, "status": "valid"}
+
+    context = SimpleNamespace(handlers=FakeHandlers(), verbose=False)
+    monkeypatch.setattr("wf_cli.commands.drafts.load_cli_context", lambda _ctx: context)
+
+    result = runner.invoke(
+        app,
+        [
+            "draft",
+            "set-input",
+            "report_ws",
+            "--revision",
+            "1",
+            "--step",
+            "render",
+            "--map",
+            "state.title=request.title",
+            "--map",
+            "state.title=audit.title",
+            "--value",
+            'request.format="markdown"',
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert len(calls) == 1
+    assert [binding.model_dump(mode="json") for binding in calls[0]["bindings"]] == [
+        {"target": "request.title", "path": "state.title"},
+        {"target": "audit.title", "path": "state.title"},
+        {"target": "request.format", "value": "markdown"},
+    ]
+
+
+def test_wf_draft_set_input_replaces_from_bindings_file_in_order(
+    monkeypatch, tmp_path
+) -> None:
+    calls: list[dict[str, Any]] = []
+
+    class FakeHandlers:
+        async def set_step_input_bindings(self, **kwargs: Any) -> dict[str, Any]:
+            calls.append(kwargs)
+            return {"revision": 2, "status": "valid"}
+
+    bindings_path = tmp_path / "bindings.json"
+    bindings_path.write_text(
+        json.dumps(
+            [
+                {"value": "markdown", "target": "request.format"},
+                {"path": "state.title", "target": "request.title"},
+            ]
+        ),
+        encoding="utf-8",
+    )
+    context = SimpleNamespace(handlers=FakeHandlers(), verbose=False)
+    monkeypatch.setattr("wf_cli.commands.drafts.load_cli_context", lambda _ctx: context)
+
+    result = runner.invoke(
+        app,
+        [
+            "draft",
+            "set-input",
+            "report_ws",
+            "--revision",
+            "1",
+            "--step",
+            "render",
+            "--bindings-file",
+            str(bindings_path),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert [binding.model_dump(mode="json") for binding in calls[0]["bindings"]] == [
+        {"target": "request.format", "value": "markdown"},
+        {"target": "request.title", "path": "state.title"},
+    ]
+
+
+def test_wf_draft_set_input_clear_sends_empty_binding_list(monkeypatch) -> None:
+    calls: list[dict[str, Any]] = []
+
+    class FakeHandlers:
+        async def set_step_input_bindings(self, **kwargs: Any) -> dict[str, Any]:
+            calls.append(kwargs)
+            return {"revision": 2, "status": "valid"}
+
+    context = SimpleNamespace(handlers=FakeHandlers(), verbose=False)
+    monkeypatch.setattr("wf_cli.commands.drafts.load_cli_context", lambda _ctx: context)
+
+    result = runner.invoke(
+        app,
+        [
+            "draft",
+            "set-input",
+            "report_ws",
+            "--revision",
+            "1",
+            "--step",
+            "render",
+            "--clear",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert calls[0]["bindings"] == []
+
+
+@pytest.mark.parametrize(
+    ("extra_args", "expected_error"),
+    [
+        ([], "provide --map/--value, --bindings-file, or --clear"),
+        (
+            ["--bindings-file", "bindings.json", "--map", "input.x=x"],
+            "cannot be combined with --map or",
+        ),
+        (
+            ["--clear", "--value", "x=null"],
+            "cannot be combined with --map or",
+        ),
+        (
+            ["--merge", "--value", "x=null"],
+            "--merge is supported only for compatibility map-only edits",
+        ),
+        (
+            ["--merge", "--bindings-file", "bindings.json"],
+            "--merge is supported only for compatibility map-only edits",
+        ),
+        (
+            ["--merge", "--clear"],
+            "--merge is supported only for compatibility map-only edits",
+        ),
+    ],
+)
+def test_wf_draft_set_input_rejects_invalid_mode_combinations(
+    monkeypatch, extra_args: list[str], expected_error: str
+) -> None:
+    monkeypatch.setattr(
+        "wf_cli.commands.drafts.load_cli_context",
+        lambda _ctx: (_ for _ in ()).throw(AssertionError("context loaded")),
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "draft",
+            "set-input",
+            "report_ws",
+            "--revision",
+            "1",
+            "--step",
+            "render",
+            *extra_args,
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert "context loaded" not in result.output
+    assert expected_error in " ".join(result.output.split())
+
+
+def test_wf_draft_set_input_merge_keeps_compatibility_map_handler(monkeypatch) -> None:
+    calls: list[dict[str, Any]] = []
+
+    class FakeHandlers:
+        async def set_step_input_map(self, **kwargs: Any) -> dict[str, Any]:
+            calls.append(kwargs)
+            return {"revision": 2, "status": "valid"}
+
+    context = SimpleNamespace(handlers=FakeHandlers(), verbose=False)
+    monkeypatch.setattr("wf_cli.commands.drafts.load_cli_context", lambda _ctx: context)
+
+    result = runner.invoke(
+        app,
+        [
+            "draft",
+            "set-input",
+            "report_ws",
+            "--revision",
+            "1",
+            "--step",
+            "render",
+            "--map",
+            "input.title=title",
+            "--merge",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert calls == [
+        {
+            "workspace_id": "report_ws",
+            "revision": 1,
+            "step_id": "render",
+            "input_map": {"input.title": "title"},
+            "merge": True,
+        }
+    ]
 
 
 def test_wf_draft_set_input_rejects_malformed_local_path(monkeypatch) -> None:

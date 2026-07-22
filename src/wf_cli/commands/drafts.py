@@ -12,6 +12,9 @@ from wf_cli.commands.draft_options import (
     _parse_route_flags,
     _parse_step_input_map_flags,
     parse_json_object_file,
+    parse_step_input_binding_flags,
+    parse_step_input_bindings_file,
+    parse_step_input_value_flags,
 )
 from wf_cli.context import load_cli_context_from_typer as load_cli_context
 from wf_cli.formats import ListOutputFormat, emit_list_payload
@@ -371,7 +374,7 @@ def set_draft_route(
 
 
 @app.command("set-input")
-def set_step_input_map(
+def set_step_input(
     ctx: typer.Context,
     workspace_id: Annotated[str, typer.Argument(help="Draft workspace id.")],
     revision: Annotated[
@@ -385,19 +388,40 @@ def set_step_input_map(
             help="One input binding SOURCE=LOCAL_TARGET. Repeat in one command.",
         ),
     ] = None,
+    literal_values: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--value",
+            help="Literal input binding LOCAL_TARGET=JSON. Repeat in one command.",
+        ),
+    ] = None,
+    bindings_file: Annotated[
+        Path | None,
+        typer.Option(
+            "--bindings-file",
+            help="JSON file containing the complete ordered canonical binding list.",
+        ),
+    ] = None,
+    clear: Annotated[
+        bool,
+        typer.Option("--clear", help="Replace the step's input bindings with []."),
+    ] = False,
     merge: Annotated[
         bool,
         typer.Option(
             "--merge",
-            help="Preserve existing input bindings and add/update the passed --map entries.",
+            help=(
+                "Compatibility map-only mode: preserve existing bindings and "
+                "add/update --map entries."
+            ),
         ),
     ] = False,
 ) -> None:
-    """Set one step's input map without writing JSON Patch manually.
+    """Replace one step's canonical inputs, or use compatibility map merge.
 
-    Default behavior replaces the full input map for this step. Pass all desired
-    --map entries in one command for a complete replacement. Use --merge only
-    when adding or updating entries across a later revision.
+    By default, repeated --map and --value flags replace the complete ordered
+    binding list. --bindings-file replaces from canonical JSON, while --clear
+    sends an empty list. Use --merge only with map-only compatibility edits.
 
     Targets are rootless node-local paths. For example, use
     `--map input.title=report.title`, not
@@ -408,18 +432,58 @@ def set_step_input_map(
     Run `wf draft validate <workspace_id>` after map edits; validation reports
     unresolved paths and conflicting writes.
     """
-    input_map = _parse_step_input_map_flags(mapping)
+    has_flags = bool(mapping or literal_values)
+    has_file = bindings_file is not None
+    selected_modes = sum((has_flags, has_file, clear))
+    if selected_modes == 0:
+        raise typer.BadParameter("provide --map/--value, --bindings-file, or --clear")
+    if selected_modes > 1:
+        raise typer.BadParameter(
+            "--bindings-file and --clear cannot be combined with --map or --value"
+        )
+    if merge and (literal_values or has_file or clear):
+        raise typer.BadParameter(
+            "--merge is supported only for compatibility map-only edits"
+        )
+
+    if merge:
+        input_map = _parse_step_input_map_flags(mapping)
+        bindings = None
+    else:
+        input_map = None
+        bindings = (
+            parse_step_input_bindings_file(bindings_file)
+            if bindings_file is not None
+            else []
+            if clear
+            else [
+                *parse_step_input_binding_flags(mapping),
+                *parse_step_input_value_flags(literal_values),
+            ]
+        )
+
     context = load_cli_context(ctx)
+    if merge:
+        assert input_map is not None
+        operation = context.handlers.set_step_input_map(
+            workspace_id=workspace_id,
+            revision=revision,
+            step_id=step_id,
+            input_map=input_map,
+            merge=True,
+        )
+    else:
+        assert bindings is not None
+        operation = context.handlers.set_step_input_bindings(
+            workspace_id=workspace_id,
+            revision=revision,
+            step_id=step_id,
+            bindings=bindings,
+        )
     emit_json(
         run_cli_operation(
             context,
-            context.handlers.set_step_input_map(
-                workspace_id=workspace_id,
-                revision=revision,
-                step_id=step_id,
-                input_map=input_map,
-                merge=merge,
-            ),
+            operation,
         )
     )
 
