@@ -4,7 +4,7 @@ from collections.abc import Mapping, Sequence
 from copy import deepcopy
 from typing import Any
 
-from jsonschema import Draft202012Validator, SchemaError
+from jsonschema import Draft202012Validator, SchemaError, ValidationError
 
 JsonObject = dict[str, Any]
 
@@ -21,6 +21,55 @@ def schema_path_exists(
     return True
 
 
+def schema_fragment_at_path(
+    schema: JsonObject,
+    parts: Sequence[str],
+    *,
+    label: str = "schema",
+) -> JsonObject:
+    """Return a self-contained selected schema fragment with local definitions."""
+    _check_schema(label, schema)
+    fragment = deepcopy(dict(_schema_at_path(schema, parts, label=label)))
+    _merge_definition_block(
+        fragment,
+        schema,
+        "$defs",
+        target_label=f"{label} fragment",
+        source_label=label,
+    )
+    _merge_definition_block(
+        fragment,
+        schema,
+        "definitions",
+        target_label=f"{label} fragment",
+        source_label=label,
+    )
+    _check_schema(f"{label} fragment", fragment)
+    return fragment
+
+
+def validate_json_value_at_schema_path(
+    *,
+    schema: JsonObject,
+    parts: Sequence[str],
+    value: object,
+    label: str,
+) -> None:
+    """Validate one JSON-compatible literal against a selected schema path."""
+    fragment = schema_fragment_at_path(
+        schema,
+        parts,
+        label="capability input schema",
+    )
+    path = ".".join(parts) or "."
+    try:
+        Draft202012Validator(fragment).validate(value)
+    except ValidationError as exc:
+        raise ValueError(
+            f"{label} does not satisfy schema at {path!r}: {exc.message}"
+        ) from exc
+
+
 def project_schema_path_to_schema_path(
     *,
     target_schema: JsonObject,
@@ -30,16 +79,20 @@ def project_schema_path_to_schema_path(
     allow_existing_equivalent: bool = False,
 ) -> JsonObject:
     """Copy one nested source subschema into a target object-property path."""
-    if not source_parts:
-        raise ValueError("source schema path must not be empty")
     if not target_parts:
         raise ValueError("target schema path must not be empty")
     _check_schema("target_schema", target_schema)
     _check_schema("source_schema", source_schema)
-    source_value = _schema_at_path(
-        source_schema,
-        source_parts,
-        label="source schema",
+    # An empty source path means the complete capability payload. This is
+    # distinct from an empty target path, which cannot be inserted into a parent.
+    source_value = (
+        source_schema
+        if not source_parts
+        else _schema_at_path(
+            source_schema,
+            source_parts,
+            label="source schema",
+        )
     )
 
     projected = deepcopy(target_schema)
@@ -263,15 +316,18 @@ def _merge_definition_block(
     target_schema: JsonObject,
     source_schema: JsonObject,
     key: str,
+    *,
+    target_label: str = "state_schema",
+    source_label: str = "output_schema",
 ) -> None:
     source_defs = source_schema.get(key)
     if source_defs is None:
         return
     if not isinstance(source_defs, dict):
-        raise ValueError(f"output_schema.{key} must be an object")
+        raise ValueError(f"{source_label}.{key} must be an object")
     target_defs = target_schema.setdefault(key, {})
     if not isinstance(target_defs, dict):
-        raise ValueError(f"state_schema.{key} must be an object")
+        raise ValueError(f"{target_label}.{key} must be an object")
     for name, definition in source_defs.items():
         if name in target_defs and target_defs[name] != definition:
             raise ValueError(f"conflicting {key}.{name}")

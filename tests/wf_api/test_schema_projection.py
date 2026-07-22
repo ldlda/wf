@@ -6,7 +6,9 @@ from wf_api.schema_projection import (
     project_output_property_to_state_schema,
     project_property_to_schema_path,
     project_schema_path_to_schema_path,
+    schema_fragment_at_path,
     schema_path_exists,
+    validate_json_value_at_schema_path,
 )
 
 
@@ -216,6 +218,168 @@ def test_project_schema_path_copies_inline_nested_source() -> None:
     assert projected["properties"]["document"]["properties"]["title"] == {
         "type": "string"
     }
+
+
+def test_schema_fragment_selects_inline_nested_field() -> None:
+    fragment = schema_fragment_at_path(
+        {
+            "type": "object",
+            "properties": {
+                "request": {
+                    "type": "object",
+                    "properties": {"format": {"type": "string"}},
+                }
+            },
+        },
+        ("request", "format"),
+    )
+
+    assert fragment == {"type": "string"}
+
+
+def test_schema_fragment_preserves_defs_for_selected_reference() -> None:
+    fragment = schema_fragment_at_path(
+        {
+            "type": "object",
+            "properties": {"request": {"$ref": "#/$defs/Request"}},
+            "$defs": {
+                "Request": {
+                    "type": "object",
+                    "properties": {"format": {"type": "string"}},
+                }
+            },
+        },
+        ("request",),
+        label="capability input schema",
+    )
+
+    assert fragment["$ref"] == "#/$defs/Request"
+    assert fragment["$defs"]["Request"]["properties"]["format"] == {"type": "string"}
+
+
+def test_schema_fragment_accepts_whole_schema() -> None:
+    schema = {"type": "object", "properties": {"title": {"type": "string"}}}
+
+    assert schema_fragment_at_path(schema, ()) == schema
+
+
+def test_schema_fragment_rejects_remote_selected_reference() -> None:
+    with pytest.raises(
+        ValueError,
+        match="unsupported reference 'https://example.com/request.json'",
+    ):
+        schema_fragment_at_path(
+            {
+                "type": "object",
+                "properties": {"request": {"$ref": "https://example.com/request.json"}},
+            },
+            ("request",),
+        )
+
+
+@pytest.mark.parametrize(
+    ("schema", "value"),
+    [
+        ({"type": "string"}, "markdown"),
+        (
+            {
+                "type": "object",
+                "properties": {"title": {"type": "string"}},
+                "required": ["title"],
+            },
+            {"title": "Report"},
+        ),
+        ({"type": "array", "items": {"type": "integer"}}, [1, 2]),
+        ({"type": ["string", "null"]}, None),
+    ],
+)
+def test_validate_json_value_accepts_matching_literals(
+    schema: dict[str, object],
+    value: object,
+) -> None:
+    validate_json_value_at_schema_path(
+        schema={
+            "type": "object",
+            "properties": {"value": schema},
+        },
+        parts=("value",),
+        value=value,
+        label="bindings[0].value",
+    )
+
+
+def test_validate_json_value_at_nested_schema_path() -> None:
+    schema = {
+        "type": "object",
+        "properties": {"request": {"$ref": "#/$defs/Request"}},
+        "$defs": {
+            "Request": {
+                "type": "object",
+                "properties": {"format": {"enum": ["markdown", "json"]}},
+            }
+        },
+    }
+
+    validate_json_value_at_schema_path(
+        schema=schema,
+        parts=("request", "format"),
+        value="markdown",
+        label="bindings[0].value",
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=r"bindings\[0\]\.value does not satisfy schema at 'request.format'",
+    ):
+        validate_json_value_at_schema_path(
+            schema=schema,
+            parts=("request", "format"),
+            value="html",
+            label="bindings[0].value",
+        )
+
+
+@pytest.mark.parametrize(
+    ("schema", "value"),
+    [
+        ({"type": "string"}, 7),
+        ({"type": "object"}, []),
+        ({"type": "array"}, {}),
+        ({"type": "null"}, "not-null"),
+    ],
+)
+def test_validate_json_value_rejects_non_matching_literals(
+    schema: dict[str, object],
+    value: object,
+) -> None:
+    with pytest.raises(
+        ValueError,
+        match=r"bindings\[0\]\.value does not satisfy schema at 'value'",
+    ):
+        validate_json_value_at_schema_path(
+            schema={
+                "type": "object",
+                "properties": {"value": schema},
+            },
+            parts=("value",),
+            value=value,
+            label="bindings[0].value",
+        )
+
+
+def test_project_schema_path_accepts_whole_source_schema() -> None:
+    projected = project_schema_path_to_schema_path(
+        target_schema={"type": "object", "properties": {}},
+        source_schema={
+            "type": "object",
+            "properties": {"title": {"type": "string"}},
+            "required": ["title"],
+        },
+        source_parts=(),
+        target_parts=("payload",),
+    )
+
+    assert projected["properties"]["payload"]["required"] == ["title"]
 
 
 def test_project_schema_path_traverses_pydantic_defs_reference() -> None:
