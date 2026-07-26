@@ -21,6 +21,7 @@ from wf_mcp.workflow_surface.models import (
     CreateMinimalDraftWorkspaceRequest,
     SetStepInputBindingsRequest,
     SetStepOutputBindingsRequest,
+    SetWorkflowOutputBindingsRequest,
 )
 
 from ..test_support import echo_tool
@@ -328,6 +329,39 @@ def test_set_step_output_bindings_request_rejects_malformed_canonical_record() -
                 "revision": 4,
                 "step_id": "analyze",
                 "bindings": [{"source": "report.title"}],
+            }
+        )
+
+
+def test_set_workflow_output_bindings_request_preserves_union_order() -> None:
+    request = SetWorkflowOutputBindingsRequest.model_validate(
+        {
+            "workspace_id": "draft-output",
+            "revision": 4,
+            "bindings": [
+                {"path": "state.report.title", "target": "report.title"},
+                {"value": "markdown", "target": "format"},
+            ],
+        }
+    )
+
+    assert isinstance(request.bindings[0], InputPathBinding)
+    assert isinstance(request.bindings[1], InputValueBinding)
+    assert [
+        binding.model_dump(mode="json") for binding in request.bindings
+    ] == [
+        {"path": "state.report.title", "target": "report.title"},
+        {"value": "markdown", "target": "format"},
+    ]
+
+
+def test_set_workflow_output_bindings_request_rejects_malformed_record() -> None:
+    with pytest.raises(ValidationError):
+        SetWorkflowOutputBindingsRequest.model_validate(
+            {
+                "workspace_id": "draft-output",
+                "revision": 4,
+                "bindings": [{"target": "report.title"}],
             }
         )
 

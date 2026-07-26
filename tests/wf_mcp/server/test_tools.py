@@ -9,7 +9,7 @@ from fastmcp.client import Client
 from fastmcp.client.transports.memory import FastMCPTransport
 
 from wf_artifacts import FileDraftWorkspaceStore, FileWorkflowArtifactStore
-from wf_core.models.steps import OutputBinding
+from wf_core.models.steps import InputPathBinding, InputValueBinding, OutputBinding
 from wf_mcp.broker import WfMcpService
 from wf_mcp.models import BrokerConfig
 from wf_mcp.server import create_server_client
@@ -52,6 +52,7 @@ async def test_server_search_mode_pins_stable_control_and_workflow_tools() -> No
         assert "wf.workflow.set_step_output_bindings" in names
         assert "wf.workflow.set_step_input_map" in names
         assert "wf.workflow.set_step_output_map" in names
+        assert "wf.workflow.set_workflow_output_bindings" in names
         assert "wf.workflow.set_workflow_output_map" in names
         assert "wf.workflow.bind" in names
         assert "wf.workflow.remove_draft_route" in names
@@ -140,6 +141,74 @@ async def test_registered_output_bindings_tool_delegates_typed_bindings_once(
     assert [(str(binding.source), str(binding.target)) for binding in bindings] == [
         ("report.title", "state.report.title"),
         ("report.title", "state.audit.title"),
+    ]
+
+
+@pytest.mark.asyncio
+async def test_registered_workflow_output_bindings_tool_preserves_union_order(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class RecordingWorkflowHandler:
+        def __init__(self) -> None:
+            self.calls: list[dict[str, Any]] = []
+
+        async def set_workflow_output_bindings(
+            self, **kwargs: Any
+        ) -> dict[str, Any]:
+            self.calls.append(kwargs)
+            return {
+                "workspace_id": kwargs["workspace_id"],
+                "revision": kwargs["revision"] + 1,
+                "status": "valid",
+                "diagnostics": [],
+                "summary": {},
+            }
+
+    recorder = RecordingWorkflowHandler()
+    monkeypatch.setattr(
+        "wf_mcp.workflow_surface.tools.WorkflowApi",
+        lambda _context: recorder,
+    )
+    service = WfMcpService(
+        store=FileStore(tmp_path / "workflow_output_tool_store"),
+        artifact_store=FileWorkflowArtifactStore(
+            tmp_path / "workflow_output_tool_artifacts"
+        ),
+        draft_workspace_store=FileDraftWorkspaceStore(
+            tmp_path / "workflow_output_tool_drafts"
+        ),
+    )
+    server = FastMCP("workflow-output-bindings-test")
+    register_workflow_tools(server, service)
+
+    async with Client(FastMCPTransport(server)) as client:
+        result = await client.call_tool(
+            "wf.workflow.set_workflow_output_bindings",
+            {
+                "request": {
+                    "workspace_id": "draft-output",
+                    "revision": 4,
+                    "bindings": [
+                        {
+                            "path": "state.report.title",
+                            "target": "report.title",
+                        },
+                        {"value": "markdown", "target": "format"},
+                    ],
+                }
+            },
+        )
+
+    assert structured(result)["revision"] == 5
+    call = recorder.calls[0]
+    assert isinstance(call["bindings"][0], InputPathBinding)
+    assert isinstance(call["bindings"][1], InputValueBinding)
+    assert [
+        binding.model_dump(mode="json") for binding in call["bindings"]
+    ] == [
+        {"path": "state.report.title", "target": "report.title"},
+        {"value": "markdown", "target": "format"},
     ]
 
 

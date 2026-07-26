@@ -39,6 +39,7 @@ from .models import (
     SetStepInputMapRequest,
     SetStepOutputBindingsRequest,
     SetStepOutputMapRequest,
+    SetWorkflowOutputBindingsRequest,
     SetWorkflowOutputMapRequest,
     TraceRange,
     ValidateDeploymentResult,
@@ -504,6 +505,25 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
                 step_id=request.step_id,
                 output_map=request.output_map,
                 merge=request.merge,
+            )
+        )
+
+    @server.tool(
+        name="wf.workflow.set_workflow_output_bindings",
+        title="Set Workflow Output Bindings",
+        description=(
+            "Replace the complete ordered workflow-output binding list with "
+            "canonical path and literal records."
+        ),
+    )
+    async def set_workflow_output_bindings(
+        request: SetWorkflowOutputBindingsRequest,
+    ) -> DraftWorkspaceResult:
+        return DraftWorkspaceResult.model_validate(
+            await handlers.set_workflow_output_bindings(
+                workspace_id=request.workspace_id,
+                revision=request.revision,
+                bindings=request.bindings,
             )
         )
 

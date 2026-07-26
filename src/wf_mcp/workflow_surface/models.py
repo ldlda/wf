@@ -57,6 +57,15 @@ DraftOutputBindings = Annotated[
         )
     ),
 ]
+WorkflowOutputBindings = Annotated[
+    list[InputBinding],
+    Field(
+        description=(
+            "Complete ordered public workflow-output projection. Path bindings "
+            "read from input, state, or context; value bindings emit JSON literals."
+        )
+    ),
+]
 JsonPatchOperations = Annotated[
     list[dict[str, Any]],
     Field(description="RFC 6902 JSON Patch operations."),
@@ -279,6 +288,14 @@ class SetWorkflowOutputMapRequest(BaseModel):
             "preserve existing bindings and add/update only output_map entries."
         ),
     )
+
+
+class SetWorkflowOutputBindingsRequest(BaseModel):
+    """Replace the complete canonical workflow-output binding list."""
+
+    workspace_id: WorkspaceId
+    revision: int = Field(ge=1, description="Expected current workspace revision.")
+    bindings: WorkflowOutputBindings
 
 
 class BindDraftRequest(BaseModel):
