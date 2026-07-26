@@ -170,6 +170,9 @@ implicit same-name state fallback. Use the map tool only for compatibility:
 `set_workflow_output_map` cannot preserve canonical path/value order, literals,
 or repeated-source fan-out.
 
+The equivalent JSON-RPC operation is
+`workflow.draft_workspaces.set_workflow_output_bindings`.
+
 Advanced workspace tools:
 
 - `wf.workflow.list_draft_workspaces`: find mutable draft sessions.

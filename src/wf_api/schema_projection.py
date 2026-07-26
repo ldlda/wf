@@ -129,6 +129,14 @@ def project_schema_path_to_schema_path(
     )
     leaf = target_parts[-1]
     if leaf in properties:
+        # Validate an existing target reference against the target document
+        # before source definitions are merged. Otherwise an unresolved target
+        # could be silently repaired by an equivalent source-side definition.
+        _resolve_local_reference(
+            projected,
+            properties[leaf],
+            label=".".join(target_parts),
+        )
         if allow_existing_equivalent and properties[leaf] == source_value:
             _merge_definition_block(projected, source_schema, "$defs")
             _merge_definition_block(projected, source_schema, "definitions")

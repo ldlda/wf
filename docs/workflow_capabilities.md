@@ -317,6 +317,9 @@ For the copy-less wrapper authoring path, use:
    `wf.workflow.set_workflow_output_bindings`, their compatibility map adapters,
    and `wf.workflow.set_draft_route` to fix low-confidence hints or explicit
    `missing_decisions`.
+   JSON-RPC clients use
+   `workflow.draft_workspaces.set_workflow_output_bindings` for the same
+   canonical replacement.
 4. `wf.workflow.validate_draft_workspace` to refresh diagnostics.
 5. `wf.workflow.create_wrapper_from_workspace` to save the wrapper artifact.
 6. `wf.workflow.call_capability` with `workflow.<artifact_id>.v<version>` to

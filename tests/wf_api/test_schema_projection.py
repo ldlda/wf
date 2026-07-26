@@ -481,6 +481,27 @@ def test_schema_path_exists_follows_local_defs() -> None:
     assert schema_path_exists(schema, ("report", "missing")) is False
 
 
+def test_project_schema_path_rejects_unresolved_equivalent_target_reference() -> None:
+    with pytest.raises(
+        ValueError,
+        match=r"unresolved reference '#/\$defs/Report'",
+    ):
+        project_schema_path_to_schema_path(
+            target_schema={
+                "type": "object",
+                "properties": {"report": {"$ref": "#/$defs/Report"}},
+            },
+            source_schema={
+                "type": "object",
+                "properties": {"report": {"$ref": "#/$defs/Report"}},
+                "$defs": {"Report": {"type": "object", "properties": {}}},
+            },
+            source_parts=("report",),
+            target_parts=("report",),
+            allow_existing_equivalent=True,
+        )
+
+
 def test_project_schema_path_rejects_missing_nested_source() -> None:
     with pytest.raises(
         ValueError,

@@ -86,10 +86,10 @@ def _draft_schema(draft: Mapping[str, Any], key: str) -> dict[str, Any]:
     return deepcopy(value)
 
 
-def _overlapping_input_targets_error(
+def _overlapping_input_binding_targets_error(
     bindings: Sequence[InputBinding],
 ) -> ValueError:
-    """Describe the first overlapping binding pair with stable input indexes."""
+    """Describe the first overlapping input-shaped target pair."""
     for left_index, left in enumerate(bindings):
         for right_index in range(left_index + 1, len(bindings)):
             right = bindings[right_index]
@@ -135,22 +135,6 @@ def _workflow_source_schema(
     if not isinstance(value, dict):
         raise ValueError(f"draft {key} must be an object")
     return value
-
-
-def _overlapping_workflow_output_targets_error(
-    bindings: Sequence[InputBinding],
-) -> ValueError:
-    """Describe the first overlapping public-output target pair."""
-    for left_index, left in enumerate(bindings):
-        for right_index in range(left_index + 1, len(bindings)):
-            right = bindings[right_index]
-            if paths_overlap(left.target, right.target):
-                return ValueError(
-                    f"bindings[{left_index}].target {str(left.target)!r} "
-                    f"overlaps bindings[{right_index}].target "
-                    f"{str(right.target)!r}"
-                )
-    raise AssertionError("overlap error requested without overlapping targets")
 
 
 def _step_input_bindings_patch(
@@ -459,7 +443,7 @@ class WorkflowDraftAuthoringApi:
 
         targets = [binding.target for binding in bindings]
         if has_overlapping_paths(targets):
-            raise _overlapping_input_targets_error(bindings)
+            raise _overlapping_input_binding_targets_error(bindings)
 
         projected_input = _draft_schema(workspace.draft, "input_schema")
         projected_state = _draft_schema(workspace.draft, "state_schema")
@@ -572,7 +556,7 @@ class WorkflowDraftAuthoringApi:
                 ) from exc
 
         if has_overlapping_paths(binding.target for binding in bindings):
-            raise _overlapping_workflow_output_targets_error(bindings)
+            raise _overlapping_input_binding_targets_error(bindings)
 
         projected = output_schema
         for index, binding in enumerate(bindings):
