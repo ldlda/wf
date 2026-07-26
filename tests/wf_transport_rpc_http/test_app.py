@@ -12,7 +12,11 @@ from wf_core import END
 from wf_server import build_local_static_workflow_server
 from wf_server.config import build_workflow_server_from_workflow_config
 from wf_transport_rpc_http.app import create_rpc_app
-from wf_transport_rpc_http.models import AddDraftStepParams
+from wf_transport_rpc_http.models import (
+    AddDraftStepParams,
+    AddStepFromCapabilityParams,
+    UpdateCapabilityStepParams,
+)
 
 
 async def _rpc(
@@ -24,6 +28,87 @@ async def _rpc(
     )
     assert response.status_code == 200
     return response.json()
+
+
+def test_update_capability_step_params_preserve_nested_field_presence() -> None:
+    params = UpdateCapabilityStepParams.model_validate(
+        {
+            "workspace_id": "report",
+            "revision": 4,
+            "step_id": "publish",
+            "update": {"desc": None, "retry": 0},
+        }
+    )
+
+    assert params.update.model_fields_set == {"desc", "retry"}
+    assert params.update.desc is None
+    assert params.update.retry == 0
+
+
+@pytest.mark.parametrize(
+    "update",
+    [
+        {},
+        {"input": None},
+        {"retry": -1},
+        {"timeout_seconds": 0},
+        {"unknown": True},
+    ],
+)
+def test_update_capability_step_params_reject_invalid_update(
+    update: dict[str, object],
+) -> None:
+    with pytest.raises(ValidationError):
+        UpdateCapabilityStepParams.model_validate(
+            {
+                "workspace_id": "report",
+                "revision": 4,
+                "step_id": "publish",
+                "update": update,
+            }
+        )
+
+
+def test_add_step_from_capability_params_preserve_canonical_inputs() -> None:
+    params = AddStepFromCapabilityParams.model_validate(
+        {
+            "workspace_id": "report",
+            "revision": 1,
+            "step_id": "publish",
+            "capability_name": "demo.report",
+            "desc": "Publish report",
+            "retry": 0,
+            "timeout_seconds": 30,
+            "input_bindings": [
+                {"path": "state.report.title", "target": "request.title"},
+                {"value": "markdown", "target": "request.format"},
+            ],
+        }
+    )
+
+    assert params.desc == "Publish report"
+    assert params.retry == 0
+    assert params.timeout_seconds == 30
+    assert [
+        binding.model_dump(mode="json") for binding in params.input_bindings or []
+    ] == [
+        {"path": "state.report.title", "target": "request.title"},
+        {"value": "markdown", "target": "request.format"},
+    ]
+
+
+def test_add_step_from_capability_params_reject_both_input_forms() -> None:
+    with pytest.raises(ValidationError, match="mutually exclusive"):
+        AddStepFromCapabilityParams.model_validate(
+            {
+                "workspace_id": "report",
+                "revision": 1,
+                "step_id": "publish",
+                "capability_name": "demo.report",
+                "input_map": {},
+                "input_bindings": [],
+            }
+        )
 
 
 async def test_rpc_health_and_capability_methods(tmp_path) -> None:
@@ -1230,6 +1315,99 @@ async def test_rpc_draft_workspace_add_step_from_capability(tmp_path) -> None:
     result = response["result"]
     assert result["revision"] == 2
     assert result["status"] == "valid"
+
+
+async def test_rpc_draft_workspace_updates_capability_step_atomically(tmp_path) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    app = create_rpc_app(server)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        await _rpc(
+            client,
+            "workflow.draft_workspaces.create_from_capability",
+            {
+                "workspace_id": "update_step_ws",
+                "capability_name": "wf.std.constant",
+                "name": "update_step",
+            },
+        )
+        before = await _rpc(
+            client,
+            "workflow.draft_workspaces.get",
+            {"workspace_id": "update_step_ws", "include_draft": True},
+        )
+
+        updated = await _rpc(
+            client,
+            "workflow.draft_workspaces.update_capability_step",
+            {
+                "workspace_id": "update_step_ws",
+                "revision": 1,
+                "step_id": "call",
+                "update": {
+                    "desc": "Return the prepared value",
+                    "retry": 0,
+                    "input": [{"value": "prepared", "target": "value"}],
+                },
+            },
+        )
+        inspected = await _rpc(
+            client,
+            "workflow.draft_workspaces.get",
+            {"workspace_id": "update_step_ws", "include_draft": True},
+        )
+
+    assert updated["result"]["revision"] == 2
+    step = inspected["result"]["draft"]["steps"]["call"]
+    assert step["use"] == "wf.std.constant"
+    assert step["desc"] == "Return the prepared value"
+    assert step["retry"] == 0
+    assert step["input"] == [{"value": "prepared", "target": "value"}]
+    assert step["output"] == before["result"]["draft"]["steps"]["call"]["output"]
+    assert inspected["result"]["draft"]["routes"] == before["result"]["draft"]["routes"]
+
+
+async def test_rpc_add_step_from_capability_accepts_canonical_inputs(tmp_path) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    app = create_rpc_app(server)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        await _rpc(
+            client,
+            "workflow.draft_workspaces.create_from_capability",
+            {
+                "workspace_id": "canonical_add_ws",
+                "capability_name": "wf.std.constant",
+                "name": "canonical_add",
+            },
+        )
+        added = await _rpc(
+            client,
+            "workflow.draft_workspaces.add_step_from_capability",
+            {
+                "workspace_id": "canonical_add_ws",
+                "revision": 1,
+                "step_id": "second",
+                "capability_name": "wf.std.constant",
+                "routes": {"ok": "__end__"},
+                "desc": "Return another prepared value",
+                "retry": 0,
+                "timeout_seconds": 30,
+                "input_bindings": [{"value": "second", "target": "value"}],
+            },
+        )
+        inspected = await _rpc(
+            client,
+            "workflow.draft_workspaces.get",
+            {"workspace_id": "canonical_add_ws", "include_draft": True},
+        )
+
+    assert added["result"]["revision"] == 2
+    step = inspected["result"]["draft"]["steps"]["second"]
+    assert step["desc"] == "Return another prepared value"
+    assert step["retry"] == 0
+    assert step["timeout_seconds"] == 30
+    assert step["input"] == [{"value": "second", "target": "value"}]
 
 
 def test_add_draft_step_params_preserve_typed_step_json() -> None:

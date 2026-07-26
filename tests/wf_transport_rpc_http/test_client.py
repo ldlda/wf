@@ -6,6 +6,7 @@ import httpx
 import pytest
 from pydantic import TypeAdapter
 
+from wf_api import CapabilityStepUpdate
 from wf_api.models import RawWorkflowPlan, TraceRange
 from wf_api.surface import RouteSource, WorkflowDraftSurface
 from wf_artifacts.drafts.models import (
@@ -873,6 +874,61 @@ async def test_rpc_client_draft_workspace_add_step_from_capability(tmp_path) -> 
 
     assert result["revision"] == 2
     assert result["status"] == "valid"
+
+
+async def test_rpc_client_serializes_capability_step_changes() -> None:
+    calls: list[dict[str, Any]] = []
+
+    class Client(RpcDraftClientMixin):
+        async def _call(self, method: str, params: dict[str, object]):
+            calls.append({"method": method, "params": params})
+            return {"revision": 2}
+
+    client = Client()
+    await client.update_capability_step(
+        workspace_id="ws",
+        revision=1,
+        step_id="publish",
+        update=CapabilityStepUpdate.model_validate({"desc": None, "retry": 0}),
+    )
+    await client.add_step_from_capability(
+        workspace_id="ws",
+        revision=2,
+        step_id="publish",
+        capability_name="demo.report",
+        routes={"ok": "__end__"},
+        desc="Publish report",
+        retry=0,
+        timeout_seconds=30,
+        input_bindings=[
+            InputPathBinding(
+                path=GraphSourcePath.state("report", "title"),
+                target=LocalPath.of("request", "title"),
+            ),
+            InputValueBinding(
+                target=LocalPath.of("request", "format"),
+                value="markdown",
+            ),
+        ],
+    )
+
+    assert calls[0] == {
+        "method": "workflow.draft_workspaces.update_capability_step",
+        "params": {
+            "workspace_id": "ws",
+            "revision": 1,
+            "step_id": "publish",
+            "update": {"desc": None, "retry": 0},
+        },
+    }
+    assert calls[1]["method"] == "workflow.draft_workspaces.add_step_from_capability"
+    assert calls[1]["params"]["input_bindings"] == [
+        {"path": "state.report.title", "target": "request.title"},
+        {"value": "markdown", "target": "request.format"},
+    ]
+    assert calls[1]["params"]["desc"] == "Publish report"
+    assert calls[1]["params"]["retry"] == 0
+    assert calls[1]["params"]["timeout_seconds"] == 30
 
 
 async def test_rpc_client_preserves_nested_local_path_strings() -> None:

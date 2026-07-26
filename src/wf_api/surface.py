@@ -8,6 +8,7 @@ from wf_artifacts.drafts.models import DraftStep
 from wf_core.models.steps import InputBinding, OutputBinding
 
 from .draft_authoring import RouteSource
+from .draft_updates import CapabilityStepUpdate
 from .runs import TraceRangeLike
 
 
@@ -156,6 +157,15 @@ class WorkflowDraftSurface(Protocol):
         bindings: Sequence[OutputBinding],
     ) -> dict[str, Any]: ...
 
+    async def update_capability_step(
+        self,
+        *,
+        workspace_id: str,
+        revision: int,
+        step_id: str,
+        update: CapabilityStepUpdate,
+    ) -> dict[str, Any]: ...
+
     async def set_step_output_map(
         self,
         *,
@@ -204,7 +214,11 @@ class WorkflowDraftSurface(Protocol):
         route_from_outcome: str = "ok",
         routes: dict[str, str] | None = None,
         input_map: dict[str, str] | None = None,
+        input_bindings: Sequence[InputBinding] | None = None,
         bind_outputs: dict[str, str] | None = None,
+        desc: str | None = None,
+        retry: int | None = None,
+        timeout_seconds: int | None = None,
     ) -> dict[str, Any]: ...
 
     async def add_step(

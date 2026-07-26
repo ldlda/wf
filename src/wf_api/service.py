@@ -11,6 +11,7 @@ from .artifacts import WorkflowArtifactApi
 from .capabilities import WorkflowCapabilityApi
 from .deployments import WorkflowDeploymentApi
 from .draft_authoring import RouteSource, WorkflowDraftAuthoringApi
+from .draft_updates import CapabilityStepUpdate
 from .drafts import WorkflowDraftApi
 from .models import RawWorkflowPlan
 from .operation_context import WorkflowOperationContext
@@ -439,6 +440,21 @@ class WorkflowApi:
             bindings=bindings,
         )
 
+    async def update_capability_step(
+        self,
+        *,
+        workspace_id: str,
+        revision: int,
+        step_id: str,
+        update: CapabilityStepUpdate,
+    ) -> dict[str, Any]:
+        return await self.draft_authoring.update_capability_step(
+            workspace_id=workspace_id,
+            revision=revision,
+            step_id=step_id,
+            update=update,
+        )
+
     async def set_step_output_map(
         self,
         *,
@@ -512,7 +528,11 @@ class WorkflowApi:
         route_from_outcome: str = "ok",
         routes: dict[str, str] | None = None,
         input_map: dict[str, str] | None = None,
+        input_bindings: Sequence[InputBinding] | None = None,
         bind_outputs: dict[str, str] | None = None,
+        desc: str | None = None,
+        retry: int | None = None,
+        timeout_seconds: int | None = None,
     ) -> dict[str, Any]:
         return await self.draft_authoring.add_step_from_capability(
             workspace_id=workspace_id,
@@ -523,7 +543,11 @@ class WorkflowApi:
             route_from_outcome=route_from_outcome,
             routes=routes,
             input_map=input_map,
+            input_bindings=input_bindings,
             bind_outputs=bind_outputs,
+            desc=desc,
+            retry=retry,
+            timeout_seconds=timeout_seconds,
         )
 
     async def add_step(

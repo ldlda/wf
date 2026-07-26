@@ -4,6 +4,7 @@ from typing import Any, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from wf_api import CapabilityStepUpdate
 from wf_api.models import TraceRange
 from wf_artifacts.drafts.models import DraftStep
 from wf_core.models.steps import InputBinding, OutputBinding
@@ -252,6 +253,13 @@ class BindDraftParams(RpcParamsModel):
     target_path: str = Field(min_length=1)
 
 
+class UpdateCapabilityStepParams(RpcParamsModel):
+    workspace_id: str = Field(min_length=1)
+    revision: int = Field(ge=1)
+    step_id: str = Field(min_length=1)
+    update: CapabilityStepUpdate
+
+
 class AddStepFromCapabilityParams(RpcParamsModel):
     workspace_id: str = Field(min_length=1)
     revision: int = Field(ge=1)
@@ -260,8 +268,18 @@ class AddStepFromCapabilityParams(RpcParamsModel):
     route_from_step: str | None = None
     route_from_outcome: str = Field(default="ok", min_length=1)
     routes: dict[str, str] | None = None
-    input_map: dict[str, str] = Field(default_factory=dict)
+    input_map: dict[str, str] | None = None
+    input_bindings: list[InputBinding] | None = None
     bind_outputs: dict[str, str] = Field(default_factory=dict)
+    desc: str | None = Field(default=None, min_length=1)
+    retry: int | None = Field(default=None, ge=0)
+    timeout_seconds: int | None = Field(default=None, gt=0)
+
+    @model_validator(mode="after")
+    def validate_input_forms(self) -> Self:
+        if {"input_map", "input_bindings"} <= self.model_fields_set:
+            raise ValueError("input_map and input_bindings are mutually exclusive")
+        return self
 
 
 class BranchDraftParams(RpcParamsModel):

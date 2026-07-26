@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any, Literal
 
+from wf_api import CapabilityStepUpdate
 from wf_api.surface import RouteSource
 from wf_artifacts.drafts.models import DraftStep
 from wf_core.models.steps import InputBinding, OutputBinding
@@ -219,6 +220,24 @@ class RpcDraftClientMixin:
             },
         )
 
+    async def update_capability_step(
+        self: RpcCaller,
+        *,
+        workspace_id: str,
+        revision: int,
+        step_id: str,
+        update: CapabilityStepUpdate,
+    ) -> dict[str, Any]:
+        return await self._call(
+            "workflow.draft_workspaces.update_capability_step",
+            {
+                "workspace_id": workspace_id,
+                "revision": revision,
+                "step_id": step_id,
+                "update": update.model_dump(mode="json", exclude_unset=True),
+            },
+        )
+
     async def set_step_output_map(
         self: RpcCaller,
         *,
@@ -304,21 +323,39 @@ class RpcDraftClientMixin:
         route_from_outcome: str = "ok",
         routes: dict[str, str] | None = None,
         input_map: dict[str, str] | None = None,
+        input_bindings: Sequence[InputBinding] | None = None,
         bind_outputs: dict[str, str] | None = None,
+        desc: str | None = None,
+        retry: int | None = None,
+        timeout_seconds: int | None = None,
     ) -> dict[str, Any]:
+        if input_map is not None and input_bindings is not None:
+            raise ValueError("input_map and input_bindings are mutually exclusive")
+        params: dict[str, object] = {
+            "workspace_id": workspace_id,
+            "revision": revision,
+            "step_id": step_id,
+            "capability_name": capability_name,
+            "route_from_step": route_from_step,
+            "route_from_outcome": route_from_outcome,
+            "routes": routes,
+            "bind_outputs": bind_outputs or {},
+        }
+        if input_map is not None:
+            params["input_map"] = input_map
+        if input_bindings is not None:
+            params["input_bindings"] = [
+                binding.model_dump(mode="json") for binding in input_bindings
+            ]
+        if desc is not None:
+            params["desc"] = desc
+        if retry is not None:
+            params["retry"] = retry
+        if timeout_seconds is not None:
+            params["timeout_seconds"] = timeout_seconds
         return await self._call(
             "workflow.draft_workspaces.add_step_from_capability",
-            {
-                "workspace_id": workspace_id,
-                "revision": revision,
-                "step_id": step_id,
-                "capability_name": capability_name,
-                "route_from_step": route_from_step,
-                "route_from_outcome": route_from_outcome,
-                "routes": routes,
-                "input_map": input_map or {},
-                "bind_outputs": bind_outputs or {},
-            },
+            params,
         )
 
     async def add_step(

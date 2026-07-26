@@ -37,6 +37,7 @@ from ..models import (
     SetStepOutputMapParams,
     SetWorkflowOutputBindingsParams,
     SetWorkflowOutputMapParams,
+    UpdateCapabilityStepParams,
     ValidateDraftParams,
     ValidateDraftWorkspaceParams,
 )
@@ -247,6 +248,23 @@ def register_methods(
             raise_workflow_rpc_error(exc)
 
     @entrypoint.method(
+        name="workflow.draft_workspaces.update_capability_step",
+        errors=[WorkflowRpcError],
+    )
+    async def workflow_draft_workspaces_update_capability_step(
+        params: UpdateCapabilityStepParams = RpcParams(),
+    ) -> dict[str, Any]:
+        try:
+            return await server.api.update_capability_step(
+                workspace_id=params.workspace_id,
+                revision=params.revision,
+                step_id=params.step_id,
+                update=params.update,
+            )
+        except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:
+            raise_workflow_rpc_error(exc)
+
+    @entrypoint.method(
         name="workflow.draft_workspaces.set_step_output_bindings",
         errors=[WorkflowRpcError],
     )
@@ -349,7 +367,11 @@ def register_methods(
                 route_from_outcome=params.route_from_outcome,
                 routes=params.routes,
                 input_map=params.input_map,
+                input_bindings=params.input_bindings,
                 bind_outputs=params.bind_outputs,
+                desc=params.desc,
+                retry=params.retry,
+                timeout_seconds=params.timeout_seconds,
             )
         except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:
             raise_workflow_rpc_error(exc)
