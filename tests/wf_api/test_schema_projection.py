@@ -339,6 +339,20 @@ def test_validate_json_value_at_nested_schema_path() -> None:
         )
 
 
+def test_validate_json_value_uses_caller_schema_label() -> None:
+    with pytest.raises(ValueError, match="workflow output schema"):
+        validate_json_value_at_schema_path(
+            schema={
+                "type": "object",
+                "properties": {"format": {"type": "string"}},
+            },
+            parts=("missing",),
+            value="markdown",
+            label="bindings[0].value",
+            schema_label="workflow output schema",
+        )
+
+
 @pytest.mark.parametrize(
     ("schema", "value"),
     [

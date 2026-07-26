@@ -15,7 +15,12 @@ from wf_api.service import WorkflowApi
 from wf_artifacts import FileDraftWorkspaceStore, FileWorkflowArtifactStore
 from wf_artifacts.drafts.models import DraftStep
 from wf_authoring import node
-from wf_core.models.steps import InputPathBinding, InputValueBinding, OutputBinding
+from wf_core.models.steps import (
+    InputBinding,
+    InputPathBinding,
+    InputValueBinding,
+    OutputBinding,
+)
 from wf_core.paths import GraphSourcePath, LocalPath, StatePath
 from wf_mcp.broker import WfMcpService
 from wf_mcp.broker.service.workflow_operation_context import context_from_service
@@ -3753,6 +3758,539 @@ async def test_compile_draft_workspace_invalid_returns_diagnostics(
     assert result["status"] == "invalid"
     assert "compiled_plan" not in result
     assert result["diagnostics"]
+
+
+def _workflow_output_binding_draft() -> dict[str, Any]:
+    draft = _echo_draft()
+    draft["state_schema"] = {
+        "type": "object",
+        "properties": {
+            "report": {
+                "type": "object",
+                "properties": {"title": {"type": "string"}},
+            },
+            "items": {"type": "array", "items": {"type": "string"}},
+        },
+    }
+    draft["output_schema"] = {
+        "type": "object",
+        "properties": {
+            "format": {"type": "string"},
+            "metadata": {
+                "type": "object",
+                "properties": {"reviewed": {"type": "boolean"}},
+                "required": ["reviewed"],
+            },
+            "tags": {"type": "array", "items": {"type": "string"}},
+            "note": {"type": ["string", "null"]},
+            "context_value": {},
+        },
+    }
+    draft["output"] = []
+    return draft
+
+
+@pytest.mark.asyncio
+async def test_set_workflow_output_bindings_projects_nested_paths_and_literals(
+    tmp_path: Path,
+) -> None:
+    draft_api, _service, authoring = _draft_api(
+        FileWorkflowArtifactStore(tmp_path / "workflow_outputs"),
+        register_echo=True,
+    )
+    draft = _workflow_output_binding_draft()
+    await draft_api.create_draft_workspace(workspace_id="report", draft=draft)
+    bindings: list[InputBinding] = [
+        InputPathBinding(
+            path=GraphSourcePath.state("report", "title"),
+            target=LocalPath.of("report", "title"),
+        ),
+        InputPathBinding(
+            path=GraphSourcePath.state("report", "title"),
+            target=LocalPath.of("audit", "title"),
+        ),
+        InputValueBinding(target=LocalPath.of("format"), value="markdown"),
+    ]
+
+    first = await authoring.set_workflow_output_bindings(
+        workspace_id="report",
+        revision=1,
+        bindings=bindings,
+    )
+    second = await authoring.set_workflow_output_bindings(
+        workspace_id="report",
+        revision=first["revision"],
+        bindings=bindings,
+    )
+    inspected = await draft_api.get_draft_workspace(
+        workspace_id="report",
+        include_draft=True,
+    )
+
+    assert first["revision"] == 2
+    assert second["revision"] == 2
+    assert inspected["draft"]["output"] == [
+        {"path": "state.report.title", "target": "report.title"},
+        {"path": "state.report.title", "target": "audit.title"},
+        {"value": "markdown", "target": "format"},
+    ]
+    assert inspected["draft"]["output_schema"]["properties"]["report"][
+        "properties"
+    ]["title"] == {"type": "string"}
+    assert inspected["draft"]["output_schema"]["properties"]["audit"][
+        "properties"
+    ]["title"] == {"type": "string"}
+
+    cleared = await authoring.set_workflow_output_bindings(
+        workspace_id="report",
+        revision=2,
+        bindings=[],
+    )
+    cleared_workspace = await draft_api.get_draft_workspace(
+        workspace_id="report",
+        include_draft=True,
+    )
+    assert cleared["revision"] == 3
+    assert cleared_workspace["draft"]["output"] == []
+    assert (
+        cleared_workspace["draft"]["output_schema"]
+        == inspected["draft"]["output_schema"]
+    )
+
+
+@pytest.mark.asyncio
+async def test_set_workflow_output_bindings_projects_input_and_whole_state(
+    tmp_path: Path,
+) -> None:
+    draft_api, _service, authoring = _draft_api(
+        FileWorkflowArtifactStore(tmp_path / "workflow_output_sources"),
+        register_echo=True,
+    )
+    draft = _workflow_output_binding_draft()
+    draft["input_schema"]["properties"]["request"] = {
+        "type": "object",
+        "properties": {"title": {"type": "string"}},
+    }
+    await draft_api.create_draft_workspace(workspace_id="report", draft=draft)
+
+    await authoring.set_workflow_output_bindings(
+        workspace_id="report",
+        revision=1,
+        bindings=[
+            InputPathBinding(
+                path=GraphSourcePath.input("request", "title"),
+                target=LocalPath.of("input_title"),
+            ),
+            InputPathBinding(
+                path=GraphSourcePath.state(),
+                target=LocalPath.of("snapshot"),
+            ),
+        ],
+    )
+    inspected = await draft_api.get_draft_workspace(
+        workspace_id="report",
+        include_draft=True,
+    )
+
+    output_schema = inspected["draft"]["output_schema"]["properties"]
+    assert output_schema["input_title"] == {"type": "string"}
+    assert output_schema["snapshot"]["properties"]["report"]["properties"][
+        "title"
+    ] == {"type": "string"}
+
+
+@pytest.mark.asyncio
+async def test_set_workflow_output_bindings_accepts_declared_context_and_literals(
+    tmp_path: Path,
+) -> None:
+    draft_api, _service, authoring = _draft_api(
+        FileWorkflowArtifactStore(tmp_path / "workflow_output_values"),
+        register_echo=True,
+    )
+    await draft_api.create_draft_workspace(
+        workspace_id="report",
+        draft=_workflow_output_binding_draft(),
+    )
+    bindings: list[InputBinding] = [
+        InputPathBinding(
+            path=GraphSourcePath.context("prior_outcome"),
+            target=LocalPath.of("context_value"),
+        ),
+        InputValueBinding(
+            target=LocalPath.of("metadata"),
+            value={"reviewed": True},
+        ),
+        InputValueBinding(target=LocalPath.of("tags"), value=["thesis"]),
+        InputValueBinding(target=LocalPath.of("note"), value=None),
+    ]
+
+    result = await authoring.set_workflow_output_bindings(
+        workspace_id="report",
+        revision=1,
+        bindings=bindings,
+    )
+    inspected = await draft_api.get_draft_workspace(
+        workspace_id="report",
+        include_draft=True,
+    )
+
+    assert result["revision"] == 2
+    assert inspected["draft"]["output"] == [
+        {"path": "context.prior_outcome", "target": "context_value"},
+        {"value": {"reviewed": True}, "target": "metadata"},
+        {"value": ["thesis"], "target": "tags"},
+        {"value": None, "target": "note"},
+    ]
+
+
+@pytest.mark.asyncio
+async def test_set_workflow_output_bindings_accepts_strict_root_bindings(
+    tmp_path: Path,
+) -> None:
+    draft_api, _service, authoring = _draft_api(
+        FileWorkflowArtifactStore(tmp_path / "workflow_output_root"),
+        register_echo=True,
+    )
+    schema = {
+        "type": "object",
+        "properties": {"text": {"type": "string"}},
+        "required": ["text"],
+    }
+    draft = _echo_draft()
+    draft["input_schema"] = schema
+    draft["output_schema"] = schema
+    draft["output"] = []
+    await draft_api.create_draft_workspace(workspace_id="report", draft=draft)
+
+    path_result = await authoring.set_workflow_output_bindings(
+        workspace_id="report",
+        revision=1,
+        bindings=[
+            InputPathBinding(
+                path=GraphSourcePath.input(),
+                target=LocalPath.root(),
+            )
+        ],
+    )
+    literal_result = await authoring.set_workflow_output_bindings(
+        workspace_id="report",
+        revision=path_result["revision"],
+        bindings=[
+            InputValueBinding(
+                target=LocalPath.root(),
+                value={"text": "Thesis"},
+            )
+        ],
+    )
+
+    assert path_result["revision"] == 2
+    assert literal_result["revision"] == 3
+
+
+@pytest.mark.asyncio
+async def test_set_workflow_output_bindings_validates_root_literal_complete_schema(
+    tmp_path: Path,
+) -> None:
+    draft_api, _service, authoring = _draft_api(
+        FileWorkflowArtifactStore(tmp_path / "workflow_output_root_literal"),
+        register_echo=True,
+    )
+    draft = _echo_draft()
+    draft["output_schema"] = {
+        "type": "object",
+        "properties": {"text": {"type": "string"}},
+        "required": ["text"],
+    }
+    draft["output"] = []
+    await draft_api.create_draft_workspace(workspace_id="report", draft=draft)
+    before = await draft_api.get_draft_workspace(
+        workspace_id="report",
+        include_draft=True,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=r"bindings\[0\]\.value does not satisfy schema at '\.'",
+    ):
+        await authoring.set_workflow_output_bindings(
+            workspace_id="report",
+            revision=1,
+            bindings=[
+                InputValueBinding(
+                    target=LocalPath.root(),
+                    value={"wrong": "field"},
+                )
+            ],
+        )
+
+    after = await draft_api.get_draft_workspace(
+        workspace_id="report",
+        include_draft=True,
+    )
+    assert after == before
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("bindings", "message"),
+    [
+        (
+            [
+                InputPathBinding(
+                    path=GraphSourcePath.state("missing"),
+                    target=LocalPath.of("missing"),
+                )
+            ],
+            r"bindings\[0\]\.path 'state\.missing' is not declared",
+        ),
+        (
+            [
+                InputPathBinding(
+                    path=GraphSourcePath.context("prior_outcome"),
+                    target=LocalPath.of("missing"),
+                )
+            ],
+            r"bindings\[0\]\.path 'context\.prior_outcome' requires a declared "
+            "output target",
+        ),
+        (
+            [InputValueBinding(target=LocalPath.of("missing"), value="x")],
+            r"bindings\[0\]\.target 'missing' is not declared",
+        ),
+        (
+            [
+                InputPathBinding(
+                    path=GraphSourcePath.state("report"),
+                    target=LocalPath.of("report"),
+                ),
+                InputValueBinding(
+                    target=LocalPath.of("report", "format"),
+                    value="markdown",
+                ),
+            ],
+            r"bindings\[0\]\.target 'report' overlaps bindings\[1\]",
+        ),
+        (
+            [
+                InputValueBinding(
+                    target=LocalPath.of("format"),
+                    value="markdown",
+                ),
+                InputValueBinding(
+                    target=LocalPath.of("format"),
+                    value="json",
+                ),
+            ],
+            r"bindings\[0\]\.target 'format' overlaps bindings\[1\]",
+        ),
+        (
+            [
+                InputPathBinding(
+                    path=GraphSourcePath.state(),
+                    target=LocalPath.root(),
+                ),
+                InputValueBinding(
+                    target=LocalPath.of("format"),
+                    value="markdown",
+                ),
+            ],
+            r"bindings\[0\]\.target '\.' overlaps bindings\[1\]",
+        ),
+        (
+            [
+                InputPathBinding(
+                    path=GraphSourcePath.state("missing"),
+                    target=LocalPath.of("report"),
+                ),
+                InputValueBinding(
+                    target=LocalPath.of("report", "format"),
+                    value="markdown",
+                ),
+            ],
+            r"bindings\[0\]\.path 'state\.missing' is not declared",
+        ),
+        (
+                [
+                    InputPathBinding(
+                        path=GraphSourcePath.state("report"),
+                        target=LocalPath.of("format"),
+                    )
+                ],
+                r"bindings\[0\]\.target 'format' cannot receive source "
+                r"'state\.report'",
+        ),
+        (
+            [
+                InputPathBinding(
+                    path=GraphSourcePath.state("report"),
+                    target=LocalPath.root(),
+                )
+            ],
+            r"bindings\[0\]\.target '\.' already has an incompatible schema",
+        ),
+        (
+            [InputValueBinding(target=LocalPath.root(), value="not-an-object")],
+            r"bindings\[0\]\.value for root target must be an object",
+        ),
+    ],
+)
+async def test_set_workflow_output_bindings_rejects_without_mutation(
+    tmp_path: Path,
+    bindings: list[InputBinding],
+    message: str,
+) -> None:
+    workspace_id = f"invalid_output_{abs(hash(message))}"
+    draft_api, _service, authoring = _draft_api(
+        FileWorkflowArtifactStore(tmp_path / workspace_id),
+        register_echo=True,
+    )
+    await draft_api.create_draft_workspace(
+        workspace_id=workspace_id,
+        draft=_workflow_output_binding_draft(),
+    )
+    before = await draft_api.get_draft_workspace(
+        workspace_id=workspace_id,
+        include_draft=True,
+    )
+
+    with pytest.raises(ValueError, match=message):
+        await authoring.set_workflow_output_bindings(
+            workspace_id=workspace_id,
+            revision=1,
+            bindings=bindings,
+        )
+
+    after = await draft_api.get_draft_workspace(
+        workspace_id=workspace_id,
+        include_draft=True,
+    )
+    assert after == before
+
+
+@pytest.mark.asyncio
+async def test_set_workflow_output_bindings_stale_revision_wins_without_mutation(
+    tmp_path: Path,
+) -> None:
+    draft_api, _service, authoring = _draft_api(
+        FileWorkflowArtifactStore(tmp_path / "stale_workflow_output"),
+        register_echo=True,
+    )
+    await draft_api.create_draft_workspace(
+        workspace_id="report",
+        draft=_workflow_output_binding_draft(),
+    )
+    before = await draft_api.get_draft_workspace(
+        workspace_id="report",
+        include_draft=True,
+    )
+
+    result = await authoring.set_workflow_output_bindings(
+        workspace_id="report",
+        revision=2,
+        bindings=[
+            InputValueBinding(target=LocalPath.of("missing"), value="x"),
+            InputValueBinding(target=LocalPath.of("missing", "child"), value="y"),
+        ],
+    )
+
+    assert result["status"] == "conflict"
+    assert result["diagnostics"][0]["code"] == "revision_conflict"
+    after = await draft_api.get_draft_workspace(
+        workspace_id="report",
+        include_draft=True,
+    )
+    assert after == before
+
+
+@pytest.mark.asyncio
+async def test_set_workflow_output_bindings_compile_and_execute(
+    tmp_path: Path,
+) -> None:
+    draft_api, service, authoring = _draft_api(
+        FileWorkflowArtifactStore(tmp_path / "execute_workflow_output"),
+        register_echo=True,
+    )
+    draft = _echo_draft()
+    draft["state_schema"] = {
+        "type": "object",
+        "properties": {
+            "report": {
+                "type": "object",
+                "properties": {"title": {"type": "string"}},
+            }
+        },
+    }
+    draft["steps"]["echo"]["output"] = [
+        {"source": "echoed", "target": "state.report.title"}
+    ]
+    draft["output_schema"] = {
+        "type": "object",
+        "properties": {"format": {"type": "string"}},
+    }
+    draft["output"] = []
+    await draft_api.create_draft_workspace(workspace_id="report", draft=draft)
+
+    await authoring.set_workflow_output_bindings(
+        workspace_id="report",
+        revision=1,
+        bindings=[
+            InputPathBinding(
+                path=GraphSourcePath.state("report", "title"),
+                target=LocalPath.of("report", "title"),
+            ),
+            InputPathBinding(
+                path=GraphSourcePath.state("report", "title"),
+                target=LocalPath.of("audit", "title"),
+            ),
+            InputValueBinding(target=LocalPath.of("format"), value="markdown"),
+        ],
+    )
+    compiled = await draft_api.compile_draft_workspace(workspace_id="report")
+    run = await service.run_workflow_from_plan(
+        RawWorkflowPlan.model_validate(compiled["compiled_plan"]),
+        {"text": "Thesis"},
+    )
+
+    assert run.error is None
+    assert run.output == {
+        "report": {"title": "Thesis"},
+        "audit": {"title": "Thesis"},
+        "format": "markdown",
+    }
+
+
+@pytest.mark.asyncio
+async def test_cleared_workflow_output_bindings_preserve_state_fallback(
+    tmp_path: Path,
+) -> None:
+    draft_api, service, authoring = _draft_api(
+        FileWorkflowArtifactStore(tmp_path / "execute_workflow_output_fallback"),
+        register_echo=True,
+    )
+    draft = _echo_draft()
+    draft["output"] = []
+    await draft_api.create_draft_workspace(workspace_id="report", draft=draft)
+
+    first = await authoring.set_workflow_output_bindings(
+        workspace_id="report",
+        revision=1,
+        bindings=[
+            InputValueBinding(target=LocalPath.of("echoed"), value="explicit")
+        ],
+    )
+    await authoring.set_workflow_output_bindings(
+        workspace_id="report",
+        revision=first["revision"],
+        bindings=[],
+    )
+    compiled = await draft_api.compile_draft_workspace(workspace_id="report")
+    run = await service.run_workflow_from_plan(
+        RawWorkflowPlan.model_validate(compiled["compiled_plan"]),
+        {"text": "Thesis"},
+    )
+
+    assert run.error is None
+    assert run.output == {"echoed": "Thesis"}
 
 
 @pytest.mark.asyncio

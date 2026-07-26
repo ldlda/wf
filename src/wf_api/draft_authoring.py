@@ -120,6 +120,39 @@ def _overlapping_output_targets_error(
     raise AssertionError("overlap error requested without overlapping targets")
 
 
+def _workflow_source_schema(
+    draft: Mapping[str, Any],
+    path: GraphSourcePath,
+) -> dict[str, Any] | None:
+    """Return the declared graph-source schema, or ``None`` for context paths."""
+    if path.root == "input":
+        key = "input_schema"
+    elif path.root == "state":
+        key = "state_schema"
+    else:
+        return None
+    value = draft.get(key, {})
+    if not isinstance(value, dict):
+        raise ValueError(f"draft {key} must be an object")
+    return value
+
+
+def _overlapping_workflow_output_targets_error(
+    bindings: Sequence[InputBinding],
+) -> ValueError:
+    """Describe the first overlapping public-output target pair."""
+    for left_index, left in enumerate(bindings):
+        for right_index in range(left_index + 1, len(bindings)):
+            right = bindings[right_index]
+            if paths_overlap(left.target, right.target):
+                return ValueError(
+                    f"bindings[{left_index}].target {str(left.target)!r} "
+                    f"overlaps bindings[{right_index}].target "
+                    f"{str(right.target)!r}"
+                )
+    raise AssertionError("overlap error requested without overlapping targets")
+
+
 def _step_input_bindings_patch(
     *,
     workspace: WorkflowDraftWorkspace,
@@ -492,6 +525,129 @@ class WorkflowDraftAuthoringApi:
             input_schema=projected_input,
             state_schema=projected_state,
         )
+        return await self.drafts.patch_draft_workspace(
+            workspace_id=workspace_id,
+            revision=revision,
+            patch=patch,
+        )
+
+    async def set_workflow_output_bindings(
+        self,
+        *,
+        workspace_id: str,
+        revision: int,
+        bindings: Sequence[InputBinding],
+    ) -> dict[str, Any]:
+        """Replace canonical workflow output bindings atomically."""
+        checked = self._workspace_if_revision_matches(
+            workspace_id=workspace_id,
+            revision=revision,
+        )
+        if isinstance(checked, dict):
+            return checked
+        workspace = checked
+        output_schema = _draft_schema(workspace.draft, "output_schema")
+
+        # Validate declared sources before overlap checks so malformed sources
+        # remain the primary diagnostic and no semantic error can mutate state.
+        source_schemas: dict[int, dict[str, Any]] = {}
+        source_fragments: dict[int, dict[str, Any]] = {}
+        for index, binding in enumerate(bindings):
+            if not isinstance(binding, InputPathBinding):
+                continue
+            source_schema = _workflow_source_schema(workspace.draft, binding.path)
+            if source_schema is None:
+                continue
+            try:
+                source_schemas[index] = source_schema
+                source_fragments[index] = schema_fragment_at_path(
+                    source_schema,
+                    binding.path.parts,
+                    label=f"workflow {binding.path.root} schema",
+                )
+            except ValueError as exc:
+                raise ValueError(
+                    f"bindings[{index}].path {str(binding.path)!r} "
+                    f"is not declared: {exc}"
+                ) from exc
+
+        if has_overlapping_paths(binding.target for binding in bindings):
+            raise _overlapping_workflow_output_targets_error(bindings)
+
+        projected = output_schema
+        for index, binding in enumerate(bindings):
+            target_parts = binding.target.parts
+            if isinstance(binding, InputPathBinding):
+                source_schema = source_schemas.get(index)
+                if source_schema is None:
+                    if not schema_path_exists(projected, target_parts):
+                        raise ValueError(
+                            f"bindings[{index}].path {str(binding.path)!r} "
+                            "requires a declared output target"
+                        )
+                    continue
+                if not target_parts:
+                    # Root replacement has no parent where a fragment can be
+                    # inserted, so only exact whole-schema equality is safe.
+                    if projected != source_fragments[index]:
+                        raise ValueError(
+                            f"bindings[{index}].target '.' already has an "
+                            "incompatible schema"
+                        )
+                    continue
+                try:
+                    # Pass the complete source document so local $ref
+                    # definitions are copied into the output schema root.
+                    projected = project_schema_path_to_schema_path(
+                        target_schema=projected,
+                        source_schema=source_schema,
+                        source_parts=binding.path.parts,
+                        target_parts=target_parts,
+                        allow_existing_equivalent=True,
+                    )
+                except ValueError as exc:
+                    raise ValueError(
+                        f"bindings[{index}].target {str(binding.target)!r} "
+                        f"cannot receive source {str(binding.path)!r}: {exc}"
+                    ) from exc
+                continue
+
+            if not isinstance(binding, InputValueBinding):
+                raise TypeError(f"unsupported workflow output binding {binding!r}")
+            if not target_parts and not isinstance(binding.value, Mapping):
+                raise ValueError(
+                    f"bindings[{index}].value for root target must be an object"
+                )
+            if not schema_path_exists(projected, target_parts):
+                raise ValueError(
+                    f"bindings[{index}].target {str(binding.target)!r} "
+                    "is not declared"
+                )
+            validate_json_value_at_schema_path(
+                schema=projected,
+                parts=target_parts,
+                value=binding.value,
+                label=f"bindings[{index}].value",
+                schema_label="workflow output schema",
+            )
+
+        payload = [binding.model_dump(mode="json") for binding in bindings]
+        if (
+            workspace.draft.get("output", []) == payload
+            and projected == output_schema
+        ):
+            return summarize_draft_workspace(workspace)
+
+        patch: list[dict[str, Any]] = []
+        if projected != output_schema:
+            patch.append(
+                {
+                    "op": "replace",
+                    "path": "/output_schema",
+                    "value": projected,
+                }
+            )
+        patch.append({"op": "replace", "path": "/output", "value": payload})
         return await self.drafts.patch_draft_workspace(
             workspace_id=workspace_id,
             revision=revision,

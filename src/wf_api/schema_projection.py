@@ -54,12 +54,13 @@ def validate_json_value_at_schema_path(
     parts: Sequence[str],
     value: object,
     label: str,
+    schema_label: str = "capability input schema",
 ) -> None:
     """Validate one JSON-compatible literal against a selected schema path."""
     fragment = schema_fragment_at_path(
         schema,
         parts,
-        label="capability input schema",
+        label=schema_label,
     )
     path = ".".join(parts) or "."
     try:
