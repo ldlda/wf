@@ -1799,6 +1799,108 @@ def test_wf_draft_add_capability_uses_rpc_target(monkeypatch, tmp_path) -> None:
     assert "workflow.draft_workspaces.add_step" not in rpc_methods
 
 
+def test_wf_draft_capability_add_and_update_preserve_rpc_payloads(
+    monkeypatch, tmp_path
+) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    _patch_rpc_client_to_server(monkeypatch, server)
+    rpc_calls: list[tuple[str, dict[str, Any]]] = []
+    original_call = RpcClientTransport._call
+
+    async def recording_call(
+        self: RpcClientTransport, method: str, params: dict[str, Any]
+    ) -> dict[str, Any]:
+        rpc_calls.append((method, params))
+        return await original_call(self, method, params)
+
+    monkeypatch.setattr(RpcClientTransport, "_call", recording_call)
+    config_path = tmp_path / "wf.json"
+    config_path.write_text('{"version": 1}', encoding="utf-8")
+    runner = CliRunner()
+    base_args = ["--config", str(config_path), "--url", "http://test/rpc"]
+
+    created = runner.invoke(
+        app,
+        [
+            *base_args,
+            "draft",
+            "create",
+            "capability_update_ws",
+            "--capability",
+            "wf.std.constant",
+            "--name",
+            "capability_update",
+        ],
+    )
+    assert created.exit_code == 0, created.output
+
+    added = runner.invoke(
+        app,
+        [
+            *base_args,
+            "draft",
+            "add",
+            "capability",
+            "capability_update_ws",
+            "--revision",
+            "1",
+            "--step",
+            "join",
+            "--capability",
+            "wf.std.concat",
+            "--from-step",
+            "call",
+            "--input",
+            "input.value=items",
+            "--value",
+            'separator=","',
+            "--description",
+            "Join values",
+            "--retry",
+            "0",
+            "--timeout-seconds",
+            "5",
+        ],
+    )
+
+    assert added.exit_code == 0, added.output
+    add_method, add_params = rpc_calls[-1]
+    assert add_method == "workflow.draft_workspaces.add_step_from_capability"
+    assert add_params["input_bindings"] == [
+        {"path": "input.value", "target": "items"},
+        {"value": ",", "target": "separator"},
+    ]
+    assert "input_map" not in add_params
+    assert add_params["desc"] == "Join values"
+    assert add_params["retry"] == 0
+    assert add_params["timeout_seconds"] == 5
+
+    updated = runner.invoke(
+        app,
+        [
+            *base_args,
+            "draft",
+            "update",
+            "capability",
+            "capability_update_ws",
+            "--revision",
+            "2",
+            "--step",
+            "join",
+            "--clear-description",
+            "--clear-timeout",
+        ],
+    )
+
+    assert updated.exit_code == 0, updated.output
+    update_method, update_params = rpc_calls[-1]
+    assert update_method == "workflow.draft_workspaces.update_capability_step"
+    assert update_params["update"] == {
+        "desc": None,
+        "timeout_seconds": None,
+    }
+
+
 def test_wf_draft_add_control_steps_use_generic_rpc_target(
     monkeypatch, tmp_path
 ) -> None:

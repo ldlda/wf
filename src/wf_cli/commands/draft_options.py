@@ -108,12 +108,28 @@ def parse_step_input_binding_flags(
     values: list[str] | None,
 ) -> list[InputPathBinding]:
     """Parse ordered step-input path bindings without collapsing source fan-out."""
-    return _parse_input_path_binding_flags(values, target_label="node-local")
+    return _parse_input_path_binding_flags(
+        values,
+        option_name="--map",
+        target_label="node-local",
+    )
+
+
+def parse_capability_input_binding_flags(
+    values: list[str] | None,
+) -> list[InputPathBinding]:
+    """Parse ordered capability input paths from the public ``--input`` flag."""
+    return _parse_input_path_binding_flags(
+        values,
+        option_name="--input",
+        target_label="node-local",
+    )
 
 
 def _parse_input_path_binding_flags(
     values: list[str] | None,
     *,
+    option_name: str,
     target_label: str,
 ) -> list[InputPathBinding]:
     """Parse ordered GRAPH_SOURCE=LOCAL_TARGET bindings for one CLI audience."""
@@ -121,24 +137,26 @@ def _parse_input_path_binding_flags(
     for item in values or []:
         source, separator, target = item.partition("=")
         if separator != "=" or not source or not target:
-            raise typer.BadParameter("--map must use GRAPH_SOURCE=LOCAL_TARGET")
+            raise typer.BadParameter(
+                f"{option_name} must use GRAPH_SOURCE=LOCAL_TARGET"
+            )
         if target.startswith("local."):
             bare_target = target.removeprefix("local.")
             raise typer.BadParameter(
-                f"--map target must be a rootless {target_label} path; "
+                f"{option_name} target must be a rootless {target_label} path; "
                 f"use {source}={bare_target}, not {source}={target}"
             )
         try:
             source_path = GraphSourcePath.parse(source)
         except PathResolutionError as exc:
             raise typer.BadParameter(
-                f"--map source must be a graph source path: {exc}"
+                f"{option_name} source must be a graph source path: {exc}"
             ) from exc
         try:
             target_path = LocalPath.parse(target)
         except PathResolutionError as exc:
             raise typer.BadParameter(
-                f"--map target must be a rootless {target_label} path: {exc}"
+                f"{option_name} target must be a rootless {target_label} path: {exc}"
             ) from exc
         bindings.append(InputPathBinding(path=source_path, target=target_path))
     return bindings
@@ -198,7 +216,11 @@ def parse_workflow_output_binding_flags(
     values: list[str] | None,
 ) -> list[InputPathBinding]:
     """Parse ordered canonical workflow-output path bindings."""
-    return _parse_input_path_binding_flags(values, target_label="workflow-output")
+    return _parse_input_path_binding_flags(
+        values,
+        option_name="--map",
+        target_label="workflow-output",
+    )
 
 
 def parse_workflow_output_value_flags(

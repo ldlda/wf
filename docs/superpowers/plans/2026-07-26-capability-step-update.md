@@ -692,7 +692,7 @@ git commit -m "feat: expose capability step updates to mcp"
 - Produces: `wf draft update capability`.
 - Extends: `wf draft add capability`.
 
-- [ ] **Step 1: Write failing parser tests**
+- [x] **Step 1: Write failing parser tests**
 
 Refactor the private input-shaped path parser so the option name and target
 audience are parameters:
@@ -722,7 +722,7 @@ def parse_capability_input_binding_flags(
 Reuse `parse_step_input_value_flags` and `parse_step_input_bindings_file`.
 Write tests for `--input`-specific diagnostics and canonical order.
 
-- [ ] **Step 2: Write failing update command tests**
+- [x] **Step 2: Write failing update command tests**
 
 Add local CLI tests for:
 
@@ -747,7 +747,7 @@ and whose input bindings preserve path-then-literal order.
 Add tests for every set/clear conflict, bindings-file conflict, clear-input
 conflict, empty update, and validation before `load_cli_context`.
 
-- [ ] **Step 3: Implement the update command group**
+- [x] **Step 3: Implement the update command group**
 
 Create `draft_update.py` with a Typer group and `capability` command. Build a
 plain `payload` dictionary only from selected flags:
@@ -783,7 +783,7 @@ app.add_typer(draft_update.app, name="update")
 
 in `drafts.py`.
 
-- [ ] **Step 4: Write failing add-command parity tests**
+- [x] **Step 4: Write failing add-command parity tests**
 
 Test `wf draft add capability` with metadata, `--input`, `--value`, and
 `--bindings-file`. Pin:
@@ -794,14 +794,14 @@ Test `wf draft add capability` with metadata, `--input`, `--value`, and
 - file/convenience exclusivity before context;
 - existing path-only invocation unchanged.
 
-- [ ] **Step 5: Extend add capability**
+- [x] **Step 5: Extend add capability**
 
 Add the approved flags and call canonical `input_bindings`. Do not pass both
 the compatibility map and canonical list. The CLI should use canonical
 bindings for every new invocation; `input_map` remains only for non-CLI
 compatibility callers.
 
-- [ ] **Step 6: Add remote parity tests**
+- [x] **Step 6: Add remote parity tests**
 
 Use the real ASGI RPC target to assert exact methods and payloads:
 
@@ -813,7 +813,7 @@ workflow.draft_workspaces.add_step_from_capability
 For update, assert omitted metadata keys do not appear and explicit clears do.
 For add, assert ordered path/value input bindings and metadata.
 
-- [ ] **Step 7: Verify and commit Task 4**
+- [x] **Step 7: Verify and commit Task 4**
 
 Run:
 

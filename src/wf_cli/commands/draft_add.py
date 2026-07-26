@@ -40,7 +40,10 @@ from .draft_options import (
     _parse_output_map_flags,
     _parse_route_flags,
     _parse_step_input_map_flags,
+    parse_capability_input_binding_flags,
     parse_json_file,
+    parse_step_input_bindings_file,
+    parse_step_input_value_flags,
     route_source,
     validation_error_as_bad_parameter,
 )
@@ -123,6 +126,20 @@ def add_step_from_capability(
             ),
         ),
     ] = None,
+    input_value: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--value",
+            help="Literal input binding LOCAL_TARGET=JSON. Repeat as needed.",
+        ),
+    ] = None,
+    bindings_file: Annotated[
+        Path | None,
+        typer.Option(
+            "--bindings-file",
+            help="Ordered canonical JSON input-binding list.",
+        ),
+    ] = None,
     output_mapping: Annotated[
         list[str] | None,
         typer.Option(
@@ -133,6 +150,16 @@ def add_step_from_capability(
                 "multiple mappings after one --bind-output."
             ),
         ),
+    ] = None,
+    description: Annotated[
+        str | None, typer.Option("--description", help="Step description.")
+    ] = None,
+    retry: Annotated[
+        int | None, typer.Option("--retry", min=0, help="Retry count.")
+    ] = None,
+    timeout_seconds: Annotated[
+        int | None,
+        typer.Option("--timeout-seconds", min=1, help="Timeout in seconds."),
     ] = None,
 ) -> None:
     """Add a capability step; this also projects its schemas and bindings.
@@ -149,7 +176,19 @@ def add_step_from_capability(
     `--input state.title=report.title --input state.summary=report.summary`
     `--bind-output title=state.title --bind-output summary=state.summary`
     """
-    input_map = _parse_step_input_map_flags(input_mapping, option_name="--input")
+    convenience_input_selected = input_mapping is not None or input_value is not None
+    if bindings_file is not None and convenience_input_selected:
+        raise typer.BadParameter(
+            "--bindings-file is mutually exclusive with --input and --value"
+        )
+    input_bindings = (
+        parse_step_input_bindings_file(bindings_file)
+        if bindings_file is not None
+        else [
+            *parse_capability_input_binding_flags(input_mapping),
+            *parse_step_input_value_flags(input_value),
+        ]
+    )
     bind_outputs = _parse_output_map_flags(output_mapping)
     routes = _parse_route_flags(route)
     context = load_cli_context(ctx)
@@ -164,8 +203,12 @@ def add_step_from_capability(
                 route_from_step=route_from_step,
                 route_from_outcome=route_from_outcome,
                 routes=routes or None,
-                input_map=input_map,
+                input_map=None,
+                input_bindings=input_bindings,
                 bind_outputs=bind_outputs,
+                desc=description,
+                retry=retry,
+                timeout_seconds=timeout_seconds,
             ),
         )
     )

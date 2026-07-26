@@ -10,6 +10,7 @@ from typer.testing import CliRunner
 
 from wf_cli.app import app
 from wf_cli.commands.draft_options import (
+    parse_capability_input_binding_flags,
     parse_json_file,
     parse_step_input_binding_flags,
     parse_step_input_bindings_file,
@@ -118,6 +119,22 @@ def test_draft_options_parse_step_input_bindings_preserves_source_fan_out() -> N
         "request.title",
         "audit.title",
     ]
+
+
+def test_draft_options_parse_capability_inputs_preserves_order() -> None:
+    bindings = parse_capability_input_binding_flags(
+        ["state.title=request.title", "state.title=audit.title"]
+    )
+
+    assert [binding.model_dump(mode="json") for binding in bindings] == [
+        {"path": "state.title", "target": "request.title"},
+        {"path": "state.title", "target": "audit.title"},
+    ]
+
+
+def test_draft_options_parse_capability_inputs_names_input_option() -> None:
+    with pytest.raises(typer.BadParameter, match="--input must use"):
+        parse_capability_input_binding_flags(["not-an-assignment"])
 
 
 def test_draft_options_parse_step_input_values_preserves_null_and_equals() -> None:
@@ -782,6 +799,11 @@ def test_wf_draft_add_capability_help_explains_explicit_wiring() -> None:
     assert "--capability" in output
     assert "--from-step" in output
     assert "--bind-output" in output
+    assert "--description" in output
+    assert "--retry" in output
+    assert "--timeout-seconds" in output
+    assert "--value" in output
+    assert "--bindings-file" in output
     assert "does not guess" in output
     assert "projects its schemas and bindings" in output
     assert "draft validate" in output
@@ -791,6 +813,26 @@ def test_wf_draft_add_capability_help_explains_explicit_wiring() -> None:
     assert (
         "--bind-output title=state.title --bind-output summary=state.summary" in output
     )
+
+
+def test_wf_draft_update_capability_help_lists_patch_controls() -> None:
+    result = runner.invoke(app, ["draft", "update", "capability", "--help"])
+
+    assert result.exit_code == 0
+    output = " ".join(result.output.split())
+    for option in (
+        "--description",
+        "--clear-description",
+        "--retry",
+        "--clear-retry",
+        "--timeout-seconds",
+        "--clear-timeout",
+        "--input",
+        "--value",
+        "--bindings-file",
+        "--clear-input",
+    ):
+        assert option in output
 
 
 def test_wf_draft_add_capability_calls_composed_local_handler(monkeypatch) -> None:
@@ -839,8 +881,300 @@ def test_wf_draft_add_capability_calls_composed_local_handler(monkeypatch) -> No
     assert call["route_from_step"] == "start"
     assert call["route_from_outcome"] == "ok"
     assert call["routes"] == {"ok": "__end__"}
-    assert call["input_map"] == {"input.text": "report.text"}
+    assert call["input_map"] is None
+    assert [binding.model_dump(mode="json") for binding in call["input_bindings"]] == [
+        {"path": "input.text", "target": "report.text"}
+    ]
     assert call["bind_outputs"] == {"value": "state.value"}
+
+
+def test_wf_draft_update_capability_builds_presence_aware_patch(monkeypatch) -> None:
+    calls: list[dict[str, Any]] = []
+
+    class FakeHandlers:
+        async def update_capability_step(self, **kwargs: Any) -> dict[str, Any]:
+            calls.append(kwargs)
+            return {"revision": 5, "status": "valid"}
+
+    context = SimpleNamespace(handlers=FakeHandlers(), verbose=False)
+    monkeypatch.setattr(
+        "wf_cli.commands.draft_update.load_cli_context", lambda _ctx: context
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "draft",
+            "update",
+            "capability",
+            "report",
+            "--revision",
+            "4",
+            "--step",
+            "publish",
+            "--description",
+            "Publish report",
+            "--retry",
+            "0",
+            "--clear-timeout",
+            "--input",
+            "state.report.title=request.title",
+            "--value",
+            'request.format="markdown"',
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    call = calls[0]
+    assert call["workspace_id"] == "report"
+    assert call["revision"] == 4
+    assert call["step_id"] == "publish"
+    update = call["update"]
+    assert update.model_fields_set == {
+        "desc",
+        "retry",
+        "timeout_seconds",
+        "input",
+    }
+    assert update.desc == "Publish report"
+    assert update.retry == 0
+    assert update.timeout_seconds is None
+    assert [binding.model_dump(mode="json") for binding in update.input] == [
+        {"path": "state.report.title", "target": "request.title"},
+        {"value": "markdown", "target": "request.format"},
+    ]
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        ["--description", "new", "--clear-description"],
+        ["--retry", "1", "--clear-retry"],
+        ["--timeout-seconds", "5", "--clear-timeout"],
+        ["--bindings-file", "bindings.json", "--input", "state.x=x"],
+        ["--bindings-file", "bindings.json", "--value", "x=1"],
+        ["--bindings-file", "bindings.json", "--clear-input"],
+        ["--clear-input", "--input", "state.x=x"],
+        ["--clear-input", "--value", "x=1"],
+        [],
+    ],
+)
+def test_wf_draft_update_capability_rejects_invalid_modes_before_context(
+    monkeypatch, args: list[str]
+) -> None:
+    monkeypatch.setattr(
+        "wf_cli.commands.draft_update.load_cli_context",
+        lambda _ctx: (_ for _ in ()).throw(AssertionError("context loaded")),
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "draft",
+            "update",
+            "capability",
+            "report",
+            "--revision",
+            "4",
+            "--step",
+            "publish",
+            *args,
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert "context loaded" not in result.output
+
+
+def test_wf_draft_update_capability_loads_exact_bindings_file(
+    monkeypatch, tmp_path
+) -> None:
+    calls: list[dict[str, Any]] = []
+    bindings_path = tmp_path / "bindings.json"
+    bindings_path.write_text(
+        json.dumps(
+            [
+                {"value": "markdown", "target": "request.format"},
+                {"path": "state.title", "target": "request.title"},
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    class FakeHandlers:
+        async def update_capability_step(self, **kwargs: Any) -> dict[str, Any]:
+            calls.append(kwargs)
+            return {"revision": 5, "status": "valid"}
+
+    context = SimpleNamespace(handlers=FakeHandlers(), verbose=False)
+    monkeypatch.setattr(
+        "wf_cli.commands.draft_update.load_cli_context", lambda _ctx: context
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "draft",
+            "update",
+            "capability",
+            "report",
+            "--revision",
+            "4",
+            "--step",
+            "publish",
+            "--bindings-file",
+            str(bindings_path),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    update = calls[0]["update"]
+    assert update.model_fields_set == {"input"}
+    assert [binding.model_dump(mode="json") for binding in update.input] == [
+        {"value": "markdown", "target": "request.format"},
+        {"path": "state.title", "target": "request.title"},
+    ]
+
+
+def test_wf_draft_add_capability_accepts_canonical_input_and_metadata(
+    monkeypatch,
+) -> None:
+    calls: list[dict[str, Any]] = []
+
+    class FakeHandlers:
+        async def add_step_from_capability(self, **kwargs: Any) -> dict[str, Any]:
+            calls.append(kwargs)
+            return {"revision": 2, "status": "valid"}
+
+    context = SimpleNamespace(handlers=FakeHandlers(), verbose=False)
+    monkeypatch.setattr(
+        "wf_cli.commands.draft_add.load_cli_context", lambda _ctx: context
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "draft",
+            "add",
+            "capability",
+            "workspace",
+            "--revision",
+            "1",
+            "--step",
+            "call",
+            "--capability",
+            "demo.call",
+            "--description",
+            "Call demo",
+            "--retry",
+            "0",
+            "--timeout-seconds",
+            "15",
+            "--input",
+            "state.title=request.title",
+            "--value",
+            'request.format="markdown"',
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    call = calls[0]
+    assert call["input_map"] is None
+    assert [binding.model_dump(mode="json") for binding in call["input_bindings"]] == [
+        {"path": "state.title", "target": "request.title"},
+        {"value": "markdown", "target": "request.format"},
+    ]
+    assert call["desc"] == "Call demo"
+    assert call["retry"] == 0
+    assert call["timeout_seconds"] == 15
+
+
+def test_wf_draft_add_capability_preserves_bindings_file_order(
+    monkeypatch, tmp_path
+) -> None:
+    calls: list[dict[str, Any]] = []
+    bindings_path = tmp_path / "bindings.json"
+    bindings_path.write_text(
+        json.dumps(
+            [
+                {"value": 1, "target": "request.first"},
+                {"path": "state.second", "target": "request.second"},
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    class FakeHandlers:
+        async def add_step_from_capability(self, **kwargs: Any) -> dict[str, Any]:
+            calls.append(kwargs)
+            return {"revision": 2, "status": "valid"}
+
+    context = SimpleNamespace(handlers=FakeHandlers(), verbose=False)
+    monkeypatch.setattr(
+        "wf_cli.commands.draft_add.load_cli_context", lambda _ctx: context
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "draft",
+            "add",
+            "capability",
+            "workspace",
+            "--revision",
+            "1",
+            "--step",
+            "call",
+            "--capability",
+            "demo.call",
+            "--bindings-file",
+            str(bindings_path),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert [
+        binding.model_dump(mode="json") for binding in calls[0]["input_bindings"]
+    ] == [
+        {"value": 1, "target": "request.first"},
+        {"path": "state.second", "target": "request.second"},
+    ]
+
+
+@pytest.mark.parametrize(
+    "extra_args",
+    [
+        ["--bindings-file", "bindings.json", "--input", "state.x=x"],
+        ["--bindings-file", "bindings.json", "--value", "x=1"],
+    ],
+)
+def test_wf_draft_add_capability_rejects_binding_modes_before_context(
+    monkeypatch, extra_args: list[str]
+) -> None:
+    monkeypatch.setattr(
+        "wf_cli.commands.draft_add.load_cli_context",
+        lambda _ctx: (_ for _ in ()).throw(AssertionError("context loaded")),
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "draft",
+            "add",
+            "capability",
+            "workspace",
+            "--revision",
+            "1",
+            "--step",
+            "call",
+            "--capability",
+            "demo.call",
+            *extra_args,
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert "context loaded" not in result.output
 
 
 def test_wf_draft_add_interrupt_builds_typed_contract(monkeypatch, tmp_path) -> None:

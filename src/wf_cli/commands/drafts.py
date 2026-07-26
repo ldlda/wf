@@ -6,7 +6,7 @@ from typing import Annotated, Literal
 
 import typer
 
-from wf_cli.commands import draft_add
+from wf_cli.commands import draft_add, draft_update
 from wf_cli.commands.draft_options import (
     _parse_map_flags,
     _parse_output_map_flags,
@@ -33,6 +33,7 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 app.add_typer(draft_add.app, name="add")
+app.add_typer(draft_update.app, name="update")
 
 
 def _validate_outcomes(values: list[str] | None) -> tuple[str, ...] | None:
