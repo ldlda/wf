@@ -553,7 +553,7 @@ class WorkflowDraftAuthoringApi:
         step_id: str,
         update: CapabilityStepUpdate,
     ) -> dict[str, Any]:
-        """Patch capability metadata and optional canonical inputs atomically."""
+        """Return a workspace summary or conflict after one atomic step patch."""
         checked = self._workspace_if_revision_matches(
             workspace_id=workspace_id,
             revision=revision,
@@ -584,11 +584,22 @@ class WorkflowDraftAuthoringApi:
             changes["input"] = update.input
 
         changed = current.model_copy(update=changes)
-        step_payload = changed.model_dump(
-            mode="json",
-            by_alias=True,
-            exclude_none=True,
-        )
+        if projected is None:
+            step_payload = dict(deepcopy(step))
+            for field in ("desc", "retry", "timeout_seconds"):
+                if field not in update.model_fields_set:
+                    continue
+                value = getattr(update, field)
+                if value is None:
+                    step_payload.pop(field, None)
+                else:
+                    step_payload[field] = value
+        else:
+            step_payload = changed.model_dump(
+                mode="json",
+                by_alias=True,
+                exclude_none=True,
+            )
         input_schema = (
             projected.input_schema
             if projected is not None
@@ -599,40 +610,31 @@ class WorkflowDraftAuthoringApi:
             if projected is not None
             else _draft_schema(workspace.draft, "state_schema")
         )
+        removed_metadata_key = any(
+            field in update.model_fields_set
+            and getattr(update, field) is None
+            and field in step
+            for field in ("desc", "retry", "timeout_seconds")
+        )
         if (
-            step == step_payload
+            current == changed
+            and not removed_metadata_key
             and workspace.draft.get("input_schema", {}) == input_schema
             and workspace.draft.get("state_schema", {}) == state_schema
         ):
             return summarize_draft_workspace(workspace)
 
-        if projected is None:
-            next_draft = deepcopy(workspace.draft)
-            next_draft["steps"][step_id] = step_payload
-            return await self.drafts.replace_validated_draft_document(
-                workspace_id=workspace_id,
-                revision=revision,
-                draft=next_draft,
-            )
-
-        patch: list[dict[str, Any]] = []
-        for key, value in (
-            ("input_schema", input_schema),
-            ("state_schema", state_schema),
-        ):
-            if workspace.draft.get(key, {}) != value:
-                patch.append({"op": "replace", "path": f"/{key}", "value": value})
-        patch.append(
-            {
-                "op": "replace",
-                "path": f"/steps/{escape_json_pointer(step_id)}",
-                "value": step_payload,
-            }
-        )
-        return await self.drafts.patch_draft_workspace(
+        next_draft = deepcopy(workspace.draft)
+        next_steps = next_draft.get("steps")
+        if not isinstance(next_steps, dict):
+            raise ValueError("draft steps must be an object")
+        next_steps[step_id] = step_payload
+        next_draft["input_schema"] = input_schema
+        next_draft["state_schema"] = state_schema
+        return await self.drafts._replace_validated_draft_document(
             workspace_id=workspace_id,
             revision=revision,
-            patch=patch,
+            draft=next_draft,
         )
 
     async def set_workflow_output_bindings(
@@ -1073,6 +1075,17 @@ class WorkflowDraftAuthoringApi:
             raise ValueError(f"draft step {step_id!r} already exists")
         if input_map is not None and input_bindings is not None:
             raise ValueError("input_map and input_bindings are mutually exclusive")
+        metadata = {
+            field: value
+            for field, value in (
+                ("desc", desc),
+                ("retry", retry),
+                ("timeout_seconds", timeout_seconds),
+            )
+            if value is not None
+        }
+        if metadata:
+            CapabilityStepUpdate.model_validate(metadata)
 
         spec = self.context.specs.get_qualified_spec(capability_name)
         output_schema = (
@@ -1160,6 +1173,11 @@ class WorkflowDraftAuthoringApi:
             step_payload["retry"] = retry
         if timeout_seconds is not None:
             step_payload["timeout_seconds"] = timeout_seconds
+        step_payload = DraftUseStep.model_validate(step_payload).model_dump(
+            mode="json",
+            by_alias=True,
+            exclude_none=True,
+        )
 
         patch: list[dict[str, Any]] = [
             {

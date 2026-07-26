@@ -102,7 +102,7 @@ def patch_draft_workspace(
     return summarize_draft_workspace(next_workspace)
 
 
-def replace_validated_draft_document(
+def _replace_validated_draft_document(
     store: DraftWorkspaceStore,
     *,
     workspace_id: str,
@@ -118,13 +118,13 @@ def replace_validated_draft_document(
     workspace = store.get_workspace(workspace_id)
     if workspace.revision != revision:
         return _revision_conflict_payload(workspace, revision)
-    canonical_draft = WorkflowDraft.model_validate(draft).model_dump(mode="json")
-    if canonical_draft == workspace.draft:
+    WorkflowDraft.model_validate(draft)
+    if draft == workspace.draft:
         return summarize_draft_workspace(workspace)
     next_workspace = workspace.model_copy(
         update={
             "revision": workspace.revision + 1,
-            "draft": canonical_draft,
+            "draft": draft,
             "updated_at_epoch_ms": _now_ms(),
         }
     )

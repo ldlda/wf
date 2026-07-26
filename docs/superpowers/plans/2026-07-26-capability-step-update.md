@@ -60,7 +60,7 @@ pytest, Ruff, basedpyright.
 - Preserves:
   `WorkflowDraftAuthoringApi.set_step_input_bindings(...)`.
 
-- [ ] **Step 1: Write failing update-model tests**
+- [x] **Step 1: Write failing update-model tests**
 
 Add focused tests in `tests/wf_api/test_drafts_service.py`:
 
@@ -91,7 +91,7 @@ def test_capability_step_update_rejects_invalid_patch(payload: object) -> None:
         CapabilityStepUpdate.model_validate(payload)
 ```
 
-- [ ] **Step 2: Run the model tests red**
+- [x] **Step 2: Run the model tests red**
 
 Run:
 
@@ -104,7 +104,7 @@ Run:
 
 Expected: collection fails because `CapabilityStepUpdate` does not exist.
 
-- [ ] **Step 3: Implement the update model**
+- [x] **Step 3: Implement the update model**
 
 Create `src/wf_api/draft_updates.py`:
 
@@ -139,7 +139,7 @@ class CapabilityStepUpdate(BaseModel):
 
 Export it from `src/wf_api/__init__.py`. Run the model tests green.
 
-- [ ] **Step 4: Write failing semantic update tests**
+- [x] **Step 4: Write failing semantic update tests**
 
 Add a helper that creates a capability-backed draft step containing:
 
@@ -218,7 +218,7 @@ Add separate tests for:
 - path/literal input replacement projects schemas and preserves order;
 - compile/run succeeds after one combined metadata/input update.
 
-- [ ] **Step 5: Run semantic tests red**
+- [x] **Step 5: Run semantic tests red**
 
 Run:
 
@@ -231,7 +231,7 @@ Run:
 
 Expected: failures because the authoring method does not exist.
 
-- [ ] **Step 6: Extract one shared input-binding preflight**
+- [x] **Step 6: Extract one shared input-binding preflight**
 
 In `src/wf_api/draft_authoring.py`, add a private result model:
 
@@ -280,7 +280,7 @@ the update method:
 
 Expected: PASS.
 
-- [ ] **Step 7: Implement atomic capability-step update**
+- [x] **Step 7: Implement atomic capability-step update**
 
 Implement:
 
@@ -339,7 +339,7 @@ values here come from `CapabilityStepUpdate`. Build one patch for changed
 schemas plus replacement of `/steps/<step_id>`. If the step payload and
 schemas are unchanged, return `summarize_draft_workspace(workspace)`.
 
-- [ ] **Step 8: Write failing creation-parity tests**
+- [x] **Step 8: Write failing creation-parity tests**
 
 Add tests proving:
 
@@ -371,7 +371,7 @@ rejecting `input_map` and `input_bindings` whenever both arguments are
 supplied, including an explicit empty compatibility map, and proving existing
 map-only callers retain behavior.
 
-- [ ] **Step 9: Extend creation through the shared preflight**
+- [x] **Step 9: Extend creation through the shared preflight**
 
 Extend the method signature:
 
@@ -399,7 +399,7 @@ and validate the resulting typed list, or accept `input_bindings` directly.
 Use `_project_step_input_bindings` for both. Persist metadata only when not
 `None`; `retry=0` must survive.
 
-- [ ] **Step 10: Verify and commit Task 1**
+- [x] **Step 10: Verify and commit Task 1**
 
 Run:
 
@@ -446,7 +446,7 @@ git commit -m "feat: update capability-backed draft steps"
 - Extends the existing add-capability RPC with metadata and canonical
   `input_bindings`.
 
-- [ ] **Step 1: Write failing RPC model tests**
+- [x] **Step 1: Write failing RPC model tests**
 
 Add tests for:
 
@@ -470,11 +470,11 @@ timeout, and unknown fields. Extend `AddStepFromCapabilityParams` tests for
 metadata, canonical path/value order, and simultaneous `input_map` plus
 `input_bindings`.
 
-- [ ] **Step 2: Run RPC model tests red**
+- [x] **Step 2: Run RPC model tests red**
 
 Run the focused new tests. Expected: import/model failures.
 
-- [ ] **Step 3: Add RPC models**
+- [x] **Step 3: Add RPC models**
 
 Add:
 
@@ -498,7 +498,7 @@ timeout_seconds: int | None = Field(default=None, gt=0)
 
 Add a model validator rejecting both input forms when both were supplied.
 
-- [ ] **Step 4: Write failing endpoint and client tests**
+- [x] **Step 4: Write failing endpoint and client tests**
 
 Add a real ASGI test that creates a capability step, updates metadata and a
 literal input through:
@@ -524,7 +524,7 @@ and asserts the emitted nested object is exactly:
 No default `timeout_seconds` or `input` keys may appear. Extend add-capability
 client tests for canonical input order and metadata.
 
-- [ ] **Step 5: Implement public and RPC adapters**
+- [x] **Step 5: Implement public and RPC adapters**
 
 Add the update method to `WorkflowDraftSurface` and `WorkflowApi`, delegating to
 `draft_authoring`.
@@ -538,7 +538,7 @@ update.model_dump(mode="json", exclude_unset=True)
 Extend every add-capability seam with the Task 1 fields. Compatibility map-only
 calls remain valid.
 
-- [ ] **Step 6: Verify and commit Task 2**
+- [x] **Step 6: Verify and commit Task 2**
 
 Run:
 

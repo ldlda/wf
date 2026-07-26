@@ -448,6 +448,7 @@ class WorkflowApi:
         step_id: str,
         update: CapabilityStepUpdate,
     ) -> dict[str, Any]:
+        """Return the updated workspace summary or a revision-conflict payload."""
         return await self.draft_authoring.update_capability_step(
             workspace_id=workspace_id,
             revision=revision,

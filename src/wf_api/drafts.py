@@ -19,8 +19,8 @@ from wf_artifacts import (
 from wf_artifacts import (
     patch_draft_workspace as patch_draft_workspace_record,
 )
-from wf_artifacts import (
-    replace_validated_draft_document as replace_validated_draft_document_record,
+from wf_artifacts.draft_workspaces.api import (
+    _replace_validated_draft_document as replace_validated_draft_document_record,
 )
 from wf_core.models.schemas import NodeDef
 from wf_core.models.steps import (
@@ -292,7 +292,7 @@ class WorkflowDraftApi:
             node_defs_for_draft=self._node_defs_for_draft,
         )
 
-    async def replace_validated_draft_document(
+    async def _replace_validated_draft_document(
         self,
         *,
         workspace_id: str,

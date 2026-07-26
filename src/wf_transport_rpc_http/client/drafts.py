@@ -23,6 +23,7 @@ class RpcDraftClientMixin:
         workspace_id: str,
         include_draft: bool = False,
     ) -> dict[str, Any]:
+        """Return the remote workspace summary or revision-conflict payload."""
         return await self._call(
             "workflow.draft_workspaces.get",
             {"workspace_id": workspace_id, "include_draft": include_draft},

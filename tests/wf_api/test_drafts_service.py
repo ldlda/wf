@@ -98,7 +98,7 @@ async def test_update_capability_step_changes_metadata_and_inputs_atomically(
     assert step["use"] == "demo.personal.echo_tool"
     assert step["desc"] == "New description"
     assert step["retry"] == 0
-    assert step["timeout_seconds"] is None
+    assert "timeout_seconds" not in step
     assert step["input"] == [{"value": "fixed", "target": "text"}]
     assert step["output"] == [{"source": "echoed", "target": "state.echoed"}]
     assert inspected["draft"]["routes"]["echo"] == {"ok": "__end__"}
@@ -128,7 +128,15 @@ async def test_update_capability_step_preserves_omitted_fields_and_exact_noop(
         workspace_id="echo",
         revision=1,
         step_id="echo",
-        update=CapabilityStepUpdate(retry=2),
+        update=CapabilityStepUpdate(
+            retry=2,
+            input=[
+                InputPathBinding(
+                    path=GraphSourcePath.input("text"),
+                    target=LocalPath.of("text"),
+                )
+            ],
+        ),
     )
     second = await authoring.update_capability_step(
         workspace_id="echo",
@@ -144,13 +152,13 @@ async def test_update_capability_step_preserves_omitted_fields_and_exact_noop(
     assert first["revision"] == 1
     assert second["revision"] == 2
     step = inspected["draft"]["steps"]["echo"]
-    assert step["desc"] is None
+    assert "desc" not in step
     assert step["retry"] == 2
     assert step["timeout_seconds"] == 15
 
 
 @pytest.mark.asyncio
-async def test_update_capability_step_clearing_absent_metadata_is_exact_noop(
+async def test_update_capability_step_removes_stored_null_metadata(
     tmp_path: Path,
 ) -> None:
     draft_api, _service, authoring = _draft_api(
@@ -158,6 +166,11 @@ async def test_update_capability_step_clearing_absent_metadata_is_exact_noop(
         register_echo=True,
     )
     await draft_api.create_draft_workspace(workspace_id="echo", draft=_echo_draft())
+    before = await draft_api.get_draft_workspace(
+        workspace_id="echo",
+        include_draft=True,
+    )
+    assert before["draft"]["steps"]["echo"]["retry"] is None
 
     result = await authoring.update_capability_step(
         workspace_id="echo",
@@ -165,8 +178,13 @@ async def test_update_capability_step_clearing_absent_metadata_is_exact_noop(
         step_id="echo",
         update=CapabilityStepUpdate(retry=None),
     )
+    after = await draft_api.get_draft_workspace(
+        workspace_id="echo",
+        include_draft=True,
+    )
 
-    assert result["revision"] == 1
+    assert result["revision"] == 2
+    assert "retry" not in after["draft"]["steps"]["echo"]
 
 
 @pytest.mark.asyncio
@@ -196,6 +214,46 @@ async def test_update_capability_step_metadata_does_not_resolve_capability(
     )
 
     assert result["revision"] == 2
+
+
+@pytest.mark.asyncio
+async def test_update_capability_step_metadata_preserves_invalid_draft_shape(
+    tmp_path: Path,
+) -> None:
+    draft_api, _service, authoring = _draft_api(
+        FileWorkflowArtifactStore(tmp_path / "update_invalid_draft_shape"),
+        register_echo=True,
+    )
+    draft = _echo_draft()
+    draft["routes"]["echo"]["ok"] = "missing"
+    await draft_api.create_draft_workspace(workspace_id="echo", draft=draft)
+    before = await draft_api.get_draft_workspace(
+        workspace_id="echo",
+        include_draft=True,
+    )
+
+    result = await authoring.update_capability_step(
+        workspace_id="echo",
+        revision=1,
+        step_id="echo",
+        update=CapabilityStepUpdate(desc="Explain the invalid draft"),
+    )
+    after = await draft_api.get_draft_workspace(
+        workspace_id="echo",
+        include_draft=True,
+    )
+
+    assert result["revision"] == 2
+    assert after["draft"]["steps"]["echo"]["desc"] == "Explain the invalid draft"
+    assert (
+        after["draft"]["steps"]["echo"]["input"]
+        == before["draft"]["steps"]["echo"]["input"]
+    )
+    assert (
+        after["draft"]["steps"]["echo"]["output"]
+        == before["draft"]["steps"]["echo"]["output"]
+    )
+    assert after["draft"]["routes"] == before["draft"]["routes"]
 
 
 @pytest.mark.asyncio
@@ -343,6 +401,54 @@ async def test_add_step_from_capability_rejects_both_input_forms(
             input_map={},
             input_bindings=[],
         )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("desc", "retry", "timeout_seconds"),
+    [
+        ("", None, None),
+        (None, -1, None),
+        (None, None, 0),
+    ],
+)
+async def test_add_step_from_capability_rejects_invalid_metadata_atomically(
+    tmp_path: Path,
+    desc: str | None,
+    retry: int | None,
+    timeout_seconds: int | None,
+) -> None:
+    workspace_id = f"invalid_add_metadata_{desc}_{retry}_{timeout_seconds}"
+    draft_api, _service, authoring = _draft_api(
+        FileWorkflowArtifactStore(tmp_path / workspace_id),
+        register_echo=True,
+    )
+    await draft_api.create_draft_workspace(
+        workspace_id=workspace_id,
+        draft=_echo_draft(),
+    )
+    before = await draft_api.get_draft_workspace(
+        workspace_id=workspace_id,
+        include_draft=True,
+    )
+
+    with pytest.raises(ValidationError):
+        await authoring.add_step_from_capability(
+            workspace_id=workspace_id,
+            revision=1,
+            step_id="other",
+            capability_name="demo.personal.echo_tool",
+            routes={"ok": "__end__"},
+            desc=desc,
+            retry=retry,
+            timeout_seconds=timeout_seconds,
+        )
+
+    after = await draft_api.get_draft_workspace(
+        workspace_id=workspace_id,
+        include_draft=True,
+    )
+    assert after == before
 
 
 def _echo_draft() -> dict[str, Any]:
