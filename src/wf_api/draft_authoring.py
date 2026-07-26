@@ -584,22 +584,19 @@ class WorkflowDraftAuthoringApi:
             changes["input"] = update.input
 
         changed = current.model_copy(update=changes)
-        if projected is None:
-            step_payload = dict(deepcopy(step))
-            for field in ("desc", "retry", "timeout_seconds"):
-                if field not in update.model_fields_set:
-                    continue
-                value = getattr(update, field)
-                if value is None:
-                    step_payload.pop(field, None)
-                else:
-                    step_payload[field] = value
-        else:
-            step_payload = changed.model_dump(
-                mode="json",
-                by_alias=True,
-                exclude_none=True,
-            )
+        # Mutate a raw copy so omitted fields preserve their exact stored
+        # presence, including legacy explicit-null metadata.
+        step_payload = dict(deepcopy(step))
+        for field in ("desc", "retry", "timeout_seconds"):
+            if field not in update.model_fields_set:
+                continue
+            value = getattr(update, field)
+            if value is None:
+                step_payload.pop(field, None)
+            else:
+                step_payload[field] = value
+        if projected is not None:
+            step_payload["input"] = projected.payload
         input_schema = (
             projected.input_schema
             if projected is not None
@@ -631,7 +628,7 @@ class WorkflowDraftAuthoringApi:
         next_steps[step_id] = step_payload
         next_draft["input_schema"] = input_schema
         next_draft["state_schema"] = state_schema
-        return await self.drafts._replace_validated_draft_document(
+        return await self.drafts.replace_validated_draft_document(
             workspace_id=workspace_id,
             revision=revision,
             draft=next_draft,

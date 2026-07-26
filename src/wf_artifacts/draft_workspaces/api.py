@@ -102,7 +102,7 @@ def patch_draft_workspace(
     return summarize_draft_workspace(next_workspace)
 
 
-def _replace_validated_draft_document(
+def replace_validated_draft_document(
     store: DraftWorkspaceStore,
     *,
     workspace_id: str,

@@ -188,6 +188,50 @@ async def test_update_capability_step_removes_stored_null_metadata(
 
 
 @pytest.mark.asyncio
+async def test_update_capability_step_input_preserves_omitted_null_metadata(
+    tmp_path: Path,
+) -> None:
+    draft_api, _service, authoring = _draft_api(
+        FileWorkflowArtifactStore(tmp_path / "update_capability_null_metadata"),
+        register_echo=True,
+    )
+    draft = _echo_draft()
+    draft["steps"]["echo"].update(
+        {
+            "desc": None,
+            "retry": None,
+            "timeout_seconds": None,
+        }
+    )
+    await draft_api.create_draft_workspace(workspace_id="echo", draft=draft)
+
+    result = await authoring.update_capability_step(
+        workspace_id="echo",
+        revision=1,
+        step_id="echo",
+        update=CapabilityStepUpdate(
+            input=[
+                InputValueBinding(
+                    target=LocalPath.of("text"),
+                    value="replacement",
+                )
+            ]
+        ),
+    )
+    inspected = await draft_api.get_draft_workspace(
+        workspace_id="echo",
+        include_draft=True,
+    )
+    step = inspected["draft"]["steps"]["echo"]
+
+    assert result["revision"] == 2
+    assert step["desc"] is None
+    assert step["retry"] is None
+    assert step["timeout_seconds"] is None
+    assert step["input"] == [{"value": "replacement", "target": "text"}]
+
+
+@pytest.mark.asyncio
 async def test_update_capability_step_metadata_does_not_resolve_capability(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

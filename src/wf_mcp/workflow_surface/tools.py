@@ -605,7 +605,8 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
         title="Update Capability Step",
         description=(
             "Update capability-step metadata and optionally replace its complete "
-            "canonical input bindings. Preserves use, routes, and outputs."
+            "canonical input bindings. Omitted metadata is preserved; explicit "
+            "null clears it. Preserves use, routes, and outputs."
         ),
     )
     async def update_capability_step(
