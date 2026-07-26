@@ -3834,12 +3834,12 @@ async def test_set_workflow_output_bindings_projects_nested_paths_and_literals(
         {"path": "state.report.title", "target": "audit.title"},
         {"value": "markdown", "target": "format"},
     ]
-    assert inspected["draft"]["output_schema"]["properties"]["report"][
-        "properties"
-    ]["title"] == {"type": "string"}
-    assert inspected["draft"]["output_schema"]["properties"]["audit"][
-        "properties"
-    ]["title"] == {"type": "string"}
+    assert inspected["draft"]["output_schema"]["properties"]["report"]["properties"][
+        "title"
+    ] == {"type": "string"}
+    assert inspected["draft"]["output_schema"]["properties"]["audit"]["properties"][
+        "title"
+    ] == {"type": "string"}
 
     cleared = await authoring.set_workflow_output_bindings(
         workspace_id="report",
@@ -3894,9 +3894,9 @@ async def test_set_workflow_output_bindings_projects_input_and_whole_state(
 
     output_schema = inspected["draft"]["output_schema"]["properties"]
     assert output_schema["input_title"] == {"type": "string"}
-    assert output_schema["snapshot"]["properties"]["report"]["properties"][
-        "title"
-    ] == {"type": "string"}
+    assert output_schema["snapshot"]["properties"]["report"]["properties"]["title"] == {
+        "type": "string"
+    }
 
 
 @pytest.mark.asyncio
@@ -4110,14 +4110,14 @@ async def test_set_workflow_output_bindings_validates_root_literal_complete_sche
             r"bindings\[0\]\.path 'state\.missing' is not declared",
         ),
         (
-                [
-                    InputPathBinding(
-                        path=GraphSourcePath.state("report"),
-                        target=LocalPath.of("format"),
-                    )
-                ],
-                r"bindings\[0\]\.target 'format' cannot receive source "
-                r"'state\.report'",
+            [
+                InputPathBinding(
+                    path=GraphSourcePath.state("report"),
+                    target=LocalPath.of("format"),
+                )
+            ],
+            r"bindings\[0\]\.target 'format' cannot receive source "
+            r"'state\.report'",
         ),
         (
             [
@@ -4274,9 +4274,7 @@ async def test_cleared_workflow_output_bindings_preserve_state_fallback(
     first = await authoring.set_workflow_output_bindings(
         workspace_id="report",
         revision=1,
-        bindings=[
-            InputValueBinding(target=LocalPath.of("echoed"), value="explicit")
-        ],
+        bindings=[InputValueBinding(target=LocalPath.of("echoed"), value="explicit")],
     )
     await authoring.set_workflow_output_bindings(
         workspace_id="report",

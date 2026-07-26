@@ -620,8 +620,7 @@ class WorkflowDraftAuthoringApi:
                 )
             if not schema_path_exists(projected, target_parts):
                 raise ValueError(
-                    f"bindings[{index}].target {str(binding.target)!r} "
-                    "is not declared"
+                    f"bindings[{index}].target {str(binding.target)!r} is not declared"
                 )
             validate_json_value_at_schema_path(
                 schema=projected,
@@ -632,10 +631,7 @@ class WorkflowDraftAuthoringApi:
             )
 
         payload = [binding.model_dump(mode="json") for binding in bindings]
-        if (
-            workspace.draft.get("output", []) == payload
-            and projected == output_schema
-        ):
+        if workspace.draft.get("output", []) == payload and projected == output_schema:
             return summarize_draft_workspace(workspace)
 
         patch: list[dict[str, Any]] = []

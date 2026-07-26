@@ -153,9 +153,7 @@ async def test_registered_workflow_output_bindings_tool_preserves_union_order(
         def __init__(self) -> None:
             self.calls: list[dict[str, Any]] = []
 
-        async def set_workflow_output_bindings(
-            self, **kwargs: Any
-        ) -> dict[str, Any]:
+        async def set_workflow_output_bindings(self, **kwargs: Any) -> dict[str, Any]:
             self.calls.append(kwargs)
             return {
                 "workspace_id": kwargs["workspace_id"],
@@ -204,9 +202,7 @@ async def test_registered_workflow_output_bindings_tool_preserves_union_order(
     call = recorder.calls[0]
     assert isinstance(call["bindings"][0], InputPathBinding)
     assert isinstance(call["bindings"][1], InputValueBinding)
-    assert [
-        binding.model_dump(mode="json") for binding in call["bindings"]
-    ] == [
+    assert [binding.model_dump(mode="json") for binding in call["bindings"]] == [
         {"path": "state.report.title", "target": "report.title"},
         {"value": "markdown", "target": "format"},
     ]

@@ -347,9 +347,7 @@ def test_set_workflow_output_bindings_request_preserves_union_order() -> None:
 
     assert isinstance(request.bindings[0], InputPathBinding)
     assert isinstance(request.bindings[1], InputValueBinding)
-    assert [
-        binding.model_dump(mode="json") for binding in request.bindings
-    ] == [
+    assert [binding.model_dump(mode="json") for binding in request.bindings] == [
         {"path": "state.report.title", "target": "report.title"},
         {"value": "markdown", "target": "format"},
     ]
