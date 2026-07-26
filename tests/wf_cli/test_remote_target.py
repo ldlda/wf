@@ -1248,9 +1248,110 @@ def test_wf_draft_focused_edit_commands_use_rpc_target(monkeypatch, tmp_path) ->
     ]
 
 
-def test_wf_draft_set_workflow_output_uses_rpc_target(monkeypatch, tmp_path) -> None:
+def test_wf_draft_set_workflow_output_replaces_canonical_bindings_over_rpc(
+    monkeypatch, tmp_path
+) -> None:
     server = build_local_static_workflow_server(tmp_path / "store")
     _patch_rpc_client_to_server(monkeypatch, server)
+    rpc_calls: list[tuple[str, dict[str, Any]]] = []
+    original_call = RpcClientTransport._call
+
+    async def recording_call(
+        self: RpcClientTransport, method: str, params: dict[str, Any]
+    ) -> dict[str, Any]:
+        rpc_calls.append((method, params))
+        return await original_call(self, method, params)
+
+    monkeypatch.setattr(RpcClientTransport, "_call", recording_call)
+    config_path = tmp_path / "wf.json"
+    config_path.write_text('{"version": 1}', encoding="utf-8")
+    state_schema_path = tmp_path / "state-schema.json"
+    state_schema_path.write_text(
+        json.dumps(
+            {
+                "type": "object",
+                "properties": {"title": {"type": "string"}},
+            }
+        ),
+        encoding="utf-8",
+    )
+    output_schema_path = tmp_path / "output-schema.json"
+    output_schema_path.write_text(
+        json.dumps(
+            {
+                "type": "object",
+                "properties": {"format": {"type": "string"}},
+            }
+        ),
+        encoding="utf-8",
+    )
+    runner = CliRunner()
+    base_args = ["--config", str(config_path), "--url", "http://test/rpc"]
+    created = runner.invoke(
+        app,
+        [
+            *base_args,
+            "draft",
+            "create",
+            "report",
+            "--name",
+            "report",
+            "--state-schema-file",
+            str(state_schema_path),
+            "--output-schema-file",
+            str(output_schema_path),
+        ],
+    )
+    assert created.exit_code == 0, created.output
+    rpc_calls.clear()
+
+    result = runner.invoke(
+        app,
+        [
+            *base_args,
+            "draft",
+            "set-workflow-output",
+            "report",
+            "--revision",
+            "1",
+            "--map",
+            "state.title=report.title",
+            "--value",
+            'format="markdown"',
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert rpc_calls == [
+        (
+            "workflow.draft_workspaces.set_workflow_output_bindings",
+            {
+                "workspace_id": "report",
+                "revision": 1,
+                "bindings": [
+                    {"path": "state.title", "target": "report.title"},
+                    {"value": "markdown", "target": "format"},
+                ],
+            },
+        )
+    ]
+
+
+def test_wf_draft_set_workflow_output_merge_uses_compatibility_rpc_target(
+    monkeypatch, tmp_path
+) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    _patch_rpc_client_to_server(monkeypatch, server)
+    rpc_methods: list[str] = []
+    original_call = RpcClientTransport._call
+
+    async def recording_call(
+        self: RpcClientTransport, method: str, params: dict[str, Any]
+    ) -> dict[str, Any]:
+        rpc_methods.append(method)
+        return await original_call(self, method, params)
+
+    monkeypatch.setattr(RpcClientTransport, "_call", recording_call)
     config_path = tmp_path / "wf.json"
     config_path.write_text('{"version": 1}', encoding="utf-8")
     runner = CliRunner()
@@ -1277,6 +1378,7 @@ def test_wf_draft_set_workflow_output_uses_rpc_target(monkeypatch, tmp_path) -> 
             "1",
             "--map",
             "state.markdown=markdown",
+            "--merge",
         ],
     )
     inspected = runner.invoke(
@@ -1289,6 +1391,10 @@ def test_wf_draft_set_workflow_output_uses_rpc_target(monkeypatch, tmp_path) -> 
     assert inspected.exit_code == 0, inspected.output
     draft = json.loads(inspected.output)["draft"]
     assert draft["output"] == [{"path": "state.markdown", "target": "markdown"}]
+    assert rpc_methods[-2:] == [
+        "workflow.draft_workspaces.set_workflow_output_map",
+        "workflow.draft_workspaces.get",
+    ]
 
 
 def test_wf_draft_remove_route_uses_rpc_target(monkeypatch, tmp_path) -> None:

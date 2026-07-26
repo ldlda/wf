@@ -107,7 +107,16 @@ def validation_error_as_bad_parameter(
 def parse_step_input_binding_flags(
     values: list[str] | None,
 ) -> list[InputPathBinding]:
-    """Parse ordered canonical path bindings without collapsing source fan-out."""
+    """Parse ordered step-input path bindings without collapsing source fan-out."""
+    return _parse_input_path_binding_flags(values, target_label="node-local")
+
+
+def _parse_input_path_binding_flags(
+    values: list[str] | None,
+    *,
+    target_label: str,
+) -> list[InputPathBinding]:
+    """Parse ordered GRAPH_SOURCE=LOCAL_TARGET bindings for one CLI audience."""
     bindings: list[InputPathBinding] = []
     for item in values or []:
         source, separator, target = item.partition("=")
@@ -116,7 +125,7 @@ def parse_step_input_binding_flags(
         if target.startswith("local."):
             bare_target = target.removeprefix("local.")
             raise typer.BadParameter(
-                "--map target must be a rootless node-local path; "
+                f"--map target must be a rootless {target_label} path; "
                 f"use {source}={bare_target}, not {source}={target}"
             )
         try:
@@ -129,7 +138,7 @@ def parse_step_input_binding_flags(
             target_path = LocalPath.parse(target)
         except PathResolutionError as exc:
             raise typer.BadParameter(
-                f"--map target must be a rootless node-local path: {exc}"
+                f"--map target must be a rootless {target_label} path: {exc}"
             ) from exc
         bindings.append(InputPathBinding(path=source_path, target=target_path))
     return bindings
@@ -138,7 +147,16 @@ def parse_step_input_binding_flags(
 def parse_step_input_value_flags(
     values: list[str] | None,
 ) -> list[InputValueBinding]:
-    """Parse ordered canonical literal bindings from LOCAL_TARGET=JSON flags."""
+    """Parse ordered step-input literal bindings from LOCAL_TARGET=JSON flags."""
+    return _parse_input_value_binding_flags(values, target_label="node-local")
+
+
+def _parse_input_value_binding_flags(
+    values: list[str] | None,
+    *,
+    target_label: str,
+) -> list[InputValueBinding]:
+    """Parse ordered LOCAL_TARGET=JSON bindings for one CLI audience."""
     bindings: list[InputValueBinding] = []
     for item in values or []:
         target, separator, raw_value = item.partition("=")
@@ -146,7 +164,7 @@ def parse_step_input_value_flags(
             raise typer.BadParameter("--value must use LOCAL_TARGET=JSON")
         if target.startswith("local."):
             raise typer.BadParameter(
-                "--value target must be a rootless node-local path"
+                f"--value target must be a rootless {target_label} path"
             )
         try:
             value = json.loads(raw_value)
@@ -161,13 +179,37 @@ def parse_step_input_value_flags(
             raise validation_error_as_bad_parameter(exc) from exc
         except PathResolutionError as exc:
             raise typer.BadParameter(
-                f"--value target must be a valid rootless local path: {exc}"
+                f"--value target must be a valid rootless {target_label} path: {exc}"
             ) from exc
     return bindings
 
 
 def parse_step_input_bindings_file(path: Path) -> list[InputBinding]:
     """Read and validate an ordered canonical input-binding list."""
+    try:
+        return _INPUT_BINDINGS_ADAPTER.validate_python(
+            parse_json_file(path, option_name="--bindings-file")
+        )
+    except ValidationError as exc:
+        raise validation_error_as_bad_parameter(exc) from exc
+
+
+def parse_workflow_output_binding_flags(
+    values: list[str] | None,
+) -> list[InputPathBinding]:
+    """Parse ordered canonical workflow-output path bindings."""
+    return _parse_input_path_binding_flags(values, target_label="workflow-output")
+
+
+def parse_workflow_output_value_flags(
+    values: list[str] | None,
+) -> list[InputValueBinding]:
+    """Parse ordered canonical workflow-output literal bindings."""
+    return _parse_input_value_binding_flags(values, target_label="workflow-output")
+
+
+def parse_workflow_output_bindings_file(path: Path) -> list[InputBinding]:
+    """Read an ordered canonical workflow-output binding list."""
     try:
         return _INPUT_BINDINGS_ADAPTER.validate_python(
             parse_json_file(path, option_name="--bindings-file")

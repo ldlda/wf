@@ -16,6 +16,9 @@ from wf_cli.commands.draft_options import (
     parse_step_input_value_flags,
     parse_step_output_binding_flags,
     parse_step_output_bindings_file,
+    parse_workflow_output_binding_flags,
+    parse_workflow_output_bindings_file,
+    parse_workflow_output_value_flags,
     route_source,
 )
 
@@ -153,6 +156,107 @@ def test_draft_options_parse_step_input_bindings_file_validates_union(
     )
     with pytest.raises(typer.BadParameter, match="validation errors"):
         parse_step_input_bindings_file(path)
+
+
+def test_parse_workflow_output_flags_preserves_path_then_literal_order() -> None:
+    bindings = [
+        *parse_workflow_output_binding_flags(
+            [
+                "state.title=report.title",
+                "state.title=audit.title",
+            ]
+        ),
+        *parse_workflow_output_value_flags(['format="markdown"', "optional=null"]),
+    ]
+
+    assert [binding.model_dump(mode="json") for binding in bindings] == [
+        {"path": "state.title", "target": "report.title"},
+        {"path": "state.title", "target": "audit.title"},
+        {"value": "markdown", "target": "format"},
+        {"value": None, "target": "optional"},
+    ]
+
+
+def test_parse_workflow_output_bindings_file_preserves_mixed_order(
+    tmp_path,
+) -> None:
+    path = tmp_path / "workflow-output-bindings.json"
+    path.write_text(
+        json.dumps(
+            [
+                {"path": "state.title", "target": "report.title"},
+                {"value": "markdown", "target": "format"},
+                {"path": "input.audit", "target": "audit"},
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    bindings = parse_workflow_output_bindings_file(path)
+
+    assert [binding.model_dump(mode="json") for binding in bindings] == [
+        {"path": "state.title", "target": "report.title"},
+        {"value": "markdown", "target": "format"},
+        {"path": "input.audit", "target": "audit"},
+    ]
+
+
+@pytest.mark.parametrize(
+    ("parser", "values", "expected_text"),
+    [
+        (
+            parse_workflow_output_binding_flags,
+            ["unknown.title=report.title"],
+            "graph source path",
+        ),
+        (
+            parse_workflow_output_binding_flags,
+            ["state.title=local.report.title"],
+            "rootless workflow-output path",
+        ),
+        (
+            parse_workflow_output_value_flags,
+            ['local.format="markdown"'],
+            "rootless workflow-output path",
+        ),
+        (
+            parse_workflow_output_value_flags,
+            ["format=not-json"],
+            "invalid JSON",
+        ),
+    ],
+)
+def test_parse_workflow_output_flags_report_compact_errors(
+    parser, values: list[str], expected_text: str
+) -> None:
+    with pytest.raises(typer.BadParameter) as exc_info:
+        parser(values)
+
+    message = str(exc_info.value)
+    assert expected_text in message
+    assert "Traceback" not in message
+
+
+@pytest.mark.parametrize(
+    ("payload", "expected_text"),
+    [
+        ({"path": "state.title", "target": "title"}, "list"),
+        (
+            [{"path": "state.title", "value": "x", "target": "title"}],
+            "validation errors",
+        ),
+    ],
+)
+def test_parse_workflow_output_bindings_file_rejects_invalid_payload(
+    tmp_path, payload, expected_text: str
+) -> None:
+    path = tmp_path / "invalid-workflow-output-bindings.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(typer.BadParameter) as exc_info:
+        parse_workflow_output_bindings_file(path)
+
+    assert expected_text in str(exc_info.value)
 
 
 def test_wf_help_lists_lifecycle_groups() -> None:
@@ -645,10 +749,15 @@ def test_wf_draft_map_help_explains_replace_merge_and_validate() -> None:
     assert "replace with no bindings" in output_help.lower()
     assert "compatibility-only and potentially lossy" in output_help
     assert "draft validate" in output_help
-    assert "replaces the full workflow output map" in workflow_output_help
+    assert "complete ordered workflow output binding list" in workflow_output_help
+    assert "GRAPH_SOURCE=OUTPUT_TARGET" in workflow_output_help
+    assert "OUTPUT_TARGET=JSON" in workflow_output_help
+    assert "ordered canonical JSON array" in workflow_output_help
+    assert "same-name state fallback" in workflow_output_help
+    assert "inspect --include-draft" in workflow_output_help
+    assert "draft.output" in workflow_output_help
     assert "Use --merge only" in workflow_output_help
-    assert "GRAPH_SOURCE=OUTPUT_FIELD" in workflow_output_help
-    assert "output_schema fields are projected" in workflow_output_help
+    assert "compatibility-only and potentially lossy" in workflow_output_help
     assert "draft validate" in workflow_output_help
 
 
@@ -2127,6 +2236,223 @@ def test_wf_draft_set_output_merge_keeps_compatibility_map_handler(monkeypatch) 
             "revision": 1,
             "step_id": "render",
             "output_map": {"value": "state.value"},
+            "merge": True,
+        }
+    ]
+
+
+def test_wf_draft_set_workflow_output_replaces_with_canonical_bindings(
+    monkeypatch,
+) -> None:
+    binding_calls: list[dict[str, Any]] = []
+    map_calls: list[dict[str, Any]] = []
+
+    class FakeHandlers:
+        async def set_workflow_output_bindings(self, **kwargs: Any) -> dict[str, Any]:
+            binding_calls.append(kwargs)
+            return {"revision": 5, "status": "valid"}
+
+        async def set_workflow_output_map(self, **kwargs: Any) -> dict[str, Any]:
+            map_calls.append(kwargs)
+            return {"revision": 5, "status": "valid"}
+
+    context = SimpleNamespace(handlers=FakeHandlers(), verbose=False)
+    monkeypatch.setattr("wf_cli.commands.drafts.load_cli_context", lambda _ctx: context)
+
+    result = runner.invoke(
+        app,
+        [
+            "draft",
+            "set-workflow-output",
+            "report_ws",
+            "--revision",
+            "4",
+            "--map",
+            "state.title=report.title",
+            "--map",
+            "state.title=audit.title",
+            "--value",
+            'format="markdown"',
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert map_calls == []
+    assert [
+        binding.model_dump(mode="json") for binding in binding_calls[0]["bindings"]
+    ] == [
+        {"path": "state.title", "target": "report.title"},
+        {"path": "state.title", "target": "audit.title"},
+        {"value": "markdown", "target": "format"},
+    ]
+
+
+def test_wf_draft_set_workflow_output_replaces_from_bindings_file(
+    monkeypatch, tmp_path
+) -> None:
+    calls: list[dict[str, Any]] = []
+
+    class FakeHandlers:
+        async def set_workflow_output_bindings(self, **kwargs: Any) -> dict[str, Any]:
+            calls.append(kwargs)
+            return {"revision": 5, "status": "valid"}
+
+    path = tmp_path / "workflow-output-bindings.json"
+    path.write_text(
+        json.dumps(
+            [
+                {"value": "markdown", "target": "format"},
+                {"path": "state.title", "target": "report.title"},
+            ]
+        ),
+        encoding="utf-8",
+    )
+    context = SimpleNamespace(handlers=FakeHandlers(), verbose=False)
+    monkeypatch.setattr("wf_cli.commands.drafts.load_cli_context", lambda _ctx: context)
+
+    result = runner.invoke(
+        app,
+        [
+            "draft",
+            "set-workflow-output",
+            "report_ws",
+            "--revision",
+            "4",
+            "--bindings-file",
+            str(path),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert [binding.model_dump(mode="json") for binding in calls[0]["bindings"]] == [
+        {"value": "markdown", "target": "format"},
+        {"path": "state.title", "target": "report.title"},
+    ]
+
+
+def test_wf_draft_set_workflow_output_clear_restores_fallback(monkeypatch) -> None:
+    calls: list[dict[str, Any]] = []
+
+    class FakeHandlers:
+        async def set_workflow_output_bindings(self, **kwargs: Any) -> dict[str, Any]:
+            calls.append(kwargs)
+            return {"revision": 5, "status": "valid"}
+
+    context = SimpleNamespace(handlers=FakeHandlers(), verbose=False)
+    monkeypatch.setattr("wf_cli.commands.drafts.load_cli_context", lambda _ctx: context)
+
+    result = runner.invoke(
+        app,
+        [
+            "draft",
+            "set-workflow-output",
+            "report_ws",
+            "--revision",
+            "4",
+            "--clear",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert calls[0]["bindings"] == []
+
+
+@pytest.mark.parametrize(
+    ("extra_args", "expected_error"),
+    [
+        ([], "provide --map, --value, --bindings-file, or --clear"),
+        (
+            ["--bindings-file", "bindings.json", "--map", "state.x=x"],
+            "--bindings-file is mutually exclusive",
+        ),
+        (
+            ["--bindings-file", "bindings.json", "--value", "x=1"],
+            "--bindings-file is mutually exclusive",
+        ),
+        (
+            ["--bindings-file", "bindings.json", "--clear"],
+            "--bindings-file is mutually exclusive",
+        ),
+        (["--clear", "--map", "state.x=x"], "--clear is mutually exclusive"),
+        (["--clear", "--value", "x=1"], "--clear is mutually exclusive"),
+        (
+            ["--merge", "--value", "x=1"],
+            "--merge is supported only for compatibility map-only edits",
+        ),
+        (
+            ["--merge", "--bindings-file", "bindings.json"],
+            "--merge is supported only for compatibility map-only edits",
+        ),
+        (
+            ["--merge", "--clear"],
+            "--merge is supported only for compatibility map-only edits",
+        ),
+    ],
+)
+def test_wf_draft_set_workflow_output_rejects_invalid_modes_before_context(
+    monkeypatch, extra_args: list[str], expected_error: str
+) -> None:
+    monkeypatch.setattr(
+        "wf_cli.commands.drafts.load_cli_context",
+        lambda _ctx: (_ for _ in ()).throw(AssertionError("context loaded")),
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "draft",
+            "set-workflow-output",
+            "report_ws",
+            "--revision",
+            "4",
+            *extra_args,
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert expected_error in " ".join(result.output.split())
+    assert "context loaded" not in result.output
+
+
+def test_wf_draft_set_workflow_output_merge_keeps_compatibility_map_handler(
+    monkeypatch,
+) -> None:
+    binding_calls: list[dict[str, Any]] = []
+    map_calls: list[dict[str, Any]] = []
+
+    class FakeHandlers:
+        async def set_workflow_output_bindings(self, **kwargs: Any) -> dict[str, Any]:
+            binding_calls.append(kwargs)
+            return {"revision": 5, "status": "valid"}
+
+        async def set_workflow_output_map(self, **kwargs: Any) -> dict[str, Any]:
+            map_calls.append(kwargs)
+            return {"revision": 5, "status": "valid"}
+
+    context = SimpleNamespace(handlers=FakeHandlers(), verbose=False)
+    monkeypatch.setattr("wf_cli.commands.drafts.load_cli_context", lambda _ctx: context)
+
+    result = runner.invoke(
+        app,
+        [
+            "draft",
+            "set-workflow-output",
+            "report_ws",
+            "--revision",
+            "4",
+            "--map",
+            "state.title=report.title",
+            "--merge",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert binding_calls == []
+    assert map_calls == [
+        {
+            "workspace_id": "report_ws",
+            "revision": 4,
+            "output_map": {"state.title": "report.title"},
             "merge": True,
         }
     ]

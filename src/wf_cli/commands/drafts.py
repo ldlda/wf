@@ -18,6 +18,9 @@ from wf_cli.commands.draft_options import (
     parse_step_input_value_flags,
     parse_step_output_binding_flags,
     parse_step_output_bindings_file,
+    parse_workflow_output_binding_flags,
+    parse_workflow_output_bindings_file,
+    parse_workflow_output_value_flags,
 )
 from wf_cli.context import load_cli_context_from_typer as load_cli_context
 from wf_cli.formats import ListOutputFormat, emit_list_payload
@@ -607,47 +610,123 @@ def set_workflow_output(
         typer.Option(
             "--map",
             help=(
-                "One output binding GRAPH_SOURCE=OUTPUT_FIELD, for example "
-                "state.markdown=markdown. Repeat in one command."
+                "GRAPH_SOURCE=OUTPUT_TARGET canonical path binding. Repeat to "
+                "replace the complete ordered workflow output binding list."
             ),
         ),
     ] = None,
+    literal_values: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--value",
+            help=(
+                "OUTPUT_TARGET=JSON canonical literal binding. Repeat after "
+                "--map bindings in the replacement list."
+            ),
+        ),
+    ] = None,
+    bindings_file: Annotated[
+        Path | None,
+        typer.Option(
+            "--bindings-file",
+            help=(
+                "Replace with an ordered canonical JSON array of path/value "
+                "workflow output bindings."
+            ),
+        ),
+    ] = None,
+    clear: Annotated[
+        bool,
+        typer.Option(
+            "--clear",
+            help=(
+                "Remove explicit bindings and restore implicit same-name state "
+                "fallback from output_schema."
+            ),
+        ),
+    ] = False,
     merge: Annotated[
         bool,
         typer.Option(
             "--merge",
-            help="Preserve existing workflow output bindings and add/update the passed --map entries.",
+            help=(
+                "Compatibility-only and potentially lossy: preserve existing "
+                "bindings and add/update map-only entries."
+            ),
         ),
     ] = False,
 ) -> None:
-    """Set the top-level workflow output projection without writing JSON Patch manually.
+    """Replace the workflow's public output projection with canonical bindings.
 
-    Default behavior replaces the full workflow output map. Pass all desired
-    --map entries in one command for a complete replacement. Use --merge only
-    when adding or updating entries across a later revision.
+    By default, ``--map GRAPH_SOURCE=OUTPUT_TARGET`` and
+    ``--value OUTPUT_TARGET=JSON`` replace the complete ordered workflow output
+    binding list. ``--bindings-file`` accepts an ordered canonical JSON array
+    and preserves exact path/value interleaving. ``--clear`` restores the
+    implicit same-name state fallback declared by ``output_schema``. Use
+    --merge only with --map for compatibility-only and potentially lossy edits.
 
     This edits WorkflowDraft.output (top-level workflow output). Use
     wf draft set-output for step-level output bindings.
 
-    For single-field input/state sources, missing output_schema fields are
-    projected automatically from the source schema.
-
-    Repeat --map for multiple mappings:
-    --map state.markdown=markdown --map state.title=title
+    To round-trip exact ordering, run wf draft inspect --include-draft and
+    export draft.output for a later --bindings-file replacement.
 
     Run `wf draft validate <workspace_id>` after editing the projection.
     """
-    output_map = _parse_map_flags(mapping)
+    has_maps = bool(mapping)
+    has_values = bool(literal_values)
+    has_file = bindings_file is not None
+    has_convenience = has_maps or has_values
+
+    if not has_convenience and not has_file and not clear:
+        raise typer.BadParameter("provide --map, --value, --bindings-file, or --clear")
+    if merge and (has_values or has_file or clear):
+        raise typer.BadParameter(
+            "--merge is supported only for compatibility map-only edits"
+        )
+    if has_file and (has_convenience or clear):
+        raise typer.BadParameter(
+            "--bindings-file is mutually exclusive with --map, --value, and --clear"
+        )
+    if clear and has_convenience:
+        raise typer.BadParameter("--clear is mutually exclusive with --map and --value")
+
+    if merge:
+        output_map = _parse_map_flags(mapping)
+        bindings = None
+    else:
+        output_map = None
+        bindings = (
+            parse_workflow_output_bindings_file(bindings_file)
+            if bindings_file is not None
+            else []
+            if clear
+            else [
+                *parse_workflow_output_binding_flags(mapping),
+                *parse_workflow_output_value_flags(literal_values),
+            ]
+        )
+
     context = load_cli_context(ctx)
+    if merge:
+        assert output_map is not None
+        operation = context.handlers.set_workflow_output_map(
+            workspace_id=workspace_id,
+            revision=revision,
+            output_map=output_map,
+            merge=True,
+        )
+    else:
+        assert bindings is not None
+        operation = context.handlers.set_workflow_output_bindings(
+            workspace_id=workspace_id,
+            revision=revision,
+            bindings=bindings,
+        )
     emit_json(
         run_cli_operation(
             context,
-            context.handlers.set_workflow_output_map(
-                workspace_id=workspace_id,
-                revision=revision,
-                output_map=output_map,
-                merge=merge,
-            ),
+            operation,
         )
     )
 
