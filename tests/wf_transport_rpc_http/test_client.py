@@ -15,7 +15,12 @@ from wf_artifacts.drafts.models import (
     DraftStep,
 )
 from wf_core import END
-from wf_core.models.steps import InputPathBinding, InputValueBinding, OutputBinding
+from wf_core.models.steps import (
+    InputBinding,
+    InputPathBinding,
+    InputValueBinding,
+    OutputBinding,
+)
 from wf_core.paths import GraphSourcePath, LocalPath, StatePath
 from wf_server import build_local_static_workflow_server
 from wf_transport_rpc_http import RpcWorkflowApiClient, create_rpc_app
@@ -729,6 +734,41 @@ async def test_rpc_client_serializes_canonical_step_input_bindings() -> None:
             ],
         },
     )
+
+
+async def test_rpc_client_set_workflow_output_bindings_preserves_union_order() -> None:
+    calls: list[dict[str, Any]] = []
+
+    class Client(RpcDraftClientMixin):
+        async def _call(self, method: str, params: dict[str, object]):
+            calls.append({"method": method, "params": params})
+            return {"revision": 4}
+
+    client = Client()
+    bindings: list[InputBinding] = [
+        InputPathBinding(
+            path=GraphSourcePath.state("value"),
+            target=LocalPath.of("value"),
+        ),
+        InputValueBinding(
+            target=LocalPath.of("format"),
+            value="markdown",
+        ),
+    ]
+
+    await client.set_workflow_output_bindings(
+        workspace_id="ws",
+        revision=3,
+        bindings=bindings,
+    )
+
+    assert calls[-1]["method"] == (
+        "workflow.draft_workspaces.set_workflow_output_bindings"
+    )
+    assert calls[-1]["params"]["bindings"] == [
+        {"target": "value", "path": "state.value"},
+        {"target": "format", "value": "markdown"},
+    ]
 
 
 async def test_rpc_client_serializes_step_output_bindings() -> None:

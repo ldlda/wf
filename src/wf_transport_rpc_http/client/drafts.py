@@ -257,6 +257,22 @@ class RpcDraftClientMixin:
             },
         )
 
+    async def set_workflow_output_bindings(
+        self: RpcCaller,
+        *,
+        workspace_id: str,
+        revision: int,
+        bindings: Sequence[InputBinding],
+    ) -> dict[str, Any]:
+        return await self._call(
+            "workflow.draft_workspaces.set_workflow_output_bindings",
+            {
+                "workspace_id": workspace_id,
+                "revision": revision,
+                "bindings": [binding.model_dump(mode="json") for binding in bindings],
+            },
+        )
+
     async def bind_draft(
         self: RpcCaller,
         *,

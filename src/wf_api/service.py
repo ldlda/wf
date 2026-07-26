@@ -471,6 +471,19 @@ class WorkflowApi:
             merge=merge,
         )
 
+    async def set_workflow_output_bindings(
+        self,
+        *,
+        workspace_id: str,
+        revision: int,
+        bindings: Sequence[InputBinding],
+    ) -> dict[str, Any]:
+        return await self.draft_authoring.set_workflow_output_bindings(
+            workspace_id=workspace_id,
+            revision=revision,
+            bindings=bindings,
+        )
+
     async def bind_draft(
         self,
         *,

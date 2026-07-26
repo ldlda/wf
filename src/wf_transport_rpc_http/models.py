@@ -238,6 +238,12 @@ class SetWorkflowOutputMapParams(RpcParamsModel):
     merge: bool = False
 
 
+class SetWorkflowOutputBindingsParams(RpcParamsModel):
+    workspace_id: str = Field(min_length=1)
+    revision: int = Field(ge=1)
+    bindings: list[InputBinding]
+
+
 class BindDraftParams(RpcParamsModel):
     workspace_id: str = Field(min_length=1)
     revision: int = Field(ge=1)

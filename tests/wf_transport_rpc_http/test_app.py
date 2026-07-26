@@ -1071,6 +1071,92 @@ async def test_rpc_draft_workspace_set_workflow_output_map(tmp_path) -> None:
     ]
 
 
+async def test_rpc_set_workflow_output_bindings_preserves_union_and_order(
+    tmp_path,
+) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    app = create_rpc_app(server)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        created = await _rpc(
+            client,
+            "workflow.draft_workspaces.create_from_capability",
+            {
+                "workspace_id": "output_bindings_ws",
+                "capability_name": "wf.std.constant",
+                "name": "output_bindings_test",
+            },
+        )
+        contracted = await _rpc(
+            client,
+            "workflow.draft_workspaces.set_contract",
+            {
+                "workspace_id": "output_bindings_ws",
+                "revision": created["result"]["revision"],
+                "output_schema": {
+                    "type": "object",
+                    "properties": {
+                        "format": {"type": "string"},
+                    },
+                },
+            },
+        )
+        result = await _rpc(
+            client,
+            "workflow.draft_workspaces.set_workflow_output_bindings",
+            {
+                "workspace_id": "output_bindings_ws",
+                "revision": contracted["result"]["revision"],
+                "bindings": [
+                    {"path": "state.value", "target": "value"},
+                    {"value": "markdown", "target": "format"},
+                ],
+            },
+        )
+        fetched = await _rpc(
+            client,
+            "workflow.draft_workspaces.get",
+            {"workspace_id": "output_bindings_ws", "include_draft": True},
+        )
+
+    assert "result" in result, result
+    assert result["result"]["revision"] == 3
+    assert fetched["result"]["draft"]["output"] == [
+        {"path": "state.value", "target": "value"},
+        {"value": "markdown", "target": "format"},
+    ]
+
+
+@pytest.mark.parametrize(
+    "binding",
+    [
+        {"path": "state.value", "value": "duplicate", "target": "value"},
+        {"path": "state.value"},
+        {"path": "state.value", "target": "value", "extra": True},
+        {"path": "local.value", "target": "value"},
+    ],
+)
+async def test_rpc_set_workflow_output_bindings_rejects_malformed_binding(
+    tmp_path,
+    binding: dict[str, Any],
+) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    app = create_rpc_app(server)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        rejected = await _rpc(
+            client,
+            "workflow.draft_workspaces.set_workflow_output_bindings",
+            {
+                "workspace_id": "missing_ws",
+                "revision": 1,
+                "bindings": [binding],
+            },
+        )
+
+    assert rejected["error"]["code"] == -32602
+
+
 async def test_rpc_draft_workspace_remove_route(tmp_path) -> None:
     server = build_local_static_workflow_server(tmp_path / "store")
     app = create_rpc_app(server)
