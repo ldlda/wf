@@ -32,9 +32,15 @@ validated, runnable deployment.
    - When adding a new capability-backed step, prefer:
 
      ```bash
-     wf draft add capability ...
+     wf draft add capability ... --description "Step purpose" \
+       --input state.value=request.value --value request.format='"json"'
+     wf draft update capability ... --retry 0 --clear-timeout
      wf draft validate <workspace_id>
      ```
+
+     Capability updates are presence-aware and preserve capability selection,
+     routes, and outputs. Input flags replace the complete canonical input
+     list; use `--bindings-file` for lossless path/value interleaving.
 
      For control flow, use the corresponding typed `wf draft add <kind>`
      command. Use raw `wf draft patch` only when changing structure that no

@@ -43,10 +43,12 @@
   outcomes list.
 - [x] A focused contract operation replaces workflow input/state/output
   schemas, preserving reducer metadata carried by the supplied state schema.
-- [ ] The dedicated capability-step CLI cannot set `desc`, `retry`,
-  `timeout_seconds`, or literal inputs at creation, and there is no focused
-  update-step operation. The generic RPC step payload can represent these
-  fields, but CLI repair still requires remove/re-add or raw patching.
+- [x] Capability-step creation accepts `desc`, `retry`, `timeout_seconds`, and
+  ordered canonical path/literal inputs through Python, JSON-RPC, MCP, and CLI.
+  The focused update operation preserves `use`, routes, and outputs while
+  changing selected metadata or atomically replacing the complete canonical
+  input list. Changing the capability itself remains an explicit remove/add
+  operation. TypeScript JSON-RPC parity remains tracked below.
 
 ## Draft revision semantics
 

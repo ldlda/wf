@@ -197,8 +197,16 @@ Repeat `--input` and `--bind-output` once per mapping. Do not put multiple
 mappings after one flag.
 
 ```bash
-wf draft add capability <workspace_id> --revision <n> --step <step_id> --capability <qualified_name> --input state.title=title --input state.summary=summary --bind-output markdown=state.markdown --bind-output title=state.title
+wf draft add capability <workspace_id> --revision <n> --step <step_id> --capability <qualified_name> --description "Publish report" --retry 2 --timeout-seconds 30 --input state.title=title --value format='"markdown"' --bind-output markdown=state.markdown
+wf draft update capability <workspace_id> --revision <n> --step <step_id> --clear-description --retry 0 --clear-timeout
 ```
+
+For `update capability`, omission preserves a field and `--clear-*` removes
+the selected metadata. Any `--input`/`--value` update replaces the complete
+ordered input list; use `--bindings-file` for exact path/value interleaving or
+`--clear-input` for `[]`. The update preserves `use`, routes, and outputs.
+Use separate focused commands for routes/outputs, and remove/add to change the
+capability.
 
 Use the matching `wf draft add <kind>` command for control steps. `when`,
 `choose`, and `match` embed their targets and do not accept `--route`.

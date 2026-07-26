@@ -157,6 +157,8 @@ Focused repair helpers:
 - `wf.workflow.set_step_output_map`
 - `wf.workflow.set_workflow_output_bindings`
 - `wf.workflow.set_workflow_output_map` (compatibility-only map adapter)
+- `wf.workflow.add_step_from_capability`
+- `wf.workflow.update_capability_step`
 
 These helpers are deliberately narrow. Prefer them over JSON Patch when the
 caller only needs to edit one common field.
@@ -172,6 +174,21 @@ or repeated-source fan-out.
 
 The equivalent JSON-RPC operation is
 `workflow.draft_workspaces.set_workflow_output_bindings`.
+
+`wf.workflow.add_step_from_capability` accepts metadata and either the legacy
+`input_map` or the preferred ordered `input_bindings` list. Canonical bindings
+may interleave graph paths and literal values.
+
+`wf.workflow.update_capability_step` accepts a presence-aware `update` object.
+Omitted keys are preserved; explicit `null` clears `desc`, `retry`, or
+`timeout_seconds`. Supplying `input` replaces the complete canonical input
+list, while `input: null` is rejected. The operation preserves `use`, routes,
+and outputs.
+
+Equivalent JSON-RPC operations:
+
+- `workflow.draft_workspaces.add_step_from_capability`
+- `workflow.draft_workspaces.update_capability_step`
 
 Advanced workspace tools:
 

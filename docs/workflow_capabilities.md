@@ -227,6 +227,34 @@ Others should be authored and saved:
 
 The platform should support both.
 
+## Capability Steps In Drafts
+
+A capability-backed draft step records its selected capability in `use`, plus
+metadata, canonical input bindings, output bindings, and routes. Creation can
+set these common fields in one revision-checked operation:
+
+```bash
+wf draft add capability report --revision 3 --step publish \
+  --capability local.report.publish \
+  --description "Publish report" --retry 2 --timeout-seconds 30 \
+  --input state.report.title=request.title \
+  --value request.format='"markdown"' --route ok=__end__
+```
+
+Focused update changes only fields explicitly supplied by the caller. Omitted
+metadata is preserved; explicit null through JSON-RPC/MCP, or the matching CLI
+`--clear-*` flag, removes that override. Supplying canonical input bindings
+replaces the complete ordered list atomically. This update preserves `use`,
+routes, and outputs. Use their dedicated operations, or remove/add when
+changing the selected capability.
+
+The transport operation names are:
+
+- JSON-RPC: `workflow.draft_workspaces.add_step_from_capability`
+- JSON-RPC: `workflow.draft_workspaces.update_capability_step`
+- MCP: `wf.workflow.add_step_from_capability`
+- MCP: `wf.workflow.update_capability_step`
+
 ## Authoring Loop
 
 A client authoring workflows, including an LLM client, should be able to:

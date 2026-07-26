@@ -727,6 +727,13 @@ wf draft set-workflow-output <workspace_id> --revision <n> \
 wf draft set-workflow-output <workspace_id> --revision <n> --clear
 wf draft set-workflow-output <workspace_id> --revision <n> \
   --merge --map state.other=other
+wf draft add capability report --revision 3 --step publish \
+  --capability local.report.publish --description "Publish report" \
+  --retry 2 --timeout-seconds 30 \
+  --input state.report.title=request.title \
+  --value request.format='"markdown"' --route ok=__end__
+wf draft update capability report --revision 4 --step publish \
+  --clear-description --retry 0 --clear-timeout
 wf draft branch <workspace_id> --revision <n> --step <step_id> --route ok=__end__ --route error=tool_error
 wf draft handle <workspace_id> --revision <n> --to fail --branch lookup:error --branch transform:error
 wf draft compile <workspace_id>
@@ -749,6 +756,17 @@ bindings need declared output targets; nested `input.*` and `state.*` paths
 may project their declared source schema into missing nested output fields.
 The compatibility `--merge --map` form remains available only for lossy map
 edits and cannot preserve literals, order, or repeated-source fan-out.
+
+`add capability` accepts metadata plus ordered path and literal input bindings.
+`update capability` is presence-aware: omitted fields remain unchanged, while
+`--clear-description`, `--clear-retry`, and `--clear-timeout` remove only the
+selected metadata. Any `--input`/`--value` update replaces the complete input
+list; `--clear-input` writes an empty list. Use `--bindings-file` when path and
+literal records must retain their exact interleaving.
+
+The focused update preserves the step's `use`, routes, and outputs. Route and
+output changes remain separate focused operations. Replacing `use` is not an
+update operation; remove and re-add the capability step explicitly.
 
 Use `draft patch` when these focused commands do not cover the structural edit.
 

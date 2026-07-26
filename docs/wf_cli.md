@@ -461,17 +461,34 @@ unknown route entries and add one route for each missing declared outcome.
 ```bash
 wf draft add capability report_ws \
   --revision 3 \
-  --step render \
-  --capability local.report.render_markdown_report \
+  --step publish \
+  --capability local.report.publish \
+  --description "Publish report" \
+  --retry 2 \
+  --timeout-seconds 30 \
   --from-step extract \
   --from-outcome ok \
   --route ok=__end__ \
-  --route error=tool_error \
-  --input state.title=title \
-  --input state.summary=summary \
-  --bind-output markdown=state.markdown \
-  --bind-output title=state.title
+  --input state.report.title=request.title \
+  --value request.format='"markdown"'
+
+wf draft update capability report_ws \
+  --revision 4 \
+  --step publish \
+  --clear-description \
+  --retry 0 \
+  --clear-timeout
 ```
+
+On update, an omitted field is preserved. A matching `--clear-*` flag removes
+that metadata override; `--retry 0` is a real value, not omission. Supplying
+`--input` and/or `--value` replaces the step's complete ordered canonical input
+list. `--clear-input` replaces it with `[]`. Use `--bindings-file` for exact
+path/value interleaving exported from `draft inspect --include-draft`.
+
+Capability updates deliberately preserve `use`, routes, and outputs. Change
+routes with `set-route`/`branch`, change output bindings with `set-output` or
+`bind`, and change the capability itself by removing and adding the step.
 
 Interrupts preserve explicit request and resume contracts:
 

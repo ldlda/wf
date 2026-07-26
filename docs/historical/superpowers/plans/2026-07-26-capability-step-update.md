@@ -856,7 +856,7 @@ git commit -m "feat: add capability step update cli"
 - Produces: accurate current docs, closed issue state, archived checked plan,
   and final review evidence.
 
-- [ ] **Step 1: Update issue and roadmap state**
+- [x] **Step 1: Update issue and roadmap state**
 
 Mark the focused capability-step update issue complete. State that:
 
@@ -868,7 +868,7 @@ Mark the focused capability-step update issue complete. State that:
 
 Add a completed roadmap entry linked to the historical plan.
 
-- [ ] **Step 2: Update user and agent docs**
+- [x] **Step 2: Update user and agent docs**
 
 Document:
 
@@ -892,7 +892,7 @@ Explain omission versus clearing, complete input replacement, bindings-file
 interleaving, and separate route/output operations. Add JSON-RPC and MCP
 operation names to live inventories.
 
-- [ ] **Step 3: Archive the checked plan**
+- [x] **Step 3: Archive the checked plan**
 
 Mark every checkbox complete, move the plan to the historical path, and update
 all live links:
@@ -901,7 +901,7 @@ all live links:
 rg -n '2026-07-26-capability-step-update' docs skills README.md
 ```
 
-- [ ] **Step 4: Run the full focused matrix**
+- [x] **Step 4: Run the full focused matrix**
 
 Run:
 
@@ -920,7 +920,7 @@ Run:
 
 Expected: PASS with only already-known dependency deprecation warnings.
 
-- [ ] **Step 5: Run static verification**
+- [x] **Step 5: Run static verification**
 
 Run:
 
@@ -933,7 +933,7 @@ git diff --check
 
 Expected: all clean.
 
-- [ ] **Step 6: Run independent two-axis review**
+- [x] **Step 6: Run independent two-axis review**
 
 Review from commit `05afc2e1` through the current worktree against:
 
@@ -959,7 +959,7 @@ reviewer must inspect:
 
 Fix every Critical and Important finding and rerun affected checks.
 
-- [ ] **Step 7: Commit documentation and review fixes**
+- [x] **Step 7: Commit documentation and review fixes**
 
 Commit documentation:
 

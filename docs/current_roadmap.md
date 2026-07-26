@@ -822,6 +822,12 @@ stable.
   and is available through Python, JSON-RPC, MCP, and local/remote CLI modes.
   Compatibility map merges remain available but inherently lossy. Implementation
   plan: [`atomic step output bindings`](historical/superpowers/plans/2026-07-23-atomic-step-output-bindings.md).
+- Completed: capability-step creation now accepts metadata and ordered
+  path/literal inputs, while focused presence-aware updates can clear selected
+  metadata or atomically replace canonical inputs without changing `use`,
+  routes, or outputs. Python, JSON-RPC, MCP, and local/remote CLI surfaces are
+  aligned. Implementation plan:
+  [`capability step updates`](historical/superpowers/plans/2026-07-26-capability-step-update.md).
 
 Agent evaluation cohort status and policy:
 

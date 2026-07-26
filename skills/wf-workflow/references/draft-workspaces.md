@@ -92,6 +92,7 @@ Prefer focused helpers over JSON Patch for common edits:
 - `bind_draft`
 - `add_step`
 - `add_step_from_capability`
+- `update_capability_step`
 - `branch_draft`
 - `handle_draft`
 - `compile_draft_workspace`
@@ -221,7 +222,8 @@ wf draft validate <workspace_id>
 
   Adds a new capability-backed step with explicit route, input bindings, and
   output-to-state schema/binding wiring in one revision. It can set the incoming
-  edge, outgoing edges, input map, and output-to-state schema/binding. Use
+  edge, outgoing edges, canonical path/literal inputs, metadata, and
+  output-to-state schema/binding. Use
   `--route OUTCOME=TARGET` for each outcome; when omitted and the capability
   declares a single outcome, that outcome routes to `__end__`. Multi-outcome
   capabilities require exact route coverage; missing or unknown outcomes are
@@ -236,11 +238,16 @@ wf draft validate <workspace_id>
   workflow input/state schema paths from the nested capability input schema.
 
 ```bash
-wf draft add capability <workspace_id> --revision <n> --step <step_id> --capability <qualified_name> --from-step <prev> --from-outcome ok --route ok=__end__ --route error=fail --input input.text=text --input input.other=other --bind-output result=state.result --bind-output title=state.title
+wf draft add capability <workspace_id> --revision <n> --step <step_id> --capability <qualified_name> --description "Publish report" --retry 2 --timeout-seconds 30 --from-step <prev> --from-outcome ok --route ok=__end__ --route error=fail --input input.text=text --value format='"markdown"' --bind-output result=state.result
+wf draft update capability <workspace_id> --revision <n> --step <step_id> --clear-description --retry 0 --clear-timeout
 wf draft validate <workspace_id>
 ```
 
-Repeat `--input` and `--bind-output` once per mapping. Do not write
+Repeat `--input`, `--value`, and `--bind-output` once per binding. Use
+`--bindings-file` for exact canonical path/value ordering. On update, omitted
+fields are preserved and `--clear-*` removes the selected metadata; input
+flags replace the complete input list. The update preserves capability
+selection, routes, and outputs. Do not write
 `--bind-output title=state.title summary=state.summary`; the second mapping is
 an unexpected extra argument because it is not attached to its own flag.
 
