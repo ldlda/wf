@@ -62,6 +62,7 @@ def test_server_exposes_upstream_admin_and_workflow_tools() -> None:
             assert "wf.workflow.set_workflow_output_map" in names
             assert "wf.workflow.bind" in names
             assert "wf.workflow.add_step_from_capability" in names
+            assert "wf.workflow.update_capability_step" in names
             assert "wf.workflow.remove_draft_route" in names
             assert "wf.workflow.remove_draft_step" in names
             assert "wf.workflow.remove_draft_binding" in names
@@ -169,6 +170,15 @@ def test_server_exposes_upstream_admin_and_workflow_tools() -> None:
             add_step_request = add_step_schema["properties"]["request"]
             assert "capability_name" in add_step_request["properties"]
             assert "bind_outputs" in add_step_request["properties"]
+            assert "input_bindings" in add_step_request["properties"]
+            assert "desc" in add_step_request["properties"]
+            assert "retry" in add_step_request["properties"]
+            assert "timeout_seconds" in add_step_request["properties"]
+            update_step_schema = tools_by_name[
+                "wf.workflow.update_capability_step"
+            ].inputSchema
+            update_step_request = update_step_schema["properties"]["request"]
+            assert "update" in update_step_request["properties"]
             from_capability_output = tools_by_name[
                 "wf.workflow.create_draft_workspace_from_capability"
             ].outputSchema

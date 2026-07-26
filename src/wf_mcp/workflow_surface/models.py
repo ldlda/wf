@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any, Literal, Self
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
+from wf_api import CapabilityStepUpdate
 from wf_api.next_actions import NextActionPatchExample, NextActions
 from wf_artifacts import ArtifactKind
 from wf_artifacts.draft_workspaces.models import WORKSPACE_ID_PATTERN
@@ -342,14 +343,39 @@ class AddStepFromCapabilityRequest(BaseModel):
             "require explicit routes."
         ),
     )
-    input_map: DraftPathMap = Field(
-        default_factory=dict,
+    input_map: DraftPathMap | None = Field(
+        default=None,
         description="Graph source path to rootless node-local target path.",
+    )
+    input_bindings: DraftInputBindings | None = Field(
+        default=None,
+        description=(
+            "Preferred complete ordered canonical input bindings. Use this "
+            "instead of input_map for new clients."
+        ),
     )
     bind_outputs: DraftPathMap = Field(
         default_factory=dict,
         description="Node-local output field to state path with schema projection.",
     )
+    desc: str | None = Field(default=None, min_length=1)
+    retry: int | None = Field(default=None, ge=0)
+    timeout_seconds: int | None = Field(default=None, gt=0)
+
+    @model_validator(mode="after")
+    def reject_both_input_forms(self) -> Self:
+        if self.input_map is not None and self.input_bindings is not None:
+            raise ValueError("input_map and input_bindings are mutually exclusive")
+        return self
+
+
+class UpdateCapabilityStepRequest(BaseModel):
+    """Typed MCP request for patching one capability-backed draft step."""
+
+    workspace_id: WorkspaceId
+    revision: int = Field(ge=1, description="Expected workspace revision.")
+    step_id: NonEmptyString = Field(description="Existing draft step id.")
+    update: CapabilityStepUpdate
 
 
 class RemoveDraftRouteRequest(BaseModel):

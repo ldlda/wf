@@ -42,6 +42,7 @@ from .models import (
     SetWorkflowOutputBindingsRequest,
     SetWorkflowOutputMapRequest,
     TraceRange,
+    UpdateCapabilityStepRequest,
     ValidateDeploymentResult,
     ValidateDraftWorkspaceRequest,
 )
@@ -591,7 +592,31 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
                 route_from_outcome=request.route_from_outcome,
                 routes=request.routes,
                 input_map=request.input_map,
+                input_bindings=request.input_bindings,
                 bind_outputs=request.bind_outputs,
+                desc=request.desc,
+                retry=request.retry,
+                timeout_seconds=request.timeout_seconds,
+            )
+        )
+
+    @server.tool(
+        name="wf.workflow.update_capability_step",
+        title="Update Capability Step",
+        description=(
+            "Update capability-step metadata and optionally replace its complete "
+            "canonical input bindings. Preserves use, routes, and outputs."
+        ),
+    )
+    async def update_capability_step(
+        request: UpdateCapabilityStepRequest,
+    ) -> DraftWorkspaceResult:
+        return DraftWorkspaceResult.model_validate(
+            await handlers.update_capability_step(
+                workspace_id=request.workspace_id,
+                revision=request.revision,
+                step_id=request.step_id,
+                update=request.update,
             )
         )
 

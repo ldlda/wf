@@ -18,10 +18,12 @@ from wf_mcp.models import ConnectionConfig
 from wf_mcp.storage import FileStore
 from wf_mcp.workflow_surface import WorkflowSurfaceHandlers
 from wf_mcp.workflow_surface.models import (
+    AddStepFromCapabilityRequest,
     CreateMinimalDraftWorkspaceRequest,
     SetStepInputBindingsRequest,
     SetStepOutputBindingsRequest,
     SetWorkflowOutputBindingsRequest,
+    UpdateCapabilityStepRequest,
 )
 
 from ..test_support import echo_tool
@@ -31,6 +33,91 @@ from .conftest import (
     handlers,
     mcp_echo_tool,
 )
+
+
+def test_update_capability_step_request_preserves_field_presence_and_binding_type() -> (
+    None
+):
+    request = UpdateCapabilityStepRequest.model_validate(
+        {
+            "workspace_id": "report",
+            "revision": 4,
+            "step_id": "publish",
+            "update": {
+                "desc": None,
+                "input": [
+                    {"value": "markdown", "target": "request.format"},
+                ],
+            },
+        }
+    )
+
+    assert request.update.model_fields_set == {"desc", "input"}
+    assert request.update.desc is None
+    assert request.update.input is not None
+    assert isinstance(request.update.input[0], InputValueBinding)
+
+
+@pytest.mark.parametrize(
+    "update",
+    [
+        {},
+        {"input": None},
+        {"retry": -1},
+        {"timeout_seconds": 0},
+        {"unknown": "field"},
+    ],
+)
+def test_update_capability_step_request_rejects_invalid_patch(update) -> None:
+    with pytest.raises(ValidationError):
+        UpdateCapabilityStepRequest.model_validate(
+            {
+                "workspace_id": "report",
+                "revision": 4,
+                "step_id": "publish",
+                "update": update,
+            }
+        )
+
+
+def test_add_step_from_capability_request_preserves_creation_parity() -> None:
+    request = AddStepFromCapabilityRequest.model_validate(
+        {
+            "workspace_id": "report",
+            "revision": 3,
+            "step_id": "publish",
+            "capability_name": "local.report.publish",
+            "input_bindings": [
+                {"path": "state.report.title", "target": "request.title"},
+                {"value": "markdown", "target": "request.format"},
+            ],
+            "desc": "Publish report",
+            "retry": 0,
+            "timeout_seconds": 30,
+        }
+    )
+
+    assert request.input_map is None
+    assert request.input_bindings is not None
+    assert isinstance(request.input_bindings[0], InputPathBinding)
+    assert isinstance(request.input_bindings[1], InputValueBinding)
+    assert request.retry == 0
+
+
+def test_add_step_from_capability_request_rejects_both_input_forms() -> None:
+    with pytest.raises(ValidationError, match="mutually exclusive"):
+        AddStepFromCapabilityRequest.model_validate(
+            {
+                "workspace_id": "report",
+                "revision": 3,
+                "step_id": "publish",
+                "capability_name": "local.report.publish",
+                "input_map": {"state.title": "request.title"},
+                "input_bindings": [
+                    {"value": "markdown", "target": "request.format"},
+                ],
+            }
+        )
 
 
 def test_workflow_surface_rejects_unknown_draft_route_outcome_when_spec_is_known(

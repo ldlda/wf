@@ -55,6 +55,7 @@ async def test_server_search_mode_pins_stable_control_and_workflow_tools() -> No
         assert "wf.workflow.set_workflow_output_bindings" in names
         assert "wf.workflow.set_workflow_output_map" in names
         assert "wf.workflow.bind" in names
+        assert "wf.workflow.update_capability_step" in names
         assert "wf.workflow.remove_draft_route" in names
         assert "wf.workflow.remove_draft_step" in names
         assert "wf.workflow.remove_draft_binding" in names
@@ -206,6 +207,115 @@ async def test_registered_workflow_output_bindings_tool_preserves_union_order(
         {"path": "state.report.title", "target": "report.title"},
         {"value": "markdown", "target": "format"},
     ]
+
+
+@pytest.mark.asyncio
+async def test_registered_capability_tools_delegate_presence_aware_requests(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class RecordingWorkflowHandler:
+        def __init__(self) -> None:
+            self.update_calls: list[dict[str, Any]] = []
+            self.add_calls: list[dict[str, Any]] = []
+
+        async def update_capability_step(self, **kwargs: Any) -> dict[str, Any]:
+            self.update_calls.append(kwargs)
+            return {
+                "workspace_id": kwargs["workspace_id"],
+                "revision": kwargs["revision"] + 1,
+                "status": "valid",
+                "diagnostics": [],
+                "summary": {},
+            }
+
+        async def add_step_from_capability(self, **kwargs: Any) -> dict[str, Any]:
+            self.add_calls.append(kwargs)
+            return {
+                "workspace_id": kwargs["workspace_id"],
+                "revision": kwargs["revision"] + 1,
+                "status": "valid",
+                "diagnostics": [],
+                "summary": {},
+            }
+
+    recorder = RecordingWorkflowHandler()
+    monkeypatch.setattr(
+        "wf_mcp.workflow_surface.tools.WorkflowApi",
+        lambda _context: recorder,
+    )
+    service = WfMcpService(
+        store=FileStore(tmp_path / "capability_tool_store"),
+        artifact_store=FileWorkflowArtifactStore(
+            tmp_path / "capability_tool_artifacts"
+        ),
+        draft_workspace_store=FileDraftWorkspaceStore(
+            tmp_path / "capability_tool_drafts"
+        ),
+    )
+    server = FastMCP("capability-update-tool-test")
+    register_workflow_tools(server, service)
+
+    async with Client(FastMCPTransport(server)) as client:
+        updated = await client.call_tool(
+            "wf.workflow.update_capability_step",
+            {
+                "request": {
+                    "workspace_id": "report",
+                    "revision": 4,
+                    "step_id": "publish",
+                    "update": {
+                        "desc": None,
+                        "input": [
+                            {
+                                "value": "markdown",
+                                "target": "request.format",
+                            }
+                        ],
+                    },
+                }
+            },
+        )
+        added = await client.call_tool(
+            "wf.workflow.add_step_from_capability",
+            {
+                "request": {
+                    "workspace_id": "report",
+                    "revision": 5,
+                    "step_id": "archive",
+                    "capability_name": "local.report.archive",
+                    "input_bindings": [
+                        {
+                            "path": "state.report.title",
+                            "target": "request.title",
+                        },
+                        {"value": "pdf", "target": "request.format"},
+                    ],
+                    "desc": "Archive report",
+                    "retry": 0,
+                    "timeout_seconds": 20,
+                }
+            },
+        )
+
+    assert structured(updated)["revision"] == 5
+    assert structured(added)["revision"] == 6
+    assert len(recorder.update_calls) == 1
+    update = recorder.update_calls[0]["update"]
+    assert update.model_fields_set == {"desc", "input"}
+    assert isinstance(update.input[0], InputValueBinding)
+    assert len(recorder.add_calls) == 1
+    add_call = recorder.add_calls[0]
+    assert add_call["input_map"] is None
+    assert [
+        binding.model_dump(mode="json") for binding in add_call["input_bindings"]
+    ] == [
+        {"path": "state.report.title", "target": "request.title"},
+        {"value": "pdf", "target": "request.format"},
+    ]
+    assert add_call["desc"] == "Archive report"
+    assert add_call["retry"] == 0
+    assert add_call["timeout_seconds"] == 20
 
 
 @pytest.mark.asyncio

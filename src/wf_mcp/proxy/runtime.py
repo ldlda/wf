@@ -55,6 +55,7 @@ _SEARCH_ALWAYS_VISIBLE_TOOL_NAMES = [
     "wf.workflow.set_workflow_output_bindings",
     "wf.workflow.set_workflow_output_map",
     "wf.workflow.bind",
+    "wf.workflow.update_capability_step",
     "wf.workflow.remove_draft_route",
     "wf.workflow.remove_draft_step",
     "wf.workflow.remove_draft_binding",

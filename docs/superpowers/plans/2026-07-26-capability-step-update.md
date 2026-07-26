@@ -577,7 +577,7 @@ git commit -m "feat: expose capability step updates over rpc"
 - Produces: `wf.workflow.update_capability_step`.
 - Extends: `wf.workflow.add_step_from_capability`.
 
-- [ ] **Step 1: Write failing MCP request tests**
+- [x] **Step 1: Write failing MCP request tests**
 
 Add:
 
@@ -602,7 +602,7 @@ assert isinstance(request.update.input[0], InputValueBinding)
 
 Add malformed update cases and add-capability request parity tests.
 
-- [ ] **Step 2: Write failing discovery and real invocation tests**
+- [x] **Step 2: Write failing discovery and real invocation tests**
 
 Require the tool in normal and search-mode inventories. Call it through an
 in-memory FastMCP client and assert:
@@ -614,7 +614,7 @@ in-memory FastMCP client and assert:
 
 Extend the add-capability invocation test with metadata and a literal binding.
 
-- [ ] **Step 3: Implement MCP request and tools**
+- [x] **Step 3: Implement MCP request and tools**
 
 Add:
 
@@ -654,7 +654,7 @@ Add the name to `_SEARCH_ALWAYS_VISIBLE_TOOL_NAMES`. Extend
 `AddStepFromCapabilityRequest` and its tool delegation with the creation-parity
 fields.
 
-- [ ] **Step 4: Verify and commit Task 3**
+- [x] **Step 4: Verify and commit Task 3**
 
 Run:
 
