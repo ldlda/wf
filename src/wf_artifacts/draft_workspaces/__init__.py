@@ -1,4 +1,9 @@
-from .api import create_draft_workspace, get_draft_workspace, patch_draft_workspace
+from .api import (
+    create_draft_workspace,
+    get_draft_workspace,
+    patch_draft_workspace,
+    replace_validated_draft_document,
+)
 from .models import (
     WorkflowDraftWorkspace,
     ensure_workspace_id,
@@ -19,5 +24,6 @@ __all__ = [
     "ensure_workspace_id",
     "get_draft_workspace",
     "patch_draft_workspace",
+    "replace_validated_draft_document",
     "summarize_draft_workspace",
 ]

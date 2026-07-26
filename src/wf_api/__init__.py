@@ -18,6 +18,7 @@ from .constants import (
 )
 from .deployments import WorkflowDeploymentApi
 from .draft_authoring import RouteSource
+from .draft_updates import CapabilityStepUpdate
 from .drafts import WorkflowDraftApi
 from .durable_context import durable_workflow_api, require_workflow_stores
 from .listing import matches_query, paged_list_payload
@@ -72,6 +73,7 @@ __all__ = [
     "DEFAULT_CALL_STEP_ID",
     "AuthRecord",
     "AuthStore",
+    "CapabilityStepUpdate",
     "builtin_sources",
     "get_qualified_spec",
     "matches_query",

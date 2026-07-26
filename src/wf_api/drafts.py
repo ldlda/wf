@@ -19,6 +19,9 @@ from wf_artifacts import (
 from wf_artifacts import (
     patch_draft_workspace as patch_draft_workspace_record,
 )
+from wf_artifacts import (
+    replace_validated_draft_document as replace_validated_draft_document_record,
+)
 from wf_core.models.schemas import NodeDef
 from wf_core.models.steps import (
     InputBinding,
@@ -287,6 +290,21 @@ class WorkflowDraftApi:
             revision=revision,
             patch=patch,
             node_defs_for_draft=self._node_defs_for_draft,
+        )
+
+    async def replace_validated_draft_document(
+        self,
+        *,
+        workspace_id: str,
+        revision: int,
+        draft: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Persist a focused, structurally validated edit without provider lookup."""
+        return replace_validated_draft_document_record(
+            self._draft_store(),
+            workspace_id=workspace_id,
+            revision=revision,
+            draft=draft,
         )
 
     async def set_draft_name(

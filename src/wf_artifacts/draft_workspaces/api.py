@@ -102,6 +102,39 @@ def patch_draft_workspace(
     return summarize_draft_workspace(next_workspace)
 
 
+def replace_validated_draft_document(
+    store: DraftWorkspaceStore,
+    *,
+    workspace_id: str,
+    revision: int,
+    draft: JsonObject,
+) -> JsonObject:
+    """Atomically replace a structurally validated draft without resolving providers.
+
+    This is for focused edits whose changed fields have already been validated and
+    cannot alter capability contracts. The workspace's existing semantic validation
+    snapshot is preserved.
+    """
+    workspace = store.get_workspace(workspace_id)
+    if workspace.revision != revision:
+        return _revision_conflict_payload(workspace, revision)
+    canonical_draft = WorkflowDraft.model_validate(draft).model_dump(mode="json")
+    if canonical_draft == workspace.draft:
+        return summarize_draft_workspace(workspace)
+    next_workspace = workspace.model_copy(
+        update={
+            "revision": workspace.revision + 1,
+            "draft": canonical_draft,
+            "updated_at_epoch_ms": _now_ms(),
+        }
+    )
+    try:
+        store.replace_workspace(next_workspace, expected_revision=revision)
+    except DraftWorkspaceConflictError as exc:
+        return _revision_conflict_payload(exc.workspace, revision)
+    return summarize_draft_workspace(next_workspace)
+
+
 def get_draft_workspace(
     store: DraftWorkspaceStore,
     *,

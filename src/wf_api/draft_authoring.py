@@ -52,6 +52,7 @@ from .draft_payloads import (
     output_bindings_payload,
     state_root_field,
 )
+from .draft_updates import CapabilityStepUpdate
 from .drafts import (
     WorkflowDraftApi,
     _draft_input_maps,
@@ -182,6 +183,15 @@ def _step_output_bindings_patch(
         }
     )
     return patch
+
+
+@dataclass(frozen=True)
+class _ProjectedStepInputBindings:
+    """Canonical step inputs plus workflow schemas projected from their sources."""
+
+    payload: list[dict[str, Any]]
+    input_schema: dict[str, Any]
+    state_schema: dict[str, Any]
 
 
 class WorkflowDraftAuthoringApi:
@@ -436,6 +446,40 @@ class WorkflowDraftAuthoringApi:
             raise ValueError(
                 f"draft step {step_id!r} does not declare a capability use"
             )
+        projected = self._project_step_input_bindings(
+            workspace=workspace,
+            capability_name=capability_name,
+            bindings=bindings,
+        )
+
+        if (
+            step.get("input", []) == projected.payload
+            and workspace.draft.get("input_schema", {}) == projected.input_schema
+            and workspace.draft.get("state_schema", {}) == projected.state_schema
+        ):
+            return summarize_draft_workspace(workspace)
+
+        patch = _step_input_bindings_patch(
+            workspace=workspace,
+            step_id=step_id,
+            bindings=projected.payload,
+            input_schema=projected.input_schema,
+            state_schema=projected.state_schema,
+        )
+        return await self.drafts.patch_draft_workspace(
+            workspace_id=workspace_id,
+            revision=revision,
+            patch=patch,
+        )
+
+    def _project_step_input_bindings(
+        self,
+        *,
+        workspace: WorkflowDraftWorkspace,
+        capability_name: str,
+        bindings: Sequence[InputBinding],
+    ) -> _ProjectedStepInputBindings:
+        """Validate canonical inputs and project missing workflow source schemas."""
         spec = self.context.specs.get_qualified_spec(capability_name)
         capability_schema = (
             spec.input_schema_contract or spec.input_model.model_json_schema()
@@ -495,19 +539,95 @@ class WorkflowDraftAuthoringApi:
                     projected_state = target_schema
 
         payload = [binding.model_dump(mode="json") for binding in bindings]
+        return _ProjectedStepInputBindings(
+            payload=payload,
+            input_schema=projected_input,
+            state_schema=projected_state,
+        )
+
+    async def update_capability_step(
+        self,
+        *,
+        workspace_id: str,
+        revision: int,
+        step_id: str,
+        update: CapabilityStepUpdate,
+    ) -> dict[str, Any]:
+        """Patch capability metadata and optional canonical inputs atomically."""
+        checked = self._workspace_if_revision_matches(
+            workspace_id=workspace_id,
+            revision=revision,
+        )
+        if isinstance(checked, dict):
+            return checked
+        workspace = checked
+        step = draft_step(workspace.draft, step_id)
+        capability_name = step.get("use")
+        if not isinstance(capability_name, str) or not capability_name:
+            raise ValueError(f"draft step {step_id!r} is not capability-backed")
+        current = DraftUseStep.model_validate(step)
+
+        changes: dict[str, object] = {}
+        for field in ("desc", "retry", "timeout_seconds"):
+            if field in update.model_fields_set:
+                changes[field] = getattr(update, field)
+
+        projected: _ProjectedStepInputBindings | None = None
+        if "input" in update.model_fields_set:
+            if update.input is None:
+                raise AssertionError("validated capability update has null input")
+            projected = self._project_step_input_bindings(
+                workspace=workspace,
+                capability_name=capability_name,
+                bindings=update.input,
+            )
+            changes["input"] = update.input
+
+        changed = current.model_copy(update=changes)
+        step_payload = changed.model_dump(
+            mode="json",
+            by_alias=True,
+            exclude_none=True,
+        )
+        input_schema = (
+            projected.input_schema
+            if projected is not None
+            else _draft_schema(workspace.draft, "input_schema")
+        )
+        state_schema = (
+            projected.state_schema
+            if projected is not None
+            else _draft_schema(workspace.draft, "state_schema")
+        )
         if (
-            step.get("input", []) == payload
-            and workspace.draft.get("input_schema", {}) == projected_input
-            and workspace.draft.get("state_schema", {}) == projected_state
+            step == step_payload
+            and workspace.draft.get("input_schema", {}) == input_schema
+            and workspace.draft.get("state_schema", {}) == state_schema
         ):
             return summarize_draft_workspace(workspace)
 
-        patch = _step_input_bindings_patch(
-            workspace=workspace,
-            step_id=step_id,
-            bindings=payload,
-            input_schema=projected_input,
-            state_schema=projected_state,
+        if projected is None:
+            next_draft = deepcopy(workspace.draft)
+            next_draft["steps"][step_id] = step_payload
+            return await self.drafts.replace_validated_draft_document(
+                workspace_id=workspace_id,
+                revision=revision,
+                draft=next_draft,
+            )
+
+        patch: list[dict[str, Any]] = []
+        for key, value in (
+            ("input_schema", input_schema),
+            ("state_schema", state_schema),
+        ):
+            if workspace.draft.get(key, {}) != value:
+                patch.append({"op": "replace", "path": f"/{key}", "value": value})
+        patch.append(
+            {
+                "op": "replace",
+                "path": f"/steps/{escape_json_pointer(step_id)}",
+                "value": step_payload,
+            }
         )
         return await self.drafts.patch_draft_workspace(
             workspace_id=workspace_id,
@@ -927,7 +1047,11 @@ class WorkflowDraftAuthoringApi:
         route_from_outcome: str = DEFAULT_OK_OUTCOME,
         routes: dict[str, str] | None = None,
         input_map: dict[str, str] | None = None,
+        input_bindings: Sequence[InputBinding] | None = None,
         bind_outputs: dict[str, str] | None = None,
+        desc: str | None = None,
+        retry: int | None = None,
+        timeout_seconds: int | None = None,
     ) -> dict[str, Any]:
         """Add one capability step plus explicit route/map/schema wiring.
 
@@ -947,6 +1071,8 @@ class WorkflowDraftAuthoringApi:
             raise ValueError("draft steps must be an object")
         if step_id in steps:
             raise ValueError(f"draft step {step_id!r} already exists")
+        if input_map is not None and input_bindings is not None:
+            raise ValueError("input_map and input_bindings are mutually exclusive")
 
         spec = self.context.specs.get_qualified_spec(capability_name)
         output_schema = (
@@ -999,46 +1125,20 @@ class WorkflowDraftAuthoringApi:
                     f"routes for {missing_outcomes}"
                 )
 
-        input_map = input_map or {}
+        if input_bindings is None:
+            canonical_inputs = TypeAdapter(list[InputBinding]).validate_python(
+                input_bindings_payload(input_map or {}, {})
+            )
+        else:
+            canonical_inputs = list(input_bindings)
         bind_outputs = bind_outputs or {}
-        projected_input_schema = workspace.draft.get("input_schema", {})
-        if not isinstance(projected_input_schema, dict):
-            raise ValueError("draft input_schema must be an object")
-        projected_state_schema = state_schema
-        input_schema = (
-            spec.input_schema_contract or spec.input_model.model_json_schema()
+        projected_inputs = self._project_step_input_bindings(
+            workspace=workspace,
+            capability_name=capability_name,
+            bindings=canonical_inputs,
         )
-        for graph_path, local_path in input_map.items():
-            try:
-                source_root, source_parts = _graph_parts(graph_path)
-                local_parts = LocalPath.parse(local_path).parts
-            except ValueError:
-                continue
-            if source_root not in {"input", "state"}:
-                continue
-            if not local_parts:
-                # `.` binds the whole graph value to the whole node input. It has
-                # no capability-property path from which to project one field.
-                continue
-            schema_key = "input_schema" if source_root == "input" else "state_schema"
-            target_schema = (
-                projected_input_schema
-                if source_root == "input"
-                else projected_state_schema
-            )
-            if schema_path_exists(target_schema, source_parts):
-                continue
-            projected = project_schema_path_to_schema_path(
-                target_schema=target_schema,
-                source_schema=input_schema,
-                source_parts=local_parts,
-                target_parts=source_parts,
-                allow_existing_equivalent=True,
-            )
-            if schema_key == "input_schema":
-                projected_input_schema = projected
-            else:
-                projected_state_schema = projected
+        projected_input_schema = projected_inputs.input_schema
+        projected_state_schema = projected_inputs.state_schema
         for output_field, path in bind_outputs.items():
             sf = state_root_field(path)
             projected_state_schema = project_output_property_to_state_schema(
@@ -1049,15 +1149,23 @@ class WorkflowDraftAuthoringApi:
                 allow_existing_equivalent=True,
             )
 
+        step_payload: dict[str, Any] = {
+            "use": capability_name,
+            "input": projected_inputs.payload,
+            "output": output_bindings_payload(bind_outputs),
+        }
+        if desc is not None:
+            step_payload["desc"] = desc
+        if retry is not None:
+            step_payload["retry"] = retry
+        if timeout_seconds is not None:
+            step_payload["timeout_seconds"] = timeout_seconds
+
         patch: list[dict[str, Any]] = [
             {
                 "op": "add",
                 "path": f"/steps/{escape_json_pointer(step_id)}",
-                "value": {
-                    "use": capability_name,
-                    "input": input_bindings_payload(input_map, {}),
-                    "output": output_bindings_payload(bind_outputs),
-                },
+                "value": step_payload,
             },
             {
                 "op": "add",

@@ -5,10 +5,11 @@ from pathlib import Path
 from typing import Any, Literal, cast
 
 import pytest
-from pydantic import BaseModel, Field, TypeAdapter
+from pydantic import BaseModel, Field, TypeAdapter, ValidationError
 
 from tests.wf_mcp.test_support import echo_tool
 from wf_api.draft_authoring import RouteSource, WorkflowDraftAuthoringApi
+from wf_api.draft_updates import CapabilityStepUpdate
 from wf_api.drafts import WorkflowDraftApi
 from wf_api.models import RawWorkflowPlan
 from wf_api.service import WorkflowApi
@@ -27,6 +28,321 @@ from wf_mcp.broker.service.workflow_operation_context import context_from_servic
 from wf_mcp.models import ConnectionConfig
 from wf_mcp.storage import FileStore
 from wf_mcp.workflow_surface import WorkflowSurfaceHandlers
+
+
+def test_capability_step_update_preserves_field_presence() -> None:
+    update = CapabilityStepUpdate.model_validate(
+        {"desc": None, "retry": 0, "input": []}
+    )
+
+    assert update.model_fields_set == {"desc", "retry", "input"}
+    assert update.desc is None
+    assert update.retry == 0
+    assert update.input == []
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {},
+        {"input": None},
+        {"desc": ""},
+        {"retry": -1},
+        {"timeout_seconds": 0},
+        {"unknown": True},
+    ],
+)
+def test_capability_step_update_rejects_invalid_patch(payload: object) -> None:
+    with pytest.raises(ValidationError):
+        CapabilityStepUpdate.model_validate(payload)
+
+
+@pytest.mark.asyncio
+async def test_update_capability_step_changes_metadata_and_inputs_atomically(
+    tmp_path: Path,
+) -> None:
+    draft_api, service, authoring = _draft_api(
+        FileWorkflowArtifactStore(tmp_path / "update_capability"),
+        register_echo=True,
+    )
+    draft = _echo_draft()
+    draft["steps"]["echo"].update(
+        {
+            "desc": "Old description",
+            "retry": 1,
+            "timeout_seconds": 10,
+        }
+    )
+    await draft_api.create_draft_workspace(workspace_id="echo", draft=draft)
+
+    result = await authoring.update_capability_step(
+        workspace_id="echo",
+        revision=1,
+        step_id="echo",
+        update=CapabilityStepUpdate.model_validate(
+            {
+                "desc": "New description",
+                "retry": 0,
+                "timeout_seconds": None,
+                "input": [{"value": "fixed", "target": "text"}],
+            }
+        ),
+    )
+    inspected = await draft_api.get_draft_workspace(
+        workspace_id="echo",
+        include_draft=True,
+    )
+    step = inspected["draft"]["steps"]["echo"]
+
+    assert result["revision"] == 2
+    assert step["use"] == "demo.personal.echo_tool"
+    assert step["desc"] == "New description"
+    assert step["retry"] == 0
+    assert step["timeout_seconds"] is None
+    assert step["input"] == [{"value": "fixed", "target": "text"}]
+    assert step["output"] == [{"source": "echoed", "target": "state.echoed"}]
+    assert inspected["draft"]["routes"]["echo"] == {"ok": "__end__"}
+
+    compiled = await draft_api.compile_draft_workspace(workspace_id="echo")
+    run = await service.run_workflow_from_plan(
+        RawWorkflowPlan.model_validate(compiled["compiled_plan"]),
+        {"text": "ignored"},
+    )
+    assert run.error is None
+    assert run.output == {"echoed": "fixed"}
+
+
+@pytest.mark.asyncio
+async def test_update_capability_step_preserves_omitted_fields_and_exact_noop(
+    tmp_path: Path,
+) -> None:
+    draft_api, _service, authoring = _draft_api(
+        FileWorkflowArtifactStore(tmp_path / "update_capability_noop"),
+        register_echo=True,
+    )
+    draft = _echo_draft()
+    draft["steps"]["echo"].update({"desc": "Keep", "retry": 2, "timeout_seconds": 15})
+    await draft_api.create_draft_workspace(workspace_id="echo", draft=draft)
+
+    first = await authoring.update_capability_step(
+        workspace_id="echo",
+        revision=1,
+        step_id="echo",
+        update=CapabilityStepUpdate(retry=2),
+    )
+    second = await authoring.update_capability_step(
+        workspace_id="echo",
+        revision=first["revision"],
+        step_id="echo",
+        update=CapabilityStepUpdate(desc=None),
+    )
+    inspected = await draft_api.get_draft_workspace(
+        workspace_id="echo",
+        include_draft=True,
+    )
+
+    assert first["revision"] == 1
+    assert second["revision"] == 2
+    step = inspected["draft"]["steps"]["echo"]
+    assert step["desc"] is None
+    assert step["retry"] == 2
+    assert step["timeout_seconds"] == 15
+
+
+@pytest.mark.asyncio
+async def test_update_capability_step_clearing_absent_metadata_is_exact_noop(
+    tmp_path: Path,
+) -> None:
+    draft_api, _service, authoring = _draft_api(
+        FileWorkflowArtifactStore(tmp_path / "update_capability_null_noop"),
+        register_echo=True,
+    )
+    await draft_api.create_draft_workspace(workspace_id="echo", draft=_echo_draft())
+
+    result = await authoring.update_capability_step(
+        workspace_id="echo",
+        revision=1,
+        step_id="echo",
+        update=CapabilityStepUpdate(retry=None),
+    )
+
+    assert result["revision"] == 1
+
+
+@pytest.mark.asyncio
+async def test_update_capability_step_metadata_does_not_resolve_capability(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    draft_api, _service, authoring = _draft_api(
+        FileWorkflowArtifactStore(tmp_path / "update_capability_metadata"),
+        register_echo=True,
+    )
+    await draft_api.create_draft_workspace(workspace_id="echo", draft=_echo_draft())
+
+    def fail_lookup(_provider: object, _capability_name: str) -> None:
+        raise AssertionError("metadata-only update resolved the capability")
+
+    monkeypatch.setattr(
+        type(authoring.context.specs),
+        "get_qualified_spec",
+        fail_lookup,
+    )
+    result = await authoring.update_capability_step(
+        workspace_id="echo",
+        revision=1,
+        step_id="echo",
+        update=CapabilityStepUpdate(desc="Metadata only"),
+    )
+
+    assert result["revision"] == 2
+
+
+@pytest.mark.asyncio
+async def test_update_capability_step_stale_revision_wins_over_semantic_errors(
+    tmp_path: Path,
+) -> None:
+    draft_api, _service, authoring = _draft_api(
+        FileWorkflowArtifactStore(tmp_path / "update_capability_stale"),
+        register_echo=True,
+    )
+    await draft_api.create_draft_workspace(workspace_id="echo", draft=_echo_draft())
+
+    result = await authoring.update_capability_step(
+        workspace_id="echo",
+        revision=2,
+        step_id="missing",
+        update=CapabilityStepUpdate(
+            input=[InputValueBinding(target=LocalPath.of("missing"), value="bad")]
+        ),
+    )
+
+    assert result["status"] == "conflict"
+    assert result["diagnostics"][0]["code"] == "revision_conflict"
+
+
+@pytest.mark.asyncio
+async def test_update_capability_step_rejects_wrong_kind_and_invalid_input_atomically(
+    tmp_path: Path,
+) -> None:
+    draft_api, _service, authoring = _draft_api(
+        FileWorkflowArtifactStore(tmp_path / "update_capability_invalid"),
+        register_echo=True,
+    )
+    draft = _echo_draft()
+    draft["steps"]["joined"] = {"join": ["echo"]}
+    await draft_api.create_draft_workspace(workspace_id="echo", draft=draft)
+    before = await draft_api.get_draft_workspace(
+        workspace_id="echo",
+        include_draft=True,
+    )
+
+    with pytest.raises(ValueError, match="not capability-backed"):
+        await authoring.update_capability_step(
+            workspace_id="echo",
+            revision=1,
+            step_id="joined",
+            update=CapabilityStepUpdate(desc="No"),
+        )
+    with pytest.raises(ValueError, match=r"bindings\[0\]\.target"):
+        await authoring.update_capability_step(
+            workspace_id="echo",
+            revision=1,
+            step_id="echo",
+            update=CapabilityStepUpdate(
+                desc="Must not persist",
+                input=[
+                    InputValueBinding(
+                        target=LocalPath.of("missing"),
+                        value="bad",
+                    )
+                ],
+            ),
+        )
+
+    after = await draft_api.get_draft_workspace(
+        workspace_id="echo",
+        include_draft=True,
+    )
+    assert after == before
+
+
+@pytest.mark.asyncio
+async def test_add_step_from_capability_accepts_metadata_and_canonical_inputs(
+    tmp_path: Path,
+) -> None:
+    draft_api, service, authoring = _draft_api(
+        FileWorkflowArtifactStore(tmp_path / "add_capability_parity"),
+        register_echo=True,
+    )
+    service.register_specs("demo.personal", _structured_report)
+    draft = _structured_report_draft()
+    draft["steps"] = {}
+    draft["routes"] = {}
+    await draft_api.create_draft_workspace(workspace_id="report", draft=draft)
+
+    result = await authoring.add_step_from_capability(
+        workspace_id="report",
+        revision=1,
+        step_id="report",
+        capability_name="demo.personal.structured_report",
+        routes={"ok": "__end__"},
+        desc="Publish report",
+        retry=0,
+        timeout_seconds=30,
+        input_bindings=[
+            InputPathBinding(
+                path=GraphSourcePath.state("report", "title"),
+                target=LocalPath.of("request", "title"),
+            ),
+            InputValueBinding(
+                target=LocalPath.of("request", "format"),
+                value="markdown",
+            ),
+        ],
+    )
+    inspected = await draft_api.get_draft_workspace(
+        workspace_id="report",
+        include_draft=True,
+    )
+    step = inspected["draft"]["steps"]["report"]
+
+    assert result["revision"] == 2
+    assert step["desc"] == "Publish report"
+    assert step["retry"] == 0
+    assert step["timeout_seconds"] == 30
+    assert step["input"] == [
+        {"path": "state.report.title", "target": "request.title"},
+        {"value": "markdown", "target": "request.format"},
+    ]
+    assert (
+        inspected["draft"]["state_schema"]["properties"]["report"]["properties"][
+            "title"
+        ]["type"]
+        == "string"
+    )
+
+
+@pytest.mark.asyncio
+async def test_add_step_from_capability_rejects_both_input_forms(
+    tmp_path: Path,
+) -> None:
+    draft_api, _service, authoring = _draft_api(
+        FileWorkflowArtifactStore(tmp_path / "add_capability_exclusive"),
+        register_echo=True,
+    )
+    await draft_api.create_draft_workspace(workspace_id="echo", draft=_echo_draft())
+
+    with pytest.raises(ValueError, match="mutually exclusive"):
+        await authoring.add_step_from_capability(
+            workspace_id="echo",
+            revision=1,
+            step_id="other",
+            capability_name="demo.personal.echo_tool",
+            routes={"ok": "__end__"},
+            input_map={},
+            input_bindings=[],
+        )
 
 
 def _echo_draft() -> dict[str, Any]:
