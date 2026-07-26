@@ -23,11 +23,11 @@
 - [ ] Compatibility step input/output maps can still collapse valid canonical
   fan-out bindings. Canonical input and output replacement preserve ordered
   fan-out, but later compatibility-map merges remain inherently lossy.
-- [ ] Focused workflow-output authoring cannot add or update literal output
-  bindings even though `WorkflowDraft.output` accepts canonical value bindings.
-- [ ] Workflow output schema projection skips nested sources such as
-  `state.report.title`, leaving callers to patch the output schema manually even
-  when the nested source schema is already declared.
+- [x] Focused workflow-output authoring supports literal output bindings through
+  canonical Python, JSON-RPC, MCP, and CLI replacement surfaces.
+- [x] Workflow-output replacement projects nested `input.*` and `state.*`
+  source schemas, including local references, into missing nested public output
+  targets without requiring raw schema patches.
 - [x] CLI help and agent instructions describe step-input targets as bare local
   fields and do not document the nested composition behavior already supported
   by the canonical runtime model.

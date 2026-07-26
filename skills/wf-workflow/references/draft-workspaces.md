@@ -87,7 +87,8 @@ Prefer focused helpers over JSON Patch for common edits:
 - `set_step_input_map`
 - `set_step_output_bindings`
 - `set_step_output_map`
-- `set_workflow_output_map`
+- `set_workflow_output_bindings`
+- `set_workflow_output_map` (compatibility-only map adapter)
 - `bind_draft`
 - `add_step`
 - `add_step_from_capability`
@@ -109,8 +110,13 @@ wf draft set-output <workspace_id> --revision <n> --step <step_id> --map text=st
 wf draft set-output <workspace_id> --revision <n> --step <step_id> --bindings-file bindings.json
 wf draft set-output <workspace_id> --revision <n> --step <step_id> --clear
 wf draft set-output <workspace_id> --revision <n> --step <step_id> --merge --map other=state.other
-wf draft set-workflow-output <workspace_id> --revision <n> --map state.value=result
-wf draft set-workflow-output <workspace_id> --revision <n> --merge --map state.other=other
+wf draft set-workflow-output <workspace_id> --revision <n> \
+  --map state.value=result --value format='"markdown"'
+wf draft set-workflow-output <workspace_id> --revision <n> \
+  --bindings-file output-bindings.json
+wf draft set-workflow-output <workspace_id> --revision <n> --clear
+wf draft set-workflow-output <workspace_id> --revision <n> \
+  --merge --map state.other=other
 wf draft branch <workspace_id> --revision <n> --step <step_id> --route ok=__end__ --route error=fail
 wf draft handle <workspace_id> --revision <n> --to fail --branch lookup:error --branch transform:error
 wf draft compile <workspace_id>
@@ -121,11 +127,13 @@ wf draft add interrupt <workspace_id> --revision <n> --step review --kind issue_
 wf draft add when <workspace_id> --revision <n> --step decide --condition-file condition.json --then next --otherwise revise
 ```
 
-`set-workflow-output` maps a graph source path (`input.*`, `state.*`, or
-`context.*`) to one public workflow output field. It edits top-level
-`WorkflowDraft.output`; `set-output` edits one step's local-to-state bindings.
-For single-field `input.*` and `state.*` sources, missing public output schema
-fields are projected automatically from the source schema.
+`set-workflow-output` replaces the complete ordered top-level
+`WorkflowDraft.output` binding list. It accepts graph source paths
+(`input.*`, `state.*`, or `context.*`) and literal values; `set-output` edits
+one step's local-to-state bindings. Nested `input.*` and `state.*` sources can
+project missing output-schema fields from their declared source schemas.
+Literal values and `context.*` paths require declared output targets, and
+literal values are validated against those targets rather than inferred.
 
 `set-input` direction: `input.title=report.title` means graph source
 `input.title` maps to node-local target `local.report.title`. Targets are
@@ -178,9 +186,10 @@ wf draft set-output WS --revision 5 --step analyze \
 wf draft set-output WS --revision 6 --step analyze --clear
 ```
 
-`--merge --map` is compatibility-only and may collapse existing fan-out. Use
-it only when a lossy map edit is acceptable. `set-workflow-output` retains its
-map replacement behavior and is a separate workflow-boundary operation.
+`--clear` replaces the list with `[]` and restores the implicit same-name state
+fallback. `--merge --map` is compatibility-only and may collapse existing
+fan-out; it cannot preserve literals or canonical ordering. Use it only when a
+lossy map edit is acceptable.
 
 `bind input.title -> local.report.title` is schema-aware and idempotent when
 `input.title` is already declared. Bind names both rooted endpoints explicitly.

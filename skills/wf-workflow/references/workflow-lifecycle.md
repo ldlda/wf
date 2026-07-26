@@ -16,10 +16,15 @@ validated, runnable deployment.
 5. Inspect/patch/validate the workspace until valid.
    - Use focused CLI commands (`set-name`, `set-route`, `set-input`, `set-output`)
      for common edits.
-   - `set-input` and `set-output` replace their ordered canonical binding lists.
+   - `set-input`, `set-output`, and `set-workflow-output` replace their ordered
+     canonical binding lists.
      Repeated sources preserve fan-out to distinct targets. The `--merge`
      variants are compatibility-only and cannot preserve canonical ordering or
      repeated-source fan-out; existing literals are retained for input merges.
+   - `set-workflow-output` accepts ordered path/value bindings. Nested
+     `input.*` and `state.*` sources can project declared source schemas into
+     missing output fields; literals and `context.*` require declared targets.
+     `--clear` restores implicit same-name state fallback.
    - Before mapping into a new workflow input, state, or output field, prefer
      `wf draft bind --from ... --to ...` when it should mirror a capability
      local input/output property. It declares the matching schema and merges

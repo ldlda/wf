@@ -590,9 +590,16 @@ clear operator feedback before adding more architecture.
   Implementation:
   [`draft remove commands`](historical/superpowers/plans/2026-06-28-draft-remove-commands.md).
 - Completed: `wf draft set-workflow-output` and full-stack API/RPC/CLI support
-  for editing top-level workflow output bindings. Accepts repeatable `--map`
-  and `--merge` flag. Implementation:
+  for editing top-level workflow output bindings. The compatibility map
+  adapter remains available for existing callers. Implementation:
   [`set-workflow-output API/RPC/CLI`](historical/superpowers/plans/2026-06-29-set-workflow-output.md).
+- Completed: canonical workflow-output replacement now preserves ordered
+  path/value bindings across Python, JSON-RPC, MCP, and CLI; nested input/state
+  sources can project missing output schemas, while literals and `context.*`
+  require declared targets. Empty replacement restores implicit same-name state
+  fallback; compatibility `--merge --map` remains intentionally lossy.
+  Implementation:
+  [`atomic workflow output bindings`](historical/superpowers/plans/2026-07-23-atomic-workflow-output-bindings.md).
 - Completed: challenge-driven output UX polish makes `set-workflow-output`
   project missing top-level output schema fields from declared `input.*` and
   `state.*` sources, and challenge prompt templates now always include

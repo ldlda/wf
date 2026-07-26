@@ -51,8 +51,13 @@ wf draft set-output <workspace_id> --revision <n> --step <step_id> --map text=st
 wf draft set-output <workspace_id> --revision <n> --step <step_id> --bindings-file bindings.json
 wf draft set-output <workspace_id> --revision <n> --step <step_id> --clear
 wf draft set-output <workspace_id> --revision <n> --step <step_id> --merge --map other=state.other
-wf draft set-workflow-output <workspace_id> --revision <n> --map state.value=result
-wf draft set-workflow-output <workspace_id> --revision <n> --merge --map state.other=other
+wf draft set-workflow-output <workspace_id> --revision <n> \
+  --map state.value=result --value format='"markdown"'
+wf draft set-workflow-output <workspace_id> --revision <n> \
+  --bindings-file output-bindings.json
+wf draft set-workflow-output <workspace_id> --revision <n> --clear
+wf draft set-workflow-output <workspace_id> --revision <n> \
+  --merge --map state.other=other
 wf draft branch <workspace_id> --revision <n> --step <step_id> --route ok=__end__ --route error=fail
 wf draft handle <workspace_id> --revision <n> --to fail --branch lookup:error --branch transform:error
 wf draft compile <workspace_id>
@@ -90,10 +95,12 @@ compatibility map-only edit when the workflow schema is already declared.
 local side, so their targets are rootless paths: write
 `input.title=report.title`, not `input.title=local.report.title`.
 
-`wf draft set-workflow-output` projects missing public output schema fields for
-single-field `input.*` and `state.*` sources. Prefer it for final workflow
-outputs; use `wf draft bind --from local.x --to output.y` when the source is a
-step-local capability output.
+`wf draft set-workflow-output` replaces the complete ordered public output
+projection. Nested `input.*` and `state.*` sources can project missing nested
+output-schema fields from declared source schemas. Literal values and
+`context.*` paths require declared output targets; literals validate against
+those targets and do not infer schemas. Use `wf draft bind --from local.x --to
+output.y` when the source is a step-local capability output.
 
 When `wf draft validate` returns a `repair_hint`, run that exact focused command
 before writing JSON Patch manually. To make one capability output public, use
@@ -170,6 +177,11 @@ wf draft set-output WS --revision 6 --step analyze --clear
 
 `--merge --map` is compatibility-only and may collapse existing fan-out. Use
 it only when a lossy map edit is acceptable.
+
+Use `set-workflow-output` without `--merge` when replacing the complete public
+output projection. Use `--bindings-file` when exact path/value interleaving
+must round-trip, and `--clear` to restore implicit same-name state fallback.
+Use `--merge --map` only when a lossy compatibility edit is acceptable.
 
 Prefer `draft bind` when a capability step binding also needs schema
 projection. Use `input/state -> local` for step inputs and `local ->

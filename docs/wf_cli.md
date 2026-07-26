@@ -320,7 +320,8 @@ wf draft set-name concat_ws --revision 1 --name concat_ws_v2
 wf draft set-route concat_ws --revision 2 --step call --outcome ok --to __end__
 wf draft set-input concat_ws --revision 3 --step call --map input.items=items --map input.separator=separator
 wf draft set-output concat_ws --revision 4 --step call --map value=state.value
-wf draft set-workflow-output concat_ws --revision 5 --map state.value=result
+wf draft set-workflow-output concat_ws --revision 5 \
+  --map state.value=result --value format='"markdown"'
 wf draft set-input concat_ws --revision 6 --step call --merge --map input.limit=limit
 wf draft branch concat_ws --revision 7 --step call --route ok=__end__ --route error=tool_error
 wf draft handle concat_ws --revision 8 --to fail --branch lookup:error --branch transform:error
@@ -363,22 +364,33 @@ repeated-source fan-out.
 `set-output` maps node-local output fields to workflow state paths:
 `text=state.text` means `local.text -> state.text`.
 
-`set-workflow-output` maps graph source paths (`input.*`, `state.*`, or
-`context.*`) to top-level output fields: `state.value=result` means
-`state.value -> output.result`.
+`set-workflow-output` canonically replaces the complete ordered workflow-output
+binding list. Repeat `--map` for graph source paths (`input.*`, `state.*`, or
+`context.*`) and `--value` for literal JSON values. For example,
+`state.value=result` means `state.value -> output.result`, while
+`--value format='"markdown"'` writes a literal to `output.format`.
 
-For single-field `input.*` and `state.*` sources, the command projects missing
-top-level `output_schema` fields from the source schema. More complex or
-undeclared paths still rely on `wf draft validate` diagnostics.
+Nested `input.*` and `state.*` source paths project missing nested
+`output_schema` fields from their declared source schemas. Literal bindings and
+`context.*` paths do not infer a schema: their output targets must already be
+declared, and literals must validate against those declared targets.
 
-By default, `set-input` and `set-output` replace complete ordered canonical
-binding lists, while `set-workflow-output` replaces its complete map. Repeated
-`set-output --map LOCAL_SOURCE=STATE_TARGET` flags preserve their order and may
-repeat a source to fan it out to several state targets. Use
-`set-output --bindings-file` for an exported canonical list and `--clear` for an
-explicit empty replacement. Use `--merge --map` only for compatibility output
-map edits; that path cannot preserve canonical ordering or repeated-source
-fan-out.
+Use `--bindings-file` to restore an exported mixed path/value list without
+changing its order, or `--clear` to replace the list with `[]`. An empty
+workflow-output list restores the runtime's implicit same-name state fallback;
+it does not promise an always-empty public output. Use `--merge --map` only for
+the compatibility map adapter. It is intentionally lossy and cannot represent
+literals, canonical ordering, or repeated-source fan-out reliably.
+
+```bash
+wf draft inspect WS --include-draft |
+  jq '.draft.output' > output-bindings.json
+
+wf draft set-workflow-output WS --revision 5 \
+  --bindings-file output-bindings.json
+
+wf draft set-workflow-output WS --revision 6 --clear
+```
 
 ### Bind A Step Path
 
@@ -413,10 +425,10 @@ Repair-hint examples:
 ```bash
 # Declare an undeclared workflow input field and bind it to a step input
 wf draft bind report_ws --revision 4 --step read --from input.path --to local.path
-# Request a public workflow output; bind lowers it through state internally
+# Request a public workflow output through an explicit state projection
 wf draft bind report_ws --revision 5 --step render --from local.markdown --to output.markdown
-# Set workflow output independently (no schema projection)
-wf draft set-workflow-output report_ws --revision 6 --map state.markdown=markdown
+# Set workflow output independently, including a nested source projection
+wf draft set-workflow-output report_ws --revision 6 --map state.report.markdown=markdown
 ```
 
 The command combines two common edits:

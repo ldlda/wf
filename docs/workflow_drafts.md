@@ -151,7 +151,16 @@ state.result_text -> workflow output.result_text
 If top-level `output` is empty, the runtime keeps the legacy same-name fallback:
 for every field in `output_schema`, it copies the top-level state field with the
 same name when present. That fallback is convenient, but explicit output
-projection is clearer for new workflows.
+projection is clearer for new workflows. Clearing canonical output bindings
+restores this fallback; it does not mean that the public output is always empty.
+
+Canonical workflow-output replacement accepts an ordered union of path and
+literal bindings. Nested `input.*` and `state.*` sources can project missing
+nested output-schema fields from their declared source schemas. Literal values
+and `context.*` paths require an already-declared output target; literals are
+validated against that target and never used to infer a schema. Equal or
+ancestor/descendant output targets are rejected so the ordered list has one
+unambiguous public projection.
 
 ## Explicit Outputs And Error Outcomes
 
@@ -711,8 +720,13 @@ wf draft set-output <workspace_id> --revision <n> --step <step_id> --map text=st
 wf draft set-output <workspace_id> --revision <n> --step <step_id> --bindings-file output-bindings.json
 wf draft set-output <workspace_id> --revision <n> --step <step_id> --clear
 wf draft set-output <workspace_id> --revision <n> --step <step_id> --merge --map other=state.other
-wf draft set-workflow-output <workspace_id> --revision <n> --map state.value=result
-wf draft set-workflow-output <workspace_id> --revision <n> --merge --map state.other=other
+wf draft set-workflow-output <workspace_id> --revision <n> \
+  --map state.value=result --value format='"markdown"'
+wf draft set-workflow-output <workspace_id> --revision <n> \
+  --bindings-file output-bindings.json
+wf draft set-workflow-output <workspace_id> --revision <n> --clear
+wf draft set-workflow-output <workspace_id> --revision <n> \
+  --merge --map state.other=other
 wf draft branch <workspace_id> --revision <n> --step <step_id> --route ok=__end__ --route error=tool_error
 wf draft handle <workspace_id> --revision <n> --to fail --branch lookup:error --branch transform:error
 wf draft compile <workspace_id>
@@ -725,6 +739,16 @@ JSON list exported by `draft inspect --include-draft`. `--clear` is the explicit
 empty replacement. The legacy `--merge --map` path is compatibility-only and
 potentially lossy because a map cannot preserve ordering or repeated-source
 fan-out.
+
+`set-workflow-output` follows the same canonical replacement model for the
+top-level `WorkflowDraft.output` list. Use repeated `--map` and `--value`
+flags for a small ordered edit, or `--bindings-file` for an exact round trip
+from `draft inspect --include-draft`. `--clear` writes an empty list and
+restores the implicit same-name state fallback. Literal and `context.*`
+bindings need declared output targets; nested `input.*` and `state.*` paths
+may project their declared source schema into missing nested output fields.
+The compatibility `--merge --map` form remains available only for lossy map
+edits and cannot preserve literals, order, or repeated-source fan-out.
 
 Use `draft patch` when these focused commands do not cover the structural edit.
 

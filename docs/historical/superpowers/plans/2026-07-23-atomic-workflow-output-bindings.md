@@ -1,6 +1,6 @@
 # Atomic Workflow Output Bindings Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Add one revision-checked canonical workflow-output binding replacement operation across Python, JSON-RPC, MCP, and CLI, with nested schema projection, literal validation, and unchanged empty-list fallback semantics.
 
@@ -36,7 +36,7 @@
 - Produces: `WorkflowDraftAuthoringApi.set_workflow_output_bindings(*, workspace_id: str, revision: int, bindings: Sequence[InputBinding]) -> dict[str, Any]`.
 - Produces: `validate_json_value_at_schema_path(..., schema_label: str = "capability input schema") -> None`, preserving existing callers through the default.
 
-- [ ] **Step 1: Write failing neutral-label and referenced-target schema tests**
+- [x] **Step 1: Write failing neutral-label and referenced-target schema tests**
 
 Add tests in `tests/wf_api/test_schema_projection.py` that pin the shared helper contract:
 
@@ -84,7 +84,7 @@ def test_project_schema_path_updates_output_target_through_local_ref() -> None:
 
 The second test protects the target-side `$ref` behavior introduced by the step-output slice while this operation begins relying on it directly.
 
-- [ ] **Step 2: Run the schema tests and verify the neutral label test fails**
+- [x] **Step 2: Run the schema tests and verify the neutral label test fails**
 
 Run:
 
@@ -95,7 +95,7 @@ uv run pytest tests/wf_api/test_schema_projection.py -q
 Expected: the existing referenced-target test passes and the new
 `schema_label` call fails because the helper does not yet accept that keyword.
 
-- [ ] **Step 3: Generalize the literal-validation diagnostic label**
+- [x] **Step 3: Generalize the literal-validation diagnostic label**
 
 Change `validate_json_value_at_schema_path(...)` in
 `src/wf_api/schema_projection.py` without adding a second validator:
@@ -126,7 +126,7 @@ def validate_json_value_at_schema_path(
 
 Run the schema test file again. Expected: PASS.
 
-- [ ] **Step 4: Write failing canonical authoring tests**
+- [x] **Step 4: Write failing canonical authoring tests**
 
 In `tests/wf_api/test_drafts_service.py`, add a helper draft whose input, state,
 and output schemas contain nested fields and whose output list initially is
@@ -262,7 +262,7 @@ async def test_set_workflow_output_bindings_rejects_without_mutation(
     # assert the complete inspected workspace still equals the snapshot.
 ```
 
-- [ ] **Step 5: Run focused authoring tests and verify they fail**
+- [x] **Step 5: Run focused authoring tests and verify they fail**
 
 Run:
 
@@ -273,7 +273,7 @@ uv run pytest tests/wf_api/test_drafts_service.py -q -k "workflow_output_binding
 Expected: FAIL because `WorkflowDraftAuthoringApi` has no canonical workflow
 output method.
 
-- [ ] **Step 6: Implement the canonical authoring operation**
+- [x] **Step 6: Implement the canonical authoring operation**
 
 In `src/wf_api/draft_authoring.py`, import `Mapping`, `InputBinding`,
 `InputPathBinding`, `InputValueBinding`, `GraphSourcePath`, `LocalPath`, and the
@@ -422,7 +422,7 @@ Do not copy this mechanically if an existing helper provides the same behavior;
 reuse it. Preserve the specified validation order and wrap projection failures
 with `bindings[index]` context.
 
-- [ ] **Step 7: Add compile-and-execute coverage**
+- [x] **Step 7: Add compile-and-execute coverage**
 
 Add a test that creates a valid draft, invokes the new authoring method, compiles
 with `compile_draft_workspace`, runs through `WfMcpService.run_workflow_from_plan`,
@@ -441,7 +441,7 @@ Add a second execution assertion for a cleared explicit list: declare a
 top-level output field matching state, clear bindings, compile/run, and prove the
 existing implicit fallback still returns that state field.
 
-- [ ] **Step 8: Run Task 1 verification**
+- [x] **Step 8: Run Task 1 verification**
 
 Run:
 
@@ -454,7 +454,7 @@ uv run basedpyright --level error src/wf_api/schema_projection.py src/wf_api/dra
 Expected: all pass. If the installed basedpyright does not accept file paths,
 run the repository-wide `uv run basedpyright --level error` instead.
 
-- [ ] **Step 9: Review and commit Task 1**
+- [x] **Step 9: Review and commit Task 1**
 
 Review the Task 1 diff against the spec, especially root-target equality,
 context behavior, stale-revision precedence, and no mutation on errors. Then:
@@ -482,7 +482,7 @@ git commit -m "feat: replace canonical workflow output bindings"
 - Consumes: Task 1's `WorkflowDraftAuthoringApi.set_workflow_output_bindings(...)`.
 - Produces: `WorkflowApiSurface.set_workflow_output_bindings(...)`, `WorkflowApi.set_workflow_output_bindings(...)`, `SetWorkflowOutputBindingsParams`, JSON-RPC method `workflow.draft_workspaces.set_workflow_output_bindings`, and `RpcWorkflowApiClient.set_workflow_output_bindings(...)`.
 
-- [ ] **Step 1: Write failing RPC model and endpoint tests**
+- [x] **Step 1: Write failing RPC model and endpoint tests**
 
 In `tests/wf_transport_rpc_http/test_app.py`, add an end-to-end request using a
 real local server:
@@ -528,7 +528,7 @@ stored list preserves a path binding followed by a value binding. Add malformed
 requests proving `path` plus `value`, missing `target`, extra fields, and invalid
 roots fail with JSON-RPC `-32602` before semantic logic.
 
-- [ ] **Step 2: Write the failing remote client test**
+- [x] **Step 2: Write the failing remote client test**
 
 In `tests/wf_transport_rpc_http/test_client.py`, add:
 
@@ -566,7 +566,7 @@ async def test_rpc_client_set_workflow_output_bindings_preserves_union_order(
 Adapt the fixture names to the existing client test harness; keep the assertions
 field-level.
 
-- [ ] **Step 3: Run RPC tests and verify they fail**
+- [x] **Step 3: Run RPC tests and verify they fail**
 
 Run:
 
@@ -576,7 +576,7 @@ uv run pytest tests/wf_transport_rpc_http/test_app.py tests/wf_transport_rpc_htt
 
 Expected: FAIL because the params model, endpoint, and client method are absent.
 
-- [ ] **Step 4: Add the public surface and local service delegation**
+- [x] **Step 4: Add the public surface and local service delegation**
 
 Add this method to `WorkflowApiSurface` in `src/wf_api/surface.py`:
 
@@ -610,7 +610,7 @@ async def set_workflow_output_bindings(
 Keep `set_workflow_output_map(...)` unchanged and adjacent as the compatibility
 surface.
 
-- [ ] **Step 5: Add the typed RPC request, endpoint, and client**
+- [x] **Step 5: Add the typed RPC request, endpoint, and client**
 
 In `src/wf_transport_rpc_http/models.py`:
 
@@ -667,7 +667,7 @@ async def set_workflow_output_bindings(
 Export `SetWorkflowOutputBindingsParams` from
 `src/wf_transport_rpc_http/__init__.py` in both import and `__all__` lists.
 
-- [ ] **Step 6: Run Task 2 verification**
+- [x] **Step 6: Run Task 2 verification**
 
 Run:
 
@@ -678,7 +678,7 @@ uv run basedpyright --level error
 
 Expected: all pass and every `WorkflowApiSurface` implementation conforms.
 
-- [ ] **Step 7: Review and commit Task 2**
+- [x] **Step 7: Review and commit Task 2**
 
 Review request validation, canonical order, and local/remote interface parity.
 Then:
@@ -704,7 +704,7 @@ git commit -m "feat: expose workflow output bindings over rpc"
 - Consumes: Task 2's public `set_workflow_output_bindings(...)` method and the existing `DraftInputBindings` alias.
 - Produces: `SetWorkflowOutputBindingsRequest` and MCP tool `wf.workflow.set_workflow_output_bindings`.
 
-- [ ] **Step 1: Write failing MCP request-model tests**
+- [x] **Step 1: Write failing MCP request-model tests**
 
 In `tests/wf_mcp/workflow_surface/test_drafts.py`, add:
 
@@ -730,7 +730,7 @@ def test_set_workflow_output_bindings_request_preserves_union_order() -> None:
 Add a malformed-record test with both `path` and `value`, and assert Pydantic
 rejects the extra union field.
 
-- [ ] **Step 2: Write failing tool-registration and invocation tests**
+- [x] **Step 2: Write failing tool-registration and invocation tests**
 
 Extend the fake handler in `tests/wf_mcp/server/test_tools.py` with a call log for
 `set_workflow_output_bindings`. Assert the tool inventory includes the new name,
@@ -760,7 +760,7 @@ assert handler.calls[-1]["bindings"][1].value == "markdown"
 Update config/discovery expectations so the public tool count/name inventory is
 explicit rather than only asserting a count.
 
-- [ ] **Step 3: Run MCP tests and verify they fail**
+- [x] **Step 3: Run MCP tests and verify they fail**
 
 Run:
 
@@ -770,7 +770,7 @@ uv run pytest tests/wf_mcp/workflow_surface/test_drafts.py tests/wf_mcp/server/t
 
 Expected: FAIL because the request and tool do not exist.
 
-- [ ] **Step 4: Add the MCP request and tool**
+- [x] **Step 4: Add the MCP request and tool**
 
 In `src/wf_mcp/workflow_surface/models.py`:
 
@@ -809,7 +809,7 @@ async def set_workflow_output_bindings(
 Add the new name to the explicit workflow proxy allow-list in
 `src/wf_mcp/proxy/runtime.py`. Preserve the existing map tool.
 
-- [ ] **Step 5: Run Task 3 verification**
+- [x] **Step 5: Run Task 3 verification**
 
 Run:
 
@@ -820,7 +820,7 @@ uv run basedpyright --level error
 
 Expected: all pass.
 
-- [ ] **Step 6: Review and commit Task 3**
+- [x] **Step 6: Review and commit Task 3**
 
 Review actual tool invocation, discovery visibility, request validation, and
 ordered union preservation. Then:
@@ -844,7 +844,7 @@ git commit -m "feat: expose workflow output bindings to mcp"
 - Consumes: Task 2's local/remote `set_workflow_output_bindings(...)` method.
 - Produces: canonical `wf draft set-workflow-output` modes `--map`, `--value`, `--bindings-file`, and `--clear`; preserves compatibility-only `--merge --map`.
 
-- [ ] **Step 1: Write failing parser tests**
+- [x] **Step 1: Write failing parser tests**
 
 In `tests/wf_cli/test_app.py`, add parser tests proving:
 
@@ -874,7 +874,7 @@ Add bindings-file tests for a mixed canonical array and malformed unions. Pin
 compact `typer.BadParameter` messages for invalid graph roots, `local.`-prefixed
 targets, invalid JSON, and non-array files.
 
-- [ ] **Step 2: Extract shared input-shaped CLI parsers**
+- [x] **Step 2: Extract shared input-shaped CLI parsers**
 
 In `src/wf_cli/commands/draft_options.py`, avoid duplicating the step-input
 parser. Extract private helpers parameterized only by audience wording:
@@ -931,7 +931,7 @@ def parse_workflow_output_bindings_file(path: Path) -> list[InputBinding]:
 
 Do not change accepted step-input syntax or its existing error assertions.
 
-- [ ] **Step 3: Write failing command tests**
+- [x] **Step 3: Write failing command tests**
 
 Add local CLI tests that use a fake handler with separate canonical and map call
 logs. Cover:
@@ -981,7 +981,7 @@ assert the captured method is
 `workflow.draft_workspaces.set_workflow_output_bindings` with the exact ordered
 mixed binding list. Keep a remote compatibility test for `--merge --map`.
 
-- [ ] **Step 4: Run CLI tests and verify they fail**
+- [x] **Step 4: Run CLI tests and verify they fail**
 
 Run:
 
@@ -991,7 +991,7 @@ uv run pytest tests/wf_cli/test_app.py tests/wf_cli/test_remote_target.py -q -k 
 
 Expected: parser tests or command tests fail because canonical modes are absent.
 
-- [ ] **Step 5: Replace the command's default path while retaining compatibility**
+- [x] **Step 5: Replace the command's default path while retaining compatibility**
 
 Update imports and the `set_workflow_output` Typer command in
 `src/wf_cli/commands/drafts.py`. Parse modes before loading context:
@@ -1057,7 +1057,7 @@ Use assertions or explicit branches to satisfy basedpyright narrowing without
 `cast(Any, ...)`. Rewrite the docstring/help so `--clear` explicitly says it
 restores implicit same-name state fallback rather than promising empty output.
 
-- [ ] **Step 6: Run Task 4 verification**
+- [x] **Step 6: Run Task 4 verification**
 
 Run:
 
@@ -1068,7 +1068,7 @@ uv run basedpyright --level error
 
 Expected: all pass.
 
-- [ ] **Step 7: Review and commit Task 4**
+- [x] **Step 7: Review and commit Task 4**
 
 Review mode exclusivity, parsing-before-context, flag ordering, local/remote
 parity, and compatibility isolation. Then:
@@ -1092,13 +1092,13 @@ git commit -m "feat: replace workflow output bindings from cli"
 - Modify: `skills/wf-workflow/references/draft-workspaces.md`
 - Modify: `skills/wf-workflow/references/workflow-lifecycle.md`
 - Modify: `docs/current_roadmap.md`
-- Move: `docs/superpowers/plans/2026-07-23-atomic-workflow-output-bindings.md` to `docs/historical/superpowers/plans/2026-07-23-atomic-workflow-output-bindings.md`
+- Moved: `docs/superpowers/plans/2026-07-23-atomic-workflow-output-bindings.md` to `docs/historical/superpowers/plans/2026-07-23-atomic-workflow-output-bindings.md`
 
 **Interfaces:**
 - Consumes: verified behavior from Tasks 1-4.
 - Produces: current user/agent documentation, accurate issue state, completed roadmap entry, archived checked plan, and final review evidence.
 
-- [ ] **Step 1: Update issue state without closing compatibility-map loss**
+- [x] **Step 1: Update issue state without closing compatibility-map loss**
 
 In `ISSUES.md`:
 
@@ -1109,7 +1109,7 @@ In `ISSUES.md`:
 - state that canonical workflow-output replacement preserves path/value union
   order while `set_workflow_output_map` remains compatibility-only.
 
-- [ ] **Step 2: Update live CLI and workflow docs**
+- [x] **Step 2: Update live CLI and workflow docs**
 
 Update `docs/wf_cli.md` and `docs/workflow_drafts.md` with all canonical modes:
 
@@ -1140,7 +1140,7 @@ Update operation inventories in `docs/workflow_capabilities.md` and
 `workflow.draft_workspaces.set_workflow_output_bindings` and
 `wf.workflow.set_workflow_output_bindings`.
 
-- [ ] **Step 3: Update agent instruction surfaces**
+- [x] **Step 3: Update agent instruction surfaces**
 
 Update `skills/wf-cli/SKILL.md` and the two `wf-workflow` references with the
 same canonical examples and decision rule:
@@ -1153,7 +1153,7 @@ round-trip. Use --merge --map only when a lossy compatibility edit is acceptable
 
 Do not direct agents to implementation files or tests.
 
-- [ ] **Step 4: Update roadmap and archive the checked plan**
+- [x] **Step 4: Update roadmap and archive the checked plan**
 
 Add a completed milestone to `docs/current_roadmap.md` linking to:
 
@@ -1168,7 +1168,7 @@ Search for the old active-plan path and update any live links:
 rg -n "2026-07-23-atomic-workflow-output-bindings" docs skills README.md
 ```
 
-- [ ] **Step 5: Run the complete focused matrix**
+- [x] **Step 5: Run the complete focused matrix**
 
 Run:
 
@@ -1204,7 +1204,7 @@ If the Windows `uv.exe` app alias is broken, use the repository environment:
   -q
 ```
 
-- [ ] **Step 6: Run static verification**
+- [x] **Step 6: Run static verification**
 
 Run:
 
@@ -1219,7 +1219,7 @@ Expected: all clean. Remove only verified workspace-local `.pytest-*` temporary
 directories before Ruff if an interrupted pytest run left generated fixture
 files under the repository root.
 
-- [ ] **Step 7: Run independent whole-slice review**
+- [x] **Step 7: Run independent whole-slice review**
 
 Review from the pre-plan implementation base through `HEAD` against
 `docs/superpowers/specs/2026-07-23-atomic-workflow-output-bindings-design.md`.
@@ -1239,7 +1239,7 @@ the reviewer to inspect:
 Fix all Critical and Important findings, rerun affected tests/static checks, and
 repeat focused review until both Standards and Spec pass.
 
-- [ ] **Step 8: Commit documentation and any final review fixes**
+- [x] **Step 8: Commit documentation and any final review fixes**
 
 Commit the documentation/archive change:
 
