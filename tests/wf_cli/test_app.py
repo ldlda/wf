@@ -888,6 +888,40 @@ def test_wf_draft_add_capability_calls_composed_local_handler(monkeypatch) -> No
     assert call["bind_outputs"] == {"value": "state.value"}
 
 
+def test_wf_draft_add_capability_rejects_outcome_without_source_step(
+    monkeypatch,
+) -> None:
+    class FakeHandlers:
+        async def add_step_from_capability(self, **_kwargs: Any) -> dict[str, Any]:
+            raise AssertionError("handler must not be called")
+
+    context = SimpleNamespace(handlers=FakeHandlers(), verbose=False)
+    monkeypatch.setattr(
+        "wf_cli.commands.draft_add.load_cli_context", lambda _ctx: context
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "draft",
+            "add",
+            "capability",
+            "workspace",
+            "--revision",
+            "1",
+            "--step",
+            "call",
+            "--capability",
+            "demo.call",
+            "--from-outcome",
+            "error",
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert "--from-outcome requires --from-step" in result.output
+
+
 def test_wf_draft_update_capability_builds_presence_aware_patch(monkeypatch) -> None:
     calls: list[dict[str, Any]] = []
 
@@ -1503,6 +1537,23 @@ def test_wf_draft_add_control_commands_reject_invalid_input_before_api_call(
             "decision=state.other_decision",
         ],
     )
+    malformed_request_source = runner.invoke(
+        app,
+        [
+            "draft",
+            "add",
+            "interrupt",
+            "ws",
+            "--revision",
+            "1",
+            "--step",
+            "review",
+            "--kind",
+            "review",
+            "--request",
+            "not_a_graph_source=items",
+        ],
+    )
     missing_collect_target = runner.invoke(
         app,
         [
@@ -1520,6 +1571,27 @@ def test_wf_draft_add_control_commands_reject_invalid_input_before_api_call(
             "item",
             "--item-error",
             "collect",
+        ],
+    )
+    collect_target_without_collect = runner.invoke(
+        app,
+        [
+            "draft",
+            "add",
+            "foreach",
+            "ws",
+            "--revision",
+            "1",
+            "--step",
+            "each",
+            "--over",
+            "state.items",
+            "--as",
+            "item",
+            "--item-error",
+            "skip",
+            "--collect-to",
+            "state.errors",
         ],
     )
     end_route = runner.invoke(
@@ -1551,11 +1623,21 @@ def test_wf_draft_add_control_commands_reject_invalid_input_before_api_call(
     assert "duplicate --resume" in duplicate_resume.output
     assert "--bind-output" not in duplicate_resume.output
     assert "Traceback" not in duplicate_resume.output
+    assert malformed_request_source.exit_code == 2
+    assert "--request source 'not_a_graph_source'" in malformed_request_source.output
+    assert "expected" in malformed_request_source.output
+    assert "GRAPH_SOURCE=LOCAL_TARGET" in malformed_request_source.output
     assert missing_collect_target.exit_code == 2
     assert (
         "collect item error policy requires collect_to" in missing_collect_target.output
     )
     assert "Traceback" not in missing_collect_target.output
+    assert collect_target_without_collect.exit_code == 2
+    assert (
+        "--collect-to requires --item-error collect"
+        in collect_target_without_collect.output
+    )
+    assert "Traceback" not in collect_target_without_collect.output
     assert end_route.exit_code == 2
     assert "No such option" in end_route.output
     assert "--route" in end_route.output
@@ -2214,11 +2296,11 @@ def test_wf_draft_set_input_clear_sends_empty_binding_list(monkeypatch) -> None:
         ([], "provide --map/--value, --bindings-file, or --clear"),
         (
             ["--bindings-file", "bindings.json", "--map", "input.x=x"],
-            "cannot be combined with --map or",
+            "mutually exclusive",
         ),
         (
             ["--clear", "--value", "x=null"],
-            "cannot be combined with --map or",
+            "mutually exclusive",
         ),
         (
             ["--merge", "--value", "x=null"],

@@ -8,12 +8,11 @@
 
 ## Draft data-shaping parity
 
-- [x] `wf draft bind` rejects nested node-local targets such as
-  `local.report.title`, even though canonical `LocalPath`, the runtime binding
-  resolver, and `WorkflowBuilder` support nested local paths.
-- [x] Capability-step authoring persists nested input targets but silently skips
-  workflow input/state schema projection when a target has more than one path
-  segment.
+- [x] `wf draft bind` accepts nested node-local targets such as
+  `local.report.title`, consistently with canonical `LocalPath`, the runtime
+  binding resolver, and `WorkflowBuilder`.
+- [x] Capability-step authoring projects workflow input/state schemas for nested
+  local targets while preserving their canonical binding paths.
 - [x] An atomic API/RPC/CLI helper assembles one structured node input from
   multiple graph paths. Canonical replacement accepts several bindings in one
   revision-checked edit without an intermediate state object or raw JSON Patch.

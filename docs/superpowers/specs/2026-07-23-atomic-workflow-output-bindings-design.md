@@ -120,6 +120,11 @@ equivalent to the complete declared `output_schema`; a root literal must be a
 mapping that validates against the complete declared `output_schema`. The
 operation does not replace or infer the root output schema.
 
+`context.*` path sources cannot target `.`. Context values do not have a
+statically declared schema, so the operation cannot perform the exact
+whole-schema comparison required for a root binding. They remain valid for
+declared non-root output targets.
+
 ## Path Source And Schema Rules
 
 For `input.*` and `state.*` path bindings:

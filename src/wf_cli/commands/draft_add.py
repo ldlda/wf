@@ -176,6 +176,8 @@ def add_step_from_capability(
     `--input state.title=report.title --input state.summary=report.summary`
     `--bind-output title=state.title --bind-output summary=state.summary`
     """
+    if route_from_step is None and route_from_outcome != "ok":
+        raise typer.BadParameter("--from-outcome requires --from-step")
     convenience_input_selected = input_mapping is not None or input_value is not None
     if bindings_file is not None and convenience_input_selected:
         raise typer.BadParameter(
@@ -378,6 +380,8 @@ def add_foreach_step(
         raise typer.BadParameter(
             "--max-active and --max-outstanding require --mode concurrent"
         )
+    if collect_to is not None and item_error != "collect":
+        raise typer.BadParameter("--collect-to requires --item-error collect")
     try:
         concurrent_options: dict[str, int] = {}
         if max_active is not None:

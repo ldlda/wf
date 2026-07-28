@@ -445,9 +445,7 @@ def set_step_input(
     if selected_modes == 0:
         raise typer.BadParameter("provide --map/--value, --bindings-file, or --clear")
     if selected_modes > 1:
-        raise typer.BadParameter(
-            "--bindings-file and --clear cannot be combined with --map or --value"
-        )
+        raise typer.BadParameter("input modes are mutually exclusive")
     if merge and (literal_values or has_file or clear):
         raise typer.BadParameter(
             "--merge is supported only for compatibility map-only edits"

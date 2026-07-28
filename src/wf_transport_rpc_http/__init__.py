@@ -4,6 +4,7 @@ from .app import create_rpc_app
 from .client import RpcWorkflowApiClient
 from .errors import WorkflowRpcError
 from .models import (
+    AddDraftStepParams,
     AddStepFromCapabilityParams,
     AdminEmptyParams,
     BindDraftParams,
@@ -37,6 +38,7 @@ from .models import (
     RemoveDraftRouteParams,
     RemoveDraftStepParams,
     ResumeRunParams,
+    RouteSourceParams,
     SaveArtifactParams,
     SaveDeploymentParams,
     SetDraftContractParams,
@@ -58,6 +60,7 @@ from .models import (
 )
 
 __all__ = [
+    "AddDraftStepParams",
     "AddStepFromCapabilityParams",
     "AdminEmptyParams",
     "BindDraftParams",
@@ -90,6 +93,7 @@ __all__ = [
     "RemoveDraftBindingParams",
     "RemoveDraftRouteParams",
     "RemoveDraftStepParams",
+    "RouteSourceParams",
     "ResumeRunParams",
     "SaveArtifactParams",
     "SaveDeploymentParams",

@@ -364,7 +364,7 @@ class AddStepFromCapabilityRequest(BaseModel):
 
     @model_validator(mode="after")
     def reject_both_input_forms(self) -> Self:
-        if self.input_map is not None and self.input_bindings is not None:
+        if {"input_map", "input_bindings"} <= self.model_fields_set:
             raise ValueError("input_map and input_bindings are mutually exclusive")
         return self
 

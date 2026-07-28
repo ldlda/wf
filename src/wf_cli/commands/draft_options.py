@@ -7,7 +7,7 @@ from typing import Any
 import typer
 from pydantic import TypeAdapter, ValidationError
 
-from wf_api.surface import RouteSource
+from wf_api.draft_authoring import RouteSource
 from wf_core.models.steps import (
     InputBinding,
     InputPathBinding,
@@ -81,6 +81,13 @@ def _parse_step_input_map_flags(
         expected="GRAPH_SOURCE=LOCAL_TARGET",
     )
     for source, target in parsed.items():
+        try:
+            GraphSourcePath.parse(source)
+        except PathResolutionError as exc:
+            raise typer.BadParameter(
+                f"{option_name} source {source!r} is invalid; expected "
+                "GRAPH_SOURCE=LOCAL_TARGET"
+            ) from exc
         if target.startswith("local."):
             bare_target = target.removeprefix("local.")
             raise typer.BadParameter(

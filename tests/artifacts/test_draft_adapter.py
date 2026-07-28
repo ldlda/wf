@@ -520,8 +520,8 @@ def test_adapter_lowers_typed_and_untyped_interrupt_steps() -> None:
 
     workflow = build_workflow_from_draft(draft)
 
-    review = workflow.nodes[0]
-    legacy = workflow.nodes[1]
+    review = next(node for node in workflow.nodes if node.id == "review")
+    legacy = next(node for node in workflow.nodes if node.id == "legacy")
     assert isinstance(review, InterruptNode)
     assert review.request_schema == request_schema
     assert review.resume_schema == resume_schema
@@ -570,6 +570,12 @@ def test_adapter_lowers_subgraph_step_without_resolving_artifact() -> None:
     assert child.workflow.version == 2
     assert child.input_schema == SchemaRef.model_validate(input_schema)
     assert child.output_schema == SchemaRef.model_validate(output_schema)
+    assert child.model_dump(mode="json", by_alias=True)["input"] == [
+        {"path": "state.topic", "target": "topic"}
+    ]
+    assert child.model_dump(mode="json", by_alias=True)["output"] == [
+        {"source": "report", "target": "state.report"}
+    ]
     assert child.outcomes == ["ok", "error"]
 
 

@@ -3,11 +3,13 @@ from __future__ import annotations
 from typing import Any
 
 from wf_artifacts import (
+    DraftWorkspaceStore,
     FileDraftWorkspaceStore,
     WorkflowDraftWorkspace,
     create_draft_workspace,
     get_draft_workspace,
     patch_draft_workspace,
+    replace_validated_draft_document,
     summarize_draft_workspace,
 )
 
@@ -250,6 +252,44 @@ def test_patch_draft_workspace_rejects_invalid_patch_without_revision_bump(
     assert result["status"] == "invalid"
     assert result["diagnostics"][0]["code"] == "patch_invalid"
     assert store.get_workspace("echo_draft").revision == 1
+
+
+def test_replace_validated_draft_document_isolates_persisted_draft() -> None:
+    class ReferenceDraftWorkspaceStore(DraftWorkspaceStore):
+        def __init__(self) -> None:
+            self.workspace: WorkflowDraftWorkspace | None = None
+
+        def save_workspace(self, workspace: WorkflowDraftWorkspace) -> None:
+            self.workspace = workspace
+
+        def get_workspace(self, workspace_id: str) -> WorkflowDraftWorkspace:
+            if self.workspace is None or self.workspace.id != workspace_id:
+                raise KeyError(workspace_id)
+            return self.workspace
+
+        def list_workspaces(self) -> list[WorkflowDraftWorkspace]:
+            return [] if self.workspace is None else [self.workspace]
+
+        def delete_workspace(self, workspace_id: str) -> bool:
+            if self.workspace is None or self.workspace.id != workspace_id:
+                return False
+            self.workspace = None
+            return True
+
+    store = ReferenceDraftWorkspaceStore()
+    create_draft_workspace(store, workspace_id="echo_draft", draft=_draft())
+    replacement = _draft()
+    replacement["name"] = "replacement"
+
+    replace_validated_draft_document(
+        store,
+        workspace_id="echo_draft",
+        revision=1,
+        draft=replacement,
+    )
+    replacement["name"] = "mutated_after_save"
+
+    assert store.get_workspace("echo_draft").draft["name"] == "replacement"
 
 
 def test_get_draft_workspace_includes_full_draft_only_when_requested(tmp_path) -> None:

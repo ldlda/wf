@@ -906,10 +906,12 @@ async def test_create_empty_draft_workspace_reports_duplicate_conflict(
     "contract",
     [
         {"input_schema": cast(Any, [])},
+        {"input_schema": {"type": 5}},
         {"outcomes": ()},
         {"outcomes": cast(Any, (1,))},
         {"outcomes": ("ok", " ")},
         {"outcomes": ("ok", "ok")},
+        {"outcomes": ("ok", " ok ")},
     ],
 )
 async def test_create_empty_draft_workspace_rejects_invalid_contract_before_mutation(
@@ -4595,6 +4597,15 @@ async def test_set_workflow_output_bindings_validates_root_literal_complete_sche
             r"bindings\[0\]\.target '\.' already has an incompatible schema",
         ),
         (
+            [
+                InputPathBinding(
+                    path=GraphSourcePath.context("prior_outcome"),
+                    target=LocalPath.root(),
+                )
+            ],
+            r"bindings\[0\]\.path 'context\.prior_outcome' cannot target '\.'",
+        ),
+        (
             [InputValueBinding(target=LocalPath.root(), value="not-an-object")],
             r"bindings\[0\]\.value for root target must be an object",
         ),
@@ -4605,7 +4616,9 @@ async def test_set_workflow_output_bindings_rejects_without_mutation(
     bindings: list[InputBinding],
     message: str,
 ) -> None:
-    workspace_id = f"invalid_output_{abs(hash(message))}"
+    # Pytest gives every parameter case an isolated tmp_path, so a stable id is
+    # sufficient and keeps failure artifacts reproducible across processes.
+    workspace_id = "invalid_output"
     draft_api, _service, authoring = _draft_api(
         FileWorkflowArtifactStore(tmp_path / workspace_id),
         register_echo=True,

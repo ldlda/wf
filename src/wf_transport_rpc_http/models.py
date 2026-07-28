@@ -88,7 +88,7 @@ def _validate_workflow_outcomes(outcomes: list[str]) -> None:
         raise ValueError("workflow outcomes must contain at least one value")
     if any(not outcome.strip() for outcome in outcomes):
         raise ValueError("workflow outcomes must not contain blank values")
-    if len(set(outcomes)) != len(outcomes):
+    if len({outcome.strip() for outcome in outcomes}) != len(outcomes):
         raise ValueError("workflow outcomes must be unique")
 
 

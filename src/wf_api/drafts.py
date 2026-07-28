@@ -4,6 +4,8 @@ from collections.abc import Mapping, Sequence
 from copy import deepcopy
 from typing import Any
 
+from jsonschema import Draft202012Validator, SchemaError
+
 from wf_artifacts import (
     DraftWorkspaceStore,
     compile_workflow_draft,
@@ -55,10 +57,17 @@ def _empty_object_schema() -> dict[str, Any]:
 
 
 def _validated_schema_object(value: object, *, field_name: str) -> dict[str, Any]:
-    """Return an isolated schema object after validating the public envelope."""
+    """Return an isolated, structurally valid JSON Schema object."""
     if not isinstance(value, dict):
         raise ValueError(f"{field_name} must be a JSON object")
-    return deepcopy(value)
+    schema = deepcopy(value)
+    try:
+        Draft202012Validator.check_schema(schema)
+    except SchemaError as exc:
+        raise ValueError(
+            f"{field_name} is not valid JSON Schema: {exc.message}"
+        ) from exc
+    return schema
 
 
 def _validated_workflow_outcomes(outcomes: Sequence[str]) -> list[str]:
@@ -68,7 +77,7 @@ def _validated_workflow_outcomes(outcomes: Sequence[str]) -> list[str]:
         raise ValueError("workflow outcomes must contain at least one value")
     if any(not isinstance(value, str) or not value.strip() for value in values):
         raise ValueError("workflow outcomes must not contain blank values")
-    if len(set(values)) != len(values):
+    if len({value.strip() for value in values}) != len(values):
         raise ValueError("workflow outcomes must be unique")
     return values
 

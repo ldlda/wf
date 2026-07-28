@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import time
 from collections.abc import Callable, Sequence
+from copy import deepcopy
 from typing import Any
 
 from wf_artifacts.drafts import (
@@ -121,10 +122,11 @@ def replace_validated_draft_document(
     WorkflowDraft.model_validate(draft)
     if draft == workspace.draft:
         return summarize_draft_workspace(workspace)
+    stored_draft = deepcopy(draft)
     next_workspace = workspace.model_copy(
         update={
             "revision": workspace.revision + 1,
-            "draft": draft,
+            "draft": stored_draft,
             "updated_at_epoch_ms": _now_ms(),
         }
     )

@@ -681,6 +681,11 @@ class WorkflowDraftAuthoringApi:
         for index, binding in enumerate(bindings):
             target_parts = binding.target.parts
             if isinstance(binding, InputPathBinding):
+                if binding.path.root == "context" and not target_parts:
+                    raise ValueError(
+                        f"bindings[{index}].path {str(binding.path)!r} "
+                        "cannot target '.' because context schemas are not declared"
+                    )
                 source_schema = source_schemas.get(index)
                 if source_schema is None:
                     if not schema_path_exists(projected, target_parts):
@@ -1082,7 +1087,7 @@ class WorkflowDraftAuthoringApi:
             if value is not None
         }
         if metadata:
-            CapabilityStepUpdate.model_validate(metadata)
+            _ = CapabilityStepUpdate.model_validate(metadata)
 
         spec = self.context.specs.get_qualified_spec(capability_name)
         output_schema = (

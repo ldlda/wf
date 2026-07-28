@@ -15,6 +15,7 @@ from wf_transport_rpc_http.app import create_rpc_app
 from wf_transport_rpc_http.models import (
     AddDraftStepParams,
     AddStepFromCapabilityParams,
+    SetDraftContractParams,
     UpdateCapabilityStepParams,
 )
 
@@ -107,6 +108,17 @@ def test_add_step_from_capability_params_reject_both_input_forms() -> None:
                 "capability_name": "demo.report",
                 "input_map": {},
                 "input_bindings": [],
+            }
+        )
+
+
+def test_set_draft_contract_params_reject_whitespace_duplicate_outcomes() -> None:
+    with pytest.raises(ValidationError, match="unique"):
+        SetDraftContractParams.model_validate(
+            {
+                "workspace_id": "report",
+                "revision": 1,
+                "outcomes": ["ok", " ok "],
             }
         )
 
@@ -471,6 +483,14 @@ async def test_rpc_draft_workspace_lifecycle_methods(tmp_path) -> None:
                 "workspace_id": "rpc_control",
                 "revision": 1,
                 "outcomes": ["ok", "ok"],
+            },
+        ),
+        (
+            "workflow.draft_workspaces.set_contract",
+            {
+                "workspace_id": "rpc_control",
+                "revision": 1,
+                "outcomes": ["ok", " ok "],
             },
         ),
         (
@@ -1077,11 +1097,20 @@ async def test_rpc_set_step_output_bindings_rejects_malformed_binding(
     app = create_rpc_app(server)
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        await _rpc(
+            client,
+            "workflow.draft_workspaces.create_from_capability",
+            {
+                "workspace_id": "valid_ws",
+                "capability_name": "wf.std.constant",
+                "name": "valid",
+            },
+        )
         rejected = await _rpc(
             client,
             "workflow.draft_workspaces.set_step_output_bindings",
             {
-                "workspace_id": "missing_ws",
+                "workspace_id": "valid_ws",
                 "revision": 1,
                 "step_id": "call",
                 "bindings": [binding],
@@ -1106,11 +1135,20 @@ async def test_rpc_set_step_input_bindings_rejects_malformed_union(
     app = create_rpc_app(server)
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        await _rpc(
+            client,
+            "workflow.draft_workspaces.create_from_capability",
+            {
+                "workspace_id": "valid_ws",
+                "capability_name": "wf.std.constant",
+                "name": "valid",
+            },
+        )
         rejected = await _rpc(
             client,
             "workflow.draft_workspaces.set_step_input_bindings",
             {
-                "workspace_id": "missing_ws",
+                "workspace_id": "valid_ws",
                 "revision": 1,
                 "step_id": "call",
                 "bindings": [binding],
@@ -1229,11 +1267,20 @@ async def test_rpc_set_workflow_output_bindings_rejects_malformed_binding(
     app = create_rpc_app(server)
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        await _rpc(
+            client,
+            "workflow.draft_workspaces.create_from_capability",
+            {
+                "workspace_id": "valid_ws",
+                "capability_name": "wf.std.constant",
+                "name": "valid",
+            },
+        )
         rejected = await _rpc(
             client,
             "workflow.draft_workspaces.set_workflow_output_bindings",
             {
-                "workspace_id": "missing_ws",
+                "workspace_id": "valid_ws",
                 "revision": 1,
                 "bindings": [binding],
             },
@@ -1574,7 +1621,7 @@ async def test_rpc_draft_workspace_add_typed_step_round_trip(tmp_path) -> None:
         )
 
     assert added["result"]["revision"] == created["result"]["revision"] + 1
-    assert added["result"]["status"] in {"valid", "invalid"}
+    assert added["result"]["status"] == "valid"
     assert "error" in malformed
     assert fetched["result"]["revision"] == added["result"]["revision"]
     assert "bad" not in fetched["result"]["draft"]["steps"]

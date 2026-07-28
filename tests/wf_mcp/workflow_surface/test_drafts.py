@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
+from typing import Any
 
 import pytest
 from pydantic import ValidationError
@@ -68,7 +69,9 @@ def test_update_capability_step_request_preserves_field_presence_and_binding_typ
         {"unknown": "field"},
     ],
 )
-def test_update_capability_step_request_rejects_invalid_patch(update) -> None:
+def test_update_capability_step_request_rejects_invalid_patch(
+    update: dict[str, Any],
+) -> None:
     with pytest.raises(ValidationError):
         UpdateCapabilityStepRequest.model_validate(
             {
@@ -113,6 +116,22 @@ def test_add_step_from_capability_request_rejects_both_input_forms() -> None:
                 "step_id": "publish",
                 "capability_name": "local.report.publish",
                 "input_map": {"state.title": "request.title"},
+                "input_bindings": [
+                    {"value": "markdown", "target": "request.format"},
+                ],
+            }
+        )
+
+
+def test_add_step_from_capability_request_rejects_explicit_null_input_form() -> None:
+    with pytest.raises(ValidationError, match="mutually exclusive"):
+        AddStepFromCapabilityRequest.model_validate(
+            {
+                "workspace_id": "report",
+                "revision": 3,
+                "step_id": "publish",
+                "capability_name": "local.report.publish",
+                "input_map": None,
                 "input_bindings": [
                     {"value": "markdown", "target": "request.format"},
                 ],
