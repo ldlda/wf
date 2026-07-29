@@ -34,14 +34,14 @@ class NotCondition(BaseModel):
     """Condition that negates another condition expression."""
 
     op: Literal["not"]
-    arg: "Condition"
+    arg: Condition
 
 
 class VariadicCondition(BaseModel):
     """Condition that combines one or more child conditions."""
 
     op: Literal["and", "or"]
-    args: list["Condition"] = Field(min_length=1)
+    args: list[Condition] = Field(min_length=1)
 
 
 class BinaryCondition(BaseModel):

@@ -240,8 +240,8 @@ async def test_upstream_transport_live_diagnostics_report_missing_connection() -
     source_catalog = SourceCatalogService(
         store=transport.catalog_store,
         connection_lookup=_raise_missing_connection,
-        connection_list_enabled=lambda: [],
-        connection_list_all=lambda: [],
+        connection_list_enabled=list,
+        connection_list_all=list,
         tool_executor_for=transport.tool_executor_for,
         load_auth=transport.load_connection_auth,
         emit_event=lambda event: None,

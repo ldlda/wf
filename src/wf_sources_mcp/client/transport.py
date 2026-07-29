@@ -77,14 +77,16 @@ async def open_mcp_session(
             headers=bound.headers or None,
             auth=bound.auth,
         )
-        async with http_client:
-            async with streamable_http_client(
+        async with (
+            http_client,
+            streamable_http_client(
                 str(transport.url),
                 http_client=http_client,
-            ) as (read_stream, write_stream, _get_session_id):
-                async with ClientSession(read_stream, write_stream) as session:
-                    await session.initialize()
-                    yield session
+            ) as (read_stream, write_stream, _get_session_id),
+        ):
+            async with ClientSession(read_stream, write_stream) as session:
+                await session.initialize()
+                yield session
         return
 
     raise ValueError(f"unsupported MCP transport {transport.kind!r}")

@@ -291,9 +291,7 @@ def _resolve_local_reference(
             raise ValueError(f"cyclic reference {reference!r} at schema path {label!r}")
         seen.add(reference)
 
-        if reference.startswith("#/$defs/"):
-            pointer = reference.removeprefix("#/")
-        elif reference.startswith("#/definitions/"):
+        if reference.startswith("#/$defs/") or reference.startswith("#/definitions/"):
             pointer = reference.removeprefix("#/")
         else:
             raise ValueError(

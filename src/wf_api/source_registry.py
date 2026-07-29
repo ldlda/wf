@@ -102,10 +102,10 @@ class AtomicJsonRegistryStore(Generic[RegistryT]):
 
 
 __all__ = [
+    "SOURCE_REGISTRY_ID_PATTERN",
     "AtomicJsonRegistryStore",
     "SourceRegistryBaseModel",
     "SourceRegistryStore",
-    "SOURCE_REGISTRY_ID_PATTERN",
     "validate_source_registry_id",
     "validate_unique_source_ids",
 ]

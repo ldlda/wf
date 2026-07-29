@@ -16,7 +16,7 @@ class NodeCatalogEntry:
     output_schema: dict[str, Any]
 
     @classmethod
-    def from_spec(cls, spec: NodeSpec[Any, Any]) -> "NodeCatalogEntry":
+    def from_spec(cls, spec: NodeSpec[Any, Any]) -> NodeCatalogEntry:
         input_schema = (
             spec.input_schema_contract or spec.input_model.model_json_schema()
         )
@@ -38,7 +38,7 @@ class NodeCatalog:
     specs: dict[str, NodeSpec[Any, Any]]
 
     @classmethod
-    def from_specs(cls, *specs: NodeSpec[Any, Any]) -> "NodeCatalog":
+    def from_specs(cls, *specs: NodeSpec[Any, Any]) -> NodeCatalog:
         return cls(specs={spec.name: spec for spec in specs})
 
     def entries(self) -> list[NodeCatalogEntry]:

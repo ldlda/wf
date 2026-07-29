@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Annotated, Any, Mapping
+from collections.abc import Mapping
+from typing import Annotated, Any
 
 from fastmcp import FastMCP
 from pydantic import Field

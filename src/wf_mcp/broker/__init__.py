@@ -31,8 +31,8 @@ __all__ = [
     "discover_connection_capabilities",
     "load_broker_config",
     "make_event",
+    "normalize_transport",
     "snapshot_from_specs",
     "specs_from_discovered_tools",
-    "normalize_transport",
     "workflow_server_from_service",
 ]

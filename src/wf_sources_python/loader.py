@@ -180,7 +180,7 @@ def _module_file_under_root(root: Path, module: str) -> Path | None:
 
 
 def _synthetic_module_root(*, source_id: str, root: Path) -> str:
-    digest = sha256(f"{source_id}\0{root}".encode("utf-8")).hexdigest()[:16]
+    digest = sha256(f"{source_id}\0{root}".encode()).hexdigest()[:16]
     safe_source = source_id.replace(".", "_").replace("-", "_")
     return f"_wf_source_{safe_source}_{digest}"
 

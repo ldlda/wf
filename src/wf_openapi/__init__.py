@@ -10,8 +10,8 @@ from .spec import load_openapi_document, load_openapi_operations
 __all__ = [
     "OPENAPI_OUTCOMES",
     "OpenApiExecutionConfig",
-    "OpenApiOperationOutput",
     "OpenApiOperation",
+    "OpenApiOperationOutput",
     "build_openapi_capability_source",
     "call_openapi_operation",
     "load_openapi_document",

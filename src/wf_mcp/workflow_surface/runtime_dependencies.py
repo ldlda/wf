@@ -6,7 +6,7 @@ older MCP workflow-surface imports keep working until callers migrate.
 
 from __future__ import annotations
 
-from wf_api.runtime_dependencies import (  # noqa: F401
+from wf_api.runtime_dependencies import (
     RuntimeDependencies,
     resolve_runtime_dependencies,
 )

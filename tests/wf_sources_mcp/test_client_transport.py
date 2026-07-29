@@ -274,10 +274,10 @@ async def test_open_mcp_session_uses_binder_for_http_headers(
         def __init__(self, **kwargs: Any) -> None:
             captured_clients.append(kwargs)
 
-        async def __aenter__(self) -> "_CapturingClient":
+        async def __aenter__(self) -> _CapturingClient:
             return self
 
-        async def __aexit__(self, *args: Any) -> None:
+        async def __aexit__(self, *args: object) -> None:
             return None
 
     import wf_sources_mcp.client.transport as mod
@@ -319,7 +319,7 @@ async def test_open_mcp_session_refreshes_oauth_record_for_http(
         def __init__(self, **kwargs: Any) -> None:
             captured_clients.append(kwargs)
 
-        async def __aenter__(self) -> "_CapturingClient":
+        async def __aenter__(self) -> _CapturingClient:
             return self
 
         async def __aexit__(self, *args: object) -> None:
@@ -365,7 +365,7 @@ async def test_open_mcp_session_refreshes_oauth_record_for_http(
 
 @pytest.mark.asyncio
 async def test_open_mcp_session_uses_binder_for_stdio_env() -> None:
-    import wf_sources_mcp.client.transport as mod  # noqa: I001
+    import wf_sources_mcp.client.transport as mod
     from wf_api.auth import EnvAuth, StoredAuthRecord
 
     captured_params: list[Any] = []

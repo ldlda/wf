@@ -21,9 +21,9 @@ from .models import (
 )
 
 __all__ = [
-    "DraftDiagnostic",
     "DraftChooseClause",
     "DraftChooseStep",
+    "DraftDiagnostic",
     "DraftEndStep",
     "DraftForeachStep",
     "DraftInterruptStep",
@@ -31,8 +31,8 @@ __all__ = [
     "DraftMatchCase",
     "DraftMatchStep",
     "DraftSubgraphStep",
-    "DraftWhenStep",
     "DraftUseStep",
+    "DraftWhenStep",
     "WorkflowDraft",
     "build_workflow_from_draft",
     "compile_workflow_draft",

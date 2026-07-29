@@ -49,8 +49,8 @@ _LAZY_EXPORTS = {
 
 __all__ = [
     "CapabilityBuckets",
-    "CapabilitySource",
     "CapabilityRef",
+    "CapabilitySource",
     "DocumentationPrompt",
     "DocumentationResource",
     "NodeSpecInventory",
@@ -63,10 +63,10 @@ __all__ = [
     "SourcePermissionsSnapshot",
     "SourcePolicy",
     "SourcePolicySnapshot",
+    "SourceRef",
     "SourceStatus",
     "SourceVisibility",
     "SourceVisibilitySnapshot",
-    "SourceRef",
     "build_documentation_source",
     "hash_json_schema",
     "page_items",

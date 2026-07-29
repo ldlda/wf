@@ -106,7 +106,7 @@ def test_wfmcpservice_uses_broker_event_recorder() -> None:
         event_bus=bus,
     )
 
-    service._record_event(  # noqa: SLF001
+    service._record_event(
         make_event("connection_registered", connection_id="demo.personal")
     )
 

@@ -15,7 +15,7 @@ class BlockedOnChildren:
     child_frame_ids: tuple[str, ...]
 
     @classmethod
-    def from_frame(cls, frame: ExecutionFrame) -> "BlockedOnChildren | None":
+    def from_frame(cls, frame: ExecutionFrame) -> BlockedOnChildren | None:
         raw = frame.metadata.get("blocked_on")
         if raw is None:
             return None
@@ -46,7 +46,7 @@ class ForeachIterationMetadata:
     loop_alias: str
 
     @classmethod
-    def from_frame(cls, frame: ExecutionFrame) -> "ForeachIterationMetadata | None":
+    def from_frame(cls, frame: ExecutionFrame) -> ForeachIterationMetadata | None:
         if frame.kind != "foreach_iteration":
             return None
         metadata = frame.metadata

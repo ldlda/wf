@@ -43,7 +43,7 @@ class Workflow(BaseModel):
     nodes: list[Step]
     edges: list[Edge]
 
-    def validate_structure(self) -> "ValidationReport":
+    def validate_structure(self) -> ValidationReport:
         """Return all structural validation issues for this workflow."""
         validation = import_module("wf_core.validation.core")
         return cast("ValidationReport", validation.validate_workflow(self))

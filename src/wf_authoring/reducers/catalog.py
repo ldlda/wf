@@ -15,7 +15,7 @@ class ReducerCatalog:
     definitions: dict[str, ReducerDefinition]
 
     @classmethod
-    def from_reducers(cls, *reducers: AuthoredReducer) -> "ReducerCatalog":
+    def from_reducers(cls, *reducers: AuthoredReducer) -> ReducerCatalog:
         return cls(
             definitions={
                 reducer.definition.spec.name: reducer.definition for reducer in reducers

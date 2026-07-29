@@ -6,8 +6,8 @@ from typing import Any
 import pytest
 from typer.testing import CliRunner
 
-import wf_cli.commands.caps as caps
 from wf_cli.app import app
+from wf_cli.commands import caps
 from wf_cli.commands.caps import (
     CapCallOutputFormat,
     render_cap_call_output,

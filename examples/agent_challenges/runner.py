@@ -30,29 +30,29 @@ def _utf8_subprocess_env() -> dict[str, str]:
     return env
 
 
-from examples.agent_challenges.names import (  # noqa: E402
+from examples.agent_challenges.names import (
     short_challenge_name,
     short_model_name,
 )
-from examples.agent_challenges.opencode_io import (  # noqa: E402
+from examples.agent_challenges.opencode_io import (
     build_opencode_command,
     opencode_text_results,
     parse_opencode_output,
     result_text,
 )
-from examples.agent_challenges.opencode_resume import (  # noqa: E402
+from examples.agent_challenges.opencode_resume import (
     build_resume_command,
     extract_session_id,
     resume_prompt_for_result,
 )
-from examples.agent_challenges.report_models import (  # noqa: E402
+from examples.agent_challenges.report_models import (
     build_trial_report,
 )
-from examples.agent_challenges.reports import (  # noqa: E402
+from examples.agent_challenges.reports import (
     save_report_from_result_payload,
     write_trial_report_projections,
 )
-from examples.agent_challenges.workspace import (  # noqa: E402
+from examples.agent_challenges.workspace import (
     ChallengeDef,
     TrialConfig,
     _display_path,

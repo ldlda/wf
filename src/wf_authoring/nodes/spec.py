@@ -22,7 +22,7 @@ from .result import NodeReturn, Nothing
 from .schema import schema_ref_for
 
 
-def _default_outcome(spec: "NodeSpec[Any, Any]") -> str:
+def _default_outcome(spec: NodeSpec[Any, Any]) -> str:
     return spec.outcomes[0]
 
 

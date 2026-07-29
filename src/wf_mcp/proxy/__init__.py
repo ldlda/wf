@@ -7,7 +7,7 @@ from .runtime import (
 
 __all__ = [
     "ProxyRuntime",
-    "register_proxy_admin_tools",
     "create_proxy_client",
     "create_proxy_server",
+    "register_proxy_admin_tools",
 ]

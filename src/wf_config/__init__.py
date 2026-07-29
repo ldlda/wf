@@ -22,7 +22,6 @@ from .models import (
 )
 
 __all__ = [
-    "load_workflow_config",
     "AuthConfig",
     "ClientConfig",
     "FilesystemStoreConfig",
@@ -40,4 +39,5 @@ __all__ = [
     "StdioSourceTransportConfig",
     "StdlibSourceConfig",
     "WorkflowConfigFile",
+    "load_workflow_config",
 ]

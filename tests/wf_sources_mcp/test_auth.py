@@ -100,7 +100,7 @@ async def test_httpx_oauth_refresher_posts_refresh_token_grant(
         def __init__(self, **kwargs: object) -> None:
             assert kwargs["timeout"] == 10.0
 
-        async def __aenter__(self) -> "_Client":
+        async def __aenter__(self) -> _Client:
             return self
 
         async def __aexit__(self, *args: object) -> None:

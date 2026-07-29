@@ -9,7 +9,7 @@ ROOT = THESIS_DIR.parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from examples.agent_challenges.evaluation import (  # noqa: E402
+from examples.agent_challenges.evaluation import (
     load_evaluation_cohort,
     render_evaluation_figures,
     render_evaluation_markdown,

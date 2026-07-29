@@ -21,6 +21,7 @@ from .subgraphs import PreparedSubgraph
 __all__ = [
     "AsyncNodeHandler",
     "NodeHandler",
+    "PreparedSubgraph",
     "WorkflowExecutionError",
     "coerce_node_result",
     "complete_step",
@@ -34,5 +35,4 @@ __all__ = [
     "resume_workflow_result_async",
     "step_workflow",
     "step_workflow_async",
-    "PreparedSubgraph",
 ]
