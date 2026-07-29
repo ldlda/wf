@@ -489,8 +489,18 @@ class WorkflowDraftApi:
         merge: bool = False,
     ) -> dict[str, Any]:
         if merge:
+            workspace = self._workspace_if_revision_matches(
+                workspace_id=workspace_id,
+                revision=revision,
+            )
+            if isinstance(workspace, dict):
+                return workspace
+            step = _draft_step(workspace.draft, step_id)
             output_map = {
-                **self._step_output_map(workspace_id=workspace_id, step_id=step_id),
+                **_require_lossless_step_output_map_round_trip(
+                    step.get("output", []),
+                    step_id=step_id,
+                ),
                 **output_map,
             }
         return await self.patch_draft_workspace(
@@ -514,12 +524,39 @@ class WorkflowDraftApi:
         merge: bool = False,
     ) -> dict[str, Any]:
         output_bindings: list[dict[str, Any]]
+        workspace: WorkflowDraftWorkspace | None = None
         if merge:
-            workspace = self._draft_store().get_workspace(workspace_id)
+            checked_workspace = self._workspace_if_revision_matches(
+                workspace_id=workspace_id,
+                revision=revision,
+            )
+            if isinstance(checked_workspace, dict):
+                return checked_workspace
+            workspace = checked_workspace
             remaining = dict(output_map)
             output_bindings = []
             output_payload = workspace.draft.get("output")
             if isinstance(output_payload, list):
+                ambiguous = next(
+                    (
+                        source
+                        for source in output_map
+                        if sum(
+                            1
+                            for binding in output_payload
+                            if isinstance(binding, dict)
+                            and binding.get("path") == source
+                        )
+                        > 1
+                    ),
+                    None,
+                )
+                if ambiguous is not None:
+                    raise ValueError(
+                        f"workflow output source {ambiguous!r} has multiple "
+                        "bindings and cannot be updated through a compatibility "
+                        "map; replace the complete canonical binding list instead"
+                    )
                 for binding in output_payload:
                     if not isinstance(binding, dict):
                         continue
@@ -545,7 +582,8 @@ class WorkflowDraftApi:
                 {"path": source, "target": target}
                 for source, target in output_map.items()
             ]
-        workspace = self._draft_store().get_workspace(workspace_id)
+        if workspace is None:
+            workspace = self._draft_store().get_workspace(workspace_id)
         output_schema = self._workflow_output_schema_for_bindings(
             draft=workspace.draft,
             output_bindings=output_bindings,
@@ -626,22 +664,6 @@ class WorkflowDraftApi:
                 changed = True
                 projected = updated
         return projected if changed else output_schema
-
-    def _step_input_maps(
-        self,
-        *,
-        workspace_id: str,
-        step_id: str,
-    ) -> tuple[dict[str, str], dict[str, Any]]:
-        workspace = self._draft_store().get_workspace(workspace_id)
-        step = _draft_step(workspace.draft, step_id)
-        return _input_maps_from_payload(step.get("input", []))
-
-    def _step_output_map(self, *, workspace_id: str, step_id: str) -> dict[str, str]:
-        workspace = self._draft_store().get_workspace(workspace_id)
-        step = _draft_step(workspace.draft, step_id)
-        return _output_map_from_payload(step.get("output", []))
-
 
 def _workflow_source_schema(
     draft: Mapping[str, Any],
@@ -763,6 +785,22 @@ def _output_map_from_payload(payload: Any) -> dict[str, str]:
             output_map[_path_text(item["source"], expected_root="local")] = _path_text(
                 item["target"],
             )
+    return output_map
+
+
+def _require_lossless_step_output_map_round_trip(
+    payload: object,
+    *,
+    step_id: str,
+) -> dict[str, str]:
+    """Return a compatibility map only when it reproduces the output list."""
+    output_map = _output_map_from_payload(payload)
+    rebuilt = _draft_output_bindings_payload(output_map)
+    if rebuilt != payload:
+        raise ValueError(
+            f"step {step_id!r} outputs cannot be safely merged through a "
+            "compatibility map; replace the complete canonical binding list instead"
+        )
     return output_map
 
 

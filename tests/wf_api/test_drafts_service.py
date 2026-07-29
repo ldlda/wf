@@ -1405,6 +1405,84 @@ async def test_step_input_map_merge_checks_revision_before_lossless_preflight(
 
 
 @pytest.mark.asyncio
+async def test_step_output_map_merge_rejects_canonical_source_fan_out(
+    tmp_path: Path,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "output_merge_fan_out")
+    api, _service, _authoring = _draft_api(artifact_store)
+    draft = _echo_draft()
+    draft["state_schema"] = {
+        "fields": {
+            "echoed": {"type": "string"},
+            "other": {"type": "string"},
+        }
+    }
+    draft["steps"]["echo"]["output"] = [
+        {"source": "echoed", "target": "state.echoed"},
+        {"source": "echoed", "target": "state.other"},
+    ]
+    await api.create_draft_workspace(workspace_id="echo_ws", draft=draft)
+    before = await api.get_draft_workspace(
+        workspace_id="echo_ws",
+        include_draft=True,
+    )
+
+    with pytest.raises(ValueError, match="complete canonical binding list"):
+        await api.set_step_output_map(
+            workspace_id="echo_ws",
+            revision=1,
+            step_id="echo",
+            output_map={"extra": "state.extra"},
+            merge=True,
+        )
+
+    after = await api.get_draft_workspace(
+        workspace_id="echo_ws",
+        include_draft=True,
+    )
+    assert after == before
+
+
+@pytest.mark.asyncio
+async def test_step_output_map_merge_checks_revision_before_lossless_preflight(
+    tmp_path: Path,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "output_merge_stale")
+    api, _service, _authoring = _draft_api(artifact_store)
+    draft = _echo_draft()
+    draft["steps"]["echo"]["output"] = [
+        {"source": "echoed", "target": "state.echoed"},
+        {"source": "echoed", "target": "state.other"},
+    ]
+    await api.create_draft_workspace(workspace_id="echo_ws", draft=draft)
+    await api.set_draft_name(
+        workspace_id="echo_ws",
+        revision=1,
+        name="echo_v2",
+    )
+    before = await api.get_draft_workspace(
+        workspace_id="echo_ws",
+        include_draft=True,
+    )
+
+    result = await api.set_step_output_map(
+        workspace_id="echo_ws",
+        revision=1,
+        step_id="echo",
+        output_map={"extra": "state.extra"},
+        merge=True,
+    )
+
+    after = await api.get_draft_workspace(
+        workspace_id="echo_ws",
+        include_draft=True,
+    )
+    assert result["status"] == "conflict"
+    assert result["diagnostics"][0]["code"] == "revision_conflict"
+    assert after == before
+
+
+@pytest.mark.asyncio
 async def test_validate_draft_workspace_refreshes_status(tmp_path: Path) -> None:
     artifact_store = FileWorkflowArtifactStore(tmp_path / "drafts_validate_workspace")
     api, service, authoring = _draft_api(artifact_store, register_echo=True)
@@ -4934,6 +5012,102 @@ async def test_set_workflow_output_map_merges_top_level_output(tmp_path: Path) -
     assert fetched["draft"]["output"] == [
         {"path": "state.echoed", "target": "echoed"},
         {"value": "report", "target": "kind"},
+        {"path": "state.other", "target": "other"},
+    ]
+
+
+@pytest.mark.asyncio
+async def test_workflow_output_map_merge_rejects_requested_fan_out_source(
+    tmp_path: Path,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "workflow_merge_fan_out")
+    api, _service, _authoring = _draft_api(artifact_store, register_echo=True)
+    draft = {
+        **_echo_draft(),
+        "output_schema": {
+            "type": "object",
+            "properties": {
+                "first": {"type": "string"},
+                "second": {"type": "string"},
+                "kind": {"type": "string"},
+            },
+        },
+        "output": [
+            {"path": "state.echoed", "target": "first"},
+            {"path": "state.echoed", "target": "second"},
+            {"value": "markdown", "target": "kind"},
+        ],
+    }
+    await api.create_draft_workspace(workspace_id="report", draft=draft)
+    before = await api.get_draft_workspace(
+        workspace_id="report",
+        include_draft=True,
+    )
+
+    with pytest.raises(ValueError, match="multiple bindings"):
+        await api.set_workflow_output_map(
+            workspace_id="report",
+            revision=1,
+            output_map={"state.echoed": "renamed"},
+            merge=True,
+        )
+
+    after = await api.get_draft_workspace(
+        workspace_id="report",
+        include_draft=True,
+    )
+    assert after == before
+
+
+@pytest.mark.asyncio
+async def test_workflow_output_map_merge_preserves_unrequested_fan_out_and_literals(
+    tmp_path: Path,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(
+        tmp_path / "workflow_merge_unrequested_fan_out"
+    )
+    api, _service, _authoring = _draft_api(artifact_store, register_echo=True)
+    draft = {
+        **_echo_draft(),
+        "state_schema": {
+            "fields": {
+                "echoed": {"type": "string"},
+                "other": {"type": "string"},
+            }
+        },
+        "output_schema": {
+            "type": "object",
+            "properties": {
+                "first": {"type": "string"},
+                "second": {"type": "string"},
+                "kind": {"type": "string"},
+                "other": {"type": "string"},
+            },
+        },
+        "output": [
+            {"path": "state.echoed", "target": "first"},
+            {"path": "state.echoed", "target": "second"},
+            {"value": "markdown", "target": "kind"},
+        ],
+    }
+    await api.create_draft_workspace(workspace_id="report", draft=draft)
+
+    result = await api.set_workflow_output_map(
+        workspace_id="report",
+        revision=1,
+        output_map={"state.other": "other"},
+        merge=True,
+    )
+
+    fetched = await api.get_draft_workspace(
+        workspace_id="report",
+        include_draft=True,
+    )
+    assert result["revision"] == 2
+    assert fetched["draft"]["output"] == [
+        {"path": "state.echoed", "target": "first"},
+        {"path": "state.echoed", "target": "second"},
+        {"value": "markdown", "target": "kind"},
         {"path": "state.other", "target": "other"},
     ]
 
