@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import NoReturn
 
 import fastapi_jsonrpc as jsonrpc
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, ValidationError
 
 
 class WorkflowRpcError(jsonrpc.BaseError):
@@ -21,6 +21,11 @@ class WorkflowRpcError(jsonrpc.BaseError):
 
 def raise_workflow_rpc_error(exc: Exception) -> NoReturn:
     """Map expected application exceptions without swallowing programming bugs."""
+
+    # DTO validation happens before handlers, while complete-document validation
+    # happens inside the service. Both are invalid JSON-RPC parameters.
+    if isinstance(exc, ValidationError):
+        raise jsonrpc.InvalidParams(data={"message": str(exc)}) from exc
 
     raise WorkflowRpcError(
         data={

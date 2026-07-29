@@ -52,6 +52,14 @@ typeCheckingMode = "basic" # too many errors
 
 [tool.ruff.format]
 preview = false
+# Ruff 0.16 formats Markdown by default, but many docs contain partial Python
+# call fragments that are illustrative rather than standalone programs.
+exclude = ["**/*.md"]
 
 [tool.ruff.lint]
-extend-select = ["I"]
+# Keep the established lint contract stable across Ruff default-rule changes.
+select = ["E4", "E7", "E9", "F", "I"]
+
+[tool.ruff.lint.per-file-ignores]
+# This generator adjusts sys.path before importing repository-local modules.
+"docs/thesis/generate_agent_challenge_evaluation.py" = ["E402"]

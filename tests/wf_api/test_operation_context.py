@@ -112,4 +112,4 @@ def test_context_runtime_runner_uses_workflow_runtime_service(tmp_path: Path) ->
     service = WfMcpService(store=FileStore(tmp_path / "context_runtime"))
     context = context_from_service(service)
 
-    assert context.runtime.runtime is service.workflow_runtime
+    assert getattr(context.runtime, "runtime") is service.workflow_runtime

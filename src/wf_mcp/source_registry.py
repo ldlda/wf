@@ -53,7 +53,7 @@ def workflow_mcp_source_to_connection_config(source: object) -> ConnectionConfig
     for field in ("id", "provider", "account", "enabled", "ownership", "transport"):
         if getattr(source, field, None) is None:
             raise ValueError(f"wf_config MCP source missing required field: {field}")
-    transport = source.transport
+    transport = getattr(source, "transport")
     metadata = dict(getattr(source, "metadata", {}))
     if transport.kind == "stdio":
         metadata.update(
@@ -83,12 +83,12 @@ def workflow_mcp_source_to_connection_config(source: object) -> ConnectionConfig
     if auth_ref is not None:
         metadata["auth_ref"] = auth_ref
     return ConnectionConfig(
-        id=source.id,
-        server=source.provider,
-        account=source.account,
-        enabled=source.enabled,
+        id=getattr(source, "id"),
+        server=getattr(source, "provider"),
+        account=getattr(source, "account"),
+        enabled=getattr(source, "enabled"),
         metadata=metadata,
-        source_config_ownership=source.ownership,
+        source_config_ownership=getattr(source, "ownership"),
     )
 
 

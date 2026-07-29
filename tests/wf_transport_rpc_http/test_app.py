@@ -467,6 +467,81 @@ async def test_rpc_replace_document_replaces_complete_draft_workspace(
     assert after_malformed["result"] == inspected["result"]
 
 
+async def test_rpc_replace_document_rejects_invalid_object_without_mutation(
+    tmp_path,
+) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    app = create_rpc_app(server)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        await _rpc(
+            client,
+            "workflow.draft_workspaces.create_empty",
+            {"workspace_id": "report", "name": "initial"},
+        )
+        before = await _rpc(
+            client,
+            "workflow.draft_workspaces.get",
+            {"workspace_id": "report", "include_draft": True},
+        )
+        malformed = await _rpc(
+            client,
+            "workflow.draft_workspaces.replace_document",
+            {
+                "workspace_id": "report",
+                "revision": 1,
+                "draft": {"name": "missing-required-fields"},
+            },
+        )
+        after = await _rpc(
+            client,
+            "workflow.draft_workspaces.get",
+            {"workspace_id": "report", "include_draft": True},
+        )
+
+    assert malformed["error"]["code"] == -32602
+    assert after["result"] == before["result"]
+
+
+async def test_rpc_replace_document_persists_semantically_invalid_draft(
+    tmp_path,
+) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    app = create_rpc_app(server)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        await _rpc(
+            client,
+            "workflow.draft_workspaces.create_empty",
+            {"workspace_id": "report", "name": "initial"},
+        )
+        initial = await _rpc(
+            client,
+            "workflow.draft_workspaces.get",
+            {"workspace_id": "report", "include_draft": True},
+        )
+        replacement = {**initial["result"]["draft"], "start": "missing_step"}
+        replaced = await _rpc(
+            client,
+            "workflow.draft_workspaces.replace_document",
+            {
+                "workspace_id": "report",
+                "revision": 1,
+                "draft": replacement,
+            },
+        )
+        after = await _rpc(
+            client,
+            "workflow.draft_workspaces.get",
+            {"workspace_id": "report", "include_draft": True},
+        )
+
+    assert replaced["result"]["status"] == "invalid"
+    assert replaced["result"]["diagnostics"]
+    assert after["result"]["draft"]["start"] == "missing_step"
+    assert after["result"]["diagnostics"] == replaced["result"]["diagnostics"]
+
+
 async def test_rpc_draft_workspace_lifecycle_methods(tmp_path) -> None:
     server = build_local_static_workflow_server(tmp_path / "store")
     app = create_rpc_app(server)

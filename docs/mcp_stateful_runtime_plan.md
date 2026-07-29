@@ -452,13 +452,13 @@ Do not change catalog refresh behavior yet. The adapter remains the temporary ex
 In `tests/wf_mcp/test_workflow_wrappers.py`, replace:
 
 ```python
-adapter = (cast(BackendAdapter, adapter),)
+adapter = cast(BackendAdapter, adapter)
 ```
 
 with:
 
 ```python
-executor = (cast(ToolExecutor, adapter),)
+executor = cast(ToolExecutor, adapter)
 ```
 
 and import:

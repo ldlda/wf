@@ -13,23 +13,6 @@ from typing import Any
 
 import yaml
 
-ROOT = Path(__file__).resolve().parents[2]
-
-
-def _utf8_subprocess_env() -> dict[str, str]:
-    """Force child tools toward UTF-8 so captured agent output is decodable.
-
-    OpenCode emits UTF-8 JSONL, but Windows defaults Python's subprocess text
-    decoding to the active ANSI code page unless an encoding is supplied. The
-    environment nudges child Python tools too; the explicit subprocess encoding
-    below is the actual guard against cp1252 reader-thread crashes.
-    """
-    env = dict(os.environ)
-    env.setdefault("PYTHONUTF8", "1")
-    env.setdefault("PYTHONIOENCODING", "utf-8")
-    return env
-
-
 from examples.agent_challenges.names import (
     short_challenge_name,
     short_model_name,
@@ -63,6 +46,22 @@ from examples.agent_challenges.workspace import (
     trial_output_path,
     wf_command_prefix_for_config,
 )
+
+ROOT = Path(__file__).resolve().parents[2]
+
+
+def _utf8_subprocess_env() -> dict[str, str]:
+    """Force child tools toward UTF-8 so captured agent output is decodable.
+
+    OpenCode emits UTF-8 JSONL, but Windows defaults Python's subprocess text
+    decoding to the active ANSI code page unless an encoding is supplied. The
+    environment nudges child Python tools too; the explicit subprocess encoding
+    below is the actual guard against cp1252 reader-thread crashes.
+    """
+    env = dict(os.environ)
+    env.setdefault("PYTHONUTF8", "1")
+    env.setdefault("PYTHONIOENCODING", "utf-8")
+    return env
 
 
 def _opencode_trial_title(
