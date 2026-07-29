@@ -2874,3 +2874,109 @@ def test_wf_draft_set_workflow_output_merge_keeps_compatibility_map_handler(
             "merge": True,
         }
     ]
+
+
+def test_wf_draft_export_writes_only_formatted_draft_document(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    calls: list[dict[str, Any]] = []
+    expected_draft = {
+        "name": "report",
+        "steps": {"finish": {"end": {}}},
+        "routes": {},
+    }
+
+    class FakeHandlers:
+        async def get_draft_workspace(self, **kwargs: Any) -> dict[str, Any]:
+            calls.append(kwargs)
+            return {
+                "workspace_id": "report",
+                "revision": 4,
+                "draft": expected_draft,
+            }
+
+    context = SimpleNamespace(handlers=FakeHandlers(), verbose=False)
+    monkeypatch.setattr("wf_cli.commands.drafts.load_cli_context", lambda _ctx: context)
+    output_path = tmp_path / "report-draft.json"
+
+    result = runner.invoke(
+        app,
+        [
+            "draft",
+            "export",
+            "report",
+            "--output",
+            str(output_path),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert calls == [{"workspace_id": "report", "include_draft": True}]
+    assert json.loads(output_path.read_text(encoding="utf-8")) == expected_draft
+    assert output_path.read_text(encoding="utf-8") == (
+        json.dumps(expected_draft, indent=2, sort_keys=True) + "\n"
+    )
+
+
+def test_wf_draft_export_requires_force_to_replace_existing_file(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    class FakeHandlers:
+        async def get_draft_workspace(self, **_kwargs: Any) -> dict[str, Any]:
+            return {"draft": {"name": "replacement"}}
+
+    context = SimpleNamespace(handlers=FakeHandlers(), verbose=False)
+    monkeypatch.setattr("wf_cli.commands.drafts.load_cli_context", lambda _ctx: context)
+    output_path = tmp_path / "report-draft.json"
+    output_path.write_text('{"name": "existing"}\n', encoding="utf-8")
+
+    refused = runner.invoke(
+        app,
+        ["draft", "export", "report", "--output", str(output_path)],
+    )
+    replaced = runner.invoke(
+        app,
+        [
+            "draft",
+            "export",
+            "report",
+            "--output",
+            str(output_path),
+            "--force",
+        ],
+    )
+
+    assert refused.exit_code == 2
+    assert "already exists" in refused.output
+    assert replaced.exit_code == 0, replaced.output
+    assert json.loads(output_path.read_text(encoding="utf-8")) == {
+        "name": "replacement"
+    }
+
+
+def test_wf_draft_export_reports_missing_parent_directory(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    class FakeHandlers:
+        async def get_draft_workspace(self, **_kwargs: Any) -> dict[str, Any]:
+            return {"draft": {"name": "report"}}
+
+    context = SimpleNamespace(handlers=FakeHandlers(), verbose=False)
+    monkeypatch.setattr("wf_cli.commands.drafts.load_cli_context", lambda _ctx: context)
+
+    result = runner.invoke(
+        app,
+        [
+            "draft",
+            "export",
+            "report",
+            "--output",
+            str(tmp_path / "missing" / "report-draft.json"),
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert "could not write file" in result.output

@@ -820,6 +820,58 @@ def test_wf_remote_capability_free_draft_lifecycle(monkeypatch, tmp_path) -> Non
     assert set(payload["draft"]["steps"]) == {"gate", "finish"}
 
 
+def test_wf_draft_export_uses_remote_get_and_writes_only_draft(
+    monkeypatch, tmp_path
+) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    _patch_rpc_client_to_server(monkeypatch, server)
+    rpc_calls: list[tuple[str, dict[str, Any]]] = []
+    original_call = RpcClientTransport._call
+
+    async def recording_call(
+        self: RpcClientTransport, method: str, params: dict[str, Any]
+    ) -> dict[str, Any]:
+        rpc_calls.append((method, params))
+        return await original_call(self, method, params)
+
+    monkeypatch.setattr(RpcClientTransport, "_call", recording_call)
+    config_path = tmp_path / "wf.json"
+    config_path.write_text('{"version": 1}', encoding="utf-8")
+    runner = CliRunner()
+    base_args = ["--config", str(config_path), "--url", "http://test/rpc"]
+    created = runner.invoke(
+        app,
+        [*base_args, "draft", "create", "export_ws", "--name", "report"],
+    )
+    assert created.exit_code == 0, created.output
+    rpc_calls.clear()
+    output_path = tmp_path / "exported-draft.json"
+
+    exported = runner.invoke(
+        app,
+        [
+            *base_args,
+            "draft",
+            "export",
+            "export_ws",
+            "--output",
+            str(output_path),
+        ],
+    )
+
+    assert exported.exit_code == 0, exported.output
+    assert rpc_calls == [
+        (
+            "workflow.draft_workspaces.get",
+            {"workspace_id": "export_ws", "include_draft": True},
+        )
+    ]
+    payload = json.loads(output_path.read_text(encoding="utf-8"))
+    assert payload["name"] == "report"
+    assert "workspace_id" not in payload
+    assert "revision" not in payload
+
+
 def test_wf_remote_run_resume_interrupted_deployment(monkeypatch, tmp_path) -> None:
     server = build_local_static_workflow_server(tmp_path / "store")
     asyncio.run(

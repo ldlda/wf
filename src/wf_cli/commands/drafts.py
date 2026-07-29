@@ -24,7 +24,13 @@ from wf_cli.commands.draft_options import (
 )
 from wf_cli.context import load_cli_context_from_typer as load_cli_context
 from wf_cli.formats import ListOutputFormat, emit_list_payload
-from wf_cli.io import CliInputError, emit_json, parse_bindings, parse_json_value
+from wf_cli.io import (
+    CliInputError,
+    emit_json,
+    parse_bindings,
+    parse_json_value,
+    write_json_file,
+)
 from wf_cli.remote_errors import run_cli_operation
 
 app = typer.Typer(
@@ -86,6 +92,35 @@ def inspect_draft(
             ),
         )
     )
+
+
+@app.command("export")
+def export_draft(
+    ctx: typer.Context,
+    workspace_id: Annotated[str, typer.Argument(help="Draft workspace id.")],
+    output: Annotated[Path, typer.Option("--output", help="Destination JSON file.")],
+    force: Annotated[
+        bool, typer.Option("--force", help="Replace an existing destination file.")
+    ] = False,
+) -> None:
+    """Export only the exact draft document from an existing workspace."""
+    context = load_cli_context(ctx)
+    payload = run_cli_operation(
+        context,
+        context.handlers.get_draft_workspace(
+            workspace_id=workspace_id,
+            include_draft=True,
+        ),
+    )
+    draft = payload.get("draft")
+    if not isinstance(draft, dict):
+        raise typer.BadParameter(
+            "draft workspace response does not contain a draft object"
+        )
+    try:
+        write_json_file(output, draft, force=force)
+    except CliInputError as exc:
+        raise typer.BadParameter(str(exc)) from exc
 
 
 @app.command("create")

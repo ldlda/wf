@@ -47,6 +47,21 @@ def emit_json(payload: Any) -> None:
     print(json.dumps(payload, indent=2, sort_keys=True))
 
 
+def write_json_file(path: Path, payload: Any, *, force: bool) -> None:
+    """Write stable formatted JSON while refusing accidental replacement."""
+    mode = "w" if force else "x"
+    try:
+        with path.open(mode, encoding="utf-8", newline="\n") as output:
+            output.write(json.dumps(payload, indent=2, sort_keys=True))
+            output.write("\n")
+    except FileExistsError as exc:
+        raise CliInputError(
+            f"file {path!s} already exists; use --force to replace it"
+        ) from exc
+    except OSError as exc:
+        raise CliInputError(f"could not write file {path!s}: {exc}") from exc
+
+
 def parse_bindings(bindings: list[str]) -> dict[str, str]:
     """Parse repeatable logical=concrete source binding flags."""
     parsed: dict[str, str] = {}
