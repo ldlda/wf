@@ -1300,6 +1300,111 @@ async def test_step_map_helpers_merge_with_existing_bindings(tmp_path: Path) -> 
 
 
 @pytest.mark.asyncio
+async def test_step_input_map_merge_rejects_canonical_source_fan_out(
+    tmp_path: Path,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "input_merge_fan_out")
+    api, _service, _authoring = _draft_api(artifact_store)
+    draft = _echo_draft()
+    draft["steps"]["echo"]["input"] = [
+        {"path": "input.text", "target": "message"},
+        {"path": "input.text", "target": "audit.message"},
+    ]
+    await api.create_draft_workspace(workspace_id="echo_ws", draft=draft)
+    before = await api.get_draft_workspace(
+        workspace_id="echo_ws",
+        include_draft=True,
+    )
+
+    with pytest.raises(ValueError, match="complete canonical binding list"):
+        await api.set_step_input_map(
+            workspace_id="echo_ws",
+            revision=1,
+            step_id="echo",
+            input_map={"input.extra": "extra"},
+            merge=True,
+        )
+
+    after = await api.get_draft_workspace(
+        workspace_id="echo_ws",
+        include_draft=True,
+    )
+    assert after == before
+
+
+@pytest.mark.asyncio
+async def test_step_input_map_merge_rejects_path_before_literal(
+    tmp_path: Path,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "input_merge_order")
+    api, _service, _authoring = _draft_api(artifact_store)
+    draft = _echo_draft()
+    draft["steps"]["echo"]["input"] = [
+        {"path": "input.text", "target": "message"},
+        {"value": "markdown", "target": "format"},
+    ]
+    await api.create_draft_workspace(workspace_id="echo_ws", draft=draft)
+    before = await api.get_draft_workspace(
+        workspace_id="echo_ws",
+        include_draft=True,
+    )
+
+    with pytest.raises(ValueError, match="complete canonical binding list"):
+        await api.set_step_input_map(
+            workspace_id="echo_ws",
+            revision=1,
+            step_id="echo",
+            input_map={"input.extra": "extra"},
+            merge=True,
+        )
+
+    after = await api.get_draft_workspace(
+        workspace_id="echo_ws",
+        include_draft=True,
+    )
+    assert after == before
+
+
+@pytest.mark.asyncio
+async def test_step_input_map_merge_checks_revision_before_lossless_preflight(
+    tmp_path: Path,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "input_merge_stale")
+    api, _service, _authoring = _draft_api(artifact_store)
+    draft = _echo_draft()
+    draft["steps"]["echo"]["input"] = [
+        {"path": "input.text", "target": "message"},
+        {"path": "input.text", "target": "audit.message"},
+    ]
+    await api.create_draft_workspace(workspace_id="echo_ws", draft=draft)
+    await api.set_draft_name(
+        workspace_id="echo_ws",
+        revision=1,
+        name="echo_v2",
+    )
+    before = await api.get_draft_workspace(
+        workspace_id="echo_ws",
+        include_draft=True,
+    )
+
+    result = await api.set_step_input_map(
+        workspace_id="echo_ws",
+        revision=1,
+        step_id="echo",
+        input_map={"input.extra": "extra"},
+        merge=True,
+    )
+
+    after = await api.get_draft_workspace(
+        workspace_id="echo_ws",
+        include_draft=True,
+    )
+    assert result["status"] == "conflict"
+    assert result["diagnostics"][0]["code"] == "revision_conflict"
+    assert after == before
+
+
+@pytest.mark.asyncio
 async def test_validate_draft_workspace_refreshes_status(tmp_path: Path) -> None:
     artifact_store = FileWorkflowArtifactStore(tmp_path / "drafts_validate_workspace")
     api, service, authoring = _draft_api(artifact_store, register_echo=True)

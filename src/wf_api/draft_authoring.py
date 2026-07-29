@@ -212,23 +212,10 @@ class WorkflowDraftAuthoringApi:
         revision: int,
     ) -> WorkflowDraftWorkspace | dict[str, Any]:
         """Load a workspace and enforce optimistic locking before semantic preflight."""
-        workspace = self.drafts._draft_store().get_workspace(workspace_id)
-        if workspace.revision == revision:
-            return workspace
-        return {
-            **summarize_draft_workspace(workspace),
-            "status": "conflict",
-            "diagnostics": [
-                {
-                    "code": "revision_conflict",
-                    "path": "revision",
-                    "message": (
-                        f"workspace {workspace.id!r} is at revision "
-                        f"{workspace.revision}, not {revision}"
-                    ),
-                }
-            ],
-        }
+        return self.drafts._workspace_if_revision_matches(
+            workspace_id=workspace_id,
+            revision=revision,
+        )
 
     def _outcomes_for_capability(self, qualified_name: str) -> tuple[str, ...] | None:
         try:

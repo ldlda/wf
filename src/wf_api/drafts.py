@@ -8,9 +8,11 @@ from jsonschema import Draft202012Validator, SchemaError
 
 from wf_artifacts import (
     DraftWorkspaceStore,
+    WorkflowDraftWorkspace,
     compile_workflow_draft,
     patch_workflow_draft,
     replace_validated_draft_document,
+    summarize_draft_workspace,
     validate_workflow_draft,
 )
 from wf_artifacts import (
@@ -97,6 +99,31 @@ class WorkflowDraftApi:
         if self.context.draft_workspace_store is None:
             raise KeyError("draft workspace store is not configured")
         return self.context.draft_workspace_store
+
+    def _workspace_if_revision_matches(
+        self,
+        *,
+        workspace_id: str,
+        revision: int,
+    ) -> WorkflowDraftWorkspace | dict[str, Any]:
+        """Load a workspace or return its canonical revision-conflict payload."""
+        workspace = self._draft_store().get_workspace(workspace_id)
+        if workspace.revision == revision:
+            return workspace
+        return {
+            **summarize_draft_workspace(workspace),
+            "status": "conflict",
+            "diagnostics": [
+                {
+                    "code": "revision_conflict",
+                    "path": "revision",
+                    "message": (
+                        f"workspace {workspace.id!r} is at revision "
+                        f"{workspace.revision}, not {revision}"
+                    ),
+                }
+            ],
+        }
 
     def _outcomes_for_capability(self, qualified_name: str) -> tuple[str, ...] | None:
         try:
@@ -426,9 +453,18 @@ class WorkflowDraftApi:
     ) -> dict[str, Any]:
         input_values: dict[str, Any] = {}
         if merge:
-            existing_map, input_values = self._step_input_maps(
+            workspace = self._workspace_if_revision_matches(
                 workspace_id=workspace_id,
-                step_id=step_id,
+                revision=revision,
+            )
+            if isinstance(workspace, dict):
+                return workspace
+            step = _draft_step(workspace.draft, step_id)
+            existing_map, input_values = (
+                _require_lossless_step_input_map_round_trip(
+                    step.get("input", []),
+                    step_id=step_id,
+                )
             )
             input_map = {**existing_map, **input_map}
         return await self.patch_draft_workspace(
@@ -681,6 +717,22 @@ def _input_maps_from_payload(
             input_map[_path_text(item["path"])] = target
         elif "value" in item:
             input_values[target] = item["value"]
+    return input_map, input_values
+
+
+def _require_lossless_step_input_map_round_trip(
+    payload: object,
+    *,
+    step_id: str,
+) -> tuple[dict[str, str], dict[str, Any]]:
+    """Return compatibility maps only when they reproduce the binding list."""
+    input_map, input_values = _input_maps_from_payload(payload)
+    rebuilt = _draft_input_bindings_payload(input_map, input_values)
+    if rebuilt != payload:
+        raise ValueError(
+            f"step {step_id!r} inputs cannot be safely merged through a "
+            "compatibility map; replace the complete canonical binding list instead"
+        )
     return input_map, input_values
 
 
