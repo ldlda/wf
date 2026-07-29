@@ -757,6 +757,8 @@ def test_wf_draft_map_help_explains_replace_merge_and_validate() -> None:
     workflow_output_help = " ".join(workflow_output_result.output.split())
     assert "replace the complete ordered binding list" in input_help
     assert "Use --merge only" in input_help
+    assert "rejects existing bindings" in input_help
+    assert "cannot round-trip safely" in input_help
     assert "draft validate" in input_help
     assert "input.text=text" in input_help
     assert "input.text=local.text" in input_help
@@ -764,7 +766,7 @@ def test_wf_draft_map_help_explains_replace_merge_and_validate() -> None:
     assert "LOCAL_SOURCE=STATE_TARGET" in output_help
     assert "ordered canonical JSON array" in output_help
     assert "replace with no bindings" in output_help.lower()
-    assert "compatibility-only and potentially lossy" in output_help
+    assert "replace the complete canonical binding list" in output_help
     assert "draft validate" in output_help
     assert "complete ordered workflow output binding list" in workflow_output_help
     assert "GRAPH_SOURCE=OUTPUT_TARGET" in workflow_output_help
@@ -774,7 +776,7 @@ def test_wf_draft_map_help_explains_replace_merge_and_validate() -> None:
     assert "inspect --include-draft" in workflow_output_help
     assert "draft.output" in workflow_output_help
     assert "Use --merge only" in workflow_output_help
-    assert "compatibility-only and potentially lossy" in workflow_output_help
+    assert "ambiguous fan-out sources" in workflow_output_help
     assert "draft validate" in workflow_output_help
 
 

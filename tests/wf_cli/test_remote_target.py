@@ -1725,7 +1725,8 @@ def test_wf_draft_set_output_replaces_canonical_bindings_over_rpc(
         ],
     )
 
-    assert merged.exit_code == 0, merged.output
+    assert merged.exit_code == 1
+    assert "complete canonical binding list" in merged.output
     assert [method for method, _params in rpc_calls] == [
         "workflow.draft_workspaces.set_step_output_map"
     ]

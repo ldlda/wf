@@ -460,11 +460,9 @@ class WorkflowDraftApi:
             if isinstance(workspace, dict):
                 return workspace
             step = _draft_step(workspace.draft, step_id)
-            existing_map, input_values = (
-                _require_lossless_step_input_map_round_trip(
-                    step.get("input", []),
-                    step_id=step_id,
-                )
+            existing_map, input_values = _require_lossless_step_input_map_round_trip(
+                step.get("input", []),
+                step_id=step_id,
             )
             input_map = {**existing_map, **input_map}
         return await self.patch_draft_workspace(
@@ -664,6 +662,13 @@ class WorkflowDraftApi:
                 changed = True
                 projected = updated
         return projected if changed else output_schema
+
+    def _step_output_map(self, *, workspace_id: str, step_id: str) -> dict[str, str]:
+        """Read one step's outputs for legacy focused binding helpers."""
+        workspace = self._draft_store().get_workspace(workspace_id)
+        step = _draft_step(workspace.draft, step_id)
+        return _output_map_from_payload(step.get("output", []))
+
 
 def _workflow_source_schema(
     draft: Mapping[str, Any],

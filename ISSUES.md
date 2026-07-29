@@ -19,9 +19,10 @@
 - [x] Focused draft authoring can add or replace literal node-input bindings
   comparable to `WorkflowBuilder.use(input=[{"target": ..., "value": ...}])`
   through canonical API, RPC, MCP, and CLI surfaces.
-- [ ] Compatibility step input/output maps can still collapse valid canonical
-  fan-out bindings. Canonical input and output replacement preserve ordered
-  fan-out, but later compatibility-map merges remain inherently lossy.
+- [x] Compatibility step input/output map merges reject canonical lists they
+  cannot reproduce exactly, and workflow-output map merges reject requested
+  sources with ambiguous fan-out. Canonical replacement remains the supported
+  path for ordered fan-out and mixed path/literal bindings.
 - [x] Focused workflow-output authoring supports literal output bindings through
   canonical Python, JSON-RPC, MCP, and CLI replacement surfaces.
 - [x] Workflow-output replacement projects nested `input.*` and `state.*`

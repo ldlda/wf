@@ -418,8 +418,9 @@ def set_step_input(
         typer.Option(
             "--merge",
             help=(
-                "Compatibility map-only mode: preserve existing bindings and "
-                "add/update --map entries."
+                "Compatibility map-only mode: preserve existing map-shaped "
+                "bindings and add/update --map entries; rejects existing "
+                "bindings that cannot round-trip safely."
             ),
         ),
     ] = False,
@@ -428,7 +429,10 @@ def set_step_input(
 
     By default, repeated --map and --value flags replace the complete ordered
     binding list. --bindings-file replaces from canonical JSON, while --clear
-    sends an empty list. Use --merge only with map-only compatibility edits.
+    sends an empty list. Use --merge only with map-only compatibility edits;
+    it rejects existing bindings that cannot round-trip safely. Canonical
+    fan-out or reordered path/literal bindings require complete canonical
+    replacement.
 
     Targets are rootless node-local paths. For example, use
     `--map input.title=report.title`, not
@@ -527,8 +531,9 @@ def set_step_output_map(
         typer.Option(
             "--merge",
             help=(
-                "Compatibility-only and potentially lossy: preserve existing "
-                "bindings and add/update --map entries."
+                "Compatibility-only: preserve existing map-shaped bindings and "
+                "add/update --map entries; fan-out must replace the complete "
+                "canonical binding list."
             ),
         ),
     ] = False,
@@ -538,8 +543,9 @@ def set_step_output_map(
     By default, ``--map LOCAL_SOURCE=STATE_TARGET`` replaces the complete
     ordered canonical binding list. ``--bindings-file`` accepts an ordered
     canonical JSON array, and ``--clear`` replaces with no bindings. Use
-    ``--merge`` only with ``--map`` for compatibility-only and potentially
-    lossy map edits.
+    ``--merge`` only with ``--map`` for compatibility-only edits; existing
+    fan-out is rejected because it cannot round-trip through the map
+    representation. Fan-out must replace the complete canonical binding list.
 
     Run `wf draft validate <workspace_id>` after map edits; validation reports
     unresolved paths and conflicting writes.
@@ -649,8 +655,8 @@ def set_workflow_output(
         typer.Option(
             "--merge",
             help=(
-                "Compatibility-only and potentially lossy: preserve existing "
-                "bindings and add/update map-only entries."
+                "Compatibility-only: preserve existing bindings and add/update "
+                "map-only entries; rejects ambiguous fan-out sources."
             ),
         ),
     ] = False,
@@ -662,7 +668,9 @@ def set_workflow_output(
     binding list. ``--bindings-file`` accepts an ordered canonical JSON array
     and preserves exact path/value interleaving. ``--clear`` restores the
     implicit same-name state fallback declared by ``output_schema``. Use
-    --merge only with --map for compatibility-only and potentially lossy edits.
+    --merge only with --map for compatibility-only edits. A requested source
+    with several existing fan-out bindings requires complete canonical
+    replacement because ambiguous fan-out sources cannot identify one binding.
 
     This edits WorkflowDraft.output (top-level workflow output). Use
     wf draft set-output for step-level output bindings.
