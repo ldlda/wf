@@ -2980,3 +2980,96 @@ def test_wf_draft_export_reports_missing_parent_directory(
 
     assert result.exit_code == 2
     assert "could not write file" in result.output
+
+
+def test_wf_draft_import_passes_exact_document_to_replacement_handler(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    calls: list[dict[str, Any]] = []
+    expected_draft = {
+        "name": "report",
+        "steps": {"finish": {"end": {"outcome": "ok"}}},
+        "routes": {},
+        "output": [{"path": "state.report", "target": "report"}],
+    }
+
+    class FakeHandlers:
+        async def replace_draft_workspace_document(
+            self, **kwargs: Any
+        ) -> dict[str, Any]:
+            calls.append(kwargs)
+            return {"workspace_id": "restored", "revision": 5, "status": "valid"}
+
+    context = SimpleNamespace(handlers=FakeHandlers(), verbose=False)
+    monkeypatch.setattr("wf_cli.commands.drafts.load_cli_context", lambda _ctx: context)
+    input_path = tmp_path / "report-draft.json"
+    input_path.write_text(json.dumps(expected_draft), encoding="utf-8")
+
+    result = runner.invoke(
+        app,
+        [
+            "draft",
+            "import",
+            "restored",
+            "--revision",
+            "4",
+            "--file",
+            str(input_path),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert calls == [
+        {
+            "workspace_id": "restored",
+            "revision": 4,
+            "draft": expected_draft,
+        }
+    ]
+    assert json.loads(result.output) == {
+        "workspace_id": "restored",
+        "revision": 5,
+        "status": "valid",
+    }
+
+
+@pytest.mark.parametrize(
+    ("file_kind", "contents", "expected_error"),
+    [
+        ("missing", None, "cannot read"),
+        ("malformed", "{", "invalid JSON"),
+        ("array", "[]", "expected a JSON object"),
+    ],
+)
+def test_wf_draft_import_rejects_bad_files_before_loading_context(
+    monkeypatch,
+    tmp_path,
+    file_kind: str,
+    contents: str | None,
+    expected_error: str,
+) -> None:
+    monkeypatch.setattr(
+        "wf_cli.commands.drafts.load_cli_context",
+        lambda _ctx: (_ for _ in ()).throw(AssertionError("context loaded")),
+    )
+    input_path = tmp_path / f"{file_kind}.json"
+    if contents is not None:
+        input_path.write_text(contents, encoding="utf-8")
+
+    result = runner.invoke(
+        app,
+        [
+            "draft",
+            "import",
+            "restored",
+            "--revision",
+            "4",
+            "--file",
+            str(input_path),
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert expected_error in " ".join(result.output.split())
+    assert "context loaded" not in result.output

@@ -123,6 +123,33 @@ def export_draft(
         raise typer.BadParameter(str(exc)) from exc
 
 
+@app.command("import")
+def import_draft(
+    ctx: typer.Context,
+    workspace_id: Annotated[str, typer.Argument(help="Draft workspace id.")],
+    revision: Annotated[
+        int,
+        typer.Option("--revision", min=1, help="Expected workspace revision."),
+    ],
+    input_file: Annotated[
+        Path, typer.Option("--file", help="Draft JSON document to import.")
+    ],
+) -> None:
+    """Replace an existing workspace draft at an expected revision."""
+    draft = parse_json_object_file(input_file, option_name="--file")
+    context = load_cli_context(ctx)
+    emit_json(
+        run_cli_operation(
+            context,
+            context.handlers.replace_draft_workspace_document(
+                workspace_id=workspace_id,
+                revision=revision,
+                draft=draft,
+            ),
+        )
+    )
+
+
 @app.command("create")
 def create_draft(
     ctx: typer.Context,

@@ -872,6 +872,145 @@ def test_wf_draft_export_uses_remote_get_and_writes_only_draft(
     assert "revision" not in payload
 
 
+def test_wf_draft_import_uses_exact_remote_replacement_payload(
+    monkeypatch, tmp_path
+) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    asyncio.run(
+        server.api.create_empty_draft_workspace(
+            workspace_id="source_ws",
+            name="source",
+        )
+    )
+    asyncio.run(
+        server.api.create_empty_draft_workspace(
+            workspace_id="destination_ws",
+            name="destination",
+        )
+    )
+    source = asyncio.run(
+        server.api.get_draft_workspace(
+            workspace_id="source_ws",
+            include_draft=True,
+        )
+    )
+    expected_draft = source["draft"]
+    _patch_rpc_client_to_server(monkeypatch, server)
+    rpc_calls: list[tuple[str, dict[str, Any]]] = []
+    original_call = RpcClientTransport._call
+
+    async def recording_call(
+        self: RpcClientTransport, method: str, params: dict[str, Any]
+    ) -> dict[str, Any]:
+        rpc_calls.append((method, params))
+        return await original_call(self, method, params)
+
+    monkeypatch.setattr(RpcClientTransport, "_call", recording_call)
+    config_path = tmp_path / "wf.json"
+    config_path.write_text('{"version": 1}', encoding="utf-8")
+    input_path = tmp_path / "source-draft.json"
+    input_path.write_text(json.dumps(expected_draft), encoding="utf-8")
+    runner = CliRunner()
+
+    imported = runner.invoke(
+        app,
+        [
+            "--config",
+            str(config_path),
+            "--url",
+            "http://test/rpc",
+            "draft",
+            "import",
+            "destination_ws",
+            "--revision",
+            "1",
+            "--file",
+            str(input_path),
+        ],
+    )
+
+    assert imported.exit_code == 0, imported.output
+    assert rpc_calls == [
+        (
+            "workflow.draft_workspaces.replace_document",
+            {
+                "workspace_id": "destination_ws",
+                "revision": 1,
+                "draft": expected_draft,
+            },
+        )
+    ]
+
+
+def test_wf_draft_transfer_round_trip_preserves_document_and_destination_id(
+    monkeypatch, tmp_path
+) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    asyncio.run(
+        server.api.create_empty_draft_workspace(
+            workspace_id="source_ws",
+            name="source",
+            title="Source workflow",
+        )
+    )
+    asyncio.run(
+        server.api.create_empty_draft_workspace(
+            workspace_id="destination_ws",
+            name="destination",
+            title="Destination workflow",
+        )
+    )
+    _patch_rpc_client_to_server(monkeypatch, server)
+    config_path = tmp_path / "wf.json"
+    config_path.write_text('{"version": 1}', encoding="utf-8")
+    runner = CliRunner()
+    base_args = ["--config", str(config_path), "--url", "http://test/rpc"]
+    transfer_path = tmp_path / "transfer.json"
+
+    exported = runner.invoke(
+        app,
+        [
+            *base_args,
+            "draft",
+            "export",
+            "source_ws",
+            "--output",
+            str(transfer_path),
+        ],
+    )
+    imported = runner.invoke(
+        app,
+        [
+            *base_args,
+            "draft",
+            "import",
+            "destination_ws",
+            "--revision",
+            "1",
+            "--file",
+            str(transfer_path),
+        ],
+    )
+    inspected = runner.invoke(
+        app,
+        [
+            *base_args,
+            "draft",
+            "inspect",
+            "destination_ws",
+            "--include-draft",
+        ],
+    )
+
+    assert exported.exit_code == 0, exported.output
+    assert imported.exit_code == 0, imported.output
+    assert inspected.exit_code == 0, inspected.output
+    exported_draft = json.loads(transfer_path.read_text(encoding="utf-8"))
+    destination = json.loads(inspected.output)
+    assert destination["workspace_id"] == "destination_ws"
+    assert destination["draft"] == exported_draft
+
+
 def test_wf_remote_run_resume_interrupted_deployment(monkeypatch, tmp_path) -> None:
     server = build_local_static_workflow_server(tmp_path / "store")
     asyncio.run(
