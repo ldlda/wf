@@ -153,6 +153,12 @@ class PatchDraftWorkspaceParams(RpcParamsModel):
     patch: list[dict[str, Any]]
 
 
+class ReplaceDraftWorkspaceDocumentParams(RpcParamsModel):
+    workspace_id: str = Field(min_length=1)
+    revision: int = Field(ge=1)
+    draft: dict[str, Any]
+
+
 class SetDraftNameParams(RpcParamsModel):
     workspace_id: str = Field(min_length=1)
     revision: int = Field(ge=1)

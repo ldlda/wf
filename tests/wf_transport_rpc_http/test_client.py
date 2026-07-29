@@ -399,6 +399,44 @@ async def test_rpc_client_sends_exact_draft_lifecycle_payloads() -> None:
     ]
 
 
+async def test_rpc_client_sends_exact_replace_document_payload() -> None:
+    calls: list[dict[str, Any]] = []
+
+    class Client(RpcDraftClientMixin):
+        async def _call(self, method: str, params: dict[str, object]):
+            calls.append({"method": method, "params": params})
+            return {"revision": 5}
+
+    client = Client()
+    draft = {
+        "name": "report",
+        "input_schema": {"type": "object", "properties": {}},
+        "state_schema": {"type": "object", "properties": {}},
+        "output_schema": {"type": "object", "properties": {}},
+        "start": "finish",
+        "steps": {"finish": {"end": {}}},
+        "routes": {},
+    }
+
+    result = await client.replace_draft_workspace_document(
+        workspace_id="report",
+        revision=4,
+        draft=draft,
+    )
+
+    assert result["revision"] == 5
+    assert calls == [
+        {
+            "method": "workflow.draft_workspaces.replace_document",
+            "params": {
+                "workspace_id": "report",
+                "revision": 4,
+                "draft": draft,
+            },
+        }
+    ]
+
+
 async def test_rpc_client_builds_capability_free_draft_lifecycle(tmp_path) -> None:
     server = build_local_static_workflow_server(tmp_path / "store")
     app = create_rpc_app(server)

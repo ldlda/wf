@@ -24,6 +24,7 @@ from ..models import (
     ListDraftWorkspacesParams,
     PatchDraftParams,
     PatchDraftWorkspaceParams,
+    ReplaceDraftWorkspaceDocumentParams,
     RemoveDraftBindingParams,
     RemoveDraftRouteParams,
     RemoveDraftStepParams,
@@ -143,6 +144,22 @@ def register_methods(
                 workspace_id=params.workspace_id,
                 revision=params.revision,
                 patch=params.patch,
+            )
+        except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:
+            raise_workflow_rpc_error(exc)
+
+    @entrypoint.method(
+        name="workflow.draft_workspaces.replace_document",
+        errors=[WorkflowRpcError],
+    )
+    async def workflow_draft_workspaces_replace_document(
+        params: ReplaceDraftWorkspaceDocumentParams = RpcParams(),
+    ) -> dict[str, Any]:
+        try:
+            return await server.api.replace_draft_workspace_document(
+                workspace_id=params.workspace_id,
+                revision=params.revision,
+                draft=params.draft,
             )
         except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:
             raise_workflow_rpc_error(exc)

@@ -99,6 +99,22 @@ class RpcDraftClientMixin:
             {"workspace_id": workspace_id, "revision": revision, "patch": patch},
         )
 
+    async def replace_draft_workspace_document(
+        self: RpcCaller,
+        *,
+        workspace_id: str,
+        revision: int,
+        draft: dict[str, Any],
+    ) -> dict[str, Any]:
+        return await self._call(
+            "workflow.draft_workspaces.replace_document",
+            {
+                "workspace_id": workspace_id,
+                "revision": revision,
+                "draft": draft,
+            },
+        )
+
     async def set_draft_name(
         self: RpcCaller,
         *,
