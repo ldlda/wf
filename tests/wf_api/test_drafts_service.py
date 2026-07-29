@@ -1300,6 +1300,40 @@ async def test_step_map_helpers_merge_with_existing_bindings(tmp_path: Path) -> 
 
 
 @pytest.mark.asyncio
+async def test_step_input_map_merge_preserves_literal_prefix(
+    tmp_path: Path,
+) -> None:
+    api, _service, _authoring = _draft_api(
+        FileWorkflowArtifactStore(tmp_path / "input_merge_literal_prefix")
+    )
+    draft = _echo_draft()
+    draft["steps"]["echo"]["input"] = [
+        {"value": "seed", "target": "fallback"},
+        {"path": "input.text", "target": "text"},
+    ]
+    await api.create_draft_workspace(workspace_id="echo_ws", draft=draft)
+
+    result = await api.set_step_input_map(
+        workspace_id="echo_ws",
+        revision=1,
+        step_id="echo",
+        input_map={"input.extra": "extra"},
+        merge=True,
+    )
+
+    fetched = await api.get_draft_workspace(
+        workspace_id="echo_ws",
+        include_draft=True,
+    )
+    assert result["revision"] == 2
+    assert fetched["draft"]["steps"]["echo"]["input"] == [
+        {"value": "seed", "target": "fallback"},
+        {"path": "input.text", "target": "text"},
+        {"path": "input.extra", "target": "extra"},
+    ]
+
+
+@pytest.mark.asyncio
 async def test_step_input_map_merge_rejects_canonical_source_fan_out(
     tmp_path: Path,
 ) -> None:
@@ -1800,6 +1834,45 @@ async def test_bind_draft_workflow_input_to_step_input_can_repeat(
 
 
 @pytest.mark.asyncio
+async def test_bind_draft_input_preserves_literals_and_unrelated_fan_out(
+    tmp_path: Path,
+) -> None:
+    api, service, authoring = _draft_api(
+        FileWorkflowArtifactStore(tmp_path / "bind_preserves_canonical_inputs"),
+        register_echo=True,
+    )
+    service.register_specs("demo.personal", _structured_report)
+    draft = _structured_report_draft()
+    draft["state_schema"] = {
+        "type": "object",
+        "properties": {"shared": {"type": "string"}},
+    }
+    draft["steps"]["report"]["input"] = [
+        {"path": "state.shared", "target": "request.title"},
+        {"path": "state.shared", "target": "request.format"},
+        {"value": "audit", "target": "audit.note"},
+    ]
+    await api.create_draft_workspace(workspace_id="report", draft=draft)
+
+    result = await authoring.bind_draft(
+        workspace_id="report",
+        revision=1,
+        step_id="report",
+        source_path="input.body",
+        target_path="local.request.body",
+    )
+    workspace = await api.get_draft_workspace(workspace_id="report", include_draft=True)
+
+    assert result["revision"] == 2
+    assert workspace["draft"]["steps"]["report"]["input"] == [
+        {"path": "state.shared", "target": "request.title"},
+        {"path": "state.shared", "target": "request.format"},
+        {"value": "audit", "target": "audit.note"},
+        {"path": "input.body", "target": "request.body"},
+    ]
+
+
+@pytest.mark.asyncio
 async def test_bind_draft_workflow_state_to_step_input_reuses_existing_schema(
     tmp_path: Path,
 ) -> None:
@@ -2026,6 +2099,51 @@ async def test_bind_draft_lowers_nested_local_output_to_public_output(
         draft["output_schema"]["properties"]["report"]["properties"]["markdown"]["type"]
         == "string"
     )
+
+
+@pytest.mark.asyncio
+async def test_bind_draft_output_preserves_unrelated_source_fan_out(
+    tmp_path: Path,
+) -> None:
+    api, service, authoring = _draft_api(
+        FileWorkflowArtifactStore(tmp_path / "bind_preserves_canonical_outputs"),
+        register_echo=True,
+    )
+    service.register_specs("demo.personal", _nested_report)
+    draft = _nested_report_draft()
+    draft["state_schema"] = {
+        "type": "object",
+        "properties": {
+            "report": {
+                "type": "object",
+                "properties": {
+                    "title": {"type": "string"},
+                    "audit_title": {"type": "string"},
+                },
+            }
+        },
+    }
+    draft["steps"]["render"]["output"] = [
+        {"source": "report.title", "target": "state.report.title"},
+        {"source": "report.title", "target": "state.report.audit_title"},
+    ]
+    await api.create_draft_workspace(workspace_id="nested", draft=draft)
+
+    result = await authoring.bind_draft(
+        workspace_id="nested",
+        revision=1,
+        step_id="render",
+        source_path="local.report.markdown",
+        target_path="state.report.markdown",
+    )
+    workspace = await api.get_draft_workspace(workspace_id="nested", include_draft=True)
+
+    assert result["revision"] == 2
+    assert workspace["draft"]["steps"]["render"]["output"] == [
+        {"source": "report.title", "target": "state.report.title"},
+        {"source": "report.title", "target": "state.report.audit_title"},
+        {"source": "report.markdown", "target": "state.report.markdown"},
+    ]
 
 
 @pytest.mark.asyncio
@@ -5060,6 +5178,48 @@ async def test_workflow_output_map_merge_rejects_requested_fan_out_source(
 
 
 @pytest.mark.asyncio
+async def test_workflow_output_map_merge_checks_revision_before_ambiguity(
+    tmp_path: Path,
+) -> None:
+    api, _service, _authoring = _draft_api(
+        FileWorkflowArtifactStore(tmp_path / "workflow_merge_stale_fan_out"),
+        register_echo=True,
+    )
+    draft = {
+        **_echo_draft(),
+        "output": [
+            {"path": "state.echoed", "target": "first"},
+            {"path": "state.echoed", "target": "second"},
+        ],
+    }
+    await api.create_draft_workspace(workspace_id="report", draft=draft)
+    await api.set_draft_name(
+        workspace_id="report",
+        revision=1,
+        name="report_v2",
+    )
+    before = await api.get_draft_workspace(
+        workspace_id="report",
+        include_draft=True,
+    )
+
+    result = await api.set_workflow_output_map(
+        workspace_id="report",
+        revision=1,
+        output_map={"state.echoed": "renamed"},
+        merge=True,
+    )
+
+    after = await api.get_draft_workspace(
+        workspace_id="report",
+        include_draft=True,
+    )
+    assert result["status"] == "conflict"
+    assert result["diagnostics"][0]["code"] == "revision_conflict"
+    assert after == before
+
+
+@pytest.mark.asyncio
 async def test_workflow_output_map_merge_preserves_unrequested_fan_out_and_literals(
     tmp_path: Path,
 ) -> None:
@@ -5619,6 +5779,47 @@ async def test_bind_draft_replaces_previous_public_output_for_local_field(
     assert workspace["draft"]["output"] == [
         {"path": "state.echoed", "target": "echoed"}
     ]
+
+
+@pytest.mark.asyncio
+async def test_bind_draft_rejects_ambiguous_previous_public_output_fan_out(
+    tmp_path: Path,
+) -> None:
+    api, _service, authoring = _draft_api(
+        FileWorkflowArtifactStore(tmp_path / "bind_ambiguous_public_output"),
+        register_echo=True,
+    )
+    draft = _echo_draft()
+    draft["state_schema"] = {
+        "type": "object",
+        "properties": {"old": {"type": "string"}},
+    }
+    draft["output_schema"] = {
+        "type": "object",
+        "properties": {
+            "first": {"type": "string"},
+            "second": {"type": "string"},
+        },
+    }
+    draft["steps"]["echo"]["output"] = [{"source": "echoed", "target": "state.old"}]
+    draft["output"] = [
+        {"path": "state.old", "target": "first"},
+        {"path": "state.old", "target": "second"},
+    ]
+    await api.create_draft_workspace(workspace_id="report", draft=draft)
+    before = await api.get_draft_workspace(workspace_id="report", include_draft=True)
+
+    with pytest.raises(ValueError, match="multiple public output bindings"):
+        await authoring.bind_draft(
+            workspace_id="report",
+            revision=1,
+            step_id="echo",
+            source_path="local.echoed",
+            target_path="output.echoed",
+        )
+
+    after = await api.get_draft_workspace(workspace_id="report", include_draft=True)
+    assert after == before
 
 
 @pytest.mark.asyncio

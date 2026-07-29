@@ -57,7 +57,6 @@ from .drafts import (
     WorkflowDraftApi,
     _draft_input_maps,
     _draft_output_map,
-    _input_map_from_payload,
 )
 from .operation_context import WorkflowOperationContext
 from .schema_projection import (
@@ -85,6 +84,119 @@ def _draft_schema(draft: Mapping[str, Any], key: str) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise ValueError(f"draft {key} must be an object")
     return deepcopy(value)
+
+
+def _upsert_input_path_binding(
+    payload: object,
+    *,
+    binding: InputPathBinding,
+    step_id: str,
+) -> list[dict[str, Any]]:
+    """Update one graph source without lowering unrelated canonical bindings."""
+    bindings = TypeAdapter(list[InputBinding]).validate_python(payload)
+    matching = [
+        index
+        for index, existing in enumerate(bindings)
+        if isinstance(existing, InputPathBinding) and existing.path == binding.path
+    ]
+    if len(matching) > 1:
+        raise ValueError(
+            f"step {step_id!r} source {str(binding.path)!r} has multiple input "
+            "bindings; replace the complete canonical binding list instead"
+        )
+    if matching:
+        bindings[matching[0]] = binding
+    else:
+        bindings.append(binding)
+    return [existing.model_dump(mode="json") for existing in bindings]
+
+
+def _upsert_step_output_binding(
+    payload: object,
+    *,
+    binding: OutputBinding,
+    step_id: str,
+) -> tuple[list[dict[str, Any]], str | None]:
+    """Return updated canonical outputs and the source's previous state target."""
+    bindings = TypeAdapter(list[OutputBinding]).validate_python(payload)
+    matching = [
+        index
+        for index, existing in enumerate(bindings)
+        if existing.source == binding.source
+    ]
+    if len(matching) > 1:
+        raise ValueError(
+            f"step {step_id!r} source {str(binding.source)!r} has multiple output "
+            "bindings; replace the complete canonical binding list instead"
+        )
+    previous_target = str(bindings[matching[0]].target) if matching else None
+    if matching:
+        bindings[matching[0]] = binding
+    else:
+        bindings.append(binding)
+    return (
+        [existing.model_dump(mode="json") for existing in bindings],
+        previous_target,
+    )
+
+
+def _rebind_workflow_output(
+    payload: object,
+    *,
+    previous_state_path: str | None,
+    state_path: str,
+    output_target: str,
+) -> list[dict[str, Any]]:
+    """Rebind one public target without guessing across source fan-out.
+
+    A previous state source and the requested public target can identify two
+    different records. Both are replaced because the bind operation transfers
+    ownership of that local output to the new state-to-public projection. The
+    replacement occupies the earliest removed position so unrelated canonical
+    bindings retain their relative order.
+    """
+    bindings = TypeAdapter(list[InputBinding]).validate_python(payload)
+    previous_matches = [
+        index
+        for index, binding in enumerate(bindings)
+        if (
+            previous_state_path is not None
+            and isinstance(binding, InputPathBinding)
+            and str(binding.path) == previous_state_path
+        )
+    ]
+    if len(previous_matches) > 1:
+        raise ValueError(
+            f"state source {previous_state_path!r} has multiple public output "
+            "bindings; replace the complete canonical binding list instead"
+        )
+    target_matches = [
+        index
+        for index, binding in enumerate(bindings)
+        if str(binding.target) == output_target
+    ]
+    if len(target_matches) > 1:
+        raise ValueError(
+            f"public output target {output_target!r} has multiple bindings; replace "
+            "the complete canonical binding list instead"
+        )
+
+    replaced_indices = set(previous_matches) | set(target_matches)
+    replacement = InputPathBinding(
+        path=GraphSourcePath.parse(state_path),
+        target=LocalPath.parse(output_target),
+    )
+    if not replaced_indices:
+        bindings.append(replacement)
+    else:
+        insert_at = min(replaced_indices)
+        bindings = [
+            binding
+            for index, binding in enumerate(bindings)
+            if index not in replaced_indices
+        ]
+        bindings.insert(insert_at, replacement)
+    return [binding.model_dump(mode="json") for binding in bindings]
 
 
 def _overlapping_input_binding_targets_error(
@@ -870,7 +982,6 @@ class WorkflowDraftAuthoringApi:
             target_root, target_parts = _graph_parts(target_path)
 
         if target_root == "local" and source_root in {"input", "state"}:
-            local_path = format_toml_path_segments(target_parts)
             input_schema = (
                 spec.input_schema_contract or spec.input_model.model_json_schema()
             )
@@ -887,10 +998,14 @@ class WorkflowDraftAuthoringApi:
                     source_parts=target_parts,
                     target_parts=source_parts,
                 )
-            input_map = {
-                **_input_map_from_payload(step.get("input", [])),
-                source_path: local_path,
-            }
+            input_bindings = _upsert_input_path_binding(
+                step.get("input", []),
+                binding=InputPathBinding(
+                    path=GraphSourcePath.parse(source_path),
+                    target=LocalPath(target_parts),
+                ),
+                step_id=step_id,
+            )
             return await self.drafts.patch_draft_workspace(
                 workspace_id=workspace_id,
                 revision=revision,
@@ -899,7 +1014,7 @@ class WorkflowDraftAuthoringApi:
                     {
                         "op": "replace",
                         "path": f"/steps/{escape_json_pointer(step_id)}/input",
-                        "value": input_bindings_payload(input_map, {}),
+                        "value": input_bindings,
                     },
                 ],
             )
@@ -934,36 +1049,18 @@ class WorkflowDraftAuthoringApi:
                 allow_existing_equivalent=True,
             )
 
-            current_output_map = self.drafts._step_output_map(
-                workspace_id=workspace_id, step_id=step_id
+            step_output_bindings, previous_state_path = _upsert_step_output_binding(
+                step.get("output", []),
+                binding=OutputBinding.model_validate(
+                    {"source": local_path, "target": state_path_str}
+                ),
+                step_id=step_id,
             )
-            previous_state_path = current_output_map.get(local_path)
-            output_map = {
-                **current_output_map,
-                local_path: state_path_str,
-            }
-
-            existing_output = workspace.draft.get("output")
-            if isinstance(existing_output, list):
-                output_bindings = [
-                    b
-                    for b in existing_output
-                    if not (
-                        isinstance(b, dict)
-                        and (
-                            b.get("target") == output_target_str
-                            or b.get("path") == state_path_str
-                            or (
-                                previous_state_path is not None
-                                and b.get("path") == previous_state_path
-                            )
-                        )
-                    )
-                ]
-            else:
-                output_bindings = []
-            output_bindings.append(
-                {"path": state_path_str, "target": output_target_str}
+            output_bindings = _rebind_workflow_output(
+                workspace.draft.get("output", []),
+                previous_state_path=previous_state_path,
+                state_path=state_path_str,
+                output_target=output_target_str,
             )
 
             return await self.drafts.patch_draft_workspace(
@@ -983,7 +1080,7 @@ class WorkflowDraftAuthoringApi:
                     {
                         "op": "replace",
                         "path": f"/steps/{escape_json_pointer(step_id)}/output",
-                        "value": output_bindings_payload(output_map),
+                        "value": step_output_bindings,
                     },
                     {"op": "replace", "path": "/output", "value": output_bindings},
                 ],
@@ -1004,12 +1101,13 @@ class WorkflowDraftAuthoringApi:
                 target_parts=target_parts,
                 allow_existing_equivalent=True,
             )
-            output_map = {
-                **self.drafts._step_output_map(
-                    workspace_id=workspace_id, step_id=step_id
+            output_bindings, _previous_state_path = _upsert_step_output_binding(
+                step.get("output", []),
+                binding=OutputBinding.model_validate(
+                    {"source": local_path, "target": target_path}
                 ),
-                local_path: target_path,
-            }
+                step_id=step_id,
+            )
             return await self.drafts.patch_draft_workspace(
                 workspace_id=workspace_id,
                 revision=revision,
@@ -1018,7 +1116,7 @@ class WorkflowDraftAuthoringApi:
                     {
                         "op": "replace",
                         "path": f"/steps/{escape_json_pointer(step_id)}/output",
-                        "value": output_bindings_payload(output_map),
+                        "value": output_bindings,
                     },
                 ],
             )

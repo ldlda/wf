@@ -484,7 +484,7 @@ git commit -m "feat: import draft documents"
 **Files:**
 - Modify: `skills/wf-cli/SKILL.md`
 - Modify: `docs/current_roadmap.md`
-- Move: `docs/superpowers/plans/2026-07-29-safe-compatibility-merges.md`
+- Reference: `docs/historical/superpowers/plans/2026-07-29-safe-compatibility-merges.md`
 - Move: `docs/superpowers/plans/2026-07-29-draft-document-transfer.md`
 
 **Interfaces:**
@@ -506,8 +506,8 @@ stored with diagnostics for repair.
 
 - [ ] **Step 2: Update roadmap and archive completed plans**
 
-Add one completed roadmap item linking to both historical plan paths. Move both
-plans under:
+Add one completed roadmap item linking to both historical plan paths. The safe
+compatibility plan is already archived; move the draft-transfer plan under:
 
 ```text
 docs/historical/superpowers/plans/

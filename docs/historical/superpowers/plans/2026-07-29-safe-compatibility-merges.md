@@ -1,5 +1,7 @@
 # Safe Compatibility Merges Implementation Plan
 
+**Status:** Completed
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Prevent compatibility-map merges from silently changing canonical step and workflow-output bindings.
@@ -31,7 +33,7 @@
 - Produces: `_require_lossless_step_input_map_round_trip(payload, *, step_id)`
 - Preserves: `WorkflowDraftApi.set_step_input_map`
 
-- [ ] **Step 1: Write failing tests for lossless and lossy input merges**
+- [x] **Step 1: Write failing tests for lossless and lossy input merges**
 
 Add focused tests beside
 `test_step_map_helpers_merge_with_existing_bindings`:
@@ -93,7 +95,7 @@ representable case.
 Add a stale-revision test where the draft contains fan-out but the request uses
 an old revision. Assert a conflict payload, not the lossless-merge `ValueError`.
 
-- [ ] **Step 2: Run the focused tests and verify RED**
+- [x] **Step 2: Run the focused tests and verify RED**
 
 Run:
 
@@ -104,7 +106,7 @@ uv run pytest tests/wf_api/test_drafts_service.py -k "step_input_map_merge" -q
 Expected: the fan-out and interleaving tests fail because the merge succeeds or
 rewrites the list; the stale-revision test fails if preflight runs first.
 
-- [ ] **Step 3: Add the revision preflight and exact round-trip guard**
+- [x] **Step 3: Add the revision preflight and exact round-trip guard**
 
 In `WorkflowDraftApi`, add:
 
@@ -153,7 +155,7 @@ Update `set_step_input_map` so `merge=True`:
 
 Do not run the guard for replacement mode (`merge=False`).
 
-- [ ] **Step 4: Run focused tests and verify GREEN**
+- [x] **Step 4: Run focused tests and verify GREEN**
 
 Run:
 
@@ -163,7 +165,7 @@ uv run pytest tests/wf_api/test_drafts_service.py -k "step_input_map_merge or st
 
 Expected: all selected tests pass.
 
-- [ ] **Step 5: Commit Task 1**
+- [x] **Step 5: Commit Task 1**
 
 ```bash
 git add src/wf_api/drafts.py src/wf_api/draft_authoring.py tests/wf_api/test_drafts_service.py
@@ -181,7 +183,7 @@ git commit -m "fix: reject lossy step input map merges"
 - Preserves: `WorkflowDraftApi.set_step_output_map`
 - Preserves: `WorkflowDraftApi.set_workflow_output_map`
 
-- [ ] **Step 1: Write failing step-output fan-out tests**
+- [x] **Step 1: Write failing step-output fan-out tests**
 
 Create a draft whose step output contains:
 
@@ -211,7 +213,7 @@ full workspace and revision remain unchanged.
 Add a stale-revision variant and retain the existing unique-source merge test as
 the positive case.
 
-- [ ] **Step 2: Write failing workflow-output ambiguity tests**
+- [x] **Step 2: Write failing workflow-output ambiguity tests**
 
 Create workflow output bindings:
 
@@ -229,7 +231,7 @@ Add two tests:
 2. merging `{"state.other": "other"}` succeeds while preserving both
    `state.title` bindings, the literal, and their order.
 
-- [ ] **Step 3: Run focused tests and verify RED**
+- [x] **Step 3: Run focused tests and verify RED**
 
 Run:
 
@@ -240,7 +242,7 @@ uv run pytest tests/wf_api/test_drafts_service.py -k "step_output_map_merge or w
 Expected: fan-out step output is collapsed and the ambiguous workflow-output
 source updates multiple bindings.
 
-- [ ] **Step 4: Implement minimal guards**
+- [x] **Step 4: Implement minimal guards**
 
 Add:
 
@@ -291,7 +293,7 @@ if ambiguous is not None:
 
 Leave unrequested duplicate sources and literal records untouched.
 
-- [ ] **Step 5: Run focused and API regression tests**
+- [x] **Step 5: Run focused and API regression tests**
 
 Run:
 
@@ -301,7 +303,7 @@ uv run pytest tests/wf_api/test_drafts_service.py -k "map_helpers or set_step_in
 
 Expected: all selected tests pass.
 
-- [ ] **Step 6: Commit Task 2**
+- [x] **Step 6: Commit Task 2**
 
 ```bash
 git add src/wf_api/drafts.py tests/wf_api/test_drafts_service.py
@@ -319,7 +321,7 @@ git commit -m "fix: reject ambiguous output map merges"
 - Consumes: compatibility merge errors from Tasks 1-2
 - Produces: CLI help that describes rejection rather than acceptable loss
 
-- [ ] **Step 1: Write the failing CLI help assertion**
+- [x] **Step 1: Write the failing CLI help assertion**
 
 Update `test_wf_draft_map_help_explains_replace_merge_and_validate` to require:
 
@@ -332,7 +334,7 @@ assert "ambiguous fan-out sources" in workflow_output_help
 Remove assertions that describe compatibility merge as merely
 `potentially lossy`.
 
-- [ ] **Step 2: Run the CLI help test and verify RED**
+- [x] **Step 2: Run the CLI help test and verify RED**
 
 Run:
 
@@ -342,7 +344,7 @@ uv run pytest tests/wf_cli/test_app.py::test_wf_draft_map_help_explains_replace_
 
 Expected: FAIL because current help still says `potentially lossy`.
 
-- [ ] **Step 3: Update command help and issue state**
+- [x] **Step 3: Update command help and issue state**
 
 Revise the `set-input`, `set-output`, and `set-workflow-output` docstrings and
 `--merge` help text. State that merge:
@@ -355,7 +357,7 @@ Revise the `set-input`, `set-output`, and `set-workflow-output` docstrings and
 Mark the `ISSUES.md` compatibility step map item complete and summarize the
 guarded behavior without claiming the map representation gained fan-out.
 
-- [ ] **Step 4: Run focused verification**
+- [x] **Step 4: Run focused verification**
 
 Run:
 
@@ -369,9 +371,18 @@ git diff --check
 Expected: tests pass, Ruff reports no issues, basedpyright reports zero errors,
 and `git diff --check` emits no errors.
 
-- [ ] **Step 5: Commit Task 3**
+- [x] **Step 5: Commit Task 3**
 
 ```bash
 git add src/wf_cli/commands/drafts.py tests/wf_cli/test_app.py ISSUES.md
 git commit -m "docs: explain safe compatibility merges"
 ```
+
+## Post-Review Hardening
+
+The final review found that `bind_draft` still reconstructed canonical input
+and output lists through compatibility maps. The completed slice therefore
+also updates focused binds directly on typed canonical lists, preserving
+unrelated fan-out, literals, and ordering while rejecting ambiguous requested
+sources before mutation. Remote CLI regressions cover canonical-replacement
+guidance for step inputs, step outputs, and workflow outputs.

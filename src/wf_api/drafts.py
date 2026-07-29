@@ -663,12 +663,6 @@ class WorkflowDraftApi:
                 projected = updated
         return projected if changed else output_schema
 
-    def _step_output_map(self, *, workspace_id: str, step_id: str) -> dict[str, str]:
-        """Read one step's outputs for legacy focused binding helpers."""
-        workspace = self._draft_store().get_workspace(workspace_id)
-        step = _draft_step(workspace.draft, step_id)
-        return _output_map_from_payload(step.get("output", []))
-
 
 def _workflow_source_schema(
     draft: Mapping[str, Any],
