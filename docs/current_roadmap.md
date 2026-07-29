@@ -600,6 +600,14 @@ clear operator feedback before adding more architecture.
   fallback; compatibility `--merge --map` remains intentionally lossy.
   Implementation:
   [`atomic workflow output bindings`](historical/superpowers/plans/2026-07-23-atomic-workflow-output-bindings.md).
+- Completed: compatibility map merges now reject canonical input/output
+  bindings they cannot preserve, and local or remote CLI users can export an
+  exact draft document and revision-check its import into an existing
+  workspace. Structurally valid imports receive fresh semantic diagnostics and
+  remain repairable when invalid. Implementation:
+  [`safe compatibility merges`](historical/superpowers/plans/2026-07-29-safe-compatibility-merges.md)
+  and
+  [`draft document transfer`](historical/superpowers/plans/2026-07-29-draft-document-transfer.md).
 - Completed: challenge-driven output UX polish makes `set-workflow-output`
   project missing top-level output schema fields from declared `input.*` and
   `state.*` sources, and challenge prompt templates now always include

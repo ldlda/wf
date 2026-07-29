@@ -111,7 +111,12 @@ def replace_draft_workspace_document(
     draft: JsonObject,
     node_defs_for_draft: NodeDefsForDraft,
 ) -> JsonObject:
-    """Replace and semantically revalidate one complete draft document."""
+    """Replace one complete draft under optimistic revision control.
+
+    Structural validation happens before mutation. Semantically invalid
+    documents remain byte-shape-equivalent and are stored with fresh diagnostics
+    for repair, while valid documents are canonicalized before persistence.
+    """
     workspace = store.get_workspace(workspace_id)
     if workspace.revision != revision:
         return _revision_conflict_payload(workspace, revision)

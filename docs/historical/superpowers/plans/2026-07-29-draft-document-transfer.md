@@ -1,5 +1,7 @@
 # Draft Document Transfer Implementation Plan
 
+**Status:** Completed
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Export exact draft documents and import them into existing revisioned workspaces through local or remote CLI.
@@ -39,7 +41,7 @@
 - Produces: `WorkflowApi.replace_draft_workspace_document`
 - Produces: `WorkflowDraftSurface.replace_draft_workspace_document`
 
-- [ ] **Step 1: Write failing artifact-layer tests**
+- [x] **Step 1: Write failing artifact-layer tests**
 
 Add tests proving:
 
@@ -63,7 +65,7 @@ Also add tests for:
 - semantically invalid routes are persisted at revision 2 with
   `status == "invalid"` and fresh diagnostics.
 
-- [ ] **Step 2: Run artifact tests and verify RED**
+- [x] **Step 2: Run artifact tests and verify RED**
 
 Run:
 
@@ -73,7 +75,7 @@ uv run pytest tests/artifacts/test_draft_workspaces.py -k "replace_draft_workspa
 
 Expected: collection fails because the operation is not defined.
 
-- [ ] **Step 3: Implement the artifact operation**
+- [x] **Step 3: Implement the artifact operation**
 
 Add:
 
@@ -104,7 +106,7 @@ Implementation order:
 
 Export the function through both artifact package `__init__.py` files.
 
-- [ ] **Step 4: Write and run API façade tests**
+- [x] **Step 4: Write and run API façade tests**
 
 In `tests/wf_api/test_drafts_service.py`, add one test that registers a
 capability, imports a draft using it, and asserts current capability definitions
@@ -119,7 +121,7 @@ uv run pytest tests/wf_api/test_drafts_service.py -k "replace_draft_workspace_do
 
 Expected before façade implementation: FAIL with missing method.
 
-- [ ] **Step 5: Thread the operation through API and surface**
+- [x] **Step 5: Thread the operation through API and surface**
 
 Add this signature to `WorkflowDraftApi`, `WorkflowApi`, and
 `WorkflowDraftSurface`:
@@ -138,7 +140,7 @@ async def replace_draft_workspace_document(
 `node_defs_for_draft=self._node_defs_for_draft`. `WorkflowApi` delegates to
 `self.drafts`.
 
-- [ ] **Step 6: Run focused tests and commit**
+- [x] **Step 6: Run focused tests and commit**
 
 Run:
 
@@ -170,7 +172,7 @@ git commit -m "feat: replace complete draft documents safely"
 - Produces RPC method: `workflow.draft_workspaces.replace_document`
 - Produces client method: `RpcDraftClientMixin.replace_draft_workspace_document`
 
-- [ ] **Step 1: Write failing RPC application test**
+- [x] **Step 1: Write failing RPC application test**
 
 Create a workspace, then call:
 
@@ -191,7 +193,7 @@ Inspect the workspace with `include_draft=True` and assert exact imported
 content. Add a malformed `draft=[]` request test that expects JSON-RPC parameter
 validation failure without mutation.
 
-- [ ] **Step 2: Run RPC application tests and verify RED**
+- [x] **Step 2: Run RPC application tests and verify RED**
 
 Run:
 
@@ -201,7 +203,7 @@ uv run pytest tests/wf_transport_rpc_http/test_app.py -k "replace_document" -q
 
 Expected: method-not-found failure.
 
-- [ ] **Step 3: Add the request model and RPC method**
+- [x] **Step 3: Add the request model and RPC method**
 
 Add:
 
@@ -217,7 +219,7 @@ Export it from `wf_transport_rpc_http.__init__`. Register
 to `server.api.replace_draft_workspace_document` and using the existing
 `WorkflowRpcError` translation.
 
-- [ ] **Step 4: Write failing client request test**
+- [x] **Step 4: Write failing client request test**
 
 In `test_client.py`, assert:
 
@@ -237,13 +239,13 @@ assert calls[-1] == {
 }
 ```
 
-- [ ] **Step 5: Implement the remote client method**
+- [x] **Step 5: Implement the remote client method**
 
 Add the exact `WorkflowDraftSurface` signature to `RpcDraftClientMixin` and
 delegate through `_call("workflow.draft_workspaces.replace_document", params)`.
 Do not normalize or lower the draft through another model in the client.
 
-- [ ] **Step 6: Run transport tests and commit**
+- [x] **Step 6: Run transport tests and commit**
 
 Run:
 
@@ -272,7 +274,7 @@ git commit -m "feat: expose draft document replacement over rpc"
 - Produces: `write_json_file(path, payload, *, force)`
 - Produces CLI command: `wf draft export WORKSPACE --output PATH [--force]`
 
-- [ ] **Step 1: Write failing local export tests**
+- [x] **Step 1: Write failing local export tests**
 
 Using a fake handler whose `get_draft_workspace` returns:
 
@@ -290,7 +292,7 @@ Assert:
 - `--force` replaces it;
 - a missing parent reports a CLI error.
 
-- [ ] **Step 2: Run export tests and verify RED**
+- [x] **Step 2: Run export tests and verify RED**
 
 Run:
 
@@ -300,7 +302,7 @@ uv run pytest tests/wf_cli/test_app.py -k "draft_export" -q
 
 Expected: command-not-found failure.
 
-- [ ] **Step 3: Add the file writer and command**
+- [x] **Step 3: Add the file writer and command**
 
 In `wf_cli.io`, add:
 
@@ -342,13 +344,13 @@ def export_draft(
 Fetch with `include_draft=True`, require `payload["draft"]` to be a dictionary,
 and call `write_json_file`. Do not call `emit_json`.
 
-- [ ] **Step 4: Add remote-target export test**
+- [x] **Step 4: Add remote-target export test**
 
 Use the existing remote target fixture and assert the RPC request is
 `workflow.draft_workspaces.get` with `include_draft: true`. Assert the resulting
 file contains only the draft, not workspace metadata.
 
-- [ ] **Step 5: Run CLI tests and commit**
+- [x] **Step 5: Run CLI tests and commit**
 
 Run:
 
@@ -377,7 +379,7 @@ git commit -m "feat: export draft documents"
 - Consumes: `WorkflowDraftSurface.replace_draft_workspace_document`
 - Produces CLI command: `wf draft import WORKSPACE --revision N --file PATH`
 
-- [ ] **Step 1: Write failing local import tests**
+- [x] **Step 1: Write failing local import tests**
 
 Assert the command:
 
@@ -398,7 +400,7 @@ replace_draft_workspace_document(
 Add CLI-input tests for missing files, malformed JSON, and JSON arrays. Assert
 these fail before `load_cli_context` is called.
 
-- [ ] **Step 2: Run import tests and verify RED**
+- [x] **Step 2: Run import tests and verify RED**
 
 Run:
 
@@ -408,7 +410,7 @@ uv run pytest tests/wf_cli/test_app.py -k "draft_import" -q
 
 Expected: command-not-found failure.
 
-- [ ] **Step 3: Implement the import command**
+- [x] **Step 3: Implement the import command**
 
 Add:
 
@@ -449,7 +451,7 @@ emit_json(
 )
 ```
 
-- [ ] **Step 4: Add remote import and round-trip tests**
+- [x] **Step 4: Add remote import and round-trip tests**
 
 Add a remote-target test asserting method
 `workflow.draft_workspaces.replace_document` and exact draft payload.
@@ -462,7 +464,7 @@ Add one round-trip test:
 4. assert destination `draft` equals the exported object;
 5. assert destination workspace ID remains unchanged.
 
-- [ ] **Step 5: Run CLI tests and commit**
+- [x] **Step 5: Run CLI tests and commit**
 
 Run:
 
@@ -485,12 +487,12 @@ git commit -m "feat: import draft documents"
 - Modify: `skills/wf-cli/SKILL.md`
 - Modify: `docs/current_roadmap.md`
 - Reference: `docs/historical/superpowers/plans/2026-07-29-safe-compatibility-merges.md`
-- Move: `docs/superpowers/plans/2026-07-29-draft-document-transfer.md`
+- Archive: `docs/historical/superpowers/plans/2026-07-29-draft-document-transfer.md`
 
 **Interfaces:**
 - Documents: safe map merge, export, and revision-checked import
 
-- [ ] **Step 1: Update CLI skill examples**
+- [x] **Step 1: Update CLI skill examples**
 
 Add a concise transfer sequence:
 
@@ -504,7 +506,7 @@ State that exported files contain only the draft document and that import
 targets an already existing workspace. State that semantic-invalid imports are
 stored with diagnostics for repair.
 
-- [ ] **Step 2: Update roadmap and archive completed plans**
+- [x] **Step 2: Update roadmap and archive completed plans**
 
 Add one completed roadmap item linking to both historical plan paths. The safe
 compatibility plan is already archived; move the draft-transfer plan under:
@@ -519,7 +521,7 @@ Update any references found by:
 rg -n "2026-07-29-(safe-compatibility-merges|draft-document-transfer)" docs skills
 ```
 
-- [ ] **Step 3: Run focused and static verification**
+- [x] **Step 3: Run focused and static verification**
 
 Run:
 
@@ -534,13 +536,13 @@ git diff --check
 Expected: all tests pass, formatting is unchanged, Ruff reports no issues,
 basedpyright reports zero errors, and diff check is clean.
 
-- [ ] **Step 4: Review the combined implementation**
+- [x] **Step 4: Review the combined implementation**
 
 Invoke the repository code-review workflow against the pre-slice commit. Fix
 Critical and Important findings, rerun the affected focused tests, and record
 any intentionally deferred Minor findings in the final report.
 
-- [ ] **Step 5: Commit documentation and plan archival**
+- [x] **Step 5: Commit documentation and plan archival**
 
 ```bash
 git add skills/wf-cli/SKILL.md docs/current_roadmap.md docs/superpowers/plans docs/historical/superpowers/plans

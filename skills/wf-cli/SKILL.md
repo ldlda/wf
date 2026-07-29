@@ -37,6 +37,8 @@ wf cap call <capability> --input '{"field":"value"}'
 wf draft create <workspace_id> --name <name>
 wf draft create <workspace_id> --capability <capability>
 wf draft inspect <workspace_id> --include-draft
+wf draft export <workspace_id> --output draft.json
+wf draft import <workspace_id> --revision <n> --file draft.json
 wf draft patch <workspace_id> --revision <n> --input-file patch.json
 wf draft set-name <workspace_id> --revision <n> --name <name>
 wf draft set-start <workspace_id> --revision <n> --step <step_id>
@@ -216,6 +218,20 @@ after the intended steps and routes are present.
 
 `wf draft compile` prints the raw plan JSON directly on success. Do not expect a
 top-level `compiled_plan` key from the CLI output.
+
+Transfer an exact draft document between existing workspaces with:
+
+```bash
+uv run wf draft export report --output report-draft.json
+uv run wf draft import restored --revision 1 --file report-draft.json
+uv run wf draft validate restored
+```
+
+The export file contains only the draft document, not workspace ID, revision,
+status, or diagnostics. Import requires an existing destination workspace and
+its expected revision; it replaces the destination draft without renaming the
+workspace. A structurally valid but semantically invalid import is stored with
+fresh diagnostics so it can be repaired in place.
 
 - To undo a bad draft edit, prefer `wf draft remove-route`,
   `wf draft remove-step`, or `wf draft remove-binding` over JSON Patch.
