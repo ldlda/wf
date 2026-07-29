@@ -1540,6 +1540,74 @@ async def test_validate_draft_workspace_refreshes_status(tmp_path: Path) -> None
 
 
 @pytest.mark.asyncio
+async def test_replace_draft_workspace_document_uses_current_capability_definitions(
+    tmp_path: Path,
+) -> None:
+    api, _service, _authoring = _draft_api(
+        FileWorkflowArtifactStore(tmp_path / "replace_document_capability_defs"),
+        register_echo=True,
+    )
+    await api.create_draft_workspace(
+        workspace_id="report",
+        draft=_echo_draft(),
+    )
+    replacement = _echo_draft()
+    replacement["name"] = "replacement"
+    replacement["steps"]["echo"]["output"] = [
+        {"source": "missing", "target": "state.echoed"}
+    ]
+
+    result = await api.replace_draft_workspace_document(
+        workspace_id="report",
+        revision=1,
+        draft=replacement,
+    )
+
+    assert result["revision"] == 2
+    assert result["status"] == "invalid"
+    assert any(
+        "missing" in str(diagnostic.get("message", ""))
+        for diagnostic in result["diagnostics"]
+    )
+
+
+@pytest.mark.asyncio
+async def test_replace_draft_workspace_document_refreshes_semantic_diagnostics(
+    tmp_path: Path,
+) -> None:
+    api, _service, _authoring = _draft_api(
+        FileWorkflowArtifactStore(tmp_path / "replace_document_diagnostics"),
+        register_echo=True,
+    )
+    await api.create_draft_workspace(
+        workspace_id="report",
+        draft=_echo_draft(),
+    )
+    before = await api.get_draft_workspace(
+        workspace_id="report",
+        include_draft=True,
+    )
+    replacement = _echo_draft()
+    replacement["routes"] = {"echo": {"ok": "missing_step"}}
+
+    result = await api.replace_draft_workspace_document(
+        workspace_id="report",
+        revision=1,
+        draft=replacement,
+    )
+    after = await api.get_draft_workspace(
+        workspace_id="report",
+        include_draft=True,
+    )
+
+    assert before["diagnostics"] == []
+    assert result["status"] == "invalid"
+    assert result["diagnostics"]
+    assert after["diagnostics"] == result["diagnostics"]
+    assert after["draft"]["routes"] == replacement["routes"]
+
+
+@pytest.mark.asyncio
 async def test_validate_draft_workspace_suggests_bind(
     tmp_path: Path,
 ) -> None:

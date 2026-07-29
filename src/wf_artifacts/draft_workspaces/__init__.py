@@ -2,6 +2,7 @@ from .api import (
     create_draft_workspace,
     get_draft_workspace,
     patch_draft_workspace,
+    replace_draft_workspace_document,
     replace_validated_draft_document,
 )
 from .models import (
@@ -24,6 +25,7 @@ __all__ = [
     "ensure_workspace_id",
     "get_draft_workspace",
     "patch_draft_workspace",
+    "replace_draft_workspace_document",
     "replace_validated_draft_document",
     "summarize_draft_workspace",
 ]

@@ -2,6 +2,9 @@ from __future__ import annotations
 
 from typing import Any
 
+import pytest
+from pydantic import ValidationError
+
 from wf_artifacts import (
     DraftWorkspaceStore,
     FileDraftWorkspaceStore,
@@ -9,6 +12,7 @@ from wf_artifacts import (
     create_draft_workspace,
     get_draft_workspace,
     patch_draft_workspace,
+    replace_draft_workspace_document,
     replace_validated_draft_document,
     summarize_draft_workspace,
 )
@@ -290,6 +294,114 @@ def test_replace_validated_draft_document_isolates_persisted_draft() -> None:
     replacement["name"] = "mutated_after_save"
 
     assert store.get_workspace("echo_draft").draft["name"] == "replacement"
+
+
+def test_replace_draft_workspace_document_revalidates_and_increments_revision(
+    tmp_path,
+) -> None:
+    store = FileDraftWorkspaceStore(tmp_path)
+    create_draft_workspace(store, workspace_id="echo_draft", draft=_draft())
+    replacement = {**_draft(), "name": "replacement"}
+
+    result = replace_draft_workspace_document(
+        store,
+        workspace_id="echo_draft",
+        revision=1,
+        draft=replacement,
+        node_defs_for_draft=lambda _draft: [],
+    )
+
+    assert result["revision"] == 2
+    assert store.get_workspace("echo_draft").draft["name"] == "replacement"
+
+
+def test_replace_draft_workspace_document_identical_draft_is_a_noop(
+    tmp_path,
+) -> None:
+    store = FileDraftWorkspaceStore(tmp_path)
+    create_draft_workspace(store, workspace_id="echo_draft", draft=_draft())
+    current = store.get_workspace("echo_draft")
+
+    result = replace_draft_workspace_document(
+        store,
+        workspace_id="echo_draft",
+        revision=1,
+        draft=current.draft,
+        node_defs_for_draft=lambda _draft: [],
+    )
+
+    assert result["revision"] == 1
+    assert store.get_workspace("echo_draft") == current
+
+
+def test_replace_draft_workspace_document_rejects_stale_revision(
+    tmp_path,
+) -> None:
+    store = FileDraftWorkspaceStore(tmp_path)
+    create_draft_workspace(store, workspace_id="echo_draft", draft=_draft())
+    patch_draft_workspace(
+        store,
+        workspace_id="echo_draft",
+        revision=1,
+        patch=[{"op": "replace", "path": "/name", "value": "current"}],
+    )
+    before = store.get_workspace("echo_draft")
+
+    result = replace_draft_workspace_document(
+        store,
+        workspace_id="echo_draft",
+        revision=1,
+        draft={**_draft(), "name": "stale"},
+        node_defs_for_draft=lambda _draft: [],
+    )
+
+    assert result["status"] == "conflict"
+    assert result["diagnostics"][0]["code"] == "revision_conflict"
+    assert store.get_workspace("echo_draft") == before
+
+
+def test_replace_draft_workspace_document_rejects_structural_failure(
+    tmp_path,
+) -> None:
+    store = FileDraftWorkspaceStore(tmp_path)
+    create_draft_workspace(store, workspace_id="echo_draft", draft=_draft())
+    before = store.get_workspace("echo_draft")
+
+    with pytest.raises(ValidationError):
+        replace_draft_workspace_document(
+            store,
+            workspace_id="echo_draft",
+            revision=1,
+            draft={"name": "incomplete"},
+            node_defs_for_draft=lambda _draft: [],
+        )
+
+    assert store.get_workspace("echo_draft") == before
+
+
+def test_replace_draft_workspace_document_persists_fresh_invalid_diagnostics(
+    tmp_path,
+) -> None:
+    store = FileDraftWorkspaceStore(tmp_path)
+    create_draft_workspace(store, workspace_id="echo_draft", draft=_draft())
+    replacement = _draft()
+    replacement["routes"] = {"echo": {"ok": "missing_step"}}
+
+    result = replace_draft_workspace_document(
+        store,
+        workspace_id="echo_draft",
+        revision=1,
+        draft=replacement,
+        node_defs_for_draft=lambda _draft: [],
+    )
+    stored = store.get_workspace("echo_draft")
+
+    assert result["revision"] == 2
+    assert result["status"] == "invalid"
+    assert result["diagnostics"]
+    assert stored.status == "invalid"
+    assert stored.diagnostics == result["diagnostics"]
+    assert stored.draft["routes"] == replacement["routes"]
 
 
 def test_get_draft_workspace_includes_full_draft_only_when_requested(tmp_path) -> None:

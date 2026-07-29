@@ -92,6 +92,16 @@ class WorkflowDraftSurface(Protocol):
         patch: list[dict[str, Any]],
     ) -> dict[str, Any]: ...
 
+    async def replace_draft_workspace_document(
+        self,
+        *,
+        workspace_id: str,
+        revision: int,
+        draft: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Replace and semantically revalidate one complete workspace draft."""
+        ...
+
     async def set_draft_name(
         self,
         *,

@@ -103,6 +103,46 @@ def patch_draft_workspace(
     return summarize_draft_workspace(next_workspace)
 
 
+def replace_draft_workspace_document(
+    store: DraftWorkspaceStore,
+    *,
+    workspace_id: str,
+    revision: int,
+    draft: JsonObject,
+    node_defs_for_draft: NodeDefsForDraft,
+) -> JsonObject:
+    """Replace and semantically revalidate one complete draft document."""
+    workspace = store.get_workspace(workspace_id)
+    if workspace.revision != revision:
+        return _revision_conflict_payload(workspace, revision)
+    WorkflowDraft.model_validate(draft)
+    if draft == workspace.draft:
+        return summarize_draft_workspace(workspace)
+
+    stored_draft = deepcopy(draft)
+    validation = validate_workflow_draft(
+        stored_draft,
+        node_defs=node_defs_for_draft(stored_draft),
+    )
+    next_workspace = workspace.model_copy(
+        update={
+            "revision": workspace.revision + 1,
+            "draft": _canonical_draft_if_valid(
+                stored_draft,
+                validation_status=validation["status"],
+            ),
+            "status": validation["status"],
+            "diagnostics": validation["diagnostics"],
+            "updated_at_epoch_ms": _now_ms(),
+        }
+    )
+    try:
+        store.replace_workspace(next_workspace, expected_revision=revision)
+    except DraftWorkspaceConflictError as exc:
+        return _revision_conflict_payload(exc.workspace, revision)
+    return summarize_draft_workspace(next_workspace)
+
+
 def replace_validated_draft_document(
     store: DraftWorkspaceStore,
     *,

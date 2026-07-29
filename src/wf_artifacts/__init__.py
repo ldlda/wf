@@ -12,6 +12,7 @@ from .draft_workspaces import (
     ensure_workspace_id,
     get_draft_workspace,
     patch_draft_workspace,
+    replace_draft_workspace_document,
     replace_validated_draft_document,
     summarize_draft_workspace,
 )
@@ -92,6 +93,7 @@ __all__ = [
     "logical_ref_for_concrete_ref",
     "normalize_plan_node_refs",
     "patch_draft_workspace",
+    "replace_draft_workspace_document",
     "replace_validated_draft_document",
     "patch_workflow_draft",
     "summarize_draft_workspace",

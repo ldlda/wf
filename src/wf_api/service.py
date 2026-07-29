@@ -331,6 +331,20 @@ class WorkflowApi:
             patch=patch,
         )
 
+    async def replace_draft_workspace_document(
+        self,
+        *,
+        workspace_id: str,
+        revision: int,
+        draft: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Replace and semantically revalidate one complete workspace draft."""
+        return await self.drafts.replace_draft_workspace_document(
+            workspace_id=workspace_id,
+            revision=revision,
+            draft=draft,
+        )
+
     async def set_draft_name(
         self,
         *,

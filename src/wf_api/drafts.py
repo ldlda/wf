@@ -24,6 +24,9 @@ from wf_artifacts import (
 from wf_artifacts import (
     patch_draft_workspace as patch_draft_workspace_record,
 )
+from wf_artifacts import (
+    replace_draft_workspace_document as replace_draft_workspace_document_record,
+)
 from wf_core.models.schemas import NodeDef
 from wf_core.models.steps import (
     InputBinding,
@@ -339,6 +342,22 @@ class WorkflowDraftApi:
             workspace_id=workspace_id,
             revision=revision,
             draft=draft,
+        )
+
+    async def replace_draft_workspace_document(
+        self,
+        *,
+        workspace_id: str,
+        revision: int,
+        draft: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Replace and semantically revalidate one complete workspace draft."""
+        return replace_draft_workspace_document_record(
+            self._draft_store(),
+            workspace_id=workspace_id,
+            revision=revision,
+            draft=draft,
+            node_defs_for_draft=self._node_defs_for_draft,
         )
 
     async def set_draft_name(
