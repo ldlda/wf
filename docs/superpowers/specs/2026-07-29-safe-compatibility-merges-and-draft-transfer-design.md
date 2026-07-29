@@ -64,8 +64,8 @@ without changing:
 - path/literal interleaving.
 
 This rejects source fan-out, duplicate literal targets, and any ordering that
-the map serializer would rearrange. A simple list with unique path sources and
-an exactly reproducible literal suffix remains mergeable.
+the map serializer would rearrange. A simple list with an exactly reproducible
+literal prefix followed by unique path sources remains mergeable.
 
 ### Step Outputs
 
