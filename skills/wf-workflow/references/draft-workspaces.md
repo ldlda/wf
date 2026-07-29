@@ -121,8 +121,8 @@ wf draft set-workflow-output <workspace_id> --revision <n> \
 wf draft branch <workspace_id> --revision <n> --step <step_id> --route ok=__end__ --route error=fail
 wf draft handle <workspace_id> --revision <n> --to fail --branch lookup:error --branch transform:error
 wf draft compile <workspace_id>
-wf draft bind <workspace_id> --revision <n> --step <step_id> --from local.report.markdown --to state.report.markdown
-wf draft bind <workspace_id> --revision <n> --step <step_id> --from input.title --to local.report.title
+wf draft bind <workspace_id> --revision <n> --step <step_id> --from local.document.markdown --to state.document.markdown
+wf draft bind <workspace_id> --revision <n> --step <step_id> --from input.title --to local.document.title
 wf draft add capability <workspace_id> --revision <n> --step <step_id> --capability <qualified_name> --from-step <prev> --from-outcome ok --route ok=__end__ --route error=fail --input input.title=report.title --bind-output result=state.result
 wf draft add interrupt <workspace_id> --revision <n> --step review --kind issue_review --request-schema-file request.schema.json --resume-schema-file resume.schema.json --outcome submitted --outcome cancelled --route submitted=next --route cancelled=revise
 wf draft add when <workspace_id> --revision <n> --step decide --condition-file condition.json --then next --otherwise revise
@@ -136,8 +136,8 @@ project missing output-schema fields from their declared source schemas.
 Literal values and `context.*` paths require declared output targets, and
 literal values are validated against those targets rather than inferred.
 
-`set-input` direction: `input.title=report.title` means graph source
-`input.title` maps to node-local target `local.report.title`. Targets are
+`set-input` direction: `input.title=document.title` means graph source
+`input.title` maps to node-local target `local.document.title`. Targets are
 rootless node-local paths; never prefix the target with `local.`. Existing
 single-field targets such as `input.text=text` remain valid. Repeated graph
 sources are allowed and preserve fan-out to distinct local targets.
@@ -192,10 +192,10 @@ fallback. `--merge --map` is compatibility-only and may collapse existing
 fan-out; it cannot preserve literals or canonical ordering. Use it only when a
 lossy map edit is acceptable.
 
-`bind input.title -> local.report.title` is schema-aware and idempotent when
+`bind input.title -> local.document.title` is schema-aware and idempotent when
 `input.title` is already declared. Bind names both rooted endpoints explicitly.
 Use it for repair hints or schema projection. Use
-`set-input --merge --map input.title=report.title` when you only need to update
+`set-input --merge --map input.title=document.title` when you only need to update
 a compatibility step input map; that command already implies the local side.
 
 - `bind_draft`
@@ -212,9 +212,9 @@ a compatibility step input map; that command already implies the local side.
   workflow boundary.
 
 ```bash
-wf draft bind <workspace_id> --revision <n> --step <step_id> --from local.report.markdown --to state.report.markdown
-wf draft bind <workspace_id> --revision <n> --step <step_id> --from input.title --to local.report.title
-wf draft bind <workspace_id> --revision <n> --step <step_id> --from local.report.markdown --to output.report.markdown
+wf draft bind <workspace_id> --revision <n> --step <step_id> --from local.document.markdown --to state.document.markdown
+wf draft bind <workspace_id> --revision <n> --step <step_id> --from input.title --to local.document.title
+wf draft bind <workspace_id> --revision <n> --step <step_id> --from local.document.markdown --to output.document.markdown
 wf draft validate <workspace_id>
 ```
 

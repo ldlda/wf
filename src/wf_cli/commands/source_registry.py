@@ -59,7 +59,13 @@ def list_registry_entries(
 @app.command("inspect")
 def inspect_registry_entry(
     ctx: typer.Context,
-    source_id: Annotated[str, typer.Argument(help="Source registry entry id.")],
+    source_id: Annotated[
+        str,
+        typer.Argument(
+            help="Source registry entry id.",
+            metavar="SOURCE_ID",
+        ),
+    ],
 ) -> None:
     """Inspect one desired persisted source registry entry."""
     context = load_cli_context_from_typer(ctx)
@@ -93,7 +99,10 @@ def add_registry_entry(
 @app.command("update")
 def update_registry_entry(
     ctx: typer.Context,
-    source_id: Annotated[str, typer.Argument(help="Source ID to update.")],
+    source_id: Annotated[
+        str,
+        typer.Argument(help="Source ID to update.", metavar="SOURCE_ID"),
+    ],
     patch_json: Annotated[
         str | None, typer.Option("--patch", help="JSON patch to apply.")
     ] = None,
@@ -115,7 +124,10 @@ def update_registry_entry(
 @app.command("enable")
 def enable_registry_entry(
     ctx: typer.Context,
-    source_id: Annotated[str, typer.Argument(help="Source ID to enable.")],
+    source_id: Annotated[
+        str,
+        typer.Argument(help="Source ID to enable.", metavar="SOURCE_ID"),
+    ],
 ) -> None:
     """Enable a desired source registry entry."""
     context = load_cli_context_from_typer(ctx)
@@ -130,7 +142,10 @@ def enable_registry_entry(
 @app.command("disable")
 def disable_registry_entry(
     ctx: typer.Context,
-    source_id: Annotated[str, typer.Argument(help="Source ID to disable.")],
+    source_id: Annotated[
+        str,
+        typer.Argument(help="Source ID to disable.", metavar="SOURCE_ID"),
+    ],
 ) -> None:
     """Disable a desired source registry entry."""
     context = load_cli_context_from_typer(ctx)
@@ -145,7 +160,10 @@ def disable_registry_entry(
 @app.command("remove")
 def remove_registry_entry(
     ctx: typer.Context,
-    source_id: Annotated[str, typer.Argument(help="Source ID to remove.")],
+    source_id: Annotated[
+        str,
+        typer.Argument(help="Source ID to remove.", metavar="SOURCE_ID"),
+    ],
     confirm: Annotated[
         bool, typer.Option("--confirm", help="Confirm removal.")
     ] = False,

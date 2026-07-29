@@ -63,8 +63,8 @@ wf draft set-workflow-output <workspace_id> --revision <n> \
 wf draft branch <workspace_id> --revision <n> --step <step_id> --route ok=__end__ --route error=fail
 wf draft handle <workspace_id> --revision <n> --to fail --branch lookup:error --branch transform:error
 wf draft compile <workspace_id>
-wf draft bind <workspace_id> --revision <n> --step <step_id> --from local.report.markdown --to state.report.markdown
-wf draft bind <workspace_id> --revision <n> --step <step_id> --from input.title --to local.report.title
+wf draft bind <workspace_id> --revision <n> --step <step_id> --from local.document.markdown --to state.document.markdown
+wf draft bind <workspace_id> --revision <n> --step <step_id> --from input.title --to local.document.title
 wf draft add capability <workspace_id> --revision <n> --step <step_id> --capability <qualified_name> --from-step <prev> --from-outcome ok --route ok=__end__ --route error=fail --input input.title=report.title --bind-output result=state.result
 wf draft add interrupt <workspace_id> --revision <n> --step review --kind issue_review \
   --request-schema-file request.schema.json --resume-schema-file resume.schema.json \
@@ -95,7 +95,7 @@ compatibility map-only edit when the workflow schema is already declared.
 `wf draft bind` names both endpoints explicitly, so local paths keep the
 `local.` root. `set-input` and `draft add capability --input` already imply the
 local side, so their targets are rootless paths: write
-`input.title=report.title`, not `input.title=local.report.title`.
+`input.title=document.title`, not `input.title=local.document.title`.
 
 `wf draft set-workflow-output` replaces the complete ordered public output
 projection. Nested `input.*` and `state.*` sources can project missing nested
