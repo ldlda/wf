@@ -79,14 +79,13 @@ Initial API shape:
 
 ```python
 class ProxyMountRegistry:
-    def get_or_create(self, connection: ConnectionConfig, *, store_root: Path) -> ProxyMount:
-        ...
+    def get_or_create(
+        self, connection: ConnectionConfig, *, store_root: Path
+    ) -> ProxyMount: ...
 
-    def active_mounts_for(self, config: BrokerConfig) -> list[ProxyMount]:
-        ...
+    def active_mounts_for(self, config: BrokerConfig) -> list[ProxyMount]: ...
 
-    def retired_connection_ids(self, active_connection_ids: set[str]) -> set[str]:
-        ...
+    def retired_connection_ids(self, active_connection_ids: set[str]) -> set[str]: ...
 ```
 
 The exact API can shrink during implementation; the boundary is more important

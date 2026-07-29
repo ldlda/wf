@@ -264,7 +264,9 @@ class FakeStatefulSession:
     page_open: bool = False
     calls: list[tuple[str, dict[str, Any]]] = field(default_factory=list)
 
-    async def call_tool(self, tool_name: str, payload: dict[str, Any]) -> ToolCallResult:
+    async def call_tool(
+        self, tool_name: str, payload: dict[str, Any]
+    ) -> ToolCallResult:
         self.calls.append((tool_name, payload))
         if tool_name == "browser_navigate":
             self.page_open = True
@@ -440,7 +442,7 @@ result = await executor.call_tool(
 In `src/wf_mcp/broker/discovery.py`, where `wrap_discovered_tool(...)` is called, pass:
 
 ```python
-executor=adapter
+executor = adapter
 ```
 
 Do not change catalog refresh behavior yet. The adapter remains the temporary executor.
@@ -450,13 +452,13 @@ Do not change catalog refresh behavior yet. The adapter remains the temporary ex
 In `tests/wf_mcp/test_workflow_wrappers.py`, replace:
 
 ```python
-adapter=cast(BackendAdapter, adapter),
+adapter = (cast(BackendAdapter, adapter),)
 ```
 
 with:
 
 ```python
-executor=cast(ToolExecutor, adapter),
+executor = (cast(ToolExecutor, adapter),)
 ```
 
 and import:
@@ -517,7 +519,9 @@ class PersistentMcpSession:
     auth: AuthRecord | None
     client: Any
 
-    async def call_tool(self, tool_name: str, payload: dict[str, Any]) -> ToolCallResult:
+    async def call_tool(
+        self, tool_name: str, payload: dict[str, Any]
+    ) -> ToolCallResult:
         return await self.client.call_tool(tool_name, payload)
 
     async def close(self) -> None:
@@ -635,7 +639,9 @@ def test_runtime_pool_reuses_stateful_session_for_same_connection() -> None:
         metadata={"transport": "stdio", "command": "pnpx", "args": ["@playwright/mcp"]},
     )
 
-    def factory(connection: ConnectionConfig, auth: AuthRecord | None) -> PersistentMcpSession:
+    def factory(
+        connection: ConnectionConfig, auth: AuthRecord | None
+    ) -> PersistentMcpSession:
         return PersistentMcpSession(
             connection=connection,
             auth=auth,
@@ -723,7 +729,7 @@ def _tool_executor_for(self, connection: ConnectionConfig) -> ToolExecutor:
 Where service discovery calls `specs_from_discovered_tools(...)`, thread through:
 
 ```python
-executor=self._tool_executor_for(connection)
+executor = self._tool_executor_for(connection)
 ```
 
 If `specs_from_discovered_tools` currently accepts `adapter`, change its
@@ -843,25 +849,31 @@ class PersistentSessionFactory:
                 ClientSession(read_stream, write_stream)
             )
             await session.initialize()
-            return PersistentMcpSession(connection=connection, auth=auth, client=session)
+            return PersistentMcpSession(
+                connection=connection, auth=auth, client=session
+            )
 
         if transport == "streamable_http":
             http_client = await self.async_exit_stack.enter_async_context(
                 httpx.AsyncClient()
             )
-            read_stream, write_stream, _get_session_id = (
-                await self.async_exit_stack.enter_async_context(
-                    streamable_http_client(
-                        connection.metadata["url"],
-                        http_client=http_client,
-                    )
+            (
+                read_stream,
+                write_stream,
+                _get_session_id,
+            ) = await self.async_exit_stack.enter_async_context(
+                streamable_http_client(
+                    connection.metadata["url"],
+                    http_client=http_client,
                 )
             )
             session = await self.async_exit_stack.enter_async_context(
                 ClientSession(read_stream, write_stream)
             )
             await session.initialize()
-            return PersistentMcpSession(connection=connection, auth=auth, client=session)
+            return PersistentMcpSession(
+                connection=connection, auth=auth, client=session
+            )
 
         raise ValueError(f"unsupported MCP transport {transport!r}")
 

@@ -52,8 +52,8 @@ twice. Today this is harmless because `context_from_service()` passes:
 
 ```python
 specs = WfMcpWorkflowSpecProvider(service)
-capability_sources=specs.capability_sources
-specs=specs
+capability_sources = specs.capability_sources
+specs = specs
 ```
 
 But it creates a future maintenance trap: one API may iterate

@@ -115,7 +115,10 @@ Prove that two sequential `call_capability` RPC requests through the JSON-RPC se
 ```python
 # tests/wf_transport_rpc_http/test_mcp_backed_server_rpc.py
 
-async def test_rpc_workflow_shares_mcp_runtime_session_across_tool_calls(tmp_path) -> None:
+
+async def test_rpc_workflow_shares_mcp_runtime_session_across_tool_calls(
+    tmp_path,
+) -> None:
     """Prove JSON-RPC-backed workflow server uses shared McpRuntimePool."""
     # 1. Build server from config (wires McpRuntimePool)
     config = BrokerConfig(
@@ -135,11 +138,11 @@ async def test_rpc_workflow_shares_mcp_runtime_session_across_tool_calls(tmp_pat
     )
     server = build_workflow_server_from_config(config)
     app = create_rpc_app(server)
-    
+
     # 2. Track session creation via pool's internal state
     pool = server.context.specs  # Access through context
     # ... or access via service.upstream.tool_executor
-    
+
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app),
         base_url="http://test",
@@ -148,19 +151,19 @@ async def test_rpc_workflow_shares_mcp_runtime_session_across_tool_calls(tmp_pat
             url="http://test/rpc",
             http_client=http_client,
         )
-        
+
         # 3. First tool call - creates session
         first = await client.call_capability(
             qualified_name="fixture.personal.echo_tool",
             payload={"text": "one"},
         )
-        
+
         # 4. Second tool call - should reuse session
         second = await client.call_capability(
             qualified_name="fixture.personal.echo_tool",
             payload={"text": "two"},
         )
-    
+
     # 5. Verify same session was used (pool has exactly 1 session)
     assert first["outcome"] == "ok"
     assert second["outcome"] == "ok"

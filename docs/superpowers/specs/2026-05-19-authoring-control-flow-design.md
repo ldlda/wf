@@ -31,10 +31,13 @@ constructing edges/conditions independently.
 `branch()` is already good:
 
 ```python
-g.branch(tool, {
-    "ok": next_step,
-    "error": fail_step,
-})
+g.branch(
+    tool,
+    {
+        "ok": next_step,
+        "error": fail_step,
+    },
+)
 ```
 
 It has one clear meaning:

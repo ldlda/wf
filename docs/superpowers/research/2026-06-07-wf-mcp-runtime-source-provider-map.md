@@ -363,6 +363,7 @@ class StdioSourceTransport(SourceRegistryBaseModel):
     args: tuple[str, ...] = ()
     env: dict[str, str] = Field(default_factory=dict)
 
+
 class HttpSourceTransport(SourceRegistryBaseModel):
     kind: Literal["http"] = "http"
     url: AnyHttpUrl

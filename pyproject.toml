@@ -6,12 +6,12 @@ readme = "readme.md"
 authors = [{ name = "lda", email = "lda@ldlda.com" }]
 requires-python = ">=3.14"
 dependencies = [
-    # AnyIO 4.14.x exposes a FastMCP 3.4.2 stateful-proxy teardown bug.
-    # Remove after a FastMCP release includes PR #4363; see docs/runbooks/dependency-compatibility.md.
-    "anyio<4.14",
+    "anyio",
     "authlib>=1.7.0",
+    # smagafurov/fastapi-jsonrpc/issues/103 # TODO: Remove this once the next version of fastapi-jsonrpc is released and we upgrade to it.
+    "fastapi>=0.135,<0.140",
     "fastapi-jsonrpc>=3.5.0",
-    "fastmcp>=3.2.4",
+    "fastmcp>=3.4.5",
     "httpx>=0.28",
     "jsonpatch>=1.33",
     "jsonschema>=4.26",
@@ -40,7 +40,7 @@ dev = [
 ]
 
 [tool.pytest.ini_options]
-addopts = "-p no:cacheprovider -n auto"
+addopts = "-p no:cacheprovider -n 8"
 pythonpath = ["."]
 asyncio_mode = "auto"
 

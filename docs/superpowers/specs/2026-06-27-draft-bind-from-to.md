@@ -134,8 +134,7 @@ async def bind_draft(
     step_id: str,
     source_path: str,
     target_path: str,
-) -> dict[str, Any]:
-    ...
+) -> dict[str, Any]: ...
 ```
 
 Name notes:

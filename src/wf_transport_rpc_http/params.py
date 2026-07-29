@@ -19,5 +19,8 @@ def RpcParams(default: Any = ...) -> Any:
     argument being explicitly provided, so every method registration emits a
     deprecation warning. Keep the upstream subclass so fastapi-jsonrpc still
     recognises method params, but pass FastAPI's real "unset" sentinel.
+
+    This issue is fixed upstream at https://github.com/smagafurov/fastapi-jsonrpc/pull/101. Remove this wrapper once the next version of fastapi-jsonrpc is released and we upgrade to it.
     """
+    # TODO
     return _RpcParams(default)

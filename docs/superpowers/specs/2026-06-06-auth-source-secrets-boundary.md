@@ -166,9 +166,11 @@ class BoundMcpHttpAuth:
     headers: Mapping[str, str] = field(default_factory=dict)
     auth: httpx.Auth | None = None
 
+
 @dataclass(frozen=True)
 class BoundMcpStdioAuth:
     env: Mapping[str, str] = field(default_factory=dict)
+
 
 class McpAuthBinder(Protocol):
     async def bind_http_auth(

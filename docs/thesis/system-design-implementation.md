@@ -1099,10 +1099,12 @@ schemas:
 def read_notes(payload: ReadInput) -> ReadOutput:
     return ReadOutput(text=Path(payload.path).read_text(encoding="utf-8"))
 
+
 @node(name="extract_report")
 def extract_report(payload: ExtractInput) -> ReportOutput:
     # Parses Markdown sections into structured report fields
     ...
+
 
 @node(name="render_markdown_report")
 def render_markdown_report(payload: MarkdownInput) -> MarkdownOutput:

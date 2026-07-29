@@ -98,16 +98,16 @@ path objects before building canonical node bindings.
 Single string arguments are TOML key expressions:
 
 ```python
-state("person.name")          # state -> person -> name
-state('"person.name"')        # state -> "person.name"
-state('person."full name"')   # state -> person -> "full name"
+state("person.name")  # state -> person -> name
+state('"person.name"')  # state -> "person.name"
+state('person."full name"')  # state -> person -> "full name"
 ```
 
 Varargs and iterables are literal path segments:
 
 ```python
-state("person.name", "email") # state -> "person.name" -> email
-state(("person.name",))       # state -> "person.name"
+state("person.name", "email")  # state -> "person.name" -> email
+state(("person.name",))  # state -> "person.name"
 ```
 
 Builder canonical bindings use the path kind implied by position:

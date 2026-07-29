@@ -153,9 +153,7 @@ Then `Namespace` could rewrite only typed MCP resource-link content:
 
 ```python
 if isinstance(content, mcp.types.ResourceLink):
-    content = content.model_copy(
-        update={"uri": self._transform_uri(str(content.uri))}
-    )
+    content = content.model_copy(update={"uri": self._transform_uri(str(content.uri))})
 ```
 
 That would keep URI rewriting logic in `Namespace`, where the forward and

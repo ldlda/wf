@@ -179,7 +179,7 @@ So the runtime needs ordered writes:
 StateWrite(
     path=StatePath(("count",)),
     incoming_value=3,  # trace and barrier replay value
-    visible_value=5,   # same-lineage read value
+    visible_value=5,  # same-lineage read value
     reducer=ReducerRef(name="wf.std.add"),
 )
 ```
@@ -216,8 +216,9 @@ more important than performance. The implementation should keep this behind one
 helper so copy-on-write or structural sharing can replace it later.
 
 ```python
-def lineage_state_view(run: RunState, scope_id: str, lineage_id: str) -> dict[str, Any]:
-    ...
+def lineage_state_view(
+    run: RunState, scope_id: str, lineage_id: str
+) -> dict[str, Any]: ...
 ```
 
 ## Relationship to Concurrent Foreach
