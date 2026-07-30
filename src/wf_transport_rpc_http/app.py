@@ -1,9 +1,12 @@
-from __future__ import annotations
+"""JSON-RPC application composition.
 
-from typing import Any
+Return annotations stay eagerly evaluated because fastapi-jsonrpc captures them
+while registering nested handlers for response validation and OpenRPC output.
+"""
 
 import fastapi_jsonrpc as jsonrpc
 
+from wf_api.models import HealthResult
 from wf_server import WorkflowServer
 
 from .errors import WorkflowRpcError
@@ -39,7 +42,7 @@ def create_rpc_app(server: WorkflowServer, *, rpc_path: str = "/rpc") -> jsonrpc
         return {"status": "ok"}
 
     @entrypoint.method(name="workflow.health", errors=[WorkflowRpcError])
-    async def workflow_health() -> dict[str, Any]:
+    async def workflow_health() -> HealthResult:
         return {
             "status": "ok",
             "store_root": str(server.config.store_root),

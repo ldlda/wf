@@ -9,6 +9,16 @@ from wf_core.models.steps import InputBinding, OutputBinding
 
 from .draft_authoring import RouteSource
 from .draft_updates import CapabilityStepUpdate
+from .models import (
+    DeleteDeploymentResult,
+    ListDeploymentsResult,
+    ListRunsResult,
+    RunResult,
+    RunTraceResult,
+    SaveDeploymentResult,
+    ValidateDeploymentResult,
+    WorkflowDeploymentPayload,
+)
 from .runs import TraceRangeLike
 
 
@@ -380,31 +390,31 @@ class WorkflowArtifactSurface(Protocol):
 class WorkflowDeploymentSurface(Protocol):
     """Deployment methods exposed by workflow frontends."""
 
-    async def list_deployments(self) -> dict[str, Any]: ...
+    async def list_deployments(self) -> ListDeploymentsResult: ...
 
     async def inspect_deployment(
         self,
         *,
         deployment_id: str,
-    ) -> dict[str, Any]: ...
+    ) -> WorkflowDeploymentPayload: ...
 
     async def save_deployment(
         self,
         deployment: dict[str, Any],
-    ) -> dict[str, Any]: ...
+    ) -> SaveDeploymentResult: ...
 
     async def delete_deployment(
         self,
         *,
         deployment_id: str,
-    ) -> dict[str, Any]: ...
+    ) -> DeleteDeploymentResult: ...
 
     async def validate_deployment(
         self,
         *,
         deployment_id: str,
         live_check: bool = False,
-    ) -> dict[str, Any]: ...
+    ) -> ValidateDeploymentResult: ...
 
 
 class WorkflowRunSurface(Protocol):
@@ -416,7 +426,7 @@ class WorkflowRunSurface(Protocol):
         status: str | None = None,
         cursor: str | None = None,
         limit: int = 50,
-    ) -> dict[str, Any]: ...
+    ) -> ListRunsResult: ...
 
     async def run_deployment(
         self,
@@ -424,7 +434,7 @@ class WorkflowRunSurface(Protocol):
         deployment_id: str,
         workflow_input: dict[str, Any],
         trace_range: TraceRangeLike | None = None,
-    ) -> dict[str, Any]: ...
+    ) -> RunResult: ...
 
     async def resume_run(
         self,
@@ -433,20 +443,20 @@ class WorkflowRunSurface(Protocol):
         resume_payload: dict[str, Any],
         resume_outcome: str = "submitted",
         trace_range: TraceRangeLike | None = None,
-    ) -> dict[str, Any]: ...
+    ) -> RunResult: ...
 
     async def inspect_run(
         self,
         *,
         run_id: str,
-    ) -> dict[str, Any]: ...
+    ) -> RunResult: ...
 
     async def read_run_trace(
         self,
         *,
         run_id: str,
         trace_range: TraceRangeLike,
-    ) -> dict[str, Any]: ...
+    ) -> RunTraceResult: ...
 
 
 class WorkflowApiSurface(

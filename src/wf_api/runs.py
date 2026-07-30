@@ -15,6 +15,15 @@ from wf_core import RunState
 
 from .artifact_plans import raw_plan_from_artifact
 from .deployments import WorkflowDeploymentApi, _available_sources
+from .models import (
+    InterruptPayload,
+    JsonProjector,
+    ListRunsResult,
+    RunResult,
+    RunSummary,
+    RunTraceResult,
+    TraceEntryPayload,
+)
 from .next_actions import NextActions
 from .operation_context import WorkflowOperationContext
 from .run_lifecycle import (
@@ -28,6 +37,10 @@ from .run_lifecycle import (
 )
 from .run_locks import AsyncKeyedLock
 from .saved_subgraphs import saved_subgraph_tree_from_snapshots
+
+_PROJECT_INTERRUPT = JsonProjector(InterruptPayload)
+_PROJECT_RUN_RESULT = JsonProjector(RunResult)
+_PROJECT_RUN_TRACE_RESULT = JsonProjector(RunTraceResult)
 
 
 class TraceRangeLike(Protocol):
@@ -67,7 +80,7 @@ class WorkflowRunApi:
         deployment_id: str,
         workflow_input: dict[str, Any],
         trace_range: TraceRangeLike | None = None,
-    ) -> dict[str, Any]:
+    ) -> RunResult:
         trace_values = _trace_range_values(trace_range)
         deployment, artifact, diagnostics, tree = (
             self.deployments.deployment_validation(deployment_id)
@@ -118,7 +131,7 @@ class WorkflowRunApi:
         resume_payload: dict[str, Any],
         resume_outcome: str = "submitted",
         trace_range: TraceRangeLike | None = None,
-    ) -> dict[str, Any]:
+    ) -> RunResult:
         """Resume one durable interrupted deployment run."""
         # FileRunStore locks individual file writes only. The API layer owns the
         # process-local read/execute/write critical section for one run id.
@@ -137,7 +150,7 @@ class WorkflowRunApi:
         resume_payload: dict[str, Any],
         resume_outcome: str,
         trace_range: TraceRangeLike | None,
-    ) -> dict[str, Any]:
+    ) -> RunResult:
         trace_values = _trace_range_values(trace_range)
         record, stopped_run = restore_interrupted_run(self._run_store(), run_id)
         environment = record.environment
@@ -201,7 +214,7 @@ class WorkflowRunApi:
         status: str | None = None,
         cursor: str | None = None,
         limit: int = 50,
-    ) -> dict[str, Any]:
+    ) -> ListRunsResult:
         """Return compact persisted run summaries without trace or checkpoint state."""
         if limit < 1 or limit > 100:
             raise ValueError("limit must be between 1 and 100")
@@ -232,7 +245,7 @@ class WorkflowRunApi:
             "limit": limit,
         }
 
-    async def inspect_run(self, *, run_id: str) -> dict[str, Any]:
+    async def inspect_run(self, *, run_id: str) -> RunResult:
         """Return one durable stopped-run summary without debug trace entries."""
         record, run = load_stored_run(self._run_store(), run_id)
         environment = record.environment
@@ -255,12 +268,12 @@ class WorkflowRunApi:
         *,
         run_id: str,
         trace_range: TraceRangeLike,
-    ) -> dict[str, Any]:
+    ) -> RunTraceResult:
         """Return only a caller-bounded debug trace slice from a stopped run."""
         trace_values = _trace_range_values(trace_range)
         record, run = load_stored_run(self._run_store(), run_id)
         environment = record.environment
-        return _run_payload(
+        payload = _run_payload(
             deployment=environment.deployment,
             artifact=environment.root_artifact,
             status=record.status.value,
@@ -270,6 +283,9 @@ class WorkflowRunApi:
             trace_count=len(run.trace),
             **_trace_slice_fields(run, trace_values),
         )
+        # A concrete trace range makes _run_payload include the four trace
+        # fields required by the narrower trace-result contract.
+        return _PROJECT_RUN_TRACE_RESULT(payload)
 
 
 def _trace_range_values(
@@ -300,7 +316,7 @@ def _cursor_offset(cursor: str | None) -> int:
     return offset
 
 
-def _run_summary(record: WorkflowRunRecord) -> dict[str, Any]:
+def _run_summary(record: WorkflowRunRecord) -> RunSummary:
     """Return an operator-facing run row without heavy runtime state."""
     environment = record.environment
     return {
@@ -340,17 +356,17 @@ def _run_payload(
     status: str,
     run_id: str | None = None,
     resume_readiness: str | None = None,
-    interrupt: dict[str, Any] | None = None,
+    interrupt: InterruptPayload | None = None,
     outcome: str | None = None,
     error: str | None = None,
     diagnostics: list[DependencyDiagnostic] | None = None,
     output: dict[str, Any] | None = None,
     trace_count: int = 0,
-    trace: list[dict[str, Any]] | None = None,
+    trace: list[TraceEntryPayload] | None = None,
     trace_start: int | None = None,
     trace_limit: int | None = None,
     trace_truncated: bool = False,
-) -> dict[str, Any]:
+) -> RunResult:
     payload = {
         "deployment_id": deployment.id,
         "artifact_id": artifact.id,
@@ -380,10 +396,12 @@ def _run_payload(
         payload["trace_limit"] = trace_limit
         payload["trace"] = trace
         payload["trace_truncated"] = trace_truncated
-    return payload
+    # This helper is the sole projection from runtime/Pydantic objects into the
+    # stable JSON dictionary described by RunResult.
+    return _PROJECT_RUN_RESULT(payload)
 
 
-def _interrupt_payload(run: RunState) -> dict[str, Any] | None:
+def _interrupt_payload(run: RunState) -> InterruptPayload | None:
     """Return a JSON-safe interrupt payload for the current run, if paused."""
     if run.interrupt is None:
         return None
@@ -395,4 +413,4 @@ def _interrupt_payload(run: RunState) -> dict[str, Any] | None:
         workflow_ref = route["workflow_ref"]
         if hasattr(workflow_ref, "model_dump"):
             route["workflow_ref"] = workflow_ref.model_dump(mode="json")
-    return payload
+    return _PROJECT_INTERRUPT(payload)

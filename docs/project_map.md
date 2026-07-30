@@ -51,6 +51,9 @@ can continue to reach a loopback-only workflow RPC server.
 - [`docs/wf_authoring_control_flow.md`](wf_authoring_control_flow.md): when to
   use `branch`, `handle`, `match`, `when`, and `choose`.
 - `wf_api.WorkflowApi`: process-local workflow application facade.
+- `wf_api.models`: canonical transport-neutral request and result models shared
+  by process-local surfaces and remote transports. Legacy `wf_mcp` DTOs are
+  compatibility contracts, not a second source of truth.
 - `wf_server.WorkflowServer`: durable workflow server composition object.
 - `wf_transport_rpc_http.RpcWorkflowApiClient`: JSON-RPC client implementing
   the workflow/admin surfaces over HTTP.

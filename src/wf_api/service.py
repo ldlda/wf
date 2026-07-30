@@ -13,7 +13,17 @@ from .deployments import WorkflowDeploymentApi
 from .draft_authoring import RouteSource, WorkflowDraftAuthoringApi
 from .draft_updates import CapabilityStepUpdate
 from .drafts import WorkflowDraftApi
-from .models import RawWorkflowPlan
+from .models import (
+    DeleteDeploymentResult,
+    ListDeploymentsResult,
+    ListRunsResult,
+    RawWorkflowPlan,
+    RunResult,
+    RunTraceResult,
+    SaveDeploymentResult,
+    ValidateDeploymentResult,
+    WorkflowDeploymentPayload,
+)
 from .operation_context import WorkflowOperationContext
 from .runs import TraceRangeLike, WorkflowRunApi
 
@@ -726,27 +736,27 @@ class WorkflowApi:
 
     # -- deployments --
 
-    async def list_deployments(self) -> dict[str, Any]:
+    async def list_deployments(self) -> ListDeploymentsResult:
         return await self.deployments.list_deployments()
 
     async def inspect_deployment(
         self,
         *,
         deployment_id: str,
-    ) -> dict[str, Any]:
+    ) -> WorkflowDeploymentPayload:
         return await self.deployments.inspect_deployment(deployment_id=deployment_id)
 
     async def save_deployment(
         self,
         deployment: dict[str, Any],
-    ) -> dict[str, Any]:
+    ) -> SaveDeploymentResult:
         return await self.deployments.save_deployment(deployment)
 
     async def delete_deployment(
         self,
         *,
         deployment_id: str,
-    ) -> dict[str, Any]:
+    ) -> DeleteDeploymentResult:
         return await self.deployments.delete_deployment(deployment_id=deployment_id)
 
     async def validate_deployment(
@@ -754,7 +764,7 @@ class WorkflowApi:
         *,
         deployment_id: str,
         live_check: bool = False,
-    ) -> dict[str, Any]:
+    ) -> ValidateDeploymentResult:
         return await self.deployments.validate_deployment(
             deployment_id=deployment_id,
             live_check=live_check,
@@ -768,7 +778,7 @@ class WorkflowApi:
         status: str | None = None,
         cursor: str | None = None,
         limit: int = 50,
-    ) -> dict[str, Any]:
+    ) -> ListRunsResult:
         return await self.runs.list_runs(
             status=status,
             cursor=cursor,
@@ -781,7 +791,7 @@ class WorkflowApi:
         deployment_id: str,
         workflow_input: dict[str, Any],
         trace_range: TraceRangeLike | None = None,
-    ) -> dict[str, Any]:
+    ) -> RunResult:
         return await self.runs.run_deployment(
             deployment_id=deployment_id,
             workflow_input=workflow_input,
@@ -795,7 +805,7 @@ class WorkflowApi:
         resume_payload: dict[str, Any],
         resume_outcome: str = "submitted",
         trace_range: TraceRangeLike | None = None,
-    ) -> dict[str, Any]:
+    ) -> RunResult:
         return await self.runs.resume_run(
             run_id=run_id,
             resume_payload=resume_payload,
@@ -807,7 +817,7 @@ class WorkflowApi:
         self,
         *,
         run_id: str,
-    ) -> dict[str, Any]:
+    ) -> RunResult:
         return await self.runs.inspect_run(run_id=run_id)
 
     async def read_run_trace(
@@ -815,7 +825,7 @@ class WorkflowApi:
         *,
         run_id: str,
         trace_range: TraceRangeLike,
-    ) -> dict[str, Any]:
+    ) -> RunTraceResult:
         return await self.runs.read_run_trace(
             run_id=run_id,
             trace_range=trace_range,

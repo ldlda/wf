@@ -1,9 +1,12 @@
-from __future__ import annotations
+"""Run JSON-RPC method registration.
 
-from typing import Any
+Return annotations stay eagerly evaluated because fastapi-jsonrpc captures them
+while registering nested handlers for response validation and OpenRPC output.
+"""
 
 import fastapi_jsonrpc as jsonrpc
 
+from wf_api.models import ListRunsResult, RunResult, RunTraceResult
 from wf_server import WorkflowServer
 
 from ..errors import WorkflowRpcError, raise_workflow_rpc_error
@@ -26,7 +29,7 @@ def register_methods(
     @entrypoint.method(name="workflow.runs.list", errors=[WorkflowRpcError])
     async def workflow_runs_list(
         params: ListRunsParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> ListRunsResult:
         try:
             return await server.api.list_runs(
                 status=params.status,
@@ -39,7 +42,7 @@ def register_methods(
     @entrypoint.method(name="workflow.runs.start", errors=[WorkflowRpcError])
     async def workflow_runs_start(
         params: StartRunParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> RunResult:
         try:
             return await server.api.run_deployment(
                 deployment_id=params.deployment_id,
@@ -56,7 +59,7 @@ def register_methods(
     @entrypoint.method(name="workflow.runs.inspect", errors=[WorkflowRpcError])
     async def workflow_runs_inspect(
         params: InspectRunParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> RunResult:
         try:
             return await server.api.inspect_run(run_id=params.run_id)
         except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:
@@ -65,7 +68,7 @@ def register_methods(
     @entrypoint.method(name="workflow.runs.trace", errors=[WorkflowRpcError])
     async def workflow_runs_trace(
         params: ReadRunTraceParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> RunTraceResult:
         try:
             return await server.api.read_run_trace(
                 run_id=params.run_id,
@@ -77,7 +80,7 @@ def register_methods(
     @entrypoint.method(name="workflow.runs.resume", errors=[WorkflowRpcError])
     async def workflow_runs_resume(
         params: ResumeRunParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> RunResult:
         try:
             return await server.api.resume_run(
                 run_id=params.run_id,

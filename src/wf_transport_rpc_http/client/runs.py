@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
+from wf_api.models import ListRunsResult, RunResult, RunTraceResult
 from wf_api.runs import TraceRangeLike
 
 from .base import RpcCaller
@@ -16,14 +17,17 @@ class RpcRunClientMixin:
         status: str | None = None,
         cursor: str | None = None,
         limit: int = 50,
-    ) -> dict[str, Any]:
-        return await self._call(
-            "workflow.runs.list",
-            {
-                "status": status,
-                "cursor": cursor,
-                "limit": limit,
-            },
+    ) -> ListRunsResult:
+        return cast(
+            ListRunsResult,
+            await self._call(
+                "workflow.runs.list",
+                {
+                    "status": status,
+                    "cursor": cursor,
+                    "limit": limit,
+                },
+            ),
         )
 
     async def run_deployment(
@@ -32,14 +36,17 @@ class RpcRunClientMixin:
         deployment_id: str,
         workflow_input: dict[str, Any],
         trace_range: TraceRangeLike | None = None,
-    ) -> dict[str, Any]:
-        return await self._call(
-            "workflow.runs.start",
-            {
-                "deployment_id": deployment_id,
-                "workflow_input": workflow_input,
-                "trace_range": _trace_range_payload(trace_range),
-            },
+    ) -> RunResult:
+        return cast(
+            RunResult,
+            await self._call(
+                "workflow.runs.start",
+                {
+                    "deployment_id": deployment_id,
+                    "workflow_input": workflow_input,
+                    "trace_range": _trace_range_payload(trace_range),
+                },
+            ),
         )
 
     async def resume_run(
@@ -49,32 +56,41 @@ class RpcRunClientMixin:
         resume_payload: dict[str, Any],
         resume_outcome: str = "submitted",
         trace_range: TraceRangeLike | None = None,
-    ) -> dict[str, Any]:
-        return await self._call(
-            "workflow.runs.resume",
-            {
-                "run_id": run_id,
-                "resume_payload": resume_payload,
-                "resume_outcome": resume_outcome,
-                "trace_range": _trace_range_payload(trace_range),
-            },
+    ) -> RunResult:
+        return cast(
+            RunResult,
+            await self._call(
+                "workflow.runs.resume",
+                {
+                    "run_id": run_id,
+                    "resume_payload": resume_payload,
+                    "resume_outcome": resume_outcome,
+                    "trace_range": _trace_range_payload(trace_range),
+                },
+            ),
         )
 
-    async def inspect_run(self: RpcCaller, *, run_id: str) -> dict[str, Any]:
-        return await self._call("workflow.runs.inspect", {"run_id": run_id})
+    async def inspect_run(self: RpcCaller, *, run_id: str) -> RunResult:
+        return cast(
+            RunResult,
+            await self._call("workflow.runs.inspect", {"run_id": run_id}),
+        )
 
     async def read_run_trace(
         self: RpcCaller,
         *,
         run_id: str,
         trace_range: TraceRangeLike,
-    ) -> dict[str, Any]:
-        return await self._call(
-            "workflow.runs.trace",
-            {
-                "run_id": run_id,
-                "trace_range": _trace_range_payload(trace_range),
-            },
+    ) -> RunTraceResult:
+        return cast(
+            RunTraceResult,
+            await self._call(
+                "workflow.runs.trace",
+                {
+                    "run_id": run_id,
+                    "trace_range": _trace_range_payload(trace_range),
+                },
+            ),
         )
 
 

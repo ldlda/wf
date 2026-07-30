@@ -68,3 +68,17 @@
   with no parity check or generated contract. Add an operation-inventory test
   or a code-generation seam so server additions cannot silently remain absent
   from TypeScript.
+  - A 2026-07-30 spike confirmed that `fastapi-jsonrpc` already exports a
+    complete OpenRPC document for all 70 registered methods. Request payloads
+    retain useful Pydantic schemas, so OpenRPC is a viable transport input.
+  - The first typed-result slice now gives `workflow.health` and all deployment
+    and run operations named transport-neutral result schemas: 11 of 70
+    methods. The remaining 59 success results still collapse to generic objects
+    because their Python API and JSON-RPC handlers return `dict[str, Any]`.
+    Continue introducing operation result DTOs before adopting generated
+    TypeScript contracts.
+  - The stock `@open-rpc/generator` TypeScript client is not suitable here. It
+    exhausted a 4 GB Node heap on the full contract and emitted invalid dotted
+    class members plus `any` results for a minimal `workflow.health` contract.
+    Keep OpenRPC as an interchange format, but generate a small
+    transport-neutral contract manifest rather than adopting its client stack.

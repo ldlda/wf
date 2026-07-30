@@ -15,9 +15,21 @@ from wf_artifacts import (
 )
 from wf_platform import CapabilitySource, hash_json_schema
 
+from .models import (
+    DeleteDeploymentResult,
+    DeploymentSummary,
+    JsonProjector,
+    ListDeploymentsResult,
+    SaveDeploymentResult,
+    ValidateDeploymentResult,
+    WorkflowDeploymentPayload,
+)
 from .next_actions import NextActions
 from .operation_context import WorkflowOperationContext
 from .saved_subgraphs import resolve_saved_subgraph_tree, validate_saved_subgraph_tree
+
+_PROJECT_DEPLOYMENT = JsonProjector(WorkflowDeploymentPayload)
+_PROJECT_DEPLOYMENT_VALIDATION = JsonProjector(ValidateDeploymentResult)
 
 
 class WorkflowDeploymentApi:
@@ -31,7 +43,7 @@ class WorkflowDeploymentApi:
             raise KeyError("workflow artifact store is not configured")
         return self.context.artifact_store
 
-    async def list_deployments(self) -> dict[str, Any]:
+    async def list_deployments(self) -> ListDeploymentsResult:
         if self.context.artifact_store is None:
             return {"deployments": []}
         return {
@@ -41,12 +53,18 @@ class WorkflowDeploymentApi:
             ]
         }
 
-    async def inspect_deployment(self, *, deployment_id: str) -> dict[str, Any]:
-        return (
-            self._artifact_store().get_deployment(deployment_id).model_dump(mode="json")
+    async def inspect_deployment(
+        self, *, deployment_id: str
+    ) -> WorkflowDeploymentPayload:
+        return _PROJECT_DEPLOYMENT(
+            self._artifact_store()
+            .get_deployment(deployment_id)
+            .model_dump(mode="json"),
         )
 
-    async def save_deployment(self, deployment: dict[str, Any]) -> dict[str, Any]:
+    async def save_deployment(
+        self, deployment: dict[str, Any]
+    ) -> SaveDeploymentResult:
         workflow_deployment = WorkflowDeployment.model_validate(deployment)
         self._artifact_store().save_deployment(workflow_deployment)
         self.context.events.record_workflow_event(
@@ -65,7 +83,9 @@ class WorkflowDeploymentApi:
             "saved": True,
         }
 
-    async def delete_deployment(self, *, deployment_id: str) -> dict[str, Any]:
+    async def delete_deployment(
+        self, *, deployment_id: str
+    ) -> DeleteDeploymentResult:
         """Delete one mutable deployment environment binding."""
         self._artifact_store().delete_deployment(deployment_id)
         self.context.events.record_workflow_event(
@@ -80,7 +100,7 @@ class WorkflowDeploymentApi:
         *,
         deployment_id: str,
         live_check: bool = False,
-    ) -> dict[str, Any]:
+    ) -> ValidateDeploymentResult:
         deployment, artifact, diagnostics, tree = self.deployment_validation(
             deployment_id
         )
@@ -91,7 +111,7 @@ class WorkflowDeploymentApi:
                     artifacts=[artifact, *tree.artifacts_by_ref.values()],
                 )
             )
-        return {
+        result = {
             "deployment_id": deployment.id,
             "artifact_id": artifact.id,
             "artifact_version": artifact.version,
@@ -104,6 +124,7 @@ class WorkflowDeploymentApi:
                 diagnostics=diagnostics,
             ).model_dump(mode="json"),
         }
+        return _PROJECT_DEPLOYMENT_VALIDATION(result)
 
     def deployment_validation(
         self,
@@ -196,7 +217,7 @@ def _capability_name(qualified_name: str) -> str | None:
     return parsed.name
 
 
-def _deployment_summary(deployment: WorkflowDeployment) -> dict[str, Any]:
+def _deployment_summary(deployment: WorkflowDeployment) -> DeploymentSummary:
     """Return compact deployment metadata for progressive list responses."""
     return {
         "id": deployment.id,

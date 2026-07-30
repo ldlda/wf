@@ -1,9 +1,18 @@
-from __future__ import annotations
+"""Deployment JSON-RPC method registration.
 
-from typing import Any
+Return annotations stay eagerly evaluated because fastapi-jsonrpc captures them
+while registering nested handlers for response validation and OpenRPC output.
+"""
 
 import fastapi_jsonrpc as jsonrpc
 
+from wf_api.models import (
+    DeleteDeploymentResult,
+    ListDeploymentsResult,
+    SaveDeploymentResult,
+    ValidateDeploymentResult,
+    WorkflowDeploymentPayload,
+)
 from wf_server import WorkflowServer
 
 from ..errors import WorkflowRpcError, raise_workflow_rpc_error
@@ -26,7 +35,7 @@ def register_methods(
     @entrypoint.method(name="workflow.deployments.save", errors=[WorkflowRpcError])
     async def workflow_deployments_save(
         params: SaveDeploymentParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> SaveDeploymentResult:
         try:
             return await server.api.save_deployment(params.deployment)
         except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:
@@ -35,7 +44,7 @@ def register_methods(
     @entrypoint.method(name="workflow.deployments.validate", errors=[WorkflowRpcError])
     async def workflow_deployments_validate(
         params: ValidateDeploymentParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> ValidateDeploymentResult:
         try:
             return await server.api.validate_deployment(
                 deployment_id=params.deployment_id,
@@ -47,7 +56,7 @@ def register_methods(
     @entrypoint.method(name="workflow.deployments.list", errors=[WorkflowRpcError])
     async def workflow_deployments_list(
         params: ListDeploymentsParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> ListDeploymentsResult:
         try:
             return await server.api.list_deployments()
         except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:
@@ -56,7 +65,7 @@ def register_methods(
     @entrypoint.method(name="workflow.deployments.inspect", errors=[WorkflowRpcError])
     async def workflow_deployments_inspect(
         params: InspectDeploymentParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> WorkflowDeploymentPayload:
         try:
             return await server.api.inspect_deployment(
                 deployment_id=params.deployment_id,
@@ -67,7 +76,7 @@ def register_methods(
     @entrypoint.method(name="workflow.deployments.delete", errors=[WorkflowRpcError])
     async def workflow_deployments_delete(
         params: DeleteDeploymentParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> DeleteDeploymentResult:
         try:
             return await server.api.delete_deployment(
                 deployment_id=params.deployment_id,
