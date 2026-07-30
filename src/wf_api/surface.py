@@ -10,13 +10,17 @@ from wf_core.models.steps import InputBinding, OutputBinding
 from .draft_authoring import RouteSource
 from .draft_updates import CapabilityStepUpdate
 from .models import (
+    DeleteArtifactResult,
     DeleteDeploymentResult,
+    ListArtifactsResult,
     ListDeploymentsResult,
     ListRunsResult,
     RunResult,
     RunTraceResult,
+    SaveArtifactResult,
     SaveDeploymentResult,
     ValidateDeploymentResult,
+    WorkflowArtifactPayload,
     WorkflowDeploymentPayload,
 )
 from .runs import TraceRangeLike
@@ -355,21 +359,26 @@ class WorkflowArtifactSurface(Protocol):
         kind: ArtifactKind | None = None,
         cursor: str | None = None,
         limit: int = 50,
-    ) -> dict[str, Any]: ...
+    ) -> ListArtifactsResult: ...
 
     async def inspect_artifact(
         self,
         *,
         artifact_id: str,
         version: int,
-    ) -> dict[str, Any]: ...
+    ) -> WorkflowArtifactPayload: ...
+
+    async def save_artifact(
+        self,
+        artifact: dict[str, Any],
+    ) -> SaveArtifactResult: ...
 
     async def delete_artifact(
         self,
         *,
         artifact_id: str,
         version: int,
-    ) -> dict[str, Any]: ...
+    ) -> DeleteArtifactResult: ...
 
     async def create_artifact_from_plan(
         self,
@@ -384,7 +393,7 @@ class WorkflowArtifactSurface(Protocol):
         required_capabilities: dict[str, dict[str, Any]] | None = None,
         source_bindings: dict[str, str] | None = None,
         created_from_catalog_version: str | None = None,
-    ) -> dict[str, Any]: ...
+    ) -> SaveArtifactResult: ...
 
 
 class WorkflowDeploymentSurface(Protocol):

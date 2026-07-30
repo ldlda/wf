@@ -24,8 +24,20 @@ from .artifact_refs import artifact_capability_id
 from .capability_requirements import observed_node_specs
 from .drafts import WorkflowDraftApi
 from .listing import matches_query, paged_list_payload
-from .models import RawWorkflowPlan
+from .models import (
+    DeleteArtifactResult,
+    JsonProjector,
+    ListArtifactsResult,
+    RawWorkflowPlan,
+    SaveArtifactResult,
+    WorkflowArtifactPayload,
+)
 from .operation_context import WorkflowOperationContext
+
+_PROJECT_ARTIFACT = JsonProjector(WorkflowArtifactPayload)
+_PROJECT_ARTIFACT_LIST = JsonProjector(ListArtifactsResult)
+_PROJECT_ARTIFACT_SAVE = JsonProjector(SaveArtifactResult)
+_PROJECT_ARTIFACT_DELETE = JsonProjector(DeleteArtifactResult)
 
 
 class WorkflowArtifactApi:
@@ -51,14 +63,16 @@ class WorkflowArtifactApi:
         kind: ArtifactKind | None = None,
         cursor: str | None = None,
         limit: int = 50,
-    ) -> dict[str, Any]:
+    ) -> ListArtifactsResult:
         """Return compact paged saved artifact summaries.
 
         Saved artifacts can contain full raw workflow plans, so list results
         deliberately stay summary-only. Use inspect/run tools for detail.
         """
         if self.context.artifact_store is None:
-            return paged_list_payload("nodes", [], cursor=cursor, limit=limit)
+            return _PROJECT_ARTIFACT_LIST(
+                paged_list_payload("nodes", [], cursor=cursor, limit=limit)
+            )
         entries = [
             artifact_catalog_entry(artifact).model_dump(mode="json")
             for artifact in self.context.artifact_store.list_artifacts()
@@ -77,9 +91,13 @@ class WorkflowArtifactApi:
             )
         ]
         entries.sort(key=lambda entry: str(entry.get("name", "")))
-        return paged_list_payload("nodes", entries, cursor=cursor, limit=limit)
+        return _PROJECT_ARTIFACT_LIST(
+            paged_list_payload("nodes", entries, cursor=cursor, limit=limit)
+        )
 
-    async def save_artifact(self, artifact: dict[str, Any]) -> dict[str, Any]:
+    async def save_artifact(
+        self, artifact: dict[str, Any]
+    ) -> SaveArtifactResult:
         workflow_artifact = WorkflowArtifact.model_validate(artifact)
         self._artifact_store().save_artifact(workflow_artifact)
         self.context.events.record_workflow_event(
@@ -90,11 +108,13 @@ class WorkflowArtifactApi:
                 "version": workflow_artifact.version,
             },
         )
-        return {
-            "artifact_id": workflow_artifact.id,
-            "version": workflow_artifact.version,
-            "saved": True,
-        }
+        return _PROJECT_ARTIFACT_SAVE(
+            {
+                "artifact_id": workflow_artifact.id,
+                "version": workflow_artifact.version,
+                "saved": True,
+            }
+        )
 
     async def create_artifact_from_plan(
         self,
@@ -109,7 +129,7 @@ class WorkflowArtifactApi:
         required_capabilities: dict[str, dict[str, Any]] | None = None,
         source_bindings: dict[str, str] | None = None,
         created_from_catalog_version: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> SaveArtifactResult:
         typed_plan = (
             plan
             if isinstance(plan, RawWorkflowPlan)
@@ -141,11 +161,13 @@ class WorkflowArtifactApi:
                 "created_from_plan": True,
             },
         )
-        return {
-            "artifact_id": workflow_artifact.id,
-            "version": workflow_artifact.version,
-            "saved": True,
-        }
+        return _PROJECT_ARTIFACT_SAVE(
+            {
+                "artifact_id": workflow_artifact.id,
+                "version": workflow_artifact.version,
+                "saved": True,
+            }
+        )
 
     async def create_artifact_from_draft(
         self,
@@ -274,35 +296,39 @@ class WorkflowArtifactApi:
 
     async def inspect_artifact(
         self, *, artifact_id: str, version: int
-    ) -> dict[str, Any]:
+    ) -> WorkflowArtifactPayload:
         artifact = self._artifact_store().get_artifact(artifact_id, version)
-        return artifact.model_dump(mode="json")
+        return _PROJECT_ARTIFACT(artifact.model_dump(mode="json"))
 
     async def delete_artifact(
         self, *, artifact_id: str, version: int
-    ) -> dict[str, Any]:
+    ) -> DeleteArtifactResult:
         store = self._artifact_store()
         blockers = store.deployments_for_artifact(artifact_id, version)
         blocker_ids = [deployment.id for deployment in blockers]
         if blocker_ids:
-            return {
-                "artifact_id": artifact_id,
-                "version": version,
-                "deleted": False,
-                "blocked_by_deployments": blocker_ids,
-            }
+            return _PROJECT_ARTIFACT_DELETE(
+                {
+                    "artifact_id": artifact_id,
+                    "version": version,
+                    "deleted": False,
+                    "blocked_by_deployments": blocker_ids,
+                }
+            )
         store.delete_artifact(artifact_id, version)
         self.context.events.record_workflow_event(
             "workflow_artifact_deleted",
             capability_id=f"{artifact_id}@{version}",
             payload={"artifact_id": artifact_id, "version": version},
         )
-        return {
-            "artifact_id": artifact_id,
-            "version": version,
-            "deleted": True,
-            "blocked_by_deployments": [],
-        }
+        return _PROJECT_ARTIFACT_DELETE(
+            {
+                "artifact_id": artifact_id,
+                "version": version,
+                "deleted": True,
+                "blocked_by_deployments": [],
+            }
+        )
 
 
 def _suggested_self_bindings(

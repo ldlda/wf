@@ -1,9 +1,17 @@
-from __future__ import annotations
+"""Artifact JSON-RPC method registration.
 
-from typing import Any
+Return annotations stay eagerly evaluated because fastapi-jsonrpc captures them
+while registering nested handlers for response validation and OpenRPC output.
+"""
 
 import fastapi_jsonrpc as jsonrpc
 
+from wf_api.models import (
+    DeleteArtifactResult,
+    ListArtifactsResult,
+    SaveArtifactResult,
+    WorkflowArtifactPayload,
+)
 from wf_server import WorkflowServer
 
 from ..errors import WorkflowRpcError, raise_workflow_rpc_error
@@ -29,7 +37,7 @@ def register_methods(
     )
     async def workflow_artifacts_create_from_plan(
         params: CreateArtifactFromPlanParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> SaveArtifactResult:
         try:
             return await server.api.create_artifact_from_plan(
                 artifact_id=params.artifact_id,
@@ -49,7 +57,7 @@ def register_methods(
     @entrypoint.method(name="workflow.artifacts.save", errors=[WorkflowRpcError])
     async def workflow_artifacts_save(
         params: SaveArtifactParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> SaveArtifactResult:
         try:
             return await server.api.save_artifact(params.artifact)
         except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:
@@ -58,7 +66,7 @@ def register_methods(
     @entrypoint.method(name="workflow.artifacts.list", errors=[WorkflowRpcError])
     async def workflow_artifacts_list(
         params: ListArtifactsParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> ListArtifactsResult:
         try:
             return await server.api.list_artifacts(
                 query=params.query,
@@ -72,7 +80,7 @@ def register_methods(
     @entrypoint.method(name="workflow.artifacts.inspect", errors=[WorkflowRpcError])
     async def workflow_artifacts_inspect(
         params: InspectArtifactParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> WorkflowArtifactPayload:
         try:
             return await server.api.inspect_artifact(
                 artifact_id=params.artifact_id,
@@ -84,7 +92,7 @@ def register_methods(
     @entrypoint.method(name="workflow.artifacts.delete", errors=[WorkflowRpcError])
     async def workflow_artifacts_delete(
         params: DeleteArtifactParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> DeleteArtifactResult:
         try:
             return await server.api.delete_artifact(
                 artifact_id=params.artifact_id,

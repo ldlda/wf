@@ -50,6 +50,59 @@ def test_openrpc_exposes_typed_health_result(
     ("method_name", "component_name", "properties"),
     [
         (
+            "workflow.artifacts.create_from_plan",
+            "SaveArtifactResult",
+            {"artifact_id", "version", "saved"},
+        ),
+        (
+            "workflow.artifacts.save",
+            "SaveArtifactResult",
+            {"artifact_id", "version", "saved"},
+        ),
+        (
+            "workflow.artifacts.list",
+            "ListArtifactsResult",
+            {"nodes", "next_cursor", "total"},
+        ),
+        (
+            "workflow.artifacts.inspect",
+            "WorkflowArtifactPayload",
+            {
+                "id",
+                "version",
+                "title",
+                "kind",
+                "input_schema",
+                "output_schema",
+                "outcomes",
+                "plan",
+            },
+        ),
+        (
+            "workflow.artifacts.delete",
+            "DeleteArtifactResult",
+            {"artifact_id", "version", "deleted", "blocked_by_deployments"},
+        ),
+    ],
+)
+def test_openrpc_exposes_typed_artifact_results(
+    openrpc_document: dict[str, Any],
+    method_name: str,
+    component_name: str,
+    properties: set[str],
+) -> None:
+    _assert_result_component(
+        openrpc_document,
+        method_name=method_name,
+        component_name=component_name,
+        properties=properties,
+    )
+
+
+@pytest.mark.parametrize(
+    ("method_name", "component_name", "properties"),
+    [
+        (
             "workflow.deployments.list",
             "ListDeploymentsResult",
             {"deployments"},

@@ -14,14 +14,18 @@ from .draft_authoring import RouteSource, WorkflowDraftAuthoringApi
 from .draft_updates import CapabilityStepUpdate
 from .drafts import WorkflowDraftApi
 from .models import (
+    DeleteArtifactResult,
     DeleteDeploymentResult,
+    ListArtifactsResult,
     ListDeploymentsResult,
     ListRunsResult,
     RawWorkflowPlan,
     RunResult,
     RunTraceResult,
+    SaveArtifactResult,
     SaveDeploymentResult,
     ValidateDeploymentResult,
+    WorkflowArtifactPayload,
     WorkflowDeploymentPayload,
 )
 from .operation_context import WorkflowOperationContext
@@ -91,7 +95,7 @@ class WorkflowApi:
         kind: ArtifactKind | None = None,
         cursor: str | None = None,
         limit: int = 50,
-    ) -> dict[str, Any]:
+    ) -> ListArtifactsResult:
         return await self.artifacts.list_artifacts(
             query=query,
             kind=kind,
@@ -104,7 +108,7 @@ class WorkflowApi:
         *,
         artifact_id: str,
         version: int,
-    ) -> dict[str, Any]:
+    ) -> WorkflowArtifactPayload:
         return await self.artifacts.inspect_artifact(
             artifact_id=artifact_id,
             version=version,
@@ -115,7 +119,7 @@ class WorkflowApi:
         *,
         artifact_id: str,
         version: int,
-    ) -> dict[str, Any]:
+    ) -> DeleteArtifactResult:
         return await self.artifacts.delete_artifact(
             artifact_id=artifact_id,
             version=version,
@@ -124,7 +128,7 @@ class WorkflowApi:
     async def save_artifact(
         self,
         artifact: dict[str, Any],
-    ) -> dict[str, Any]:
+    ) -> SaveArtifactResult:
         return await self.artifacts.save_artifact(artifact)
 
     async def create_artifact_from_plan(
@@ -140,7 +144,7 @@ class WorkflowApi:
         required_capabilities: dict[str, dict[str, Any]] | None = None,
         source_bindings: dict[str, str] | None = None,
         created_from_catalog_version: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> SaveArtifactResult:
         return await self.artifacts.create_artifact_from_plan(
             artifact_id=artifact_id,
             version=version,

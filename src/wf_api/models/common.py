@@ -73,6 +73,13 @@ class GuidedResultPayload(TypedDict):
     next_actions: NextActionsPayload
 
 
+class PageMetadataPayload(TypedDict):
+    """Cursor metadata shared by compact workflow discovery responses."""
+
+    next_cursor: str | None
+    total: int
+
+
 @dataclass(frozen=True, slots=True)
 class TraceRange:
     """Caller-bounded debug trace slice for durable deployment runs."""
