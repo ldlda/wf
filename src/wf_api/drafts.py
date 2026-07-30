@@ -52,8 +52,18 @@ from .draft_payloads import (
 from .draft_payloads import (
     output_bindings_payload as _draft_output_bindings_payload,
 )
+from .models import (
+    DeleteDraftWorkspaceResult,
+    DraftWorkspaceResult,
+    JsonProjector,
+    ListDraftWorkspacesResult,
+)
 from .operation_context import WorkflowOperationContext
 from .schema_projection import project_property_to_schema_path, schema_path_exists
+
+_PROJECT_DRAFT_WORKSPACE = JsonProjector(DraftWorkspaceResult)
+_PROJECT_DRAFT_WORKSPACE_LIST = JsonProjector(ListDraftWorkspacesResult)
+_PROJECT_DRAFT_WORKSPACE_DELETE = JsonProjector(DeleteDraftWorkspaceResult)
 
 
 def _empty_object_schema() -> dict[str, Any]:
@@ -108,25 +118,27 @@ class WorkflowDraftApi:
         *,
         workspace_id: str,
         revision: int,
-    ) -> WorkflowDraftWorkspace | dict[str, Any]:
+    ) -> WorkflowDraftWorkspace | DraftWorkspaceResult:
         """Load a workspace or return its canonical revision-conflict payload."""
         workspace = self._draft_store().get_workspace(workspace_id)
         if workspace.revision == revision:
             return workspace
-        return {
-            **summarize_draft_workspace(workspace),
-            "status": "conflict",
-            "diagnostics": [
-                {
-                    "code": "revision_conflict",
-                    "path": "revision",
-                    "message": (
-                        f"workspace {workspace.id!r} is at revision "
-                        f"{workspace.revision}, not {revision}"
-                    ),
-                }
-            ],
-        }
+        return _PROJECT_DRAFT_WORKSPACE(
+            {
+                **summarize_draft_workspace(workspace),
+                "status": "conflict",
+                "diagnostics": [
+                    {
+                        "code": "revision_conflict",
+                        "path": "revision",
+                        "message": (
+                            f"workspace {workspace.id!r} is at revision "
+                            f"{workspace.revision}, not {revision}"
+                        ),
+                    }
+                ],
+            }
+        )
 
     def _outcomes_for_capability(self, qualified_name: str) -> tuple[str, ...] | None:
         try:
@@ -189,15 +201,17 @@ class WorkflowDraftApi:
             node_defs_for_draft=self._node_defs_for_draft,
         )
 
-    async def list_draft_workspaces(self) -> dict[str, Any]:
+    async def list_draft_workspaces(self) -> ListDraftWorkspacesResult:
         """Return compact summaries for stored draft workspaces."""
         store = self._draft_store()
-        return {
-            "workspaces": [
-                get_draft_workspace_record(store, workspace_id=workspace.id)
-                for workspace in store.list_workspaces()
-            ]
-        }
+        return _PROJECT_DRAFT_WORKSPACE_LIST(
+            {
+                "workspaces": [
+                    get_draft_workspace_record(store, workspace_id=workspace.id)
+                    for workspace in store.list_workspaces()
+                ]
+            }
+        )
 
     async def create_draft_workspace(
         self,
@@ -205,12 +219,14 @@ class WorkflowDraftApi:
         workspace_id: str,
         draft: dict[str, Any],
         title: str | None = None,
-    ) -> dict[str, Any]:
-        return create_draft_workspace_record(
-            self._draft_store(),
-            workspace_id=workspace_id,
-            draft=draft,
-            title=title,
+    ) -> DraftWorkspaceResult:
+        return _PROJECT_DRAFT_WORKSPACE(
+            create_draft_workspace_record(
+                self._draft_store(),
+                workspace_id=workspace_id,
+                draft=draft,
+                title=title,
+            )
         )
 
     async def create_empty_draft_workspace(
@@ -223,7 +239,7 @@ class WorkflowDraftApi:
         state_schema: dict[str, Any] | None = None,
         output_schema: dict[str, Any] | None = None,
         outcomes: Sequence[str] = ("ok",),
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         """Create an intentionally invalid, capability-free draft workspace.
 
         The empty entry point is persisted so callers can assemble the graph in
@@ -272,22 +288,30 @@ class WorkflowDraftApi:
         *,
         workspace_id: str,
         include_draft: bool = False,
-    ) -> dict[str, Any]:
-        return get_draft_workspace_record(
-            self._draft_store(),
-            workspace_id=workspace_id,
-            include_draft=include_draft,
+    ) -> DraftWorkspaceResult:
+        return _PROJECT_DRAFT_WORKSPACE(
+            get_draft_workspace_record(
+                self._draft_store(),
+                workspace_id=workspace_id,
+                include_draft=include_draft,
+            )
         )
 
-    async def delete_draft_workspace(self, *, workspace_id: str) -> dict[str, Any]:
+    async def delete_draft_workspace(
+        self, *, workspace_id: str
+    ) -> DeleteDraftWorkspaceResult:
         deleted = self._draft_store().delete_workspace(workspace_id)
-        return {
-            "workspace_id": workspace_id,
-            "deleted": deleted,
-            "status": "deleted" if deleted else "not_found",
-        }
+        return _PROJECT_DRAFT_WORKSPACE_DELETE(
+            {
+                "workspace_id": workspace_id,
+                "deleted": deleted,
+                "status": "deleted" if deleted else "not_found",
+            }
+        )
 
-    async def validate_draft_workspace(self, *, workspace_id: str) -> dict[str, Any]:
+    async def validate_draft_workspace(
+        self, *, workspace_id: str
+    ) -> DraftWorkspaceResult:
         """Refresh stored validation status without changing draft revision."""
         store = self._draft_store()
         workspace = store.get_workspace(workspace_id)
@@ -303,7 +327,9 @@ class WorkflowDraftApi:
             }
         )
         store.save_workspace(refreshed)
-        return get_draft_workspace_record(store, workspace_id=workspace_id)
+        return _PROJECT_DRAFT_WORKSPACE(
+            get_draft_workspace_record(store, workspace_id=workspace_id)
+        )
 
     async def compile_draft_workspace(self, *, workspace_id: str) -> dict[str, Any]:
         """Compile a stored draft workspace without mutating it."""
@@ -319,14 +345,16 @@ class WorkflowDraftApi:
         workspace_id: str,
         revision: int,
         patch: list[dict[str, Any]],
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         store = self._draft_store()
-        return patch_draft_workspace_record(
-            store,
-            workspace_id=workspace_id,
-            revision=revision,
-            patch=patch,
-            node_defs_for_draft=self._node_defs_for_draft,
+        return _PROJECT_DRAFT_WORKSPACE(
+            patch_draft_workspace_record(
+                store,
+                workspace_id=workspace_id,
+                revision=revision,
+                patch=patch,
+                node_defs_for_draft=self._node_defs_for_draft,
+            )
         )
 
     async def replace_validated_draft_document(
@@ -335,13 +363,15 @@ class WorkflowDraftApi:
         workspace_id: str,
         revision: int,
         draft: dict[str, Any],
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         """Persist a focused, structurally validated edit without provider lookup."""
-        return replace_validated_draft_document(
-            self._draft_store(),
-            workspace_id=workspace_id,
-            revision=revision,
-            draft=draft,
+        return _PROJECT_DRAFT_WORKSPACE(
+            replace_validated_draft_document(
+                self._draft_store(),
+                workspace_id=workspace_id,
+                revision=revision,
+                draft=draft,
+            )
         )
 
     async def replace_draft_workspace_document(
@@ -350,14 +380,16 @@ class WorkflowDraftApi:
         workspace_id: str,
         revision: int,
         draft: dict[str, Any],
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         """Replace and semantically revalidate one complete workspace draft."""
-        return replace_draft_workspace_document_record(
-            self._draft_store(),
-            workspace_id=workspace_id,
-            revision=revision,
-            draft=draft,
-            node_defs_for_draft=self._node_defs_for_draft,
+        return _PROJECT_DRAFT_WORKSPACE(
+            replace_draft_workspace_document_record(
+                self._draft_store(),
+                workspace_id=workspace_id,
+                revision=revision,
+                draft=draft,
+                node_defs_for_draft=self._node_defs_for_draft,
+            )
         )
 
     async def set_draft_name(
@@ -366,7 +398,7 @@ class WorkflowDraftApi:
         workspace_id: str,
         revision: int,
         name: str,
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         return await self.patch_draft_workspace(
             workspace_id=workspace_id,
             revision=revision,
@@ -379,7 +411,7 @@ class WorkflowDraftApi:
         workspace_id: str,
         revision: int,
         step_id: str,
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         """Select an entry point, including a forward-referenced step id."""
         if not isinstance(step_id, str) or not step_id.strip():
             raise ValueError("draft start step id must not be blank")
@@ -398,7 +430,7 @@ class WorkflowDraftApi:
         state_schema: dict[str, Any] | None = None,
         output_schema: dict[str, Any] | None = None,
         outcomes: Sequence[str] | None = None,
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         """Replace supplied top-level contract fields in one draft revision.
 
         Complete schema replacement is intentional: deep merging JSON Schema
@@ -445,7 +477,7 @@ class WorkflowDraftApi:
         step_id: str,
         outcome: str,
         target: str,
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         return await self.patch_draft_workspace(
             workspace_id=workspace_id,
             revision=revision,
@@ -469,7 +501,7 @@ class WorkflowDraftApi:
         step_id: str,
         input_map: dict[str, str],
         merge: bool = False,
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         input_values: dict[str, Any] = {}
         if merge:
             workspace = self._workspace_if_revision_matches(
@@ -504,7 +536,7 @@ class WorkflowDraftApi:
         step_id: str,
         output_map: dict[str, str],
         merge: bool = False,
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         if merge:
             workspace = self._workspace_if_revision_matches(
                 workspace_id=workspace_id,
@@ -539,7 +571,7 @@ class WorkflowDraftApi:
         revision: int,
         output_map: dict[str, str],
         merge: bool = False,
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         output_bindings: list[dict[str, Any]]
         workspace: WorkflowDraftWorkspace | None = None
         if merge:

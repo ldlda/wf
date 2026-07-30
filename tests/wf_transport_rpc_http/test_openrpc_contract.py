@@ -100,6 +100,109 @@ def test_openrpc_exposes_typed_artifact_results(
 
 
 @pytest.mark.parametrize(
+    "method_name",
+    [
+        "workflow.draft_workspaces.get",
+        "workflow.draft_workspaces.create_empty",
+        "workflow.draft_workspaces.patch",
+        "workflow.draft_workspaces.replace_document",
+        "workflow.draft_workspaces.set_name",
+        "workflow.draft_workspaces.set_start",
+        "workflow.draft_workspaces.set_contract",
+        "workflow.draft_workspaces.set_route",
+        "workflow.draft_workspaces.set_step_input_map",
+        "workflow.draft_workspaces.set_step_input_bindings",
+        "workflow.draft_workspaces.update_capability_step",
+        "workflow.draft_workspaces.set_step_output_bindings",
+        "workflow.draft_workspaces.set_step_output_map",
+        "workflow.draft_workspaces.set_workflow_output_map",
+        "workflow.draft_workspaces.set_workflow_output_bindings",
+        "workflow.draft_workspaces.bind",
+        "workflow.draft_workspaces.add_step_from_capability",
+        "workflow.draft_workspaces.add_step",
+        "workflow.draft_workspaces.branch",
+        "workflow.draft_workspaces.handle",
+        "workflow.draft_workspaces.validate",
+        "workflow.draft_workspaces.remove_route",
+        "workflow.draft_workspaces.remove_step",
+        "workflow.draft_workspaces.remove_binding",
+    ],
+)
+def test_openrpc_exposes_typed_draft_workspace_results(
+    openrpc_document: dict[str, Any],
+    method_name: str,
+) -> None:
+    _assert_result_component(
+        openrpc_document,
+        method_name=method_name,
+        component_name="DraftWorkspaceResult",
+        properties={
+            "workspace_id",
+            "revision",
+            "title",
+            "status",
+            "diagnostics",
+            "summary",
+        },
+    )
+
+
+def test_openrpc_exposes_typed_draft_workspace_list_result(
+    openrpc_document: dict[str, Any],
+) -> None:
+    _assert_result_component(
+        openrpc_document,
+        method_name="workflow.draft_workspaces.list",
+        component_name="ListDraftWorkspacesResult",
+        properties={"workspaces"},
+    )
+
+
+def test_openrpc_exposes_typed_delete_draft_workspace_result(
+    openrpc_document: dict[str, Any],
+) -> None:
+    _assert_result_component(
+        openrpc_document,
+        method_name="workflow.draft_workspaces.delete",
+        component_name="DeleteDraftWorkspaceResult",
+        properties={"workspace_id", "deleted", "status"},
+    )
+
+
+def test_openrpc_pins_nested_draft_workspace_contract(
+    openrpc_document: dict[str, Any],
+) -> None:
+    schemas = openrpc_document["components"]["schemas"]
+    workspace = schemas["DraftWorkspaceResult"]
+    diagnostic = schemas["DraftDiagnosticPayload"]
+    listed = schemas["ListDraftWorkspacesResult"]
+    deleted = schemas["DeleteDraftWorkspaceResult"]
+
+    assert workspace["required"] == [
+        "workspace_id",
+        "revision",
+        "title",
+        "status",
+        "diagnostics",
+        "summary",
+    ]
+    assert "draft" not in workspace["required"]
+    assert workspace["properties"]["status"]["enum"] == [
+        "valid",
+        "invalid",
+        "conflict",
+    ]
+    assert workspace["properties"]["diagnostics"]["items"] == {
+        "$ref": "#/components/schemas/DraftDiagnosticPayload"
+    }
+    assert diagnostic["required"] == ["code", "path", "message"]
+    assert listed["properties"]["workspaces"]["items"] == {
+        "$ref": "#/components/schemas/DraftWorkspaceResult"
+    }
+    assert deleted["properties"]["status"]["enum"] == ["deleted", "not_found"]
+
+
+@pytest.mark.parametrize(
     ("method_name", "component_name", "properties"),
     [
         (

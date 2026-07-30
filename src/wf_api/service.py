@@ -16,8 +16,11 @@ from .drafts import WorkflowDraftApi
 from .models import (
     DeleteArtifactResult,
     DeleteDeploymentResult,
+    DeleteDraftWorkspaceResult,
+    DraftWorkspaceResult,
     ListArtifactsResult,
     ListDeploymentsResult,
+    ListDraftWorkspacesResult,
     ListRunsResult,
     RawWorkflowPlan,
     RunResult,
@@ -263,7 +266,7 @@ class WorkflowApi:
 
     # -- draft workspaces --
 
-    async def list_draft_workspaces(self) -> dict[str, Any]:
+    async def list_draft_workspaces(self) -> ListDraftWorkspacesResult:
         return await self.drafts.list_draft_workspaces()
 
     async def create_draft_workspace(
@@ -272,7 +275,7 @@ class WorkflowApi:
         workspace_id: str,
         draft: dict[str, Any],
         title: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         return await self.drafts.create_draft_workspace(
             workspace_id=workspace_id,
             draft=draft,
@@ -289,7 +292,7 @@ class WorkflowApi:
         state_schema: dict[str, Any] | None = None,
         output_schema: dict[str, Any] | None = None,
         outcomes: Sequence[str] = ("ok",),
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         return await self.drafts.create_empty_draft_workspace(
             workspace_id=workspace_id,
             name=name,
@@ -305,7 +308,7 @@ class WorkflowApi:
         *,
         workspace_id: str,
         include_draft: bool = False,
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         return await self.drafts.get_draft_workspace(
             workspace_id=workspace_id,
             include_draft=include_draft,
@@ -315,14 +318,14 @@ class WorkflowApi:
         self,
         *,
         workspace_id: str,
-    ) -> dict[str, Any]:
+    ) -> DeleteDraftWorkspaceResult:
         return await self.drafts.delete_draft_workspace(workspace_id=workspace_id)
 
     async def validate_draft_workspace(
         self,
         *,
         workspace_id: str,
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         return await self.drafts.validate_draft_workspace(workspace_id=workspace_id)
 
     async def compile_draft_workspace(
@@ -338,7 +341,7 @@ class WorkflowApi:
         workspace_id: str,
         revision: int,
         patch: list[dict[str, Any]],
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         return await self.drafts.patch_draft_workspace(
             workspace_id=workspace_id,
             revision=revision,
@@ -351,7 +354,7 @@ class WorkflowApi:
         workspace_id: str,
         revision: int,
         draft: dict[str, Any],
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         """Replace and semantically revalidate one complete workspace draft."""
         return await self.drafts.replace_draft_workspace_document(
             workspace_id=workspace_id,
@@ -365,7 +368,7 @@ class WorkflowApi:
         workspace_id: str,
         revision: int,
         name: str,
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         return await self.drafts.set_draft_name(
             workspace_id=workspace_id,
             revision=revision,
@@ -378,7 +381,7 @@ class WorkflowApi:
         workspace_id: str,
         revision: int,
         step_id: str,
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         return await self.drafts.set_draft_start(
             workspace_id=workspace_id,
             revision=revision,
@@ -394,7 +397,7 @@ class WorkflowApi:
         state_schema: dict[str, Any] | None = None,
         output_schema: dict[str, Any] | None = None,
         outcomes: Sequence[str] | None = None,
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         return await self.drafts.set_draft_contract(
             workspace_id=workspace_id,
             revision=revision,
@@ -412,7 +415,7 @@ class WorkflowApi:
         step_id: str,
         outcome: str,
         target: str,
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         return await self.drafts.set_draft_route(
             workspace_id=workspace_id,
             revision=revision,
@@ -429,7 +432,7 @@ class WorkflowApi:
         step_id: str,
         input_map: dict[str, str],
         merge: bool = False,
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         return await self.drafts.set_step_input_map(
             workspace_id=workspace_id,
             revision=revision,
@@ -445,7 +448,7 @@ class WorkflowApi:
         revision: int,
         step_id: str,
         bindings: Sequence[InputBinding],
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         return await self.draft_authoring.set_step_input_bindings(
             workspace_id=workspace_id,
             revision=revision,
@@ -460,7 +463,7 @@ class WorkflowApi:
         revision: int,
         step_id: str,
         bindings: Sequence[OutputBinding],
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         return await self.draft_authoring.set_step_output_bindings(
             workspace_id=workspace_id,
             revision=revision,
@@ -475,7 +478,7 @@ class WorkflowApi:
         revision: int,
         step_id: str,
         update: CapabilityStepUpdate,
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         """Return the updated workspace summary or a revision-conflict payload."""
         return await self.draft_authoring.update_capability_step(
             workspace_id=workspace_id,
@@ -492,7 +495,7 @@ class WorkflowApi:
         step_id: str,
         output_map: dict[str, str],
         merge: bool = False,
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         return await self.drafts.set_step_output_map(
             workspace_id=workspace_id,
             revision=revision,
@@ -508,7 +511,7 @@ class WorkflowApi:
         revision: int,
         output_map: dict[str, str],
         merge: bool = False,
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         return await self.drafts.set_workflow_output_map(
             workspace_id=workspace_id,
             revision=revision,
@@ -522,7 +525,7 @@ class WorkflowApi:
         workspace_id: str,
         revision: int,
         bindings: Sequence[InputBinding],
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         return await self.draft_authoring.set_workflow_output_bindings(
             workspace_id=workspace_id,
             revision=revision,
@@ -537,7 +540,7 @@ class WorkflowApi:
         step_id: str,
         source_path: str,
         target_path: str,
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         return await self.draft_authoring.bind_draft(
             workspace_id=workspace_id,
             revision=revision,
@@ -562,7 +565,7 @@ class WorkflowApi:
         desc: str | None = None,
         retry: int | None = None,
         timeout_seconds: int | None = None,
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         return await self.draft_authoring.add_step_from_capability(
             workspace_id=workspace_id,
             revision=revision,
@@ -588,7 +591,7 @@ class WorkflowApi:
         step: DraftStep,
         incoming: RouteSource | None = None,
         routes: dict[str, str] | None = None,
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         return await self.draft_authoring.add_step(
             workspace_id=workspace_id,
             revision=revision,
@@ -605,7 +608,7 @@ class WorkflowApi:
         revision: int,
         step_id: str,
         routes: dict[str, str],
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         return await self.draft_authoring.branch_draft(
             workspace_id=workspace_id,
             revision=revision,
@@ -620,7 +623,7 @@ class WorkflowApi:
         revision: int,
         branches: list[dict[str, str]],
         target: str,
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         refs = [
             RouteSource(step_id=b["step_id"], outcome=b["outcome"]) for b in branches
         ]
@@ -646,7 +649,7 @@ class WorkflowApi:
         output_map: dict[str, str] | None = None,
         error_message_source: Any | None = None,
         title: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         return await self.draft_authoring.create_minimal_draft_workspace(
             workspace_id=workspace_id,
             name=name,
@@ -669,7 +672,7 @@ class WorkflowApi:
         revision: int,
         step_id: str,
         outcome: str,
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         return await self.draft_authoring.remove_draft_route(
             workspace_id=workspace_id,
             revision=revision,
@@ -683,7 +686,7 @@ class WorkflowApi:
         workspace_id: str,
         revision: int,
         step_id: str,
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         return await self.draft_authoring.remove_draft_step(
             workspace_id=workspace_id,
             revision=revision,
@@ -698,7 +701,7 @@ class WorkflowApi:
         step_id: str,
         inputs: Sequence[str] = (),
         outputs: Sequence[str] = (),
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         return await self.draft_authoring.remove_draft_binding(
             workspace_id=workspace_id,
             revision=revision,

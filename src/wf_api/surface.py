@@ -12,8 +12,11 @@ from .draft_updates import CapabilityStepUpdate
 from .models import (
     DeleteArtifactResult,
     DeleteDeploymentResult,
+    DeleteDraftWorkspaceResult,
+    DraftWorkspaceResult,
     ListArtifactsResult,
     ListDeploymentsResult,
+    ListDraftWorkspacesResult,
     ListRunsResult,
     RunResult,
     RunTraceResult,
@@ -60,14 +63,14 @@ class WorkflowDraftSurface(Protocol):
     not every same-process authoring helper on ``WorkflowApi``.
     """
 
-    async def list_draft_workspaces(self) -> dict[str, Any]: ...
+    async def list_draft_workspaces(self) -> ListDraftWorkspacesResult: ...
 
     async def get_draft_workspace(
         self,
         *,
         workspace_id: str,
         include_draft: bool = False,
-    ) -> dict[str, Any]: ...
+    ) -> DraftWorkspaceResult: ...
 
     async def create_draft_workspace_from_capability(
         self,
@@ -96,7 +99,7 @@ class WorkflowDraftSurface(Protocol):
         state_schema: dict[str, Any] | None = None,
         output_schema: dict[str, Any] | None = None,
         outcomes: Sequence[str] = ("ok",),
-    ) -> dict[str, Any]: ...
+    ) -> DraftWorkspaceResult: ...
 
     async def patch_draft_workspace(
         self,
@@ -104,7 +107,7 @@ class WorkflowDraftSurface(Protocol):
         workspace_id: str,
         revision: int,
         patch: list[dict[str, Any]],
-    ) -> dict[str, Any]: ...
+    ) -> DraftWorkspaceResult: ...
 
     async def replace_draft_workspace_document(
         self,
@@ -112,7 +115,7 @@ class WorkflowDraftSurface(Protocol):
         workspace_id: str,
         revision: int,
         draft: dict[str, Any],
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         """Replace and semantically revalidate one complete workspace draft."""
         ...
 
@@ -122,7 +125,7 @@ class WorkflowDraftSurface(Protocol):
         workspace_id: str,
         revision: int,
         name: str,
-    ) -> dict[str, Any]: ...
+    ) -> DraftWorkspaceResult: ...
 
     async def set_draft_start(
         self,
@@ -130,7 +133,7 @@ class WorkflowDraftSurface(Protocol):
         workspace_id: str,
         revision: int,
         step_id: str,
-    ) -> dict[str, Any]: ...
+    ) -> DraftWorkspaceResult: ...
 
     async def set_draft_contract(
         self,
@@ -141,7 +144,7 @@ class WorkflowDraftSurface(Protocol):
         state_schema: dict[str, Any] | None = None,
         output_schema: dict[str, Any] | None = None,
         outcomes: Sequence[str] | None = None,
-    ) -> dict[str, Any]: ...
+    ) -> DraftWorkspaceResult: ...
 
     async def set_draft_route(
         self,
@@ -151,7 +154,7 @@ class WorkflowDraftSurface(Protocol):
         step_id: str,
         outcome: str,
         target: str,
-    ) -> dict[str, Any]: ...
+    ) -> DraftWorkspaceResult: ...
 
     async def set_step_input_map(
         self,
@@ -161,7 +164,7 @@ class WorkflowDraftSurface(Protocol):
         step_id: str,
         input_map: dict[str, str],
         merge: bool = False,
-    ) -> dict[str, Any]: ...
+    ) -> DraftWorkspaceResult: ...
 
     async def set_step_input_bindings(
         self,
@@ -170,7 +173,7 @@ class WorkflowDraftSurface(Protocol):
         revision: int,
         step_id: str,
         bindings: Sequence[InputBinding],
-    ) -> dict[str, Any]: ...
+    ) -> DraftWorkspaceResult: ...
 
     async def set_step_output_bindings(
         self,
@@ -179,7 +182,7 @@ class WorkflowDraftSurface(Protocol):
         revision: int,
         step_id: str,
         bindings: Sequence[OutputBinding],
-    ) -> dict[str, Any]: ...
+    ) -> DraftWorkspaceResult: ...
 
     async def update_capability_step(
         self,
@@ -188,7 +191,7 @@ class WorkflowDraftSurface(Protocol):
         revision: int,
         step_id: str,
         update: CapabilityStepUpdate,
-    ) -> dict[str, Any]: ...
+    ) -> DraftWorkspaceResult: ...
 
     async def set_step_output_map(
         self,
@@ -198,7 +201,7 @@ class WorkflowDraftSurface(Protocol):
         step_id: str,
         output_map: dict[str, str],
         merge: bool = False,
-    ) -> dict[str, Any]: ...
+    ) -> DraftWorkspaceResult: ...
 
     async def set_workflow_output_map(
         self,
@@ -207,7 +210,7 @@ class WorkflowDraftSurface(Protocol):
         revision: int,
         output_map: dict[str, str],
         merge: bool = False,
-    ) -> dict[str, Any]: ...
+    ) -> DraftWorkspaceResult: ...
 
     async def set_workflow_output_bindings(
         self,
@@ -215,7 +218,7 @@ class WorkflowDraftSurface(Protocol):
         workspace_id: str,
         revision: int,
         bindings: Sequence[InputBinding],
-    ) -> dict[str, Any]: ...
+    ) -> DraftWorkspaceResult: ...
 
     async def bind_draft(
         self,
@@ -225,7 +228,7 @@ class WorkflowDraftSurface(Protocol):
         step_id: str,
         source_path: str,
         target_path: str,
-    ) -> dict[str, Any]: ...
+    ) -> DraftWorkspaceResult: ...
 
     async def add_step_from_capability(
         self,
@@ -243,7 +246,7 @@ class WorkflowDraftSurface(Protocol):
         desc: str | None = None,
         retry: int | None = None,
         timeout_seconds: int | None = None,
-    ) -> dict[str, Any]: ...
+    ) -> DraftWorkspaceResult: ...
 
     async def add_step(
         self,
@@ -254,7 +257,7 @@ class WorkflowDraftSurface(Protocol):
         step: DraftStep,
         incoming: RouteSource | None = None,
         routes: dict[str, str] | None = None,
-    ) -> dict[str, Any]: ...
+    ) -> DraftWorkspaceResult: ...
 
     async def branch_draft(
         self,
@@ -263,7 +266,7 @@ class WorkflowDraftSurface(Protocol):
         revision: int,
         step_id: str,
         routes: dict[str, str],
-    ) -> dict[str, Any]: ...
+    ) -> DraftWorkspaceResult: ...
 
     async def handle_draft(
         self,
@@ -272,7 +275,7 @@ class WorkflowDraftSurface(Protocol):
         revision: int,
         branches: list[dict[str, str]],
         target: str,
-    ) -> dict[str, Any]: ...
+    ) -> DraftWorkspaceResult: ...
 
     async def remove_draft_route(
         self,
@@ -281,7 +284,7 @@ class WorkflowDraftSurface(Protocol):
         revision: int,
         step_id: str,
         outcome: str,
-    ) -> dict[str, Any]: ...
+    ) -> DraftWorkspaceResult: ...
 
     async def remove_draft_step(
         self,
@@ -289,7 +292,7 @@ class WorkflowDraftSurface(Protocol):
         workspace_id: str,
         revision: int,
         step_id: str,
-    ) -> dict[str, Any]: ...
+    ) -> DraftWorkspaceResult: ...
 
     async def remove_draft_binding(
         self,
@@ -299,13 +302,13 @@ class WorkflowDraftSurface(Protocol):
         step_id: str,
         inputs: Sequence[str] = (),
         outputs: Sequence[str] = (),
-    ) -> dict[str, Any]: ...
+    ) -> DraftWorkspaceResult: ...
 
     async def validate_draft_workspace(
         self,
         *,
         workspace_id: str,
-    ) -> dict[str, Any]: ...
+    ) -> DraftWorkspaceResult: ...
 
     async def compile_draft_workspace(
         self,
@@ -317,7 +320,7 @@ class WorkflowDraftSurface(Protocol):
         self,
         *,
         workspace_id: str,
-    ) -> dict[str, Any]: ...
+    ) -> DeleteDraftWorkspaceResult: ...
 
     async def create_artifact_from_workspace(
         self,

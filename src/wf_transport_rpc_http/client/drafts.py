@@ -1,9 +1,14 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 from wf_api import CapabilityStepUpdate
+from wf_api.models import (
+    DeleteDraftWorkspaceResult,
+    DraftWorkspaceResult,
+    ListDraftWorkspacesResult,
+)
 from wf_api.surface import RouteSource
 from wf_artifacts.drafts.models import DraftStep
 from wf_core.models.steps import InputBinding, OutputBinding
@@ -11,20 +16,33 @@ from wf_core.models.steps import InputBinding, OutputBinding
 from .base import RpcCaller
 
 
+async def _call_draft_workspace(
+    caller: RpcCaller,
+    method: str,
+    params: dict[str, Any],
+) -> DraftWorkspaceResult:
+    """Call one server-validated draft method with its canonical client type."""
+    return cast(DraftWorkspaceResult, await caller._call(method, params))
+
+
 class RpcDraftClientMixin:
     """JSON-RPC implementation of workflow draft workspace surface methods."""
 
-    async def list_draft_workspaces(self: RpcCaller) -> dict[str, Any]:
-        return await self._call("workflow.draft_workspaces.list", {})
+    async def list_draft_workspaces(self: RpcCaller) -> ListDraftWorkspacesResult:
+        return cast(
+            ListDraftWorkspacesResult,
+            await self._call("workflow.draft_workspaces.list", {}),
+        )
 
     async def get_draft_workspace(
         self: RpcCaller,
         *,
         workspace_id: str,
         include_draft: bool = False,
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         """Return the remote workspace summary or revision-conflict payload."""
-        return await self._call(
+        return await _call_draft_workspace(
+            self,
             "workflow.draft_workspaces.get",
             {"workspace_id": workspace_id, "include_draft": include_draft},
         )
@@ -73,8 +91,9 @@ class RpcDraftClientMixin:
         state_schema: dict[str, Any] | None = None,
         output_schema: dict[str, Any] | None = None,
         outcomes: Sequence[str] = ("ok",),
-    ) -> dict[str, Any]:
-        return await self._call(
+    ) -> DraftWorkspaceResult:
+        return await _call_draft_workspace(
+            self,
             "workflow.draft_workspaces.create_empty",
             {
                 "workspace_id": workspace_id,
@@ -93,8 +112,9 @@ class RpcDraftClientMixin:
         workspace_id: str,
         revision: int,
         patch: list[dict[str, Any]],
-    ) -> dict[str, Any]:
-        return await self._call(
+    ) -> DraftWorkspaceResult:
+        return await _call_draft_workspace(
+            self,
             "workflow.draft_workspaces.patch",
             {"workspace_id": workspace_id, "revision": revision, "patch": patch},
         )
@@ -105,8 +125,9 @@ class RpcDraftClientMixin:
         workspace_id: str,
         revision: int,
         draft: dict[str, Any],
-    ) -> dict[str, Any]:
-        return await self._call(
+    ) -> DraftWorkspaceResult:
+        return await _call_draft_workspace(
+            self,
             "workflow.draft_workspaces.replace_document",
             {
                 "workspace_id": workspace_id,
@@ -121,8 +142,9 @@ class RpcDraftClientMixin:
         workspace_id: str,
         revision: int,
         name: str,
-    ) -> dict[str, Any]:
-        return await self._call(
+    ) -> DraftWorkspaceResult:
+        return await _call_draft_workspace(
+            self,
             "workflow.draft_workspaces.set_name",
             {"workspace_id": workspace_id, "revision": revision, "name": name},
         )
@@ -133,8 +155,9 @@ class RpcDraftClientMixin:
         workspace_id: str,
         revision: int,
         step_id: str,
-    ) -> dict[str, Any]:
-        return await self._call(
+    ) -> DraftWorkspaceResult:
+        return await _call_draft_workspace(
+            self,
             "workflow.draft_workspaces.set_start",
             {"workspace_id": workspace_id, "revision": revision, "step_id": step_id},
         )
@@ -148,8 +171,9 @@ class RpcDraftClientMixin:
         state_schema: dict[str, Any] | None = None,
         output_schema: dict[str, Any] | None = None,
         outcomes: Sequence[str] | None = None,
-    ) -> dict[str, Any]:
-        return await self._call(
+    ) -> DraftWorkspaceResult:
+        return await _call_draft_workspace(
+            self,
             "workflow.draft_workspaces.set_contract",
             {
                 "workspace_id": workspace_id,
@@ -169,8 +193,9 @@ class RpcDraftClientMixin:
         step_id: str,
         outcome: str,
         target: str,
-    ) -> dict[str, Any]:
-        return await self._call(
+    ) -> DraftWorkspaceResult:
+        return await _call_draft_workspace(
+            self,
             "workflow.draft_workspaces.set_route",
             {
                 "workspace_id": workspace_id,
@@ -189,8 +214,9 @@ class RpcDraftClientMixin:
         step_id: str,
         input_map: dict[str, str],
         merge: bool = False,
-    ) -> dict[str, Any]:
-        return await self._call(
+    ) -> DraftWorkspaceResult:
+        return await _call_draft_workspace(
+            self,
             "workflow.draft_workspaces.set_step_input_map",
             {
                 "workspace_id": workspace_id,
@@ -208,8 +234,9 @@ class RpcDraftClientMixin:
         revision: int,
         step_id: str,
         bindings: Sequence[InputBinding],
-    ) -> dict[str, Any]:
-        return await self._call(
+    ) -> DraftWorkspaceResult:
+        return await _call_draft_workspace(
+            self,
             "workflow.draft_workspaces.set_step_input_bindings",
             {
                 "workspace_id": workspace_id,
@@ -226,8 +253,9 @@ class RpcDraftClientMixin:
         revision: int,
         step_id: str,
         bindings: Sequence[OutputBinding],
-    ) -> dict[str, Any]:
-        return await self._call(
+    ) -> DraftWorkspaceResult:
+        return await _call_draft_workspace(
+            self,
             "workflow.draft_workspaces.set_step_output_bindings",
             {
                 "workspace_id": workspace_id,
@@ -244,8 +272,9 @@ class RpcDraftClientMixin:
         revision: int,
         step_id: str,
         update: CapabilityStepUpdate,
-    ) -> dict[str, Any]:
-        return await self._call(
+    ) -> DraftWorkspaceResult:
+        return await _call_draft_workspace(
+            self,
             "workflow.draft_workspaces.update_capability_step",
             {
                 "workspace_id": workspace_id,
@@ -263,8 +292,9 @@ class RpcDraftClientMixin:
         step_id: str,
         output_map: dict[str, str],
         merge: bool = False,
-    ) -> dict[str, Any]:
-        return await self._call(
+    ) -> DraftWorkspaceResult:
+        return await _call_draft_workspace(
+            self,
             "workflow.draft_workspaces.set_step_output_map",
             {
                 "workspace_id": workspace_id,
@@ -282,8 +312,9 @@ class RpcDraftClientMixin:
         revision: int,
         output_map: dict[str, str],
         merge: bool = False,
-    ) -> dict[str, Any]:
-        return await self._call(
+    ) -> DraftWorkspaceResult:
+        return await _call_draft_workspace(
+            self,
             "workflow.draft_workspaces.set_workflow_output_map",
             {
                 "workspace_id": workspace_id,
@@ -299,8 +330,9 @@ class RpcDraftClientMixin:
         workspace_id: str,
         revision: int,
         bindings: Sequence[InputBinding],
-    ) -> dict[str, Any]:
-        return await self._call(
+    ) -> DraftWorkspaceResult:
+        return await _call_draft_workspace(
+            self,
             "workflow.draft_workspaces.set_workflow_output_bindings",
             {
                 "workspace_id": workspace_id,
@@ -317,8 +349,9 @@ class RpcDraftClientMixin:
         step_id: str,
         source_path: str,
         target_path: str,
-    ) -> dict[str, Any]:
-        return await self._call(
+    ) -> DraftWorkspaceResult:
+        return await _call_draft_workspace(
+            self,
             "workflow.draft_workspaces.bind",
             {
                 "workspace_id": workspace_id,
@@ -345,7 +378,7 @@ class RpcDraftClientMixin:
         desc: str | None = None,
         retry: int | None = None,
         timeout_seconds: int | None = None,
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         if input_map is not None and input_bindings is not None:
             raise ValueError("input_map and input_bindings are mutually exclusive")
         params: dict[str, object] = {
@@ -370,7 +403,8 @@ class RpcDraftClientMixin:
             params["retry"] = retry
         if timeout_seconds is not None:
             params["timeout_seconds"] = timeout_seconds
-        return await self._call(
+        return await _call_draft_workspace(
+            self,
             "workflow.draft_workspaces.add_step_from_capability",
             params,
         )
@@ -384,8 +418,9 @@ class RpcDraftClientMixin:
         step: DraftStep,
         incoming: RouteSource | None = None,
         routes: dict[str, str] | None = None,
-    ) -> dict[str, Any]:
-        return await self._call(
+    ) -> DraftWorkspaceResult:
+        return await _call_draft_workspace(
+            self,
             "workflow.draft_workspaces.add_step",
             {
                 "workspace_id": workspace_id,
@@ -408,8 +443,9 @@ class RpcDraftClientMixin:
         revision: int,
         step_id: str,
         routes: dict[str, str],
-    ) -> dict[str, Any]:
-        return await self._call(
+    ) -> DraftWorkspaceResult:
+        return await _call_draft_workspace(
+            self,
             "workflow.draft_workspaces.branch",
             {
                 "workspace_id": workspace_id,
@@ -426,8 +462,9 @@ class RpcDraftClientMixin:
         revision: int,
         branches: list[dict[str, str]],
         target: str,
-    ) -> dict[str, Any]:
-        return await self._call(
+    ) -> DraftWorkspaceResult:
+        return await _call_draft_workspace(
+            self,
             "workflow.draft_workspaces.handle",
             {
                 "workspace_id": workspace_id,
@@ -444,8 +481,9 @@ class RpcDraftClientMixin:
         revision: int,
         step_id: str,
         outcome: str,
-    ) -> dict[str, Any]:
-        return await self._call(
+    ) -> DraftWorkspaceResult:
+        return await _call_draft_workspace(
+            self,
             "workflow.draft_workspaces.remove_route",
             {
                 "workspace_id": workspace_id,
@@ -461,8 +499,9 @@ class RpcDraftClientMixin:
         workspace_id: str,
         revision: int,
         step_id: str,
-    ) -> dict[str, Any]:
-        return await self._call(
+    ) -> DraftWorkspaceResult:
+        return await _call_draft_workspace(
+            self,
             "workflow.draft_workspaces.remove_step",
             {
                 "workspace_id": workspace_id,
@@ -479,8 +518,9 @@ class RpcDraftClientMixin:
         step_id: str,
         inputs: Sequence[str] = (),
         outputs: Sequence[str] = (),
-    ) -> dict[str, Any]:
-        return await self._call(
+    ) -> DraftWorkspaceResult:
+        return await _call_draft_workspace(
+            self,
             "workflow.draft_workspaces.remove_binding",
             {
                 "workspace_id": workspace_id,
@@ -495,8 +535,9 @@ class RpcDraftClientMixin:
         self: RpcCaller,
         *,
         workspace_id: str,
-    ) -> dict[str, Any]:
-        return await self._call(
+    ) -> DraftWorkspaceResult:
+        return await _call_draft_workspace(
+            self,
             "workflow.draft_workspaces.validate",
             {"workspace_id": workspace_id},
         )
@@ -515,10 +556,13 @@ class RpcDraftClientMixin:
         self: RpcCaller,
         *,
         workspace_id: str,
-    ) -> dict[str, Any]:
-        return await self._call(
-            "workflow.draft_workspaces.delete",
-            {"workspace_id": workspace_id},
+    ) -> DeleteDraftWorkspaceResult:
+        return cast(
+            DeleteDraftWorkspaceResult,
+            await self._call(
+                "workflow.draft_workspaces.delete",
+                {"workspace_id": workspace_id},
+            ),
         )
 
     async def create_artifact_from_workspace(

@@ -761,6 +761,28 @@ async def test_create_draft_workspace_creates_workspace(tmp_path: Path) -> None:
 
 
 @pytest.mark.asyncio
+async def test_invalid_summary_values_remain_inspectable_and_listable(
+    tmp_path: Path,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "invalid_summary_values")
+    api, _service, _authoring = _draft_api(artifact_store)
+    draft = _echo_draft()
+    draft["name"] = 123
+    draft["start"] = ["echo"]
+
+    created = await api.create_draft_workspace(
+        workspace_id="repairable",
+        draft=draft,
+    )
+    listed = await api.list_draft_workspaces()
+
+    assert created["status"] == "invalid"
+    assert created["summary"]["name"] == 123
+    assert created["summary"]["start"] == ["echo"]
+    assert listed["workspaces"][0]["workspace_id"] == "repairable"
+
+
+@pytest.mark.asyncio
 async def test_create_empty_draft_workspace_persists_invalid_skeleton(
     tmp_path: Path,
 ) -> None:

@@ -1,9 +1,18 @@
-from __future__ import annotations
+"""Draft JSON-RPC method registration.
+
+Return annotations stay eagerly evaluated because fastapi-jsonrpc captures them
+while registering nested handlers for response validation and OpenRPC output.
+"""
 
 from typing import Any
 
 import fastapi_jsonrpc as jsonrpc
 
+from wf_api.models import (
+    DeleteDraftWorkspaceResult,
+    DraftWorkspaceResult,
+    ListDraftWorkspacesResult,
+)
 from wf_api.surface import RouteSource
 from wf_server import WorkflowServer
 
@@ -83,7 +92,7 @@ def register_methods(
     @entrypoint.method(name="workflow.draft_workspaces.list", errors=[WorkflowRpcError])
     async def workflow_draft_workspaces_list(
         params: ListDraftWorkspacesParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> ListDraftWorkspacesResult:
         try:
             return await server.api.list_draft_workspaces()
         except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:
@@ -92,7 +101,7 @@ def register_methods(
     @entrypoint.method(name="workflow.draft_workspaces.get", errors=[WorkflowRpcError])
     async def workflow_draft_workspaces_get(
         params: GetDraftWorkspaceParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         try:
             return await server.api.get_draft_workspace(
                 workspace_id=params.workspace_id,
@@ -119,7 +128,7 @@ def register_methods(
     )
     async def workflow_draft_workspaces_create_empty(
         params: CreateEmptyDraftWorkspaceParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         try:
             return await server.api.create_empty_draft_workspace(
                 workspace_id=params.workspace_id,
@@ -138,7 +147,7 @@ def register_methods(
     )
     async def workflow_draft_workspaces_patch(
         params: PatchDraftWorkspaceParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         try:
             return await server.api.patch_draft_workspace(
                 workspace_id=params.workspace_id,
@@ -154,7 +163,7 @@ def register_methods(
     )
     async def workflow_draft_workspaces_replace_document(
         params: ReplaceDraftWorkspaceDocumentParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         try:
             return await server.api.replace_draft_workspace_document(
                 workspace_id=params.workspace_id,
@@ -169,7 +178,7 @@ def register_methods(
     )
     async def workflow_draft_workspaces_set_name(
         params: SetDraftNameParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         try:
             return await server.api.set_draft_name(
                 workspace_id=params.workspace_id,
@@ -184,7 +193,7 @@ def register_methods(
     )
     async def workflow_draft_workspaces_set_start(
         params: SetDraftStartParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         try:
             return await server.api.set_draft_start(
                 workspace_id=params.workspace_id,
@@ -199,7 +208,7 @@ def register_methods(
     )
     async def workflow_draft_workspaces_set_contract(
         params: SetDraftContractParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         try:
             return await server.api.set_draft_contract(
                 workspace_id=params.workspace_id,
@@ -217,7 +226,7 @@ def register_methods(
     )
     async def workflow_draft_workspaces_set_route(
         params: SetDraftRouteParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         try:
             return await server.api.set_draft_route(
                 workspace_id=params.workspace_id,
@@ -235,7 +244,7 @@ def register_methods(
     )
     async def workflow_draft_workspaces_set_step_input_map(
         params: SetStepInputMapParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         try:
             return await server.api.set_step_input_map(
                 workspace_id=params.workspace_id,
@@ -253,7 +262,7 @@ def register_methods(
     )
     async def workflow_draft_workspaces_set_step_input_bindings(
         params: SetStepInputBindingsParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         try:
             return await server.api.set_step_input_bindings(
                 workspace_id=params.workspace_id,
@@ -270,7 +279,7 @@ def register_methods(
     )
     async def workflow_draft_workspaces_update_capability_step(
         params: UpdateCapabilityStepParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         try:
             return await server.api.update_capability_step(
                 workspace_id=params.workspace_id,
@@ -287,7 +296,7 @@ def register_methods(
     )
     async def workflow_draft_workspaces_set_step_output_bindings(
         params: SetStepOutputBindingsParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         try:
             return await server.api.set_step_output_bindings(
                 workspace_id=params.workspace_id,
@@ -304,7 +313,7 @@ def register_methods(
     )
     async def workflow_draft_workspaces_set_step_output_map(
         params: SetStepOutputMapParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         try:
             return await server.api.set_step_output_map(
                 workspace_id=params.workspace_id,
@@ -322,7 +331,7 @@ def register_methods(
     )
     async def workflow_draft_workspaces_set_workflow_output_map(
         params: SetWorkflowOutputMapParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         try:
             return await server.api.set_workflow_output_map(
                 workspace_id=params.workspace_id,
@@ -339,7 +348,7 @@ def register_methods(
     )
     async def workflow_draft_workspaces_set_workflow_output_bindings(
         params: SetWorkflowOutputBindingsParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         try:
             return await server.api.set_workflow_output_bindings(
                 workspace_id=params.workspace_id,
@@ -355,7 +364,7 @@ def register_methods(
     )
     async def workflow_draft_workspaces_bind(
         params: BindDraftParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         try:
             return await server.api.bind_draft(
                 workspace_id=params.workspace_id,
@@ -373,7 +382,7 @@ def register_methods(
     )
     async def workflow_draft_workspaces_add_step_from_capability(
         params: AddStepFromCapabilityParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         try:
             return await server.api.add_step_from_capability(
                 workspace_id=params.workspace_id,
@@ -399,7 +408,7 @@ def register_methods(
     )
     async def workflow_draft_workspaces_add_step(
         params: AddDraftStepParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         try:
             incoming = (
                 None
@@ -425,7 +434,7 @@ def register_methods(
     )
     async def workflow_draft_workspaces_branch(
         params: BranchDraftParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         try:
             return await server.api.branch_draft(
                 workspace_id=params.workspace_id,
@@ -441,7 +450,7 @@ def register_methods(
     )
     async def workflow_draft_workspaces_handle(
         params: HandleDraftParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         try:
             return await server.api.handle_draft(
                 workspace_id=params.workspace_id,
@@ -460,7 +469,7 @@ def register_methods(
     )
     async def workflow_draft_workspaces_validate(
         params: ValidateDraftWorkspaceParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         try:
             return await server.api.validate_draft_workspace(
                 workspace_id=params.workspace_id,
@@ -486,7 +495,7 @@ def register_methods(
     )
     async def workflow_draft_workspaces_delete(
         params: DeleteDraftWorkspaceParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> DeleteDraftWorkspaceResult:
         try:
             return await server.api.delete_draft_workspace(
                 workspace_id=params.workspace_id,
@@ -499,7 +508,7 @@ def register_methods(
     )
     async def workflow_draft_workspaces_remove_route(
         params: RemoveDraftRouteParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         try:
             return await server.api.remove_draft_route(
                 workspace_id=params.workspace_id,
@@ -515,7 +524,7 @@ def register_methods(
     )
     async def workflow_draft_workspaces_remove_step(
         params: RemoveDraftStepParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         try:
             return await server.api.remove_draft_step(
                 workspace_id=params.workspace_id,
@@ -530,7 +539,7 @@ def register_methods(
     )
     async def workflow_draft_workspaces_remove_binding(
         params: RemoveDraftBindingParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         try:
             return await server.api.remove_draft_binding(
                 workspace_id=params.workspace_id,

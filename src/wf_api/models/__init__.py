@@ -34,6 +34,13 @@ from .deployments import (
     ValidateDeploymentResult,
     WorkflowDeploymentPayload,
 )
+from .drafts import (
+    DeleteDraftWorkspaceResult,
+    DraftDiagnosticPayload,
+    DraftWorkspaceResult,
+    DraftWorkspaceSummary,
+    ListDraftWorkspacesResult,
+)
 from .runs import (
     InterruptPayload,
     InterruptRoutePayload,
@@ -55,8 +62,12 @@ __all__ = [
     "CapabilityRefPayload",
     "DeleteArtifactResult",
     "DeleteDeploymentResult",
+    "DeleteDraftWorkspaceResult",
     "DependencyDiagnosticPayload",
     "DeploymentSummary",
+    "DraftDiagnosticPayload",
+    "DraftWorkspaceResult",
+    "DraftWorkspaceSummary",
     "HealthResult",
     "GuidedResultPayload",
     "InterruptPayload",
@@ -65,6 +76,7 @@ __all__ = [
     "JsonProjector",
     "JsonSchema",
     "ListDeploymentsResult",
+    "ListDraftWorkspacesResult",
     "ListArtifactsResult",
     "ListRunsResult",
     "NextActionPatchExamplePayload",

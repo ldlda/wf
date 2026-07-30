@@ -58,6 +58,7 @@ from .drafts import (
     _draft_input_maps,
     _draft_output_map,
 )
+from .models import DraftWorkspaceResult, JsonProjector
 from .operation_context import WorkflowOperationContext
 from .schema_projection import (
     project_output_property_to_state_schema,
@@ -66,6 +67,8 @@ from .schema_projection import (
     schema_path_exists,
     validate_json_value_at_schema_path,
 )
+
+_PROJECT_DRAFT_WORKSPACE = JsonProjector(DraftWorkspaceResult)
 
 
 def _graph_parts(path: str) -> tuple[str, tuple[str, ...]]:
@@ -322,7 +325,7 @@ class WorkflowDraftAuthoringApi:
         *,
         workspace_id: str,
         revision: int,
-    ) -> WorkflowDraftWorkspace | dict[str, Any]:
+    ) -> WorkflowDraftWorkspace | DraftWorkspaceResult:
         """Load a workspace and enforce optimistic locking before semantic preflight."""
         return self.drafts._workspace_if_revision_matches(
             workspace_id=workspace_id,
@@ -367,7 +370,7 @@ class WorkflowDraftAuthoringApi:
         step: DraftStep,
         incoming: RouteSource | None = None,
         routes: dict[str, str] | None = None,
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         """Add one typed draft step and optional route edits in one revision."""
         checked = self._workspace_if_revision_matches(
             workspace_id=workspace_id,
@@ -471,7 +474,7 @@ class WorkflowDraftAuthoringApi:
         output_map: dict[str, str] | None = None,
         error_message_source: str | GraphSourcePath | None = None,
         title: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         """Bootstrap the smallest patchable draft around one workflow capability."""
         draft_input, draft_with = _draft_input_maps(
             input=input,
@@ -530,7 +533,7 @@ class WorkflowDraftAuthoringApi:
         revision: int,
         step_id: str,
         bindings: Sequence[InputBinding],
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         """Replace one capability step's canonical input bindings atomically."""
         checked = self._workspace_if_revision_matches(
             workspace_id=workspace_id,
@@ -556,7 +559,7 @@ class WorkflowDraftAuthoringApi:
             and workspace.draft.get("input_schema", {}) == projected.input_schema
             and workspace.draft.get("state_schema", {}) == projected.state_schema
         ):
-            return summarize_draft_workspace(workspace)
+            return _PROJECT_DRAFT_WORKSPACE(summarize_draft_workspace(workspace))
 
         patch = _step_input_bindings_patch(
             workspace=workspace,
@@ -651,7 +654,7 @@ class WorkflowDraftAuthoringApi:
         revision: int,
         step_id: str,
         update: CapabilityStepUpdate,
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         """Return a workspace summary or conflict after one atomic step patch."""
         checked = self._workspace_if_revision_matches(
             workspace_id=workspace_id,
@@ -718,7 +721,7 @@ class WorkflowDraftAuthoringApi:
             and workspace.draft.get("input_schema", {}) == input_schema
             and workspace.draft.get("state_schema", {}) == state_schema
         ):
-            return summarize_draft_workspace(workspace)
+            return _PROJECT_DRAFT_WORKSPACE(summarize_draft_workspace(workspace))
 
         next_draft = deepcopy(workspace.draft)
         next_steps = next_draft.get("steps")
@@ -739,7 +742,7 @@ class WorkflowDraftAuthoringApi:
         workspace_id: str,
         revision: int,
         bindings: Sequence[InputBinding],
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         """Replace canonical workflow output bindings atomically."""
         checked = self._workspace_if_revision_matches(
             workspace_id=workspace_id,
@@ -839,7 +842,7 @@ class WorkflowDraftAuthoringApi:
 
         payload = [binding.model_dump(mode="json") for binding in bindings]
         if workspace.draft.get("output", []) == payload and projected == output_schema:
-            return summarize_draft_workspace(workspace)
+            return _PROJECT_DRAFT_WORKSPACE(summarize_draft_workspace(workspace))
 
         patch: list[dict[str, Any]] = []
         if projected != output_schema:
@@ -864,7 +867,7 @@ class WorkflowDraftAuthoringApi:
         revision: int,
         step_id: str,
         bindings: Sequence[OutputBinding],
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         """Replace one capability step's canonical output bindings atomically."""
         checked = self._workspace_if_revision_matches(
             workspace_id=workspace_id,
@@ -924,7 +927,7 @@ class WorkflowDraftAuthoringApi:
             step.get("output", []) == payload
             and workspace.draft.get("state_schema", {}) == projected_state
         ):
-            return summarize_draft_workspace(workspace)
+            return _PROJECT_DRAFT_WORKSPACE(summarize_draft_workspace(workspace))
 
         return await self.drafts.patch_draft_workspace(
             workspace_id=workspace_id,
@@ -945,7 +948,7 @@ class WorkflowDraftAuthoringApi:
         step_id: str,
         source_path: str,
         target_path: str,
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         """Bind a graph path to or from one capability-local path."""
         checked = self._workspace_if_revision_matches(
             workspace_id=workspace_id,
@@ -1141,7 +1144,7 @@ class WorkflowDraftAuthoringApi:
         desc: str | None = None,
         retry: int | None = None,
         timeout_seconds: int | None = None,
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         """Add one capability step plus explicit route/map/schema wiring.
 
         This is a composed authoring helper for agents.  It edits the draft in
@@ -1321,7 +1324,7 @@ class WorkflowDraftAuthoringApi:
         revision: int,
         step_id: str,
         routes: dict[str, str],
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         """Atomically set routes for one step, preserving unspecified outcomes."""
         checked = self._workspace_if_revision_matches(
             workspace_id=workspace_id,
@@ -1338,7 +1341,7 @@ class WorkflowDraftAuthoringApi:
             raise ValueError(f"routes for step {step_id!r} must be an object")
         merged = {**existing, **routes}
         if merged == existing:
-            return summarize_draft_workspace(workspace)
+            return _PROJECT_DRAFT_WORKSPACE(summarize_draft_workspace(workspace))
         return await self.drafts.patch_draft_workspace(
             workspace_id=workspace_id,
             revision=revision,
@@ -1358,7 +1361,7 @@ class WorkflowDraftAuthoringApi:
         revision: int,
         branches: Sequence[RouteSource],
         target: str,
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         """Update the target for multiple (step, outcome) pairs atomically."""
         checked = self._workspace_if_revision_matches(
             workspace_id=workspace_id,
@@ -1368,7 +1371,7 @@ class WorkflowDraftAuthoringApi:
             return checked
         workspace = checked
         if not branches:
-            return summarize_draft_workspace(workspace)
+            return _PROJECT_DRAFT_WORKSPACE(summarize_draft_workspace(workspace))
         draft_routes = workspace.draft.get("routes", {})
         if not isinstance(draft_routes, dict):
             raise ValueError("draft routes must be an object")
@@ -1397,7 +1400,7 @@ class WorkflowDraftAuthoringApi:
                 }
             )
         if not patch:
-            return summarize_draft_workspace(workspace)
+            return _PROJECT_DRAFT_WORKSPACE(summarize_draft_workspace(workspace))
         return await self.drafts.patch_draft_workspace(
             workspace_id=workspace_id,
             revision=revision,
@@ -1411,7 +1414,7 @@ class WorkflowDraftAuthoringApi:
         revision: int,
         step_id: str,
         outcome: str,
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         """Remove one route; missing routes are revision-checked no-ops."""
         checked = self._workspace_if_revision_matches(
             workspace_id=workspace_id,
@@ -1427,7 +1430,7 @@ class WorkflowDraftAuthoringApi:
         if not isinstance(step_routes, dict):
             raise ValueError(f"routes for step {step_id!r} must be an object")
         if outcome not in step_routes:
-            return summarize_draft_workspace(workspace)
+            return _PROJECT_DRAFT_WORKSPACE(summarize_draft_workspace(workspace))
         return await self.drafts.patch_draft_workspace(
             workspace_id=workspace_id,
             revision=revision,
@@ -1448,7 +1451,7 @@ class WorkflowDraftAuthoringApi:
         workspace_id: str,
         revision: int,
         step_id: str,
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         """Remove a step and its own route map; inbound routes are left explicit."""
         checked = self._workspace_if_revision_matches(
             workspace_id=workspace_id,
@@ -1461,7 +1464,7 @@ class WorkflowDraftAuthoringApi:
         if not isinstance(steps, dict):
             raise ValueError("draft steps must be an object")
         if step_id not in steps:
-            return summarize_draft_workspace(workspace)
+            return _PROJECT_DRAFT_WORKSPACE(summarize_draft_workspace(workspace))
         patch = [
             {
                 "op": "remove",
@@ -1490,7 +1493,7 @@ class WorkflowDraftAuthoringApi:
         step_id: str,
         inputs: Sequence[str] = (),
         outputs: Sequence[str] = (),
-    ) -> dict[str, Any]:
+    ) -> DraftWorkspaceResult:
         """Remove selected local input/output bindings from one draft step."""
         if not inputs and not outputs:
             raise ValueError("pass at least one input or output binding to remove")
@@ -1525,7 +1528,7 @@ class WorkflowDraftAuthoringApi:
             item for item in current_outputs if item.get("source") not in output_sources
         ]
         if next_inputs == current_inputs and next_outputs == current_outputs:
-            return summarize_draft_workspace(workspace)
+            return _PROJECT_DRAFT_WORKSPACE(summarize_draft_workspace(workspace))
         patch: list[dict[str, Any]] = []
         if next_inputs != current_inputs:
             patch.append(
