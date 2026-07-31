@@ -14,6 +14,7 @@ from .draft_authoring import RouteSource, WorkflowDraftAuthoringApi
 from .draft_updates import CapabilityStepUpdate
 from .drafts import WorkflowDraftApi
 from .models import (
+    CapabilityCallResult,
     CompileDraftWorkspaceResult,
     CompileDraftWorkspaceSuccess,
     CreateArtifactFromWorkspaceResult,
@@ -22,7 +23,9 @@ from .models import (
     DeleteDeploymentResult,
     DeleteDraftWorkspaceResult,
     DraftWorkspaceResult,
+    InspectCapabilityResult,
     ListArtifactsResult,
+    ListCapabilitiesResult,
     ListDeploymentsResult,
     ListDraftWorkspacesResult,
     ListRunsResult,
@@ -66,7 +69,7 @@ class WorkflowApi:
         source_id: str | None = None,
         cursor: str | None = None,
         limit: int = 50,
-    ) -> dict[str, Any]:
+    ) -> ListCapabilitiesResult:
         return await self.capabilities.list_capabilities(
             query=query,
             source_id=source_id,
@@ -78,7 +81,7 @@ class WorkflowApi:
         self,
         *,
         qualified_name: str,
-    ) -> dict[str, Any]:
+    ) -> InspectCapabilityResult:
         return await self.capabilities.inspect_capability(qualified_name=qualified_name)
 
     async def call_capability(
@@ -87,7 +90,7 @@ class WorkflowApi:
         qualified_name: str,
         payload: dict[str, Any],
         deployment_id: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> CapabilityCallResult:
         return await self.capabilities.call_capability(
             qualified_name=qualified_name,
             payload=payload,

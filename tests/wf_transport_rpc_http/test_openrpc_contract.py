@@ -46,6 +46,77 @@ def test_openrpc_exposes_typed_health_result(
     )
 
 
+def test_openrpc_exposes_typed_capability_list_result(
+    openrpc_document: dict[str, Any],
+) -> None:
+    _assert_result_component(
+        openrpc_document,
+        method_name="workflow.capabilities.list",
+        component_name="ListCapabilitiesResult",
+        properties={"capabilities", "next_cursor", "total"},
+    )
+    capabilities = openrpc_document["components"]["schemas"]["ListCapabilitiesResult"][
+        "properties"
+    ]["capabilities"]
+    assert capabilities["items"] == {
+        "anyOf": [
+            {"$ref": "#/components/schemas/NodeSpecCapabilitySummary"},
+            {"$ref": "#/components/schemas/WrapperArtifactCapabilitySummary"},
+        ]
+    }
+
+
+def test_openrpc_exposes_typed_capability_inspect_result(
+    openrpc_document: dict[str, Any],
+) -> None:
+    method = _method_by_name(openrpc_document, "workflow.capabilities.inspect")
+
+    assert method["result"]["schema"] == {
+        "$ref": "#/components/schemas/InspectCapabilityResult"
+    }
+    schemas = openrpc_document["components"]["schemas"]
+    assert schemas["InspectCapabilityResult"] == {
+        "anyOf": [
+            {"$ref": "#/components/schemas/NodeSpecCapabilityDetail"},
+            {"$ref": "#/components/schemas/WrapperArtifactCapabilityDetail"},
+        ]
+    }
+    assert schemas["NodeSpecCapabilityDetail"]["properties"]["wrapper_hints"] == {
+        "$ref": "#/components/schemas/WrapperAuthoringHintsPayload"
+    }
+    assert schemas["NodeSpecCapabilityDetail"]["properties"]["kind"]["const"] == (
+        "node_spec"
+    )
+    assert (
+        schemas["WrapperArtifactCapabilityDetail"]["properties"]["kind"]["const"]
+        == "wrapper_artifact"
+    )
+    assert schemas["WrapperArtifactCapabilityDetail"]["properties"][
+        "required_capabilities"
+    ]["additionalProperties"] == {
+        "$ref": "#/components/schemas/RequiredCapabilityPayload"
+    }
+
+
+def test_openrpc_exposes_typed_capability_call_result(
+    openrpc_document: dict[str, Any],
+) -> None:
+    _assert_result_component(
+        openrpc_document,
+        method_name="workflow.capabilities.call",
+        component_name="CapabilityCallResult",
+        properties={
+            "qualified_name",
+            "source_id",
+            "kind",
+            "deployment_id",
+            "outcome",
+            "output",
+            "diagnostics",
+        },
+    )
+
+
 @pytest.mark.parametrize(
     ("method_name", "component_name", "properties"),
     [

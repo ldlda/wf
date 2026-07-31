@@ -163,6 +163,50 @@ async def test_rpc_health_and_capability_methods(tmp_path) -> None:
     assert called["result"]["output"] == {"value": "hello direct rpc"}
 
 
+async def test_rpc_capability_methods_preserve_saved_wrapper_fields(tmp_path) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    await server.api.create_artifact_from_plan(
+        artifact_id="rpc_wrapper",
+        version=1,
+        title="RPC Wrapper",
+        kind="wrapper",
+        plan=_constant_plan(),
+        outcomes=["ok"],
+    )
+    app = create_rpc_app(server)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        listed = await _rpc(
+            client,
+            "workflow.capabilities.list",
+            {"source_id": "workflow", "limit": 10},
+        )
+        inspected = await _rpc(
+            client,
+            "workflow.capabilities.inspect",
+            {"qualified_name": "workflow.rpc_wrapper.v1"},
+        )
+        called = await _rpc(
+            client,
+            "workflow.capabilities.call",
+            {
+                "qualified_name": "workflow.rpc_wrapper.v1",
+                "payload": {},
+            },
+        )
+
+    wrapper = listed["result"]["capabilities"][0]
+    assert wrapper["kind"] == "wrapper_artifact"
+    assert wrapper["artifact_id"] == "rpc_wrapper"
+    assert wrapper["version"] == 1
+    assert wrapper["title"] == "RPC Wrapper"
+    assert inspected["result"]["kind"] == "wrapper_artifact"
+    assert inspected["result"]["artifact_id"] == "rpc_wrapper"
+    assert "required_capabilities" in inspected["result"]
+    assert called["result"]["kind"] == "wrapper_artifact"
+    assert called["result"]["output"] == {"result": "hello over rpc"}
+
+
 async def test_rpc_unknown_method_returns_json_rpc_error(tmp_path) -> None:
     server = build_local_static_workflow_server(tmp_path / "store")
     app = create_rpc_app(server)

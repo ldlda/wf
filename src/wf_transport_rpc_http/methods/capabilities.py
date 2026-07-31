@@ -1,9 +1,16 @@
-from __future__ import annotations
+"""Capability JSON-RPC method registration.
 
-from typing import Any
+Return annotations stay eagerly evaluated because fastapi-jsonrpc captures them
+while registering nested handlers for response validation and OpenRPC output.
+"""
 
 import fastapi_jsonrpc as jsonrpc
 
+from wf_api.models import (
+    CapabilityCallResult,
+    InspectCapabilityResult,
+    ListCapabilitiesResult,
+)
 from wf_server import WorkflowServer
 
 from ..errors import WorkflowRpcError, raise_workflow_rpc_error
@@ -24,7 +31,7 @@ def register_methods(
     @entrypoint.method(name="workflow.capabilities.list", errors=[WorkflowRpcError])
     async def workflow_capabilities_list(
         params: ListCapabilitiesParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> ListCapabilitiesResult:
         try:
             return await server.api.list_capabilities(
                 query=params.query,
@@ -38,7 +45,7 @@ def register_methods(
     @entrypoint.method(name="workflow.capabilities.inspect", errors=[WorkflowRpcError])
     async def workflow_capabilities_inspect(
         params: InspectCapabilityParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> InspectCapabilityResult:
         try:
             return await server.api.inspect_capability(
                 qualified_name=params.qualified_name,
@@ -49,7 +56,7 @@ def register_methods(
     @entrypoint.method(name="workflow.capabilities.call", errors=[WorkflowRpcError])
     async def workflow_capabilities_call(
         params: CallCapabilityParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> CapabilityCallResult:
         try:
             return await server.api.call_capability(
                 qualified_name=params.qualified_name,

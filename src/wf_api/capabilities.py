@@ -22,9 +22,17 @@ from .draft_authoring import WorkflowDraftAuthoringApi
 from .drafts import WorkflowDraftApi
 from .listing import matches_query, paged_list_payload
 from .models import (
+    CapabilityCallResult,
+    CapabilitySummary,
     CreateDraftWorkspaceFromCapabilityResult,
+    InspectCapabilityResult,
     JsonProjector,
+    ListCapabilitiesResult,
     NextActionsPayload,
+    NodeSpecCapabilityDetail,
+    NodeSpecCapabilitySummary,
+    WrapperArtifactCapabilityDetail,
+    WrapperArtifactCapabilitySummary,
     WrapperAuthoringHintsPayload,
 )
 from .next_actions import NextActions
@@ -37,6 +45,12 @@ from .wrapper_hints import (
 )
 
 _PROJECT_WRAPPER_HINTS = JsonProjector(WrapperAuthoringHintsPayload)
+_PROJECT_CAPABILITY_LIST = JsonProjector(ListCapabilitiesResult)
+_PROJECT_CAPABILITY_CALL = JsonProjector(CapabilityCallResult)
+_PROJECT_NODE_SPEC_SUMMARY = JsonProjector(NodeSpecCapabilitySummary)
+_PROJECT_WRAPPER_SUMMARY = JsonProjector(WrapperArtifactCapabilitySummary)
+_PROJECT_NODE_SPEC_DETAIL = JsonProjector(NodeSpecCapabilityDetail)
+_PROJECT_WRAPPER_DETAIL = JsonProjector(WrapperArtifactCapabilityDetail)
 
 
 def _schema_field_names(schema: dict[str, Any]) -> list[str]:
@@ -82,21 +96,23 @@ class WorkflowCapabilityApi:
         source_id: str | None = None,
         cursor: str | None = None,
         limit: int = 50,
-    ) -> dict[str, Any]:
+    ) -> ListCapabilitiesResult:
         """Return compact paged planner-visible workflow capability summaries."""
-        capabilities = [
-            {
-                "name": detail.name,
-                "source_id": source.id,
-                "kind": "node_spec",
-                "description": detail.description,
-                "outcomes": list(detail.outcomes),
-                "is_async": detail.is_async,
-                "input_fields": _schema_field_names(detail.input_schema),
-                "output_fields": _schema_field_names(
-                    workflow_output_schema_for_authoring(detail.output_schema)
-                ),
-            }
+        capabilities: list[CapabilitySummary] = [
+            _PROJECT_NODE_SPEC_SUMMARY(
+                {
+                    "name": detail.name,
+                    "source_id": source.id,
+                    "kind": "node_spec",
+                    "description": detail.description,
+                    "outcomes": list(detail.outcomes),
+                    "is_async": detail.is_async,
+                    "input_fields": _schema_field_names(detail.input_schema),
+                    "output_fields": _schema_field_names(
+                        workflow_output_schema_for_authoring(detail.output_schema)
+                    ),
+                }
+            )
             for source in sorted(
                 self.context.specs.capability_sources.values(),
                 key=lambda source: source.id,
@@ -114,14 +130,18 @@ class WorkflowCapabilityApi:
             self._wrapper_capability_summaries(query=query, source_id=source_id)
         )
         capabilities.sort(key=lambda capability: capability["name"])
-        return paged_list_payload(
-            "capabilities",
-            capabilities,
-            cursor=cursor,
-            limit=limit,
+        return _PROJECT_CAPABILITY_LIST(
+            paged_list_payload(
+                "capabilities",
+                capabilities,
+                cursor=cursor,
+                limit=limit,
+            )
         )
 
-    async def inspect_capability(self, *, qualified_name: str) -> dict[str, Any]:
+    async def inspect_capability(
+        self, *, qualified_name: str
+    ) -> InspectCapabilityResult:
         """Return one planner-visible workflow capability contract."""
         for source in self.context.specs.capability_sources.values():
             if not source.enabled or not source.visibility.planner:
@@ -129,13 +149,15 @@ class WorkflowCapabilityApi:
             for detail in source.as_inventory().capabilities.node_spec_details:
                 if detail.name == qualified_name:
                     detail_payload = detail.model_dump(mode="json")
+                    detail_payload["source_id"] = source.id
+                    detail_payload["kind"] = "node_spec"
                     detail_payload["wrapper_hints"] = wrapper_hints_for_capability(
                         capability_name=detail.name,
                         input_schema=detail.input_schema,
                         output_schema=detail.output_schema,
                         outcomes=detail.outcomes,
                     ).model_dump(mode="json")
-                    return detail_payload
+                    return _PROJECT_NODE_SPEC_DETAIL(detail_payload)
         wrapper_detail = self._wrapper_capability_detail(qualified_name)
         if wrapper_detail is not None:
             return wrapper_detail
@@ -147,7 +169,7 @@ class WorkflowCapabilityApi:
         qualified_name: str,
         payload: dict[str, Any],
         deployment_id: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> CapabilityCallResult:
         """Execute one planner-visible workflow capability for authoring tests."""
         wrapper_artifact = self._wrapper_artifact_for_capability_name(qualified_name)
         if wrapper_artifact is not None:
@@ -166,39 +188,43 @@ class WorkflowCapabilityApi:
         try:
             result = await handler(payload, RuntimeContext(current_node_id=spec.name))
         except Exception as exc:
-            return {
+            return _PROJECT_CAPABILITY_CALL(
+                {
+                    "qualified_name": spec.name,
+                    "source_id": source_id,
+                    "kind": "node_spec",
+                    "deployment_id": None,
+                    "outcome": "runtime_error",
+                    "output": None,
+                    "diagnostics": [
+                        DependencyDiagnostic(
+                            severity=DiagnosticSeverity.ERROR,
+                            code="capability_call_failed",
+                            logical_ref=spec.name,
+                            bound_source=source_id,
+                            message=(
+                                f"Capability {spec.name!r} failed during test call: {exc}"
+                            ),
+                            repair_hint=(
+                                "Check the source runtime, then retry the capability "
+                                "or inspect the deployment run if this happened inside "
+                                "a workflow."
+                            ),
+                        ).model_dump(mode="json")
+                    ],
+                }
+            )
+        return _PROJECT_CAPABILITY_CALL(
+            {
                 "qualified_name": spec.name,
                 "source_id": source_id,
                 "kind": "node_spec",
                 "deployment_id": None,
-                "outcome": "runtime_error",
-                "output": None,
-                "diagnostics": [
-                    DependencyDiagnostic(
-                        severity=DiagnosticSeverity.ERROR,
-                        code="capability_call_failed",
-                        logical_ref=spec.name,
-                        bound_source=source_id,
-                        message=(
-                            f"Capability {spec.name!r} failed during test call: {exc}"
-                        ),
-                        repair_hint=(
-                            "Check the source runtime, then retry the capability "
-                            "or inspect the deployment run if this happened inside "
-                            "a workflow."
-                        ),
-                    ).model_dump(mode="json")
-                ],
+                "outcome": result["outcome"],
+                "output": result["output"],
+                "diagnostics": [],
             }
-        return {
-            "qualified_name": spec.name,
-            "source_id": source_id,
-            "kind": "node_spec",
-            "deployment_id": None,
-            "outcome": result["outcome"],
-            "output": result["output"],
-            "diagnostics": [],
-        }
+        )
 
     def _wrapper_artifact_for_capability_name(
         self,
@@ -230,7 +256,7 @@ class WorkflowCapabilityApi:
         *,
         query: str | None,
         source_id: str | None,
-    ) -> list[dict[str, Any]]:
+    ) -> list[WrapperArtifactCapabilitySummary]:
         """Project saved wrappers into workflow capability discovery rows.
 
         Wrapper artifacts are not live source NodeSpecs, but authors need to
@@ -240,7 +266,7 @@ class WorkflowCapabilityApi:
         """
         if source_id not in {None, "workflow"} or self.context.artifact_store is None:
             return []
-        rows: list[dict[str, Any]] = []
+        rows: list[WrapperArtifactCapabilitySummary] = []
         for artifact in self.context.artifact_store.list_artifacts():
             if artifact.kind != "wrapper":
                 continue
@@ -252,52 +278,56 @@ class WorkflowCapabilityApi:
             ):
                 continue
             rows.append(
-                {
-                    "name": name,
-                    "source_id": "workflow",
-                    "kind": "wrapper_artifact",
-                    "artifact_id": artifact.id,
-                    "version": artifact.version,
-                    "title": artifact.title,
-                    "description": artifact.description,
-                    "outcomes": list(artifact.outcomes),
-                    "is_async": True,
-                    "input_fields": _schema_field_names(artifact.input_schema),
-                    "output_fields": _schema_field_names(artifact.output_schema),
-                }
+                _PROJECT_WRAPPER_SUMMARY(
+                    {
+                        "name": name,
+                        "source_id": "workflow",
+                        "kind": "wrapper_artifact",
+                        "artifact_id": artifact.id,
+                        "version": artifact.version,
+                        "title": artifact.title,
+                        "description": artifact.description,
+                        "outcomes": list(artifact.outcomes),
+                        "is_async": True,
+                        "input_fields": _schema_field_names(artifact.input_schema),
+                        "output_fields": _schema_field_names(artifact.output_schema),
+                    }
+                )
             )
         return rows
 
     def _wrapper_capability_detail(
         self,
         qualified_name: str,
-    ) -> dict[str, Any] | None:
+    ) -> WrapperArtifactCapabilityDetail | None:
         """Return a NodeSpec-like contract for one saved wrapper artifact."""
         artifact = self._wrapper_artifact_for_capability_name(qualified_name)
         if artifact is None:
             return None
-        return {
-            "name": artifact_capability_id(artifact),
-            "source_id": "workflow",
-            "kind": "wrapper_artifact",
-            "artifact_id": artifact.id,
-            "version": artifact.version,
-            "title": artifact.title,
-            "description": artifact.description,
-            "outcomes": list(artifact.outcomes),
-            "is_async": True,
-            "input_schema": artifact.input_schema,
-            "output_schema": artifact.output_schema,
-            "required_capabilities": required_capability_payloads(
-                artifact.required_capability_map()
-            ),
-            "wrapper_hints": wrapper_hints_for_capability(
-                capability_name=artifact_capability_id(artifact),
-                input_schema=artifact.input_schema,
-                output_schema=artifact.output_schema,
-                outcomes=list(artifact.outcomes),
-            ).model_dump(mode="json"),
-        }
+        return _PROJECT_WRAPPER_DETAIL(
+            {
+                "name": artifact_capability_id(artifact),
+                "source_id": "workflow",
+                "kind": "wrapper_artifact",
+                "artifact_id": artifact.id,
+                "version": artifact.version,
+                "title": artifact.title,
+                "description": artifact.description,
+                "outcomes": list(artifact.outcomes),
+                "is_async": True,
+                "input_schema": artifact.input_schema,
+                "output_schema": artifact.output_schema,
+                "required_capabilities": required_capability_payloads(
+                    artifact.required_capability_map()
+                ),
+                "wrapper_hints": wrapper_hints_for_capability(
+                    capability_name=artifact_capability_id(artifact),
+                    input_schema=artifact.input_schema,
+                    output_schema=artifact.output_schema,
+                    outcomes=list(artifact.outcomes),
+                ).model_dump(mode="json"),
+            }
+        )
 
     async def _call_wrapper_artifact(
         self,
@@ -305,7 +335,7 @@ class WorkflowCapabilityApi:
         payload: dict[str, Any],
         *,
         deployment_id: str | None,
-    ) -> dict[str, Any]:
+    ) -> CapabilityCallResult:
         """Execute a saved wrapper artifact through the workflow runner."""
         unsupported = direct_wrapper_interrupt_diagnostic(artifact)
         if unsupported is not None:
@@ -334,15 +364,17 @@ class WorkflowCapabilityApi:
             deployment=deployment,
             artifact=artifact,
         )
-        return {
-            "qualified_name": artifact_capability_id(artifact),
-            "source_id": "workflow",
-            "kind": "wrapper_artifact",
-            "deployment_id": deployment_id,
-            "outcome": run.status.value,
-            "output": run.output,
-            "diagnostics": [],
-        }
+        return _PROJECT_CAPABILITY_CALL(
+            {
+                "qualified_name": artifact_capability_id(artifact),
+                "source_id": "workflow",
+                "kind": "wrapper_artifact",
+                "deployment_id": deployment_id,
+                "outcome": run.status.value,
+                "output": run.output,
+                "diagnostics": [],
+            }
+        )
 
     async def create_draft_workspace_from_capability(
         self,

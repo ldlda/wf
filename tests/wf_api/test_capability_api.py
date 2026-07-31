@@ -84,6 +84,8 @@ async def test_inspect_capability_returns_detail_with_wrapper_hints(
     detail = await api.inspect_capability(qualified_name="demo.personal.echo_tool")
 
     assert detail["name"] == "demo.personal.echo_tool"
+    assert detail["source_id"] == "demo.personal"
+    assert detail["kind"] == "node_spec"
     assert "wrapper_hints" in detail
     hints = detail["wrapper_hints"]
     assert hints["capability_name"] == "demo.personal.echo_tool"

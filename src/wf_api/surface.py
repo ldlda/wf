@@ -10,6 +10,7 @@ from wf_core.models.steps import InputBinding, OutputBinding
 from .draft_authoring import RouteSource
 from .draft_updates import CapabilityStepUpdate
 from .models import (
+    CapabilityCallResult,
     CompileDraftWorkspaceResult,
     CreateArtifactFromWorkspaceResult,
     CreateDraftWorkspaceFromCapabilityResult,
@@ -17,7 +18,9 @@ from .models import (
     DeleteDeploymentResult,
     DeleteDraftWorkspaceResult,
     DraftWorkspaceResult,
+    InspectCapabilityResult,
     ListArtifactsResult,
+    ListCapabilitiesResult,
     ListDeploymentsResult,
     ListDraftWorkspacesResult,
     ListRunsResult,
@@ -42,13 +45,13 @@ class WorkflowCapabilitySurface(Protocol):
         source_id: str | None = None,
         cursor: str | None = None,
         limit: int = 50,
-    ) -> dict[str, Any]: ...
+    ) -> ListCapabilitiesResult: ...
 
     async def inspect_capability(
         self,
         *,
         qualified_name: str,
-    ) -> dict[str, Any]: ...
+    ) -> InspectCapabilityResult: ...
 
     async def call_capability(
         self,
@@ -56,7 +59,7 @@ class WorkflowCapabilitySurface(Protocol):
         qualified_name: str,
         payload: dict[str, Any],
         deployment_id: str | None = None,
-    ) -> dict[str, Any]: ...
+    ) -> CapabilityCallResult: ...
 
 
 class WorkflowDraftSurface(Protocol):
