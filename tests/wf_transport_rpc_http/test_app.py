@@ -163,6 +163,36 @@ async def test_rpc_health_and_capability_methods(tmp_path) -> None:
     assert called["result"]["output"] == {"value": "hello direct rpc"}
 
 
+async def test_rpc_source_discovery_preserves_inventory_contracts(tmp_path) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    app = create_rpc_app(server)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        listed = await _rpc(client, "workflow.sources.list", {"limit": 10})
+        inspected = await _rpc(
+            client,
+            "workflow.sources.inspect",
+            {"source_id": "wf.std"},
+        )
+        diagnosed = await _rpc(
+            client,
+            "workflow.sources.diagnose",
+            {"source_id": "wf.std"},
+        )
+
+    source = next(row for row in listed["result"]["sources"] if row["id"] == "wf.std")
+    assert source["kind"] == "system"
+    assert source["preview"]["node_specs"]
+    inventory = inspected["result"]["capabilities"]
+    assert inventory["node_spec_details"][0]["input_schema"]["type"] == "object"
+    assert inventory["reducer_details"][0]["ref"] == {
+        "source": "wf.std",
+        "capability_key": "add",
+    }
+    assert diagnosed["result"]["source_id"] == "wf.std"
+    assert diagnosed["result"]["status"] == "unknown"
+
+
 async def test_rpc_capability_methods_preserve_saved_wrapper_fields(tmp_path) -> None:
     server = build_local_static_workflow_server(tmp_path / "store")
     await server.api.create_artifact_from_plan(

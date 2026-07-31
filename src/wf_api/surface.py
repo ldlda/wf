@@ -19,15 +19,18 @@ from .models import (
     DeleteDraftWorkspaceResult,
     DraftWorkspaceResult,
     InspectCapabilityResult,
+    InspectSourceResult,
     ListArtifactsResult,
     ListCapabilitiesResult,
     ListDeploymentsResult,
     ListDraftWorkspacesResult,
     ListRunsResult,
+    ListSourcesResult,
     RunResult,
     RunTraceResult,
     SaveArtifactResult,
     SaveDeploymentResult,
+    SourceDiagnosisResult,
     ValidateDeploymentResult,
     WorkflowArtifactPayload,
     WorkflowDeploymentPayload,
@@ -496,19 +499,19 @@ class WorkflowSourceAdminSurface(Protocol):
         *,
         cursor: str | None = None,
         limit: int = 50,
-    ) -> dict[str, Any]: ...
+    ) -> ListSourcesResult: ...
 
     async def inspect_source(
         self,
         *,
         source_id: str,
-    ) -> dict[str, Any]: ...
+    ) -> InspectSourceResult: ...
 
     async def diagnose_source(
         self,
         *,
         source_id: str,
-    ) -> dict[str, Any]: ...
+    ) -> SourceDiagnosisResult: ...
 
 
 class WorkflowAdminSurface(Protocol):

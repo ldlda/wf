@@ -117,6 +117,58 @@ def test_openrpc_exposes_typed_capability_call_result(
     )
 
 
+def test_openrpc_exposes_typed_source_list_result(
+    openrpc_document: dict[str, Any],
+) -> None:
+    _assert_result_component(
+        openrpc_document,
+        method_name="workflow.sources.list",
+        component_name="ListSourcesResult",
+        properties={"sources", "next_cursor", "total"},
+    )
+    sources = openrpc_document["components"]["schemas"]["ListSourcesResult"][
+        "properties"
+    ]["sources"]
+    assert sources["items"] == {"$ref": "#/components/schemas/SourceStatusPayload"}
+    assert set(
+        openrpc_document["components"]["schemas"]["ListSourcesResult"]["required"]
+    ) == {"sources", "next_cursor", "total"}
+
+
+def test_openrpc_exposes_typed_source_inspect_result(
+    openrpc_document: dict[str, Any],
+) -> None:
+    _assert_result_component(
+        openrpc_document,
+        method_name="workflow.sources.inspect",
+        component_name="InspectSourceResult",
+        properties={"id", "kind", "capabilities"},
+    )
+    inspected = openrpc_document["components"]["schemas"]["InspectSourceResult"]
+    assert inspected["properties"]["capabilities"] == {
+        "$ref": "#/components/schemas/SourceCapabilityInventoryPayload"
+    }
+    assert inspected["properties"]["diagnostics"]["anyOf"][:2] == [
+        {"$ref": "#/components/schemas/SourceDiagnosisResult"},
+        {"$ref": "#/components/schemas/SourceDiagnosticsUnavailablePayload"},
+    ]
+    assert {"id", "kind", "capabilities"} <= set(inspected["required"])
+
+
+def test_openrpc_exposes_typed_source_diagnosis_result(
+    openrpc_document: dict[str, Any],
+) -> None:
+    _assert_result_component(
+        openrpc_document,
+        method_name="workflow.sources.diagnose",
+        component_name="SourceDiagnosisResult",
+        properties={"source_id", "status", "diagnostics"},
+    )
+    diagnosed = openrpc_document["components"]["schemas"]["SourceDiagnosisResult"]
+    assert set(diagnosed["required"]) == {"source_id", "status", "diagnostics"}
+    assert diagnosed["additionalProperties"] is True
+
+
 @pytest.mark.parametrize(
     ("method_name", "component_name", "properties"),
     [

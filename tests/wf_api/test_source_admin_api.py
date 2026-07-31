@@ -243,6 +243,28 @@ def test_diagnose_source_uses_provider() -> None:
     assert payload["auth"]["record_present"] is True
 
 
+class _ExtendedDiagnostics:
+    def diagnose_source(self, source_id: str) -> dict[str, object]:
+        return {
+            "source_id": source_id,
+            "status": "degraded",
+            "diagnostics": [],
+            "provider_latency_ms": 12,
+        }
+
+
+def test_diagnose_source_preserves_provider_extensions() -> None:
+    payload = asyncio.run(
+        _api_with_diagnostics(
+            _source("demo.personal"),
+            diagnostics=_ExtendedDiagnostics(),
+        ).diagnose_source(source_id="demo.personal")
+    )
+
+    assert payload["status"] == "degraded"
+    assert dict(payload)["provider_latency_ms"] == 12
+
+
 def test_diagnose_source_without_provider_returns_basic_status() -> None:
     payload = asyncio.run(
         _api_with_diagnostics(_source("demo.personal")).diagnose_source(

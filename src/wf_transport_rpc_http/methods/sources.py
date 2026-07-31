@@ -1,9 +1,12 @@
-from __future__ import annotations
+"""Source discovery JSON-RPC method registration.
 
-from typing import Any
+Return annotations stay eagerly evaluated because fastapi-jsonrpc captures them
+while registering nested handlers for response validation and OpenRPC output.
+"""
 
 import fastapi_jsonrpc as jsonrpc
 
+from wf_api.models import InspectSourceResult, ListSourcesResult, SourceDiagnosisResult
 from wf_server import WorkflowServer
 
 from ..errors import WorkflowRpcError, raise_workflow_rpc_error
@@ -20,7 +23,7 @@ def register_methods(
     @entrypoint.method(name="workflow.sources.list", errors=[WorkflowRpcError])
     async def workflow_sources_list(
         params: ListSourcesParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> ListSourcesResult:
         try:
             return await server.source_admin.list_sources(
                 cursor=params.cursor,
@@ -32,7 +35,7 @@ def register_methods(
     @entrypoint.method(name="workflow.sources.inspect", errors=[WorkflowRpcError])
     async def workflow_sources_inspect(
         params: InspectSourceParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> InspectSourceResult:
         try:
             return await server.source_admin.inspect_source(source_id=params.source_id)
         except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:
@@ -41,7 +44,7 @@ def register_methods(
     @entrypoint.method(name="workflow.sources.diagnose", errors=[WorkflowRpcError])
     async def workflow_sources_diagnose(
         params: DiagnoseSourceParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> SourceDiagnosisResult:
         try:
             return await server.source_admin.diagnose_source(source_id=params.source_id)
         except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:

@@ -72,10 +72,10 @@
     complete OpenRPC document for all 70 registered methods. Request payloads
     retain useful Pydantic schemas, so OpenRPC is a viable transport input.
   - Typed-result slices now give `workflow.health`, all artifact, deployment,
-    and run operations, every persisted draft-workspace operation, and the
-    capability discovery/call surface named transport-neutral result schemas:
-    50 of 70 methods. The remaining 20 success results still collapse to generic
-    objects across stateless draft patch/validate, source discovery, and
+    and run operations, every persisted draft-workspace operation, and both the
+    capability and source-discovery surfaces named transport-neutral result
+    schemas: 53 of 70 methods. The remaining 17 success results still collapse
+    to generic objects across stateless draft patch/validate and the
     source-registry/admin operations. Continue introducing operation result DTOs
     before adopting generated TypeScript contracts.
   - The stock `@open-rpc/generator` TypeScript client is not suitable here. It
