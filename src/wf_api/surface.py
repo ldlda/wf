@@ -10,6 +10,9 @@ from wf_core.models.steps import InputBinding, OutputBinding
 from .draft_authoring import RouteSource
 from .draft_updates import CapabilityStepUpdate
 from .models import (
+    CompileDraftWorkspaceResult,
+    CreateArtifactFromWorkspaceResult,
+    CreateDraftWorkspaceFromCapabilityResult,
     DeleteArtifactResult,
     DeleteDeploymentResult,
     DeleteDraftWorkspaceResult,
@@ -87,7 +90,7 @@ class WorkflowDraftSurface(Protocol):
         input_map: dict[str, str] | None = None,
         output_map: dict[str, str] | None = None,
         error_message_source: Any | None = None,
-    ) -> dict[str, Any]: ...
+    ) -> CreateDraftWorkspaceFromCapabilityResult: ...
 
     async def create_empty_draft_workspace(
         self,
@@ -314,7 +317,7 @@ class WorkflowDraftSurface(Protocol):
         self,
         *,
         workspace_id: str,
-    ) -> dict[str, Any]: ...
+    ) -> CompileDraftWorkspaceResult: ...
 
     async def delete_draft_workspace(
         self,
@@ -335,7 +338,7 @@ class WorkflowDraftSurface(Protocol):
         required_capabilities: dict[str, dict[str, Any]] | None = None,
         source_bindings: dict[str, str] | None = None,
         created_from_catalog_version: str | None = None,
-    ) -> dict[str, Any]: ...
+    ) -> CreateArtifactFromWorkspaceResult: ...
 
     async def create_wrapper_from_workspace(
         self,
@@ -349,7 +352,7 @@ class WorkflowDraftSurface(Protocol):
         required_capabilities: dict[str, dict[str, Any]] | None = None,
         source_bindings: dict[str, str] | None = None,
         created_from_catalog_version: str | None = None,
-    ) -> dict[str, Any]: ...
+    ) -> CreateArtifactFromWorkspaceResult: ...
 
 
 class WorkflowArtifactSurface(Protocol):

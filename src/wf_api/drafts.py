@@ -53,8 +53,11 @@ from .draft_payloads import (
     output_bindings_payload as _draft_output_bindings_payload,
 )
 from .models import (
+    CompileDraftWorkspaceResult,
+    CompileDraftWorkspaceSuccess,
     DeleteDraftWorkspaceResult,
     DraftWorkspaceResult,
+    InvalidDraftResult,
     JsonProjector,
     ListDraftWorkspacesResult,
 )
@@ -64,6 +67,8 @@ from .schema_projection import project_property_to_schema_path, schema_path_exis
 _PROJECT_DRAFT_WORKSPACE = JsonProjector(DraftWorkspaceResult)
 _PROJECT_DRAFT_WORKSPACE_LIST = JsonProjector(ListDraftWorkspacesResult)
 _PROJECT_DRAFT_WORKSPACE_DELETE = JsonProjector(DeleteDraftWorkspaceResult)
+_PROJECT_DRAFT_COMPILE = JsonProjector(CompileDraftWorkspaceSuccess)
+_PROJECT_INVALID_DRAFT = JsonProjector(InvalidDraftResult)
 
 
 def _empty_object_schema() -> dict[str, Any]:
@@ -176,18 +181,22 @@ class WorkflowDraftApi:
             node_defs=self._node_defs_for_draft(draft),
         )
 
-    async def compile_draft(self, *, draft: dict[str, Any]) -> dict[str, Any]:
+    async def compile_draft(
+        self, *, draft: dict[str, Any]
+    ) -> CompileDraftWorkspaceSuccess:
         plan = compile_workflow_draft(draft)
-        return {
-            "compiled_plan": plan,
-            "required_capabilities": required_capability_payloads(
-                required_capabilities_for_plan(
-                    plan,
-                    source_bindings=None,
-                    context=self.context,
-                )
-            ),
-        }
+        return _PROJECT_DRAFT_COMPILE(
+            {
+                "compiled_plan": plan,
+                "required_capabilities": required_capability_payloads(
+                    required_capabilities_for_plan(
+                        plan,
+                        source_bindings=None,
+                        context=self.context,
+                    )
+                ),
+            }
+        )
 
     async def patch_draft(
         self,
@@ -331,12 +340,14 @@ class WorkflowDraftApi:
             get_draft_workspace_record(store, workspace_id=workspace_id)
         )
 
-    async def compile_draft_workspace(self, *, workspace_id: str) -> dict[str, Any]:
+    async def compile_draft_workspace(
+        self, *, workspace_id: str
+    ) -> CompileDraftWorkspaceResult:
         """Compile a stored draft workspace without mutating it."""
         workspace = self._draft_store().get_workspace(workspace_id)
         validation = await self.validate_draft(draft=workspace.draft)
         if validation["status"] != "valid":
-            return validation
+            return _PROJECT_INVALID_DRAFT(validation)
         return await self.compile_draft(draft=workspace.draft)
 
     async def patch_draft_workspace(

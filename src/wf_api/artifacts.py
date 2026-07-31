@@ -25,11 +25,14 @@ from .capability_requirements import observed_node_specs
 from .drafts import WorkflowDraftApi
 from .listing import matches_query, paged_list_payload
 from .models import (
+    CreateArtifactFromWorkspaceResult,
     DeleteArtifactResult,
     JsonProjector,
     ListArtifactsResult,
     RawWorkflowPlan,
     SaveArtifactResult,
+    SavedDraftArtifactResult,
+    UnsavedDraftArtifactResult,
     WorkflowArtifactPayload,
 )
 from .operation_context import WorkflowOperationContext
@@ -38,6 +41,8 @@ _PROJECT_ARTIFACT = JsonProjector(WorkflowArtifactPayload)
 _PROJECT_ARTIFACT_LIST = JsonProjector(ListArtifactsResult)
 _PROJECT_ARTIFACT_SAVE = JsonProjector(SaveArtifactResult)
 _PROJECT_ARTIFACT_DELETE = JsonProjector(DeleteArtifactResult)
+_PROJECT_UNSAVED_DRAFT_ARTIFACT = JsonProjector(UnsavedDraftArtifactResult)
+_PROJECT_SAVED_DRAFT_ARTIFACT = JsonProjector(SavedDraftArtifactResult)
 
 
 class WorkflowArtifactApi:
@@ -95,9 +100,7 @@ class WorkflowArtifactApi:
             paged_list_payload("nodes", entries, cursor=cursor, limit=limit)
         )
 
-    async def save_artifact(
-        self, artifact: dict[str, Any]
-    ) -> SaveArtifactResult:
+    async def save_artifact(self, artifact: dict[str, Any]) -> SaveArtifactResult:
         workflow_artifact = WorkflowArtifact.model_validate(artifact)
         self._artifact_store().save_artifact(workflow_artifact)
         self.context.events.record_workflow_event(
@@ -182,7 +185,7 @@ class WorkflowArtifactApi:
         required_capabilities: dict[str, dict[str, Any]] | None = None,
         source_bindings: dict[str, str] | None = None,
         created_from_catalog_version: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> SavedDraftArtifactResult:
         from wf_artifacts import compile_workflow_draft
 
         plan = compile_workflow_draft(draft)
@@ -202,6 +205,24 @@ class WorkflowArtifactApi:
             observed_node_specs=observed_node_specs(self.context),
             created_from_catalog_version=created_from_catalog_version,
         )
+        required_sources = _binding_required_sources(
+            workflow_artifact.required_capability_map(),
+            self.context.specs.capability_sources,
+        )
+        result = _PROJECT_SAVED_DRAFT_ARTIFACT(
+            {
+                "artifact_id": workflow_artifact.id,
+                "version": workflow_artifact.version,
+                "saved": True,
+                "required_logical_sources": required_sources,
+                "suggested_bindings": _suggested_self_bindings(
+                    required_sources,
+                    self.context.specs.capability_sources,
+                ),
+            }
+        )
+        # Validate the public result before persistence so a projection bug
+        # cannot report failure after the artifact has already been saved.
         self._artifact_store().save_artifact(workflow_artifact)
         self.context.events.record_workflow_event(
             "workflow_artifact_saved",
@@ -212,20 +233,7 @@ class WorkflowArtifactApi:
                 "created_from_draft": True,
             },
         )
-        required_sources = _binding_required_sources(
-            workflow_artifact.required_capability_map(),
-            self.context.specs.capability_sources,
-        )
-        return {
-            "artifact_id": workflow_artifact.id,
-            "version": workflow_artifact.version,
-            "saved": True,
-            "required_logical_sources": required_sources,
-            "suggested_bindings": _suggested_self_bindings(
-                required_sources,
-                self.context.specs.capability_sources,
-            ),
-        }
+        return result
 
     async def create_artifact_from_workspace(
         self,
@@ -240,20 +248,22 @@ class WorkflowArtifactApi:
         required_capabilities: dict[str, dict[str, Any]] | None = None,
         source_bindings: dict[str, str] | None = None,
         created_from_catalog_version: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> CreateArtifactFromWorkspaceResult:
         store = self.context.draft_workspace_store
         if store is None:
             raise KeyError("draft workspace store is not configured")
         workspace = store.get_workspace(workspace_id)
         validation = await self.drafts.validate_draft(draft=workspace.draft)
         if validation["status"] != "valid":
-            return {
-                "saved": False,
-                "workspace_id": workspace_id,
-                "revision": workspace.revision,
-                "status": validation["status"],
-                "diagnostics": validation["diagnostics"],
-            }
+            return _PROJECT_UNSAVED_DRAFT_ARTIFACT(
+                {
+                    "saved": False,
+                    "workspace_id": workspace_id,
+                    "revision": workspace.revision,
+                    "status": validation["status"],
+                    "diagnostics": validation["diagnostics"],
+                }
+            )
         return await self.create_artifact_from_draft(
             artifact_id=artifact_id,
             version=version,
@@ -279,7 +289,7 @@ class WorkflowArtifactApi:
         required_capabilities: dict[str, dict[str, Any]] | None = None,
         source_bindings: dict[str, str] | None = None,
         created_from_catalog_version: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> CreateArtifactFromWorkspaceResult:
         """Save the current draft workspace as a callable wrapper artifact."""
         return await self.create_artifact_from_workspace(
             workspace_id=workspace_id,

@@ -14,6 +14,10 @@ from .draft_authoring import RouteSource, WorkflowDraftAuthoringApi
 from .draft_updates import CapabilityStepUpdate
 from .drafts import WorkflowDraftApi
 from .models import (
+    CompileDraftWorkspaceResult,
+    CompileDraftWorkspaceSuccess,
+    CreateArtifactFromWorkspaceResult,
+    CreateDraftWorkspaceFromCapabilityResult,
     DeleteArtifactResult,
     DeleteDeploymentResult,
     DeleteDraftWorkspaceResult,
@@ -26,6 +30,7 @@ from .models import (
     RunResult,
     RunTraceResult,
     SaveArtifactResult,
+    SavedDraftArtifactResult,
     SaveDeploymentResult,
     ValidateDeploymentResult,
     WorkflowArtifactPayload,
@@ -174,7 +179,7 @@ class WorkflowApi:
         required_capabilities: dict[str, dict[str, Any]] | None = None,
         source_bindings: dict[str, str] | None = None,
         created_from_catalog_version: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> SavedDraftArtifactResult:
         return await self.artifacts.create_artifact_from_draft(
             artifact_id=artifact_id,
             version=version,
@@ -201,7 +206,7 @@ class WorkflowApi:
         required_capabilities: dict[str, dict[str, Any]] | None = None,
         source_bindings: dict[str, str] | None = None,
         created_from_catalog_version: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> CreateArtifactFromWorkspaceResult:
         return await self.artifacts.create_artifact_from_workspace(
             workspace_id=workspace_id,
             artifact_id=artifact_id,
@@ -227,7 +232,7 @@ class WorkflowApi:
         required_capabilities: dict[str, dict[str, Any]] | None = None,
         source_bindings: dict[str, str] | None = None,
         created_from_catalog_version: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> CreateArtifactFromWorkspaceResult:
         return await self.artifacts.create_wrapper_from_workspace(
             workspace_id=workspace_id,
             artifact_id=artifact_id,
@@ -253,7 +258,7 @@ class WorkflowApi:
         self,
         *,
         draft: dict[str, Any],
-    ) -> dict[str, Any]:
+    ) -> CompileDraftWorkspaceSuccess:
         return await self.drafts.compile_draft(draft=draft)
 
     async def patch_draft(
@@ -332,7 +337,7 @@ class WorkflowApi:
         self,
         *,
         workspace_id: str,
-    ) -> dict[str, Any]:
+    ) -> CompileDraftWorkspaceResult:
         return await self.drafts.compile_draft_workspace(workspace_id=workspace_id)
 
     async def patch_draft_workspace(
@@ -725,7 +730,7 @@ class WorkflowApi:
         input_map: dict[str, str] | None = None,
         output_map: dict[str, str] | None = None,
         error_message_source: Any | None = None,
-    ) -> dict[str, Any]:
+    ) -> CreateDraftWorkspaceFromCapabilityResult:
         return await self.capabilities.create_draft_workspace_from_capability(
             workspace_id=workspace_id,
             capability_name=capability_name,

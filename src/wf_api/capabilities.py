@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from typing import Any
+from typing import Any, cast
 
 from wf_artifacts import (
     DependencyDiagnostic,
@@ -21,6 +21,12 @@ from .capability_requirements import required_capability_payloads
 from .draft_authoring import WorkflowDraftAuthoringApi
 from .drafts import WorkflowDraftApi
 from .listing import matches_query, paged_list_payload
+from .models import (
+    CreateDraftWorkspaceFromCapabilityResult,
+    JsonProjector,
+    NextActionsPayload,
+    WrapperAuthoringHintsPayload,
+)
 from .next_actions import NextActions
 from .operation_context import WorkflowOperationContext
 from .refs import parse_workflow_surface_capability_id
@@ -29,6 +35,8 @@ from .wrapper_hints import (
     workflow_output_schema_for_authoring,
     wrapper_hints_for_capability,
 )
+
+_PROJECT_WRAPPER_HINTS = JsonProjector(WrapperAuthoringHintsPayload)
 
 
 def _schema_field_names(schema: dict[str, Any]) -> list[str]:
@@ -351,10 +359,12 @@ class WorkflowCapabilityApi:
         input_map: dict[str, str] | None = None,
         output_map: dict[str, str] | None = None,
         error_message_source: str | GraphSourcePath | None = None,
-    ) -> dict[str, Any]:
+    ) -> CreateDraftWorkspaceFromCapabilityResult:
         """Create a patchable draft workspace from inspect_capability hints."""
         capability = await self.inspect_capability(qualified_name=capability_name)
-        hints = capability["wrapper_hints"]
+        # Validate capability-derived guidance before workspace creation. The
+        # workspace result is already projected by the draft-workspace API.
+        hints = _PROJECT_WRAPPER_HINTS(capability["wrapper_hints"])
         result = await self.draft_authoring.create_minimal_draft_workspace(
             workspace_id=workspace_id,
             name=name or _draft_name_from_capability(capability_name),
@@ -371,12 +381,21 @@ class WorkflowCapabilityApi:
             error_message_source=error_message_source,
             title=title,
         )
-        return {
-            **result,
-            "wrapper_hints": hints,
-            "next_actions": NextActions.from_wrapper_hints(
+        next_actions = cast(
+            NextActionsPayload,
+            NextActions.from_wrapper_hints(
                 workspace_id=workspace_id,
                 revision=int(result["revision"]),
-                hints=hints,
+                hints=dict(hints),
             ).model_dump(mode="json"),
-        }
+        )
+        # Both merged extensions are independently validated or model-dumped,
+        # while the workspace payload was projected by the mutating API.
+        return cast(
+            CreateDraftWorkspaceFromCapabilityResult,
+            {
+                **result,
+                "wrapper_hints": hints,
+                "next_actions": next_actions,
+            },
+        )

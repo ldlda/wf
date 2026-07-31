@@ -5,6 +5,9 @@ from typing import Any, Literal, cast
 
 from wf_api import CapabilityStepUpdate
 from wf_api.models import (
+    CompileDraftWorkspaceResult,
+    CreateArtifactFromWorkspaceResult,
+    CreateDraftWorkspaceFromCapabilityResult,
     DeleteDraftWorkspaceResult,
     DraftWorkspaceResult,
     ListDraftWorkspacesResult,
@@ -62,23 +65,26 @@ class RpcDraftClientMixin:
         input_map: dict[str, str] | None = None,
         output_map: dict[str, str] | None = None,
         error_message_source: Any | None = None,
-    ) -> dict[str, Any]:
-        return await self._call(
-            "workflow.draft_workspaces.create_from_capability",
-            {
-                "workspace_id": workspace_id,
-                "capability_name": capability_name,
-                "name": name,
-                "title": title,
-                "input_schema": input_schema,
-                "state_schema": state_schema,
-                "output_schema": output_schema,
-                "input": input,
-                "output": output,
-                "input_map": input_map,
-                "output_map": output_map,
-                "error_message_source": error_message_source,
-            },
+    ) -> CreateDraftWorkspaceFromCapabilityResult:
+        return cast(
+            CreateDraftWorkspaceFromCapabilityResult,
+            await self._call(
+                "workflow.draft_workspaces.create_from_capability",
+                {
+                    "workspace_id": workspace_id,
+                    "capability_name": capability_name,
+                    "name": name,
+                    "title": title,
+                    "input_schema": input_schema,
+                    "state_schema": state_schema,
+                    "output_schema": output_schema,
+                    "input": input,
+                    "output": output,
+                    "input_map": input_map,
+                    "output_map": output_map,
+                    "error_message_source": error_message_source,
+                },
+            ),
         )
 
     async def create_empty_draft_workspace(
@@ -546,10 +552,13 @@ class RpcDraftClientMixin:
         self: RpcCaller,
         *,
         workspace_id: str,
-    ) -> dict[str, Any]:
-        return await self._call(
-            "workflow.draft_workspaces.compile",
-            {"workspace_id": workspace_id},
+    ) -> CompileDraftWorkspaceResult:
+        return cast(
+            CompileDraftWorkspaceResult,
+            await self._call(
+                "workflow.draft_workspaces.compile",
+                {"workspace_id": workspace_id},
+            ),
         )
 
     async def delete_draft_workspace(
@@ -578,21 +587,24 @@ class RpcDraftClientMixin:
         required_capabilities: dict[str, dict[str, Any]] | None = None,
         source_bindings: dict[str, str] | None = None,
         created_from_catalog_version: str | None = None,
-    ) -> dict[str, Any]:
-        return await self._call(
-            "workflow.draft_workspaces.create_artifact",
-            {
-                "workspace_id": workspace_id,
-                "artifact_id": artifact_id,
-                "version": version,
-                "title": title,
-                "outcomes": list(outcomes),
-                "kind": kind,
-                "description": description,
-                "required_capabilities": required_capabilities,
-                "source_bindings": source_bindings,
-                "created_from_catalog_version": created_from_catalog_version,
-            },
+    ) -> CreateArtifactFromWorkspaceResult:
+        return cast(
+            CreateArtifactFromWorkspaceResult,
+            await self._call(
+                "workflow.draft_workspaces.create_artifact",
+                {
+                    "workspace_id": workspace_id,
+                    "artifact_id": artifact_id,
+                    "version": version,
+                    "title": title,
+                    "outcomes": list(outcomes),
+                    "kind": kind,
+                    "description": description,
+                    "required_capabilities": required_capabilities,
+                    "source_bindings": source_bindings,
+                    "created_from_catalog_version": created_from_catalog_version,
+                },
+            ),
         )
 
     async def create_wrapper_from_workspace(
@@ -607,18 +619,21 @@ class RpcDraftClientMixin:
         required_capabilities: dict[str, dict[str, Any]] | None = None,
         source_bindings: dict[str, str] | None = None,
         created_from_catalog_version: str | None = None,
-    ) -> dict[str, Any]:
-        return await self._call(
-            "workflow.draft_workspaces.create_wrapper",
-            {
-                "workspace_id": workspace_id,
-                "artifact_id": artifact_id,
-                "version": version,
-                "title": title,
-                "outcomes": list(outcomes),
-                "description": description,
-                "required_capabilities": required_capabilities,
-                "source_bindings": source_bindings,
-                "created_from_catalog_version": created_from_catalog_version,
-            },
+    ) -> CreateArtifactFromWorkspaceResult:
+        return cast(
+            CreateArtifactFromWorkspaceResult,
+            await self._call(
+                "workflow.draft_workspaces.create_wrapper",
+                {
+                    "workspace_id": workspace_id,
+                    "artifact_id": artifact_id,
+                    "version": version,
+                    "title": title,
+                    "outcomes": list(outcomes),
+                    "description": description,
+                    "required_capabilities": required_capabilities,
+                    "source_bindings": source_bindings,
+                    "created_from_catalog_version": created_from_catalog_version,
+                },
+            ),
         )

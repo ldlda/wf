@@ -202,6 +202,95 @@ def test_openrpc_pins_nested_draft_workspace_contract(
     assert deleted["properties"]["status"]["enum"] == ["deleted", "not_found"]
 
 
+def test_openrpc_exposes_typed_compile_draft_workspace_result(
+    openrpc_document: dict[str, Any],
+) -> None:
+    method = _method_by_name(
+        openrpc_document,
+        "workflow.draft_workspaces.compile",
+    )
+
+    assert method["result"]["schema"] == {
+        "$ref": "#/components/schemas/CompileDraftWorkspaceResult"
+    }
+    assert openrpc_document["components"]["schemas"]["CompileDraftWorkspaceResult"] == {
+        "anyOf": [
+            {"$ref": ("#/components/schemas/CompileDraftWorkspaceSuccess")},
+            {"$ref": "#/components/schemas/InvalidDraftResult"},
+        ]
+    }
+    schemas = openrpc_document["components"]["schemas"]
+    assert schemas["CompileDraftWorkspaceSuccess"]["required"] == [
+        "compiled_plan",
+        "required_capabilities",
+    ]
+    assert schemas["InvalidDraftResult"]["properties"]["status"]["const"] == "invalid"
+
+
+def test_openrpc_exposes_typed_capability_bootstrap_result(
+    openrpc_document: dict[str, Any],
+) -> None:
+    for method_name in (
+        "workflow.drafts.create_from_capability",
+        "workflow.draft_workspaces.create_from_capability",
+    ):
+        _assert_result_component(
+            openrpc_document,
+            method_name=method_name,
+            component_name="CreateDraftWorkspaceFromCapabilityResult",
+            properties={
+                "workspace_id",
+                "revision",
+                "wrapper_hints",
+                "next_actions",
+            },
+        )
+    result = openrpc_document["components"]["schemas"][
+        "CreateDraftWorkspaceFromCapabilityResult"
+    ]
+    assert result["properties"]["wrapper_hints"] == {
+        "$ref": "#/components/schemas/WrapperAuthoringHintsPayload"
+    }
+    assert result["properties"]["next_actions"] == {
+        "$ref": "#/components/schemas/NextActionsPayload"
+    }
+
+
+@pytest.mark.parametrize(
+    "method_name",
+    [
+        "workflow.draft_workspaces.create_artifact",
+        "workflow.draft_workspaces.create_wrapper",
+    ],
+)
+def test_openrpc_exposes_typed_workspace_artifact_save_result(
+    openrpc_document: dict[str, Any],
+    method_name: str,
+) -> None:
+    method = _method_by_name(openrpc_document, method_name)
+
+    assert method["result"]["schema"] == {
+        "$ref": "#/components/schemas/CreateArtifactFromWorkspaceResult"
+    }
+    assert openrpc_document["components"]["schemas"][
+        "CreateArtifactFromWorkspaceResult"
+    ] == {
+        "anyOf": [
+            {"$ref": "#/components/schemas/SavedDraftArtifactResult"},
+            {"$ref": "#/components/schemas/UnsavedDraftArtifactResult"},
+        ]
+    }
+    schemas = openrpc_document["components"]["schemas"]
+    assert schemas["SavedDraftArtifactResult"]["properties"]["saved"]["const"] is True
+    assert {
+        "required_logical_sources",
+        "suggested_bindings",
+    } <= schemas["SavedDraftArtifactResult"]["properties"].keys()
+    assert (
+        schemas["UnsavedDraftArtifactResult"]["properties"]["saved"]["const"] is False
+    )
+
+
 @pytest.mark.parametrize(
     ("method_name", "component_name", "properties"),
     [

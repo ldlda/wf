@@ -9,6 +9,9 @@ from typing import Any
 import fastapi_jsonrpc as jsonrpc
 
 from wf_api.models import (
+    CompileDraftWorkspaceResult,
+    CreateArtifactFromWorkspaceResult,
+    CreateDraftWorkspaceFromCapabilityResult,
     DeleteDraftWorkspaceResult,
     DraftWorkspaceResult,
     ListDraftWorkspacesResult,
@@ -65,7 +68,7 @@ def register_methods(
     )
     async def workflow_drafts_create_from_capability(
         params: CreateDraftFromCapabilityParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> CreateDraftWorkspaceFromCapabilityResult:
         try:
             return await _create_from_capability(server, params)
         except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:
@@ -116,7 +119,7 @@ def register_methods(
     )
     async def workflow_draft_workspaces_create_from_capability(
         params: CreateDraftFromCapabilityParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> CreateDraftWorkspaceFromCapabilityResult:
         try:
             return await _create_from_capability(server, params)
         except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:
@@ -482,7 +485,7 @@ def register_methods(
     )
     async def workflow_draft_workspaces_compile(
         params: CompileDraftWorkspaceParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> CompileDraftWorkspaceResult:
         try:
             return await server.api.compile_draft_workspace(
                 workspace_id=params.workspace_id,
@@ -556,7 +559,7 @@ def register_methods(
     )
     async def workflow_draft_workspaces_create_artifact(
         params: CreateArtifactFromWorkspaceParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> CreateArtifactFromWorkspaceResult:
         try:
             return await server.api.create_artifact_from_workspace(
                 workspace_id=params.workspace_id,
@@ -578,7 +581,7 @@ def register_methods(
     )
     async def workflow_draft_workspaces_create_wrapper(
         params: CreateWrapperFromWorkspaceParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> CreateArtifactFromWorkspaceResult:
         try:
             return await server.api.create_wrapper_from_workspace(
                 workspace_id=params.workspace_id,
@@ -598,7 +601,7 @@ def register_methods(
 async def _create_from_capability(
     server: WorkflowServer,
     params: CreateDraftFromCapabilityParams,
-) -> dict[str, Any]:
+) -> CreateDraftWorkspaceFromCapabilityResult:
     return await server.api.create_draft_workspace_from_capability(
         workspace_id=params.workspace_id,
         capability_name=params.capability_name,
