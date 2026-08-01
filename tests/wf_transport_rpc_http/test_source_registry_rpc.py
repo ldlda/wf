@@ -22,6 +22,7 @@ class FakeRegistryEntry:
     transport: dict[str, str] | None = None
     auth_ref: str | None = "github.work"
     metadata: dict[str, object] | None = None
+    provider_options: dict[str, object] | None = None
 
 
 class FakeRegistryProvider:
@@ -31,6 +32,7 @@ class FakeRegistryProvider:
                 id="github.work",
                 transport={"kind": "stdio", "command": "npx"},
                 metadata={},
+                provider_options={"region": "work"},
             )
         ]
 
@@ -152,6 +154,8 @@ async def test_rpc_source_registry_methods_return_registry_payloads(tmp_path) ->
     assert listed["result"]["entries"][0]["id"] == "github.work"
     assert listed["result"]["entries"][0]["shadowed_by_config"] is True
     assert inspected["result"]["entry"]["transport"]["kind"] == "stdio"
+    assert inspected["result"]["entry"]["transport"]["command"] == "npx"
+    assert inspected["result"]["entry"]["provider_options"] == {"region": "work"}
     assert inspected["result"]["shadowed_by_config"] is True
 
 
@@ -246,12 +250,22 @@ async def test_rpc_source_registry_add_returns_entry(tmp_path) -> None:
         payload = await _rpc(
             client,
             "workflow.admin.source_registry.add",
-            {"entry": {"id": "new.mcp", "kind": "mcp", "enabled": True}},
+            {
+                "entry": {
+                    "id": "new.mcp",
+                    "kind": "mcp",
+                    "enabled": True,
+                    "transport": {"kind": "stdio", "command": "custom-runner"},
+                    "provider_options": {"region": "local"},
+                }
+            },
         )
 
     assert "result" in payload
     assert payload["result"]["entry"]["id"] == "new.mcp"
     assert payload["result"]["entry"]["kind"] == "mcp"
+    assert payload["result"]["entry"]["transport"]["command"] == "custom-runner"
+    assert payload["result"]["entry"]["provider_options"] == {"region": "local"}
 
 
 async def test_rpc_source_registry_update_returns_entry(tmp_path) -> None:
@@ -476,6 +490,16 @@ async def test_rpc_source_registry_apply_returns_summary(tmp_path) -> None:
         "removed": [],
         "connection_count": 1,
         "registry_entry_count": 1,
+        "auth_diagnostics": [
+            {
+                "severity": "error",
+                "code": "auth_not_found",
+                "logical_ref": "",
+                "bound_source": "demo.new",
+                "message": "Missing auth record.",
+                "repair_hint": "Save the referenced auth record.",
+            }
+        ],
     }
     server = replace(
         build_local_static_workflow_server(tmp_path / "store"),
@@ -494,6 +518,7 @@ async def test_rpc_source_registry_apply_returns_summary(tmp_path) -> None:
 
     assert payload["result"]["applied"] is True
     assert payload["result"]["registered"] == ["demo.new"]
+    assert payload["result"]["auth_diagnostics"][0]["code"] == "auth_not_found"
     admin.apply_registry_changes.assert_awaited_once()
 
 

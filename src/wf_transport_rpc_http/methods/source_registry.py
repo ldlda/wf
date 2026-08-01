@@ -1,10 +1,19 @@
-from __future__ import annotations
+"""Source registry JSON-RPC method registration.
 
-from typing import Any
+Return annotations stay eagerly evaluated because fastapi-jsonrpc captures them
+while registering nested handlers for response validation and OpenRPC output.
+"""
 
 import fastapi_jsonrpc as jsonrpc
 
 from wf_api import WorkflowSourceRegistrySurface
+from wf_api.models import (
+    ApplyRegistryChangesResult,
+    InspectRegistryEntryResult,
+    ListRegistryEntriesResult,
+    RegistryEntryMutationResult,
+    RemoveRegistryEntryResult,
+)
 from wf_server import WorkflowServer
 
 from ..errors import WorkflowRpcError, raise_workflow_rpc_error
@@ -51,7 +60,7 @@ def register_methods(
     )
     async def workflow_admin_source_registry_list(
         params: ListRegistryEntriesParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> ListRegistryEntriesResult:
         admin = _require_source_registry_admin(server, operation="reads")
         try:
             return await admin.list_registry_entries(
@@ -67,7 +76,7 @@ def register_methods(
     )
     async def workflow_admin_source_registry_inspect(
         params: InspectRegistryEntryParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> InspectRegistryEntryResult:
         admin = _require_source_registry_admin(server, operation="reads")
         try:
             return await admin.inspect_registry_entry(
@@ -82,7 +91,7 @@ def register_methods(
     )
     async def workflow_admin_source_registry_add(
         params: AddRegistryEntryParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> RegistryEntryMutationResult:
         admin = _require_source_registry_admin(server, operation="mutations")
         try:
             return await admin.add_registry_entry(
@@ -97,7 +106,7 @@ def register_methods(
     )
     async def workflow_admin_source_registry_update(
         params: UpdateRegistryEntryParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> RegistryEntryMutationResult:
         admin = _require_source_registry_admin(server, operation="mutations")
         try:
             return await admin.update_registry_entry(
@@ -113,7 +122,7 @@ def register_methods(
     )
     async def workflow_admin_source_registry_enable(
         params: RegistryEntryIdParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> RegistryEntryMutationResult:
         admin = _require_source_registry_admin(server, operation="mutations")
         try:
             return await admin.enable_registry_entry(
@@ -128,7 +137,7 @@ def register_methods(
     )
     async def workflow_admin_source_registry_disable(
         params: RegistryEntryIdParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> RegistryEntryMutationResult:
         admin = _require_source_registry_admin(server, operation="mutations")
         try:
             return await admin.disable_registry_entry(
@@ -143,7 +152,7 @@ def register_methods(
     )
     async def workflow_admin_source_registry_remove(
         params: RegistryEntryIdParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> RemoveRegistryEntryResult:
         admin = _require_source_registry_admin(server, operation="mutations")
         try:
             return await admin.remove_registry_entry(
@@ -158,7 +167,7 @@ def register_methods(
     )
     async def workflow_admin_source_registry_apply(
         params: ApplyRegistryChangesParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> ApplyRegistryChangesResult:
         admin = _require_source_registry_admin(server, operation="apply")
         try:
             return await admin.apply_registry_changes()

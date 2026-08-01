@@ -169,6 +169,121 @@ def test_openrpc_exposes_typed_source_diagnosis_result(
     assert diagnosed["additionalProperties"] is True
 
 
+def test_openrpc_exposes_typed_source_registry_read_results(
+    openrpc_document: dict[str, Any],
+) -> None:
+    _assert_result_component(
+        openrpc_document,
+        method_name="workflow.admin.source_registry.list",
+        component_name="ListRegistryEntriesResult",
+        properties={"entries", "next_cursor", "total"},
+    )
+    _assert_result_component(
+        openrpc_document,
+        method_name="workflow.admin.source_registry.inspect",
+        component_name="InspectRegistryEntryResult",
+        properties={"entry", "shadowed_by_config", "config_ownership", "mutable"},
+    )
+    schemas = openrpc_document["components"]["schemas"]
+    assert schemas["ListRegistryEntriesResult"]["properties"]["entries"]["items"] == {
+        "$ref": "#/components/schemas/RegistryEntrySummaryPayload"
+    }
+    assert schemas["InspectRegistryEntryResult"]["properties"]["entry"] == {
+        "$ref": "#/components/schemas/RegistryEntryPayload"
+    }
+    assert schemas["RegistryEntryPayload"]["additionalProperties"] is True
+    assert set(schemas["ListRegistryEntriesResult"]["required"]) == {
+        "entries",
+        "next_cursor",
+        "total",
+    }
+    assert set(schemas["RegistryEntrySummaryPayload"]["required"]) == {
+        "id",
+        "kind",
+        "enabled",
+        "provider",
+        "account",
+        "profile",
+        "transport_kind",
+        "auth_ref",
+        "shadowed_by_config",
+        "config_ownership",
+        "mutable",
+    }
+    assert set(schemas["InspectRegistryEntryResult"]["required"]) == {
+        "entry",
+        "shadowed_by_config",
+        "config_ownership",
+        "mutable",
+    }
+
+
+@pytest.mark.parametrize(
+    "method_name",
+    [
+        "workflow.admin.source_registry.add",
+        "workflow.admin.source_registry.update",
+        "workflow.admin.source_registry.enable",
+        "workflow.admin.source_registry.disable",
+    ],
+)
+def test_openrpc_exposes_typed_source_registry_mutation_result(
+    openrpc_document: dict[str, Any],
+    method_name: str,
+) -> None:
+    _assert_result_component(
+        openrpc_document,
+        method_name=method_name,
+        component_name="RegistryEntryMutationResult",
+        properties={"entry", "shadowed_by_config"},
+    )
+    mutation = openrpc_document["components"]["schemas"]["RegistryEntryMutationResult"]
+    assert set(mutation["required"]) == {"entry", "shadowed_by_config"}
+    assert mutation["properties"]["entry"] == {
+        "$ref": "#/components/schemas/RegistryEntryPayload"
+    }
+
+
+def test_openrpc_exposes_typed_source_registry_remove_and_apply_results(
+    openrpc_document: dict[str, Any],
+) -> None:
+    _assert_result_component(
+        openrpc_document,
+        method_name="workflow.admin.source_registry.remove",
+        component_name="RemoveRegistryEntryResult",
+        properties={"removed", "source_id"},
+    )
+    _assert_result_component(
+        openrpc_document,
+        method_name="workflow.admin.source_registry.apply",
+        component_name="ApplyRegistryChangesResult",
+        properties={
+            "applied",
+            "registered",
+            "updated",
+            "removed",
+            "connection_count",
+            "registry_entry_count",
+        },
+    )
+    schemas = openrpc_document["components"]["schemas"]
+    assert set(schemas["RemoveRegistryEntryResult"]["required"]) == {
+        "removed",
+        "source_id",
+    }
+    assert set(schemas["ApplyRegistryChangesResult"]["required"]) == {
+        "applied",
+        "registered",
+        "updated",
+        "removed",
+        "connection_count",
+        "registry_entry_count",
+    }
+    assert schemas["ApplyRegistryChangesResult"]["properties"]["auth_diagnostics"][
+        "items"
+    ] == {"$ref": "#/components/schemas/DependencyDiagnosticPayload"}
+
+
 @pytest.mark.parametrize(
     ("method_name", "component_name", "properties"),
     [

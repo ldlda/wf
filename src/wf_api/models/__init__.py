@@ -79,6 +79,15 @@ from .runs import (
     TraceEntryPayload,
     WorkflowRefPayload,
 )
+from .source_registry import (
+    ApplyRegistryChangesResult,
+    InspectRegistryEntryResult,
+    ListRegistryEntriesResult,
+    RegistryEntryMutationResult,
+    RegistryEntryPayload,
+    RegistryEntrySummaryPayload,
+    RemoveRegistryEntryResult,
+)
 from .sources import (
     InspectSourceResult,
     ListSourcesResult,
@@ -99,6 +108,7 @@ from .sources import (
 )
 
 __all__ = [
+    "ApplyRegistryChangesResult",
     "ArtifactVersionPayload",
     "ArtifactCatalogEntryPayload",
     "ArtifactKindPayload",
@@ -125,6 +135,7 @@ __all__ = [
     "InterruptRoutePayload",
     "InvalidDraftResult",
     "InspectCapabilityResult",
+    "InspectRegistryEntryResult",
     "InspectSourceResult",
     "JsonObject",
     "JsonProjector",
@@ -134,6 +145,7 @@ __all__ = [
     "ListArtifactsResult",
     "ListCapabilitiesResult",
     "ListRunsResult",
+    "ListRegistryEntriesResult",
     "ListSourcesResult",
     "NextActionPatchExamplePayload",
     "NextActionsPayload",
@@ -145,6 +157,9 @@ __all__ = [
     "PatchedDraftInvalidResult",
     "PatchedDraftValidResult",
     "RawWorkflowPlan",
+    "RegistryEntryMutationResult",
+    "RegistryEntryPayload",
+    "RegistryEntrySummaryPayload",
     "ReducerInventoryPayload",
     "ResumeReadiness",
     "RunResult",
@@ -152,6 +167,7 @@ __all__ = [
     "RunSummary",
     "RunTraceResult",
     "RequiredCapabilityPayload",
+    "RemoveRegistryEntryResult",
     "SaveArtifactResult",
     "SavedDraftArtifactResult",
     "SaveDeploymentResult",

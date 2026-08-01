@@ -10,6 +10,7 @@ from wf_core.models.steps import InputBinding, OutputBinding
 from .draft_authoring import RouteSource
 from .draft_updates import CapabilityStepUpdate
 from .models import (
+    ApplyRegistryChangesResult,
     CapabilityCallResult,
     CompileDraftWorkspaceResult,
     CreateArtifactFromWorkspaceResult,
@@ -19,14 +20,18 @@ from .models import (
     DeleteDraftWorkspaceResult,
     DraftWorkspaceResult,
     InspectCapabilityResult,
+    InspectRegistryEntryResult,
     InspectSourceResult,
     ListArtifactsResult,
     ListCapabilitiesResult,
     ListDeploymentsResult,
     ListDraftWorkspacesResult,
+    ListRegistryEntriesResult,
     ListRunsResult,
     ListSourcesResult,
     PatchDraftResult,
+    RegistryEntryMutationResult,
+    RemoveRegistryEntryResult,
     RunResult,
     RunTraceResult,
     SaveArtifactResult,
@@ -562,46 +567,46 @@ class WorkflowSourceRegistrySurface(Protocol):
         *,
         cursor: str | None = None,
         limit: int = 50,
-    ) -> dict[str, Any]: ...
+    ) -> ListRegistryEntriesResult: ...
 
     async def inspect_registry_entry(
         self,
         *,
         source_id: str,
-    ) -> dict[str, Any]: ...
+    ) -> InspectRegistryEntryResult: ...
 
     async def add_registry_entry(
         self,
         *,
         entry: dict[str, Any],
-    ) -> dict[str, Any]: ...
+    ) -> RegistryEntryMutationResult: ...
 
     async def update_registry_entry(
         self,
         *,
         source_id: str,
         patch: dict[str, Any],
-    ) -> dict[str, Any]: ...
+    ) -> RegistryEntryMutationResult: ...
 
     async def enable_registry_entry(
         self,
         *,
         source_id: str,
-    ) -> dict[str, Any]: ...
+    ) -> RegistryEntryMutationResult: ...
 
     async def disable_registry_entry(
         self,
         *,
         source_id: str,
-    ) -> dict[str, Any]: ...
+    ) -> RegistryEntryMutationResult: ...
 
     async def remove_registry_entry(
         self,
         *,
         source_id: str,
-    ) -> dict[str, Any]: ...
+    ) -> RemoveRegistryEntryResult: ...
 
-    async def apply_registry_changes(self) -> dict[str, Any]: ...
+    async def apply_registry_changes(self) -> ApplyRegistryChangesResult: ...
 
 
 __all__ = [

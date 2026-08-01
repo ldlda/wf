@@ -6,6 +6,21 @@ from typing import Any, Protocol, runtime_checkable
 
 from wf_platform import page_items
 
+from .models import (
+    ApplyRegistryChangesResult,
+    InspectRegistryEntryResult,
+    JsonProjector,
+    ListRegistryEntriesResult,
+    RegistryEntryMutationResult,
+    RemoveRegistryEntryResult,
+)
+
+_PROJECT_REGISTRY_LIST = JsonProjector(ListRegistryEntriesResult)
+_PROJECT_REGISTRY_INSPECT = JsonProjector(InspectRegistryEntryResult)
+_PROJECT_REGISTRY_MUTATION = JsonProjector(RegistryEntryMutationResult)
+_PROJECT_REGISTRY_REMOVE = JsonProjector(RemoveRegistryEntryResult)
+_PROJECT_REGISTRY_APPLY = JsonProjector(ApplyRegistryChangesResult)
+
 
 class WorkflowSourceRegistryProvider(Protocol):
     """Provides desired source registry state for read-only admin frontends."""
@@ -68,7 +83,7 @@ class WorkflowSourceRegistryApi:
         *,
         cursor: str | None = None,
         limit: int = 50,
-    ) -> dict[str, Any]:
+    ) -> ListRegistryEntriesResult:
         ownership = self._provider.config_source_ownership()
         entries = sorted(
             (
@@ -80,104 +95,109 @@ class WorkflowSourceRegistryApi:
             key=lambda item: str(item.get("id", "")),
         )
         page = page_items(entries, cursor=cursor, limit=limit)
-        return {
-            "entries": list(page.items),
-            "next_cursor": page.next_cursor,
-            "total": page.total,
-        }
+        return _PROJECT_REGISTRY_LIST(
+            {
+                "entries": list(page.items),
+                "next_cursor": page.next_cursor,
+                "total": page.total,
+            }
+        )
 
     async def inspect_registry_entry(
         self,
         *,
         source_id: str,
-    ) -> dict[str, Any]:
+    ) -> InspectRegistryEntryResult:
         ownership = self._provider.config_source_ownership()
         for item in self._provider.list_registry_entries():
             entry = _payload(item)
             if entry.get("id") == source_id:
-                return {
-                    "entry": entry,
-                    "shadowed_by_config": self._is_shadowed(source_id),
-                    "config_ownership": ownership.get(source_id),
-                    "mutable": ownership.get(source_id) != "locked",
-                }
+                return _PROJECT_REGISTRY_INSPECT(
+                    {
+                        "entry": entry,
+                        "shadowed_by_config": self._is_shadowed(source_id),
+                        "config_ownership": ownership.get(source_id),
+                        "mutable": ownership.get(source_id) != "locked",
+                    }
+                )
         raise KeyError(f"unknown registry source {source_id!r}")
 
     async def add_registry_entry(
         self,
         *,
         entry: dict[str, Any],
-    ) -> dict[str, Any]:
+    ) -> RegistryEntryMutationResult:
         if self._mutation_provider is None:
             raise TypeError("add_registry_entry requires a mutation provider")
         raw = self._mutation_provider.add_registry_entry(entry)
         result = _payload(raw)
-        return {
-            "entry": result,
-            "shadowed_by_config": self._is_shadowed(result["id"]),
-        }
+        return self._mutation_result(result)
 
     async def update_registry_entry(
         self,
         *,
         source_id: str,
         patch: dict[str, Any],
-    ) -> dict[str, Any]:
+    ) -> RegistryEntryMutationResult:
         if self._mutation_provider is None:
             raise TypeError("update_registry_entry requires a mutation provider")
         raw = self._mutation_provider.update_registry_entry(source_id, patch)
         result = _payload(raw)
-        return {
-            "entry": result,
-            "shadowed_by_config": self._is_shadowed(result["id"]),
-        }
+        return self._mutation_result(result)
 
     async def enable_registry_entry(
         self,
         *,
         source_id: str,
-    ) -> dict[str, Any]:
+    ) -> RegistryEntryMutationResult:
         if self._mutation_provider is None:
             raise TypeError("enable_registry_entry requires a mutation provider")
         raw = self._mutation_provider.set_registry_entry_enabled(source_id, True)
         result = _payload(raw)
-        return {
-            "entry": result,
-            "shadowed_by_config": self._is_shadowed(result["id"]),
-        }
+        return self._mutation_result(result)
 
     async def disable_registry_entry(
         self,
         *,
         source_id: str,
-    ) -> dict[str, Any]:
+    ) -> RegistryEntryMutationResult:
         if self._mutation_provider is None:
             raise TypeError("disable_registry_entry requires a mutation provider")
         raw = self._mutation_provider.set_registry_entry_enabled(source_id, False)
         result = _payload(raw)
-        return {
-            "entry": result,
-            "shadowed_by_config": self._is_shadowed(result["id"]),
-        }
+        return self._mutation_result(result)
 
     async def remove_registry_entry(
         self,
         *,
         source_id: str,
-    ) -> dict[str, Any]:
+    ) -> RemoveRegistryEntryResult:
         if self._mutation_provider is None:
             raise TypeError("remove_registry_entry requires a mutation provider")
         raw = self._mutation_provider.remove_registry_entry(source_id)
         result = _payload(raw)
-        return {
-            "removed": bool(result.get("removed")),
-            "source_id": str(result.get("source_id", source_id)),
-        }
+        return _PROJECT_REGISTRY_REMOVE(
+            {
+                "removed": bool(result.get("removed")),
+                "source_id": str(result.get("source_id", source_id)),
+            }
+        )
 
-    async def apply_registry_changes(self) -> dict[str, Any]:
+    async def apply_registry_changes(self) -> ApplyRegistryChangesResult:
         if self._apply_provider is None:
             raise TypeError("apply_registry_changes requires an apply provider")
-        return _payload(self._apply_provider.apply_registry_changes())
+        return _PROJECT_REGISTRY_APPLY(
+            _payload(self._apply_provider.apply_registry_changes())
+        )
+
+    def _mutation_result(self, entry: dict[str, Any]) -> RegistryEntryMutationResult:
+        """Attach config precedence to one provider-validated mutation entry."""
+        return _PROJECT_REGISTRY_MUTATION(
+            {
+                "entry": entry,
+                "shadowed_by_config": self._is_shadowed(entry["id"]),
+            }
+        )
 
 
 def _payload(value: Mapping[str, Any] | object) -> dict[str, Any]:
