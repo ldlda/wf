@@ -71,13 +71,11 @@
   - A 2026-07-30 spike confirmed that `fastapi-jsonrpc` already exports a
     complete OpenRPC document for all 70 registered methods. Request payloads
     retain useful Pydantic schemas, so OpenRPC is a viable transport input.
-  - Typed-result slices now give `workflow.health`, all artifact, deployment,
-    and run operations, every persisted draft-workspace operation, and both the
-    capability and source-discovery surfaces named transport-neutral result
-    schemas: 63 of 70 methods. The remaining seven success results still
-    collapse to generic objects across connections, events, and auth admin
-    operations. Continue introducing operation result DTOs before adopting
-    generated TypeScript contracts.
+  - All 70 JSON-RPC methods now expose named transport-neutral success-result
+    schemas, including connections, events, and secret-safe auth admin results.
+    No success result collapses to a generic object. The next contract-parity
+    step can consume OpenRPC through a small transport-neutral manifest rather
+    than adding more Python result DTOs.
   - The stock `@open-rpc/generator` TypeScript client is not suitable here. It
     exhausted a 4 GB Node heap on the full contract and emitted invalid dotted
     class members plus `any` results for a minimal `workflow.health` contract.

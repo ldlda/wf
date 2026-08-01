@@ -1,5 +1,16 @@
 """Transport-neutral workflow API models."""
 
+from .admin import (
+    AdminEventPayload,
+    AuthRecordSummaryPayload,
+    ConnectionPayload,
+    ConnectionStatusPayload,
+    DeleteAuthRecordResult,
+    ListAdminEventsResult,
+    ListAuthRecordsResult,
+    ListConnectionsResult,
+    ListConnectionStatusesResult,
+)
 from .artifacts import (
     ArtifactCatalogEntryPayload,
     ArtifactKindPayload,
@@ -108,8 +119,10 @@ from .sources import (
 )
 
 __all__ = [
+    "AdminEventPayload",
     "ApplyRegistryChangesResult",
     "ArtifactVersionPayload",
+    "AuthRecordSummaryPayload",
     "ArtifactCatalogEntryPayload",
     "ArtifactKindPayload",
     "CapabilityKindPayload",
@@ -119,9 +132,12 @@ __all__ = [
     "CapabilitySummaryPayload",
     "CompileDraftWorkspaceResult",
     "CompileDraftWorkspaceSuccess",
+    "ConnectionPayload",
+    "ConnectionStatusPayload",
     "CreateArtifactFromWorkspaceResult",
     "CreateDraftWorkspaceFromCapabilityResult",
     "DeleteArtifactResult",
+    "DeleteAuthRecordResult",
     "DeleteDeploymentResult",
     "DeleteDraftWorkspaceResult",
     "DependencyDiagnosticPayload",
@@ -141,6 +157,10 @@ __all__ = [
     "JsonProjector",
     "JsonSchema",
     "ListDeploymentsResult",
+    "ListAdminEventsResult",
+    "ListAuthRecordsResult",
+    "ListConnectionsResult",
+    "ListConnectionStatusesResult",
     "ListDraftWorkspacesResult",
     "ListArtifactsResult",
     "ListCapabilitiesResult",

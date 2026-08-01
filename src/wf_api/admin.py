@@ -5,6 +5,28 @@ from dataclasses import asdict, is_dataclass
 from typing import Any, Protocol
 
 from wf_api.auth import AuthRecord
+from wf_api.models import (
+    AdminEventPayload,
+    AuthRecordSummaryPayload,
+    ConnectionPayload,
+    ConnectionStatusPayload,
+    DeleteAuthRecordResult,
+    JsonProjector,
+    ListAdminEventsResult,
+    ListAuthRecordsResult,
+    ListConnectionsResult,
+    ListConnectionStatusesResult,
+)
+
+_project_connection = JsonProjector(ConnectionPayload)
+_project_connection_status = JsonProjector(ConnectionStatusPayload)
+_project_event = JsonProjector(AdminEventPayload)
+_project_auth_record = JsonProjector(AuthRecordSummaryPayload)
+_project_delete_auth = JsonProjector(DeleteAuthRecordResult)
+_project_connections_result = JsonProjector(ListConnectionsResult)
+_project_connection_statuses_result = JsonProjector(ListConnectionStatusesResult)
+_project_events_result = JsonProjector(ListAdminEventsResult)
+_project_auth_records_result = JsonProjector(ListAuthRecordsResult)
 
 
 class WorkflowAdminConnectionProvider(Protocol):
@@ -51,39 +73,56 @@ class WorkflowAdminApi:
         self.events = events
         self.auth = auth
 
-    async def list_connections(self) -> dict[str, Any]:
+    async def list_connections(self) -> ListConnectionsResult:
         connections = sorted(
-            (_payload(item) for item in self.connections.list_connections()),
+            (
+                _project_connection(_payload(item))
+                for item in self.connections.list_connections()
+            ),
             key=lambda item: str(item.get("id", item.get("connection_id", ""))),
         )
-        return {"connections": connections, "total": len(connections)}
+        return _project_connections_result(
+            {"connections": connections, "total": len(connections)}
+        )
 
-    async def get_connection_statuses(self) -> dict[str, Any]:
+    async def get_connection_statuses(self) -> ListConnectionStatusesResult:
         statuses = sorted(
-            (_payload(item) for item in self.connections.get_connection_statuses()),
+            (
+                _project_connection_status(_payload(item))
+                for item in self.connections.get_connection_statuses()
+            ),
             key=lambda item: str(item.get("connection_id", item.get("id", ""))),
         )
-        return {"statuses": statuses, "total": len(statuses)}
+        return _project_connection_statuses_result(
+            {"statuses": statuses, "total": len(statuses)}
+        )
 
     # Preserve provider order for events; event providers are expected to return
     # chronological order and callers may rely on that ordering for diagnostics.
-    async def list_events(self) -> dict[str, Any]:
-        events = [_payload(event) for event in self.events.list_events()]
-        return {"events": events, "total": len(events)}
+    async def list_events(self) -> ListAdminEventsResult:
+        events = [
+            _project_event(_payload(event)) for event in self.events.list_events()
+        ]
+        return _project_events_result({"events": events, "total": len(events)})
 
-    async def list_auth_records(self) -> dict[str, Any]:
+    async def list_auth_records(self) -> ListAuthRecordsResult:
         if self.auth is None:
             raise RuntimeError("auth admin is not available for this target")
         records = sorted(
-            (_payload(item) for item in self.auth.list_auth_records()),
+            (
+                _project_auth_record(_payload(item))
+                for item in self.auth.list_auth_records()
+            ),
             key=lambda item: str(item.get("id", "")),
         )
-        return {"auth_records": records, "total": len(records)}
+        return _project_auth_records_result(
+            {"auth_records": records, "total": len(records)}
+        )
 
-    async def inspect_auth_record(self, auth_ref: str) -> dict[str, Any]:
+    async def inspect_auth_record(self, auth_ref: str) -> AuthRecordSummaryPayload:
         if self.auth is None:
             raise RuntimeError("auth admin is not available for this target")
-        return _payload(self.auth.inspect_auth_record(auth_ref))
+        return _project_auth_record(_payload(self.auth.inspect_auth_record(auth_ref)))
 
     async def save_auth_record(
         self,
@@ -92,7 +131,7 @@ class WorkflowAdminApi:
         scheme: str,
         payload: Mapping[str, object],
         metadata: Mapping[str, object] | None = None,
-    ) -> dict[str, Any]:
+    ) -> AuthRecordSummaryPayload:
         if self.auth is None:
             raise RuntimeError("auth admin is not available for this target")
         record = AuthRecord(
@@ -101,12 +140,12 @@ class WorkflowAdminApi:
             payload=dict(payload),
             metadata=dict(metadata or {}),
         )
-        return _payload(self.auth.save_auth_record(record))
+        return _project_auth_record(_payload(self.auth.save_auth_record(record)))
 
-    async def delete_auth_record(self, auth_ref: str) -> dict[str, Any]:
+    async def delete_auth_record(self, auth_ref: str) -> DeleteAuthRecordResult:
         if self.auth is None:
             raise RuntimeError("auth admin is not available for this target")
-        return _payload(self.auth.delete_auth_record(auth_ref))
+        return _project_delete_auth(_payload(self.auth.delete_auth_record(auth_ref)))
 
 
 def _payload(value: Mapping[str, Any] | object) -> dict[str, Any]:

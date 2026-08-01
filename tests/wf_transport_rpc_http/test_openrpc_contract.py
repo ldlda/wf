@@ -284,6 +284,113 @@ def test_openrpc_exposes_typed_source_registry_remove_and_apply_results(
     ] == {"$ref": "#/components/schemas/DependencyDiagnosticPayload"}
 
 
+def test_openrpc_exposes_typed_admin_inventory_results(
+    openrpc_document: dict[str, Any],
+) -> None:
+    for method_name, component_name, collection_name, item_name in [
+        (
+            "workflow.admin.connections.list",
+            "ListConnectionsResult",
+            "connections",
+            "ConnectionPayload",
+        ),
+        (
+            "workflow.admin.connection_statuses.list",
+            "ListConnectionStatusesResult",
+            "statuses",
+            "ConnectionStatusPayload",
+        ),
+        (
+            "workflow.admin.events.list",
+            "ListAdminEventsResult",
+            "events",
+            "AdminEventPayload",
+        ),
+        (
+            "workflow.admin.auth.list",
+            "ListAuthRecordsResult",
+            "auth_records",
+            "AuthRecordSummaryPayload",
+        ),
+    ]:
+        _assert_result_component(
+            openrpc_document,
+            method_name=method_name,
+            component_name=component_name,
+            properties={collection_name, "total"},
+        )
+        schema = openrpc_document["components"]["schemas"][component_name]
+        assert schema["properties"][collection_name]["items"] == {
+            "$ref": f"#/components/schemas/{item_name}"
+        }
+        assert set(schema["required"]) == {collection_name, "total"}
+
+    schemas = openrpc_document["components"]["schemas"]
+    assert set(schemas["ConnectionPayload"]["required"]) == {
+        "id",
+        "server",
+        "account",
+        "enabled",
+        "metadata",
+    }
+    assert set(schemas["ConnectionStatusPayload"]["required"]) == {
+        "connection_id",
+        "enabled",
+    }
+    assert set(schemas["AdminEventPayload"]["required"]) == {
+        "kind",
+        "timestamp_epoch_ms",
+        "payload",
+    }
+    for component_name in [
+        "ConnectionPayload",
+        "ConnectionStatusPayload",
+        "AdminEventPayload",
+    ]:
+        assert schemas[component_name]["additionalProperties"] is True
+
+
+@pytest.mark.parametrize(
+    "method_name",
+    [
+        "workflow.admin.auth.inspect",
+        "workflow.admin.auth.save",
+    ],
+)
+def test_openrpc_exposes_secret_safe_auth_record_results(
+    openrpc_document: dict[str, Any],
+    method_name: str,
+) -> None:
+    _assert_result_component(
+        openrpc_document,
+        method_name=method_name,
+        component_name="AuthRecordSummaryPayload",
+        properties={"id", "scheme", "metadata", "payload_keys"},
+    )
+    schema = openrpc_document["components"]["schemas"]["AuthRecordSummaryPayload"]
+    assert set(schema["required"]) == {
+        "id",
+        "scheme",
+        "metadata",
+        "payload_keys",
+    }
+    assert "payload" not in schema["properties"]
+    assert schema["additionalProperties"] is False
+
+
+def test_openrpc_exposes_typed_auth_delete_result(
+    openrpc_document: dict[str, Any],
+) -> None:
+    _assert_result_component(
+        openrpc_document,
+        method_name="workflow.admin.auth.delete",
+        component_name="DeleteAuthRecordResult",
+        properties={"deleted", "id"},
+    )
+    schema = openrpc_document["components"]["schemas"]["DeleteAuthRecordResult"]
+    assert set(schema["required"]) == {"deleted", "id"}
+
+
 @pytest.mark.parametrize(
     ("method_name", "component_name", "properties"),
     [

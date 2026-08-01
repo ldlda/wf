@@ -11,19 +11,25 @@ from .draft_authoring import RouteSource
 from .draft_updates import CapabilityStepUpdate
 from .models import (
     ApplyRegistryChangesResult,
+    AuthRecordSummaryPayload,
     CapabilityCallResult,
     CompileDraftWorkspaceResult,
     CreateArtifactFromWorkspaceResult,
     CreateDraftWorkspaceFromCapabilityResult,
     DeleteArtifactResult,
+    DeleteAuthRecordResult,
     DeleteDeploymentResult,
     DeleteDraftWorkspaceResult,
     DraftWorkspaceResult,
     InspectCapabilityResult,
     InspectRegistryEntryResult,
     InspectSourceResult,
+    ListAdminEventsResult,
     ListArtifactsResult,
+    ListAuthRecordsResult,
     ListCapabilitiesResult,
+    ListConnectionsResult,
+    ListConnectionStatusesResult,
     ListDeploymentsResult,
     ListDraftWorkspacesResult,
     ListRegistryEntriesResult,
@@ -537,15 +543,15 @@ class WorkflowSourceAdminSurface(Protocol):
 class WorkflowAdminSurface(Protocol):
     """Read-only connection/config admin methods exposed by platform frontends."""
 
-    async def list_connections(self) -> dict[str, Any]: ...
+    async def list_connections(self) -> ListConnectionsResult: ...
 
-    async def get_connection_statuses(self) -> dict[str, Any]: ...
+    async def get_connection_statuses(self) -> ListConnectionStatusesResult: ...
 
-    async def list_events(self) -> dict[str, Any]: ...
+    async def list_events(self) -> ListAdminEventsResult: ...
 
-    async def list_auth_records(self) -> dict[str, Any]: ...
+    async def list_auth_records(self) -> ListAuthRecordsResult: ...
 
-    async def inspect_auth_record(self, auth_ref: str) -> dict[str, Any]: ...
+    async def inspect_auth_record(self, auth_ref: str) -> AuthRecordSummaryPayload: ...
 
     async def save_auth_record(
         self,
@@ -554,9 +560,9 @@ class WorkflowAdminSurface(Protocol):
         scheme: str,
         payload: Mapping[str, object],
         metadata: Mapping[str, object] | None = None,
-    ) -> dict[str, Any]: ...
+    ) -> AuthRecordSummaryPayload: ...
 
-    async def delete_auth_record(self, auth_ref: str) -> dict[str, Any]: ...
+    async def delete_auth_record(self, auth_ref: str) -> DeleteAuthRecordResult: ...
 
 
 class WorkflowSourceRegistrySurface(Protocol):

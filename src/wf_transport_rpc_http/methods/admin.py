@@ -1,9 +1,19 @@
-from __future__ import annotations
+"""Admin JSON-RPC method registration.
 
-from typing import Any
+Return annotations stay eagerly evaluated because fastapi-jsonrpc captures them
+while registering nested handlers for response validation and OpenRPC output.
+"""
 
 import fastapi_jsonrpc as jsonrpc
 
+from wf_api.models import (
+    AuthRecordSummaryPayload,
+    DeleteAuthRecordResult,
+    ListAdminEventsResult,
+    ListAuthRecordsResult,
+    ListConnectionsResult,
+    ListConnectionStatusesResult,
+)
 from wf_server import WorkflowServer
 
 from ..errors import WorkflowRpcError, raise_workflow_rpc_error
@@ -28,7 +38,7 @@ def register_methods(
     )
     async def workflow_admin_connections_list(
         params: AdminEmptyParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> ListConnectionsResult:
         try:
             return await server.admin.list_connections()
         except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:
@@ -40,7 +50,7 @@ def register_methods(
     )
     async def workflow_admin_connection_statuses_list(
         params: AdminEmptyParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> ListConnectionStatusesResult:
         try:
             return await server.admin.get_connection_statuses()
         except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:
@@ -52,7 +62,7 @@ def register_methods(
     )
     async def workflow_admin_events_list(
         params: AdminEmptyParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> ListAdminEventsResult:
         try:
             return await server.admin.list_events()
         except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:
@@ -64,7 +74,7 @@ def register_methods(
     )
     async def workflow_admin_auth_list(
         params: AdminEmptyParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> ListAuthRecordsResult:
         try:
             return await server.admin.list_auth_records()
         except (
@@ -82,7 +92,7 @@ def register_methods(
     )
     async def workflow_admin_auth_inspect(
         params: InspectAuthParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> AuthRecordSummaryPayload:
         try:
             return await server.admin.inspect_auth_record(params.auth_ref)
         except (
@@ -100,7 +110,7 @@ def register_methods(
     )
     async def workflow_admin_auth_save(
         params: SaveAuthParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> AuthRecordSummaryPayload:
         try:
             return await server.admin.save_auth_record(
                 auth_ref=params.auth_ref,
@@ -123,7 +133,7 @@ def register_methods(
     )
     async def workflow_admin_auth_delete(
         params: DeleteAuthParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> DeleteAuthRecordResult:
         try:
             return await server.admin.delete_auth_record(params.auth_ref)
         except (

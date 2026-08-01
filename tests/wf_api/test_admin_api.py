@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 import pytest
+from pydantic import ValidationError
 
 from wf_api import WorkflowAdminApi, WorkflowAdminSurface
 from wf_api.auth import AuthRecord
@@ -154,6 +155,18 @@ async def test_admin_inspects_auth_record_without_payload_values() -> None:
         "metadata": {"owner": "platform"},
         "payload_keys": ["token"],
     }
+
+
+async def test_admin_rejects_auth_provider_payload_values() -> None:
+    class UnsafeAuthProvider(AuthProvider):
+        def inspect_auth_record(self, auth_ref: str) -> dict[str, Any]:
+            return {
+                **super().inspect_auth_record(auth_ref),
+                "payload": {"token": "secret"},
+            }
+
+    with pytest.raises(ValidationError, match="payload"):
+        await _api(UnsafeAuthProvider()).inspect_auth_record("github.work")
 
 
 async def test_admin_auth_methods_report_unavailable_without_provider() -> None:
