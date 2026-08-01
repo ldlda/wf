@@ -741,6 +741,36 @@ async def test_patch_draft_applies_json_patch(tmp_path: Path) -> None:
 
 
 @pytest.mark.asyncio
+async def test_patch_draft_projects_valid_applied_document(tmp_path: Path) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "drafts_patch_valid")
+    api, _service, _authoring = _draft_api(artifact_store, register_echo=True)
+
+    result = await api.patch_draft(
+        draft=_echo_draft(),
+        patch=[{"op": "replace", "path": "/name", "value": "renamed_echo"}],
+    )
+
+    assert result["status"] == "valid"
+    assert result["draft"]["name"] == "renamed_echo"
+    assert result["compiled_plan"]["name"] == "renamed_echo"
+
+
+@pytest.mark.asyncio
+async def test_patch_draft_malformed_patch_has_no_draft(tmp_path: Path) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "drafts_patch_malformed")
+    api, _service, _authoring = _draft_api(artifact_store, register_echo=True)
+
+    result = await api.patch_draft(
+        draft=_echo_draft(),
+        patch=[{"op": "remove", "path": "/missing"}],
+    )
+
+    assert result["status"] == "invalid"
+    assert result["diagnostics"][0]["code"] == "patch_invalid"
+    assert "draft" not in result
+
+
+@pytest.mark.asyncio
 async def test_create_draft_workspace_creates_workspace(tmp_path: Path) -> None:
     artifact_store = FileWorkflowArtifactStore(tmp_path / "drafts_create_workspace")
     api, _service, _authoring = _draft_api(artifact_store)

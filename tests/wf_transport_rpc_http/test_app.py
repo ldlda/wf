@@ -31,6 +31,48 @@ async def _rpc(
     return response.json()
 
 
+def _rpc_constant_draft() -> dict[str, Any]:
+    """Return the canonical keyed draft shared by stateless RPC tests."""
+    return {
+        "name": "rpc_constant",
+        "input_schema": {"type": "object", "properties": {}},
+        "state_schema": {
+            "type": "object",
+            "properties": {"result": {"type": "string", "reducer": "wf.std.replace"}},
+        },
+        "output_schema": {
+            "type": "object",
+            "properties": {"result": {"type": "string"}},
+            "required": ["result"],
+        },
+        "start": "constant",
+        "steps": {
+            "constant": {
+                "use": "wf.std.constant",
+                "input": [
+                    {
+                        "value": "hello over rpc",
+                        "target": {"root": "local", "parts": ["value"]},
+                    }
+                ],
+                "output": [
+                    {
+                        "source": {"root": "local", "parts": ["value"]},
+                        "target": {"root": "state", "parts": ["result"]},
+                    }
+                ],
+            }
+        },
+        "routes": {"constant": {"ok": "__end__"}},
+        "output": [
+            {
+                "path": {"root": "state", "parts": ["result"]},
+                "target": {"root": "local", "parts": ["result"]},
+            }
+        ],
+    }
+
+
 def test_update_capability_step_params_preserve_nested_field_presence() -> None:
     params = UpdateCapabilityStepParams.model_validate(
         {
@@ -193,6 +235,67 @@ async def test_rpc_source_discovery_preserves_inventory_contracts(tmp_path) -> N
     assert diagnosed["result"]["status"] == "unknown"
 
 
+async def test_rpc_stateless_draft_methods_preserve_result_variants(tmp_path) -> None:
+    app = create_rpc_app(build_local_static_workflow_server(tmp_path / "store"))
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        validated = await _rpc(
+            client,
+            "workflow.drafts.validate",
+            {"draft": {}},
+        )
+        patched_valid = await _rpc(
+            client,
+            "workflow.drafts.patch",
+            {
+                "draft": _rpc_constant_draft(),
+                "patch": [
+                    {
+                        "op": "replace",
+                        "path": "/name",
+                        "value": "renamed_rpc_constant",
+                    }
+                ],
+            },
+        )
+        patched_invalid = await _rpc(
+            client,
+            "workflow.drafts.patch",
+            {
+                "draft": _rpc_constant_draft(),
+                "patch": [
+                    {
+                        "op": "replace",
+                        "path": "/routes/constant/ok",
+                        "value": "missing_step",
+                    }
+                ],
+            },
+        )
+        patched_malformed = await _rpc(
+            client,
+            "workflow.drafts.patch",
+            {
+                "draft": {},
+                "patch": [{"op": "remove", "path": "/missing"}],
+            },
+        )
+
+    assert validated["result"]["status"] == "invalid"
+    assert validated["result"]["diagnostics"]
+    assert patched_valid["result"]["status"] == "valid"
+    assert patched_valid["result"]["draft"]["name"] == "renamed_rpc_constant"
+    assert patched_valid["result"]["compiled_plan"]["name"] == "renamed_rpc_constant"
+    assert patched_invalid["result"]["status"] == "invalid"
+    assert patched_invalid["result"]["diagnostics"]
+    assert patched_invalid["result"]["draft"]["routes"]["constant"]["ok"] == (
+        "missing_step"
+    )
+    assert patched_malformed["result"]["status"] == "invalid"
+    assert patched_malformed["result"]["diagnostics"][0]["code"] == "patch_invalid"
+    assert "draft" not in patched_malformed["result"]
+
+
 async def test_rpc_capability_methods_preserve_saved_wrapper_fields(tmp_path) -> None:
     server = build_local_static_workflow_server(tmp_path / "store")
     await server.api.create_artifact_from_plan(
@@ -285,46 +388,7 @@ async def test_rpc_draft_artifact_deployment_lifecycle(tmp_path) -> None:
             },
         )
 
-        draft = {
-            "name": "rpc_constant",
-            "input_schema": {"type": "object", "properties": {}},
-            "state_schema": {
-                "type": "object",
-                "properties": {
-                    "result": {"type": "string", "reducer": "wf.std.replace"}
-                },
-            },
-            "output_schema": {
-                "type": "object",
-                "properties": {"result": {"type": "string"}},
-                "required": ["result"],
-            },
-            "start": "constant",
-            "steps": {
-                "constant": {
-                    "use": "wf.std.constant",
-                    "input": [
-                        {
-                            "value": "hello over rpc",
-                            "target": {"root": "local", "parts": ["value"]},
-                        }
-                    ],
-                    "output": [
-                        {
-                            "source": {"root": "local", "parts": ["value"]},
-                            "target": {"root": "state", "parts": ["result"]},
-                        }
-                    ],
-                }
-            },
-            "routes": {"constant": {"ok": "__end__"}},
-            "output": [
-                {
-                    "path": {"root": "state", "parts": ["result"]},
-                    "target": {"root": "local", "parts": ["result"]},
-                }
-            ],
-        }
+        draft = _rpc_constant_draft()
 
         validate_draft = await _rpc(
             client,

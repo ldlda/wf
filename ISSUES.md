@@ -74,10 +74,10 @@
   - Typed-result slices now give `workflow.health`, all artifact, deployment,
     and run operations, every persisted draft-workspace operation, and both the
     capability and source-discovery surfaces named transport-neutral result
-    schemas: 53 of 70 methods. The remaining 17 success results still collapse
-    to generic objects across stateless draft patch/validate and the
-    source-registry/admin operations. Continue introducing operation result DTOs
-    before adopting generated TypeScript contracts.
+    schemas: 55 of 70 methods. The remaining 15 success results still collapse
+    to generic objects across the source-registry/admin operations. Continue
+    introducing operation result DTOs before adopting generated TypeScript
+    contracts.
   - The stock `@open-rpc/generator` TypeScript client is not suitable here. It
     exhausted a 4 GB Node heap on the full contract and emitted invalid dotted
     class members plus `any` results for a minimal `workflow.health` contract.

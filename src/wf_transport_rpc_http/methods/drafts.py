@@ -4,8 +4,6 @@ Return annotations stay eagerly evaluated because fastapi-jsonrpc captures them
 while registering nested handlers for response validation and OpenRPC output.
 """
 
-from typing import Any
-
 import fastapi_jsonrpc as jsonrpc
 
 from wf_api.models import (
@@ -15,6 +13,8 @@ from wf_api.models import (
     DeleteDraftWorkspaceResult,
     DraftWorkspaceResult,
     ListDraftWorkspacesResult,
+    PatchDraftResult,
+    ValidateDraftResult,
 )
 from wf_api.surface import RouteSource
 from wf_server import WorkflowServer
@@ -77,7 +77,7 @@ def register_methods(
     @entrypoint.method(name="workflow.drafts.patch", errors=[WorkflowRpcError])
     async def workflow_drafts_patch(
         params: PatchDraftParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> PatchDraftResult:
         try:
             return await server.api.patch_draft(draft=params.draft, patch=params.patch)
         except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:
@@ -86,7 +86,7 @@ def register_methods(
     @entrypoint.method(name="workflow.drafts.validate", errors=[WorkflowRpcError])
     async def workflow_drafts_validate(
         params: ValidateDraftParams = RpcParams(),
-    ) -> dict[str, Any]:
+    ) -> ValidateDraftResult:
         try:
             return await server.api.validate_draft(draft=params.draft)
         except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:

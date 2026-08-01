@@ -26,12 +26,14 @@ from .models import (
     ListDraftWorkspacesResult,
     ListRunsResult,
     ListSourcesResult,
+    PatchDraftResult,
     RunResult,
     RunTraceResult,
     SaveArtifactResult,
     SaveDeploymentResult,
     SourceDiagnosisResult,
     ValidateDeploymentResult,
+    ValidateDraftResult,
     WorkflowArtifactPayload,
     WorkflowDeploymentPayload,
 )
@@ -71,6 +73,19 @@ class WorkflowDraftSurface(Protocol):
     This protocol intentionally describes the transport-facing workflow surface,
     not every same-process authoring helper on ``WorkflowApi``.
     """
+
+    async def validate_draft(
+        self,
+        *,
+        draft: dict[str, Any],
+    ) -> ValidateDraftResult: ...
+
+    async def patch_draft(
+        self,
+        *,
+        draft: dict[str, Any],
+        patch: list[dict[str, Any]],
+    ) -> PatchDraftResult: ...
 
     async def list_draft_workspaces(self) -> ListDraftWorkspacesResult: ...
 

@@ -61,6 +61,34 @@ class InvalidDraftResult(TypedDict):
     diagnostics: list[DraftDiagnosticPayload]
 
 
+class ValidDraftResult(TypedDict):
+    """Successful validation of one stateless draft document."""
+
+    status: Literal["valid"]
+    diagnostics: list[DraftDiagnosticPayload]
+    compiled_plan: JsonObject
+
+
+type ValidateDraftResult = ValidDraftResult | InvalidDraftResult
+
+
+class PatchedDraftValidResult(ValidDraftResult):
+    """Valid draft document produced after applying a JSON Patch."""
+
+    draft: JsonObject
+
+
+class PatchedDraftInvalidResult(InvalidDraftResult):
+    """Invalid patch result, optionally retaining the applied draft document."""
+
+    # Malformed JSON Patch cannot produce a document. Applied patches retain
+    # their invalid document so a later edit can repair it.
+    draft: NotRequired[JsonObject]
+
+
+type PatchDraftResult = PatchedDraftValidResult | PatchedDraftInvalidResult
+
+
 class CompileDraftWorkspaceSuccess(TypedDict):
     """Compiled raw plan and dependencies for one valid draft workspace."""
 

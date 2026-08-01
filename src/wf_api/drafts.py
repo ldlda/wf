@@ -60,6 +60,11 @@ from .models import (
     InvalidDraftResult,
     JsonProjector,
     ListDraftWorkspacesResult,
+    PatchDraftResult,
+    PatchedDraftInvalidResult,
+    PatchedDraftValidResult,
+    ValidateDraftResult,
+    ValidDraftResult,
 )
 from .operation_context import WorkflowOperationContext
 from .schema_projection import project_property_to_schema_path, schema_path_exists
@@ -69,6 +74,23 @@ _PROJECT_DRAFT_WORKSPACE_LIST = JsonProjector(ListDraftWorkspacesResult)
 _PROJECT_DRAFT_WORKSPACE_DELETE = JsonProjector(DeleteDraftWorkspaceResult)
 _PROJECT_DRAFT_COMPILE = JsonProjector(CompileDraftWorkspaceSuccess)
 _PROJECT_INVALID_DRAFT = JsonProjector(InvalidDraftResult)
+_PROJECT_VALID_DRAFT = JsonProjector(ValidDraftResult)
+_PROJECT_PATCHED_DRAFT_VALID = JsonProjector(PatchedDraftValidResult)
+_PROJECT_PATCHED_DRAFT_INVALID = JsonProjector(PatchedDraftInvalidResult)
+
+
+def _project_validate_draft(payload: dict[str, Any]) -> ValidateDraftResult:
+    """Project one validation result through the matching status variant."""
+    if payload.get("status") == "valid":
+        return _PROJECT_VALID_DRAFT(payload)
+    return _PROJECT_INVALID_DRAFT(payload)
+
+
+def _project_patch_draft(payload: dict[str, Any]) -> PatchDraftResult:
+    """Project one patch result while preserving an optional invalid draft."""
+    if payload.get("status") == "valid":
+        return _PROJECT_PATCHED_DRAFT_VALID(payload)
+    return _PROJECT_PATCHED_DRAFT_INVALID(payload)
 
 
 def _empty_object_schema() -> dict[str, Any]:
@@ -174,11 +196,13 @@ class WorkflowDraftApi:
             node_defs.append(spec.to_node_def())
         return node_defs
 
-    async def validate_draft(self, *, draft: dict[str, Any]) -> dict[str, Any]:
-        return validate_workflow_draft(
-            draft,
-            outcome_lookup=self._outcomes_for_capability,
-            node_defs=self._node_defs_for_draft(draft),
+    async def validate_draft(self, *, draft: dict[str, Any]) -> ValidateDraftResult:
+        return _project_validate_draft(
+            validate_workflow_draft(
+                draft,
+                outcome_lookup=self._outcomes_for_capability,
+                node_defs=self._node_defs_for_draft(draft),
+            )
         )
 
     async def compile_draft(
@@ -203,11 +227,13 @@ class WorkflowDraftApi:
         *,
         draft: dict[str, Any],
         patch: list[dict[str, Any]],
-    ) -> dict[str, Any]:
-        return patch_workflow_draft(
-            draft,
-            patch,
-            node_defs_for_draft=self._node_defs_for_draft,
+    ) -> PatchDraftResult:
+        return _project_patch_draft(
+            patch_workflow_draft(
+                draft,
+                patch,
+                node_defs_for_draft=self._node_defs_for_draft,
+            )
         )
 
     async def list_draft_workspaces(self) -> ListDraftWorkspacesResult:
@@ -887,14 +913,14 @@ def _path_text(value: Any, *, expected_root: str | None = None) -> str:
 
 
 def _with_workspace_repair_hints(
-    payload: dict[str, Any],
+    payload: Mapping[str, Any],
     *,
     workspace_id: str,
     revision: int,
 ) -> dict[str, Any]:
     diagnostics = payload.get("diagnostics")
     if not isinstance(diagnostics, list):
-        return payload
+        return dict(payload)
     enriched = []
     changed = False
     for diagnostic in diagnostics:
@@ -912,7 +938,7 @@ def _with_workspace_repair_hints(
             changed = True
         enriched.append(repaired)
     if not changed:
-        return payload
+        return dict(payload)
     return {**payload, "diagnostics": enriched}
 
 

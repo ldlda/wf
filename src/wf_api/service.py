@@ -29,6 +29,7 @@ from .models import (
     ListDeploymentsResult,
     ListDraftWorkspacesResult,
     ListRunsResult,
+    PatchDraftResult,
     RawWorkflowPlan,
     RunResult,
     RunTraceResult,
@@ -36,6 +37,7 @@ from .models import (
     SavedDraftArtifactResult,
     SaveDeploymentResult,
     ValidateDeploymentResult,
+    ValidateDraftResult,
     WorkflowArtifactPayload,
     WorkflowDeploymentPayload,
 )
@@ -254,7 +256,7 @@ class WorkflowApi:
         self,
         *,
         draft: dict[str, Any],
-    ) -> dict[str, Any]:
+    ) -> ValidateDraftResult:
         return await self.drafts.validate_draft(draft=draft)
 
     async def compile_draft(
@@ -269,7 +271,7 @@ class WorkflowApi:
         *,
         draft: dict[str, Any],
         patch: list[dict[str, Any]],
-    ) -> dict[str, Any]:
+    ) -> PatchDraftResult:
         return await self.drafts.patch_draft(draft=draft, patch=patch)
 
     # -- draft workspaces --

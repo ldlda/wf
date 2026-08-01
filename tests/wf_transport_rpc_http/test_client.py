@@ -399,6 +399,33 @@ async def test_rpc_client_sends_exact_draft_lifecycle_payloads() -> None:
     ]
 
 
+async def test_rpc_client_sends_exact_stateless_draft_payloads() -> None:
+    calls: list[dict[str, Any]] = []
+
+    class Client(RpcDraftClientMixin):
+        async def _call(self, method: str, params: dict[str, object]):
+            calls.append({"method": method, "params": params})
+            return {"status": "invalid", "diagnostics": []}
+
+    client = Client()
+    draft = {"name": "report"}
+    patch = [{"op": "replace", "path": "/name", "value": "renamed"}]
+
+    await client.validate_draft(draft=draft)
+    await client.patch_draft(draft=draft, patch=patch)
+
+    assert calls == [
+        {
+            "method": "workflow.drafts.validate",
+            "params": {"draft": draft},
+        },
+        {
+            "method": "workflow.drafts.patch",
+            "params": {"draft": draft, "patch": patch},
+        },
+    ]
+
+
 async def test_rpc_client_sends_exact_replace_document_payload() -> None:
     calls: list[dict[str, Any]] = []
 

@@ -350,6 +350,53 @@ def test_openrpc_exposes_typed_compile_draft_workspace_result(
     assert schemas["InvalidDraftResult"]["properties"]["status"]["const"] == "invalid"
 
 
+def test_openrpc_exposes_typed_stateless_draft_validation_result(
+    openrpc_document: dict[str, Any],
+) -> None:
+    method = _method_by_name(openrpc_document, "workflow.drafts.validate")
+    schemas = openrpc_document["components"]["schemas"]
+
+    assert method["result"]["schema"] == {
+        "$ref": "#/components/schemas/ValidateDraftResult"
+    }
+    assert schemas["ValidateDraftResult"] == {
+        "anyOf": [
+            {"$ref": "#/components/schemas/ValidDraftResult"},
+            {"$ref": "#/components/schemas/InvalidDraftResult"},
+        ]
+    }
+    assert schemas["ValidDraftResult"]["required"] == [
+        "status",
+        "diagnostics",
+        "compiled_plan",
+    ]
+
+
+def test_openrpc_exposes_typed_stateless_draft_patch_result(
+    openrpc_document: dict[str, Any],
+) -> None:
+    method = _method_by_name(openrpc_document, "workflow.drafts.patch")
+    schemas = openrpc_document["components"]["schemas"]
+
+    assert method["result"]["schema"] == {
+        "$ref": "#/components/schemas/PatchDraftResult"
+    }
+    assert schemas["PatchDraftResult"] == {
+        "anyOf": [
+            {"$ref": "#/components/schemas/PatchedDraftValidResult"},
+            {"$ref": "#/components/schemas/PatchedDraftInvalidResult"},
+        ]
+    }
+    assert "draft" in schemas["PatchedDraftValidResult"]["required"]
+    assert "draft" not in schemas["PatchedDraftInvalidResult"]["required"]
+    assert schemas["PatchedDraftValidResult"]["properties"]["draft"] == {
+        "$ref": "#/components/schemas/JsonObject"
+    }
+    assert schemas["PatchedDraftInvalidResult"]["properties"]["draft"] == {
+        "$ref": "#/components/schemas/JsonObject"
+    }
+
+
 def test_openrpc_exposes_typed_capability_bootstrap_result(
     openrpc_document: dict[str, Any],
 ) -> None:

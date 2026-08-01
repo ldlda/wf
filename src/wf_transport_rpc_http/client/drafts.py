@@ -11,6 +11,8 @@ from wf_api.models import (
     DeleteDraftWorkspaceResult,
     DraftWorkspaceResult,
     ListDraftWorkspacesResult,
+    PatchDraftResult,
+    ValidateDraftResult,
 )
 from wf_api.surface import RouteSource
 from wf_artifacts.drafts.models import DraftStep
@@ -30,6 +32,30 @@ async def _call_draft_workspace(
 
 class RpcDraftClientMixin:
     """JSON-RPC implementation of workflow draft workspace surface methods."""
+
+    async def validate_draft(
+        self: RpcCaller,
+        *,
+        draft: dict[str, Any],
+    ) -> ValidateDraftResult:
+        return cast(
+            ValidateDraftResult,
+            await self._call("workflow.drafts.validate", {"draft": draft}),
+        )
+
+    async def patch_draft(
+        self: RpcCaller,
+        *,
+        draft: dict[str, Any],
+        patch: list[dict[str, Any]],
+    ) -> PatchDraftResult:
+        return cast(
+            PatchDraftResult,
+            await self._call(
+                "workflow.drafts.patch",
+                {"draft": draft, "patch": patch},
+            ),
+        )
 
     async def list_draft_workspaces(self: RpcCaller) -> ListDraftWorkspacesResult:
         return cast(
