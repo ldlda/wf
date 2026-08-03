@@ -737,6 +737,13 @@ stable.
 
 ## Recently Completed Platform Milestones
 
+- Completed: the composed Python OpenRPC contract now has a checked,
+  transport-neutral manifest with a deterministic drift gate. Design:
+  [`workflow contract manifest design`](superpowers/specs/2026-08-01-workflow-contract-manifest-design.md).
+  Artifact: [`workflow-api.manifest.json`](../contracts/workflow-api.manifest.json).
+  Generated TypeScript operation names/raw types and a fail-closed
+  representative JSON Schema-to-Effect translator are the next contract-parity
+  slice; TypeScript parity is not complete.
 - `WorkflowApiSurface` is the protocol-neutral workflow operation contract.
 - `wf_transport_rpc_http` exposes local/static and MCP-backed `WorkflowServer`
   over JSON-RPC HTTP.

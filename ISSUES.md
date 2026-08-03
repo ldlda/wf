@@ -59,25 +59,23 @@
 
 ## TypeScript JSON-RPC coverage
 
-- [ ] `@lda/workflow-rpc` models only the 12 operations needed by the current
-  console explorer. It omits typed access to capabilities, source
-  inspect/diagnose, artifact save/delete/create, deployment save/delete, every
-  draft operation, and source-registry/admin operations already exposed by the
-  Python JSON-RPC server.
-- [ ] Python JSON-RPC models and the Effect RPC schemas are maintained by hand
-  with no parity check or generated contract. Add an operation-inventory test
-  or a code-generation seam so server additions cannot silently remain absent
-  from TypeScript.
-  - A 2026-07-30 spike confirmed that `fastapi-jsonrpc` already exports a
-    complete OpenRPC document for all 70 registered methods. Request payloads
-    retain useful Pydantic schemas, so OpenRPC is a viable transport input.
-  - All 70 JSON-RPC methods now expose named transport-neutral success-result
-    schemas, including connections, events, and secret-safe auth admin results.
-    No success result collapses to a generic object. The next contract-parity
-    step can consume OpenRPC through a small transport-neutral manifest rather
-    than adding more Python result DTOs.
-  - The stock `@open-rpc/generator` TypeScript client is not suitable here. It
-    exhausted a 4 GB Node heap on the full contract and emitted invalid dotted
+- [ ] TypeScript JSON-RPC parity remains incomplete: `@lda/workflow-rpc` models
+  only the 12 operations needed by the current console explorer. It omits typed
+  access to capabilities, source inspect/diagnose, artifact save/delete/create,
+  deployment save/delete, every draft operation, and source-registry/admin
+  operations already exposed by the Python JSON-RPC server.
+  - All 70 Python methods now have named OpenRPC success schemas, including
+    connections, events, and secret-safe auth admin results. No success result
+    collapses to a generic object.
+  - `contracts/workflow-api.manifest.json` is the checked transport-neutral
+    inventory, and `python -m wf_contract_manifest check` is the drift gate.
+  - The manifest does not authorize callers: browser authorization, operation
+    metadata, and the 12 current Effect RPC implementations remain authored
+    boundaries.
+  - The next slice is generated TypeScript operation names/raw types plus a
+    fail-closed representative JSON Schema-to-Effect translator.
+- The stock `@open-rpc/generator` TypeScript client is not suitable here. It
+  exhausted a 4 GB Node heap on the full contract and emitted invalid dotted
     class members plus `any` results for a minimal `workflow.health` contract.
     Keep OpenRPC as an interchange format, but generate a small
     transport-neutral contract manifest rather than adopting its client stack.

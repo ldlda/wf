@@ -28,6 +28,7 @@ For verified Python 3.14 dependency constraints and their removal criteria, see
 | `wf_sources_mcp` | MCP-as-upstream-source implementation: ids, registry DTOs, auth/catalog stores, discovery, SDK client/facade, runtime pool, wrappers. | `wf_server`, broker glue, MCP source tests. |
 | `wf_mcp` | MCP frontend/compatibility package: legacy `wf-mcp` entrypoints, broker glue, proxy/admin tools, and shims while extraction continues. | Compatibility callers and MCP transport work. |
 | `wf_cli` | Command-line frontend over local or remote workflow APIs. | Humans, scripts, agent skills. |
+| `wf_contract_manifest` | Tooling that normalizes the composed workflow OpenRPC document into the checked transport-neutral contract manifest and detects drift. | Contract generation, tests, and future TypeScript generators. |
 | `@lda/presentation-sync` | Shared, bounded wire contract for ephemeral LAN presentation rooms. | Browser `@lda/console` and Hono `@lda/web-server`. |
 
 The TypeScript presentation synchronization boundary is deliberately narrow.
@@ -65,6 +66,8 @@ can continue to reach a loopback-only workflow RPC server.
 - `wf-mcp`: legacy/special-purpose MCP script from `pyproject.toml`.
 - `wf-rpc-server`: preferred durable workflow server script for CLI/API clients,
   implemented by `wf_server.cli`.
+- `python -m wf_contract_manifest write|check`: regenerate or verify
+  `contracts/workflow-api.manifest.json` from the real composed workflow server.
 - `wf_mcp.broker.WfMcpService.get_catalog()`: backend MCP catalog snapshots.
 - `wf_mcp.broker.WfMcpService.get_planner_catalog()`: backend snapshots plus
   broker-local workflow sources such as `wf.std` and `wf.mcp`.
