@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from copy import deepcopy
 from typing import Any
 
 import pytest
@@ -152,18 +153,18 @@ def test_rejects_invalid_or_missing_top_level_envelope_values(
     ("name", "message"),
     [
         ("", "expected a non-empty string"),
-        ("workflow", "expected a method name with non-empty dot-separated segments"),
+        ("workflow", "malformed dotted method name"),
         (
             "workflow..run",
-            "expected a method name with non-empty dot-separated segments",
+            "malformed dotted method name",
         ),
         (
             ".workflow.run",
-            "expected a method name with non-empty dot-separated segments",
+            "malformed dotted method name",
         ),
         (
             "workflow.run.",
-            "expected a method name with non-empty dot-separated segments",
+            "malformed dotted method name",
         ),
     ],
 )
@@ -222,3 +223,106 @@ def test_rejects_invalid_method_error_schema_shape() -> None:
         "$.methods[1].errors[0]",
         "expected a schema object",
     )
+
+
+@pytest.mark.parametrize(
+    ("mutate", "path", "message"),
+    [
+        (
+            lambda document: document.update({"openrpc": "2.0.0"}),
+            "$.openrpc",
+            "unsupported OpenRPC version '2.0.0'; expected '1.2.6'",
+        ),
+        (lambda document: document.update({"methods": {}}), "$.methods", "expected an array"),
+        (
+            lambda document: document["methods"].append(
+                deepcopy(document["methods"][0])
+            ),
+            "$.methods[2].name",
+            "duplicate method 'workflow.zeta.run'",
+        ),
+        (
+            lambda document: document["methods"][0].update({"name": "workflow..run"}),
+            "$.methods[0].name",
+            "malformed dotted method name",
+        ),
+        (
+            lambda document: document["methods"][0].update({"params": {}}),
+            "$.methods[0].params",
+            "expected an array",
+        ),
+        (
+            lambda document: document["methods"][0]["params"].append(
+                {"name": "value", "required": "yes", "schema": {"type": "string"}}
+            ),
+            "$.methods[0].params[0].required",
+            "expected a boolean",
+        ),
+        (
+            lambda document: document["methods"][0].update({"result": {}}),
+            "$.methods[0].result.schema",
+            "expected an object",
+        ),
+        (
+            lambda document: document["methods"][0]["result"].update(
+                {
+                    "schema": {
+                        "type": "object",
+                        "properties": {"ok": {"type": "boolean"}},
+                    }
+                }
+            ),
+            "$.methods[0].result.schema",
+            "success result must reference a named schema component",
+        ),
+    ],
+)
+def test_rejects_malformed_openrpc_contracts(
+    mutate: Any, path: str, message: str
+) -> None:
+    document = synthetic_openrpc_document()
+    mutate(document)
+
+    assert_manifest_error(document, path, message)
+
+
+@pytest.mark.parametrize(
+    ("reference", "message"),
+    [
+        ("https://example.test/schema.json", "external references are not supported"),
+        ("#/definitions/Result", "unsupported local reference namespace"),
+        (
+            "#/components/parameters/Value",
+            "unsupported component reference namespace",
+        ),
+        ("#/components/schemas/Missing", "dangling local reference"),
+        (
+            "#/components/schemas/A~0B",
+            "unsupported escaped component reference",
+        ),
+    ],
+)
+def test_rejects_unsupported_or_dangling_references(
+    reference: str, message: str
+) -> None:
+    document = synthetic_openrpc_document()
+    document["components"]["schemas"]["AlphaResult"]["properties"]["linked"] = {
+        "$ref": reference
+    }
+
+    with pytest.raises(ManifestError) as exc_info:
+        manifest_from_openrpc(document)
+
+    assert exc_info.value.path.endswith(".properties.linked.$ref")
+    assert exc_info.value.message == message
+
+
+def test_accepts_nested_schema_and_error_component_references() -> None:
+    document = synthetic_openrpc_document()
+    document["components"]["schemas"]["AlphaResult"]["properties"]["linked"] = {
+        "$ref": "#/components/schemas/ZetaResult"
+    }
+
+    manifest = manifest_from_openrpc(document)
+
+    assert manifest["operations"][0]["errors"] == [{"$ref": "#/components/errors/5000"}]
