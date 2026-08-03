@@ -134,8 +134,8 @@ def test_generated_contract_contains_no_temporary_or_transport_state() -> None:
 
     assert not any("TemporaryDirectory" in value for value in strings)
     assert not any("\\Temp\\" in value for value in strings)
-    assert "127.0.0.1" not in strings
-    assert "/rpc" not in strings
+    assert not any("127.0.0.1" in value for value in strings)
+    assert not any("/rpc" in value for value in strings)
 
 
 def test_generated_required_properties_are_declared() -> None:
