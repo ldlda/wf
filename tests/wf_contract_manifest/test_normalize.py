@@ -1,13 +1,17 @@
 from __future__ import annotations
 
 from copy import deepcopy
-from typing import Any
+from typing import Any, Protocol
 
 import pytest
 
 from wf_contract_manifest import ManifestError, manifest_from_openrpc
 
 from .fixtures import synthetic_openrpc_document
+
+
+class DocumentMutation(Protocol):
+    def __call__(self, document: dict[str, Any]) -> object: ...
 
 
 def assert_manifest_error(
@@ -214,6 +218,17 @@ def test_rejects_invalid_result_schema_shape() -> None:
     )
 
 
+def test_rejects_extra_raw_success_result_schema_keys() -> None:
+    document = synthetic_openrpc_document()
+    document["methods"][0]["result"]["schema"]["title"] = "extra"
+
+    assert_manifest_error(
+        document,
+        "$.methods[0].result.schema",
+        "success result must reference a named schema component",
+    )
+
+
 def test_rejects_invalid_method_error_schema_shape() -> None:
     document = synthetic_openrpc_document()
     document["methods"][1]["errors"][0] = []
@@ -278,7 +293,7 @@ def test_rejects_invalid_method_error_schema_shape() -> None:
     ],
 )
 def test_rejects_malformed_openrpc_contracts(
-    mutate: Any, path: str, message: str
+    mutate: DocumentMutation, path: str, message: str
 ) -> None:
     document = synthetic_openrpc_document()
     mutate(document)
@@ -315,6 +330,23 @@ def test_rejects_unsupported_or_dangling_references(
 
     assert exc_info.value.path.endswith(".properties.linked.$ref")
     assert exc_info.value.message == message
+
+
+def test_reports_reference_errors_at_original_method_path() -> None:
+    document = synthetic_openrpc_document()
+    assert [method["name"] for method in document["methods"]] == [
+        "workflow.zeta.run",
+        "workflow.alpha.inspect",
+    ]
+    document["methods"][0]["errors"][0] = {
+        "$ref": "#/components/errors/Missing"
+    }
+
+    with pytest.raises(ManifestError) as exc_info:
+        manifest_from_openrpc(document)
+
+    assert exc_info.value.path == "$.methods[0].errors[0].$ref"
+    assert exc_info.value.message == "dangling local reference"
 
 
 def test_accepts_nested_schema_and_error_component_references() -> None:

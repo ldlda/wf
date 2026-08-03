@@ -83,7 +83,7 @@ def _validate_references(
 ) -> None:
     values: list[tuple[str, JsonValue]] = []
     for operation_index, operation in enumerate(manifest["operations"]):
-        operation_path = f"$.operations[{operation_index}]"
+        operation_path = f"$.methods[{operation_index}]"
         for parameter_index, parameter in enumerate(operation["params"]):
             values.append(
                 (
@@ -176,15 +176,19 @@ def manifest_from_openrpc(document: Mapping[str, object]) -> ContractManifest:
         result = _mapping(method.get("result"), result_path)
         if "schema" not in result:
             raise ManifestError(f"{result_path}.schema", "expected an object")
-        result_schema = _schema(result["schema"], f"{result_path}.schema")
-        if set(result_schema) != {"$ref"} or not (
-            isinstance(result_schema["$ref"], str)
-            and result_schema["$ref"].startswith("#/components/schemas/")
+        raw_result_schema = result["schema"]
+        if isinstance(raw_result_schema, Mapping) and (
+            set(raw_result_schema) != {"$ref"}
+            or not (
+                isinstance(raw_result_schema.get("$ref"), str)
+                and raw_result_schema["$ref"].startswith("#/components/schemas/")
+            )
         ):
             raise ManifestError(
                 f"{result_path}.schema",
                 "success result must reference a named schema component",
             )
+        result_schema = _schema(raw_result_schema, f"{result_path}.schema")
         errors: list[JsonSchema] = []
         for error_index, error_value in enumerate(
             _list(method.get("errors"), f"{method_path}.errors")
@@ -216,7 +220,7 @@ def manifest_from_openrpc(document: Mapping[str, object]) -> ContractManifest:
     manifest: ContractManifest = {
         "manifest_version": 1,
         "source": {"format": "openrpc", "openrpc_version": openrpc_version},
-        "operations": sorted(operations, key=lambda operation: operation["method"]),
+        "operations": operations,
         "components": {"schemas": normalized_schemas, "errors": normalized_errors},
     }
     component_index = {
@@ -224,4 +228,7 @@ def manifest_from_openrpc(document: Mapping[str, object]) -> ContractManifest:
         "errors": set(manifest["components"]["errors"]),
     }
     _validate_references(manifest, component_index)
+    manifest["operations"] = sorted(
+        manifest["operations"], key=lambda operation: operation["method"]
+    )
     return manifest

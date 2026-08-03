@@ -50,3 +50,43 @@ and scope audit.
 ## Concerns
 
 None identified.
+
+## Task 2 Review Fixes
+
+### Findings Addressed
+
+1. Reference validation now runs against operations in original source order,
+   and reports `$.methods[index]...` paths before deterministic lexical sorting.
+   A regression test uses the source order `workflow.zeta.run`, then
+   `workflow.alpha.inspect`, and asserts the exact later ref path.
+2. Success result validation now checks raw mapping keys before `_schema()`
+   removes `title`, so a valid `$ref` plus an extra `title` is rejected.
+3. The malformed-contract mutation table now uses the typed
+   `DocumentMutation` Protocol instead of an `Any` mutation annotation.
+
+### TDD Evidence
+
+- Review regression tests were run before implementation: 2 failed as
+  intended, one for the title-stripping acceptance and one for the sorted
+  operation path.
+- After implementation, all 41 focused normalization tests passed.
+
+### Fix Verification
+
+```text
+.venv\Scripts\python.exe -m pytest tests\wf_contract_manifest\test_normalize.py -n 0 -q
+41 passed in 0.13s
+
+.venv\Scripts\ruff.exe check src\wf_contract_manifest tests\wf_contract_manifest
+All checks passed!
+
+.venv\Scripts\basedpyright.exe --level error src\wf_contract_manifest tests\wf_contract_manifest
+0 errors, 0 warnings, 0 notes
+
+git diff --check
+passed (only Git line-ending warnings)
+```
+
+### Fix Concerns
+
+None identified.
