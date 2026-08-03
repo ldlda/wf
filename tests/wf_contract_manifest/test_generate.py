@@ -10,6 +10,14 @@ UNION_RESULTS = {
     "CreateArtifactFromWorkspaceResult",
 }
 
+AUTH_SECURITY_COMPONENTS = {
+    "AuthRecordSummaryPayload",
+    "ListAuthRecordsResult",
+    "DeleteAuthRecordResult",
+    "SourceAuthDiagnosisPayload",
+    "SourceDiagnosisResult",
+}
+
 
 def test_generates_the_complete_real_workflow_contract() -> None:
     manifest = generate_manifest()
@@ -29,11 +37,8 @@ def test_generates_the_complete_real_workflow_contract() -> None:
 def test_generated_contract_preserves_security_and_extension_boundaries() -> None:
     schemas = generate_manifest()["components"]["schemas"]
 
-    auth_result_names = [
-        name for name in schemas if "Auth" in name and name.endswith("Result")
-    ]
-    assert auth_result_names
-    for name in auth_result_names:
+    assert AUTH_SECURITY_COMPONENTS <= schemas.keys()
+    for name in AUTH_SECURITY_COMPONENTS:
         properties = schemas[name].get("properties", {})
         assert isinstance(properties, dict)
         assert "payload" not in properties

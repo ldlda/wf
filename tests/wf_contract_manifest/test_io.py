@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -19,6 +21,17 @@ def _manifest():
     return manifest_from_openrpc(synthetic_openrpc_document())
 
 
+def _reverse_mapping_insertions(value: Any) -> Any:
+    if isinstance(value, Mapping):
+        return {
+            key: _reverse_mapping_insertions(child)
+            for key, child in reversed(list(value.items()))
+        }
+    if isinstance(value, list):
+        return [_reverse_mapping_insertions(item) for item in value]
+    return value
+
+
 def test_canonical_json_is_stable_utf8_text_with_trailing_newline() -> None:
     first = canonical_manifest_json(_manifest())
     second = canonical_manifest_json(_manifest())
@@ -27,6 +40,15 @@ def test_canonical_json_is_stable_utf8_text_with_trailing_newline() -> None:
     assert first.endswith("\n")
     assert '  "manifest_version": 1' in first
     assert "\\u" not in first
+
+
+def test_canonical_json_ignores_recursive_mapping_insertion_order() -> None:
+    manifest = _manifest()
+    reordered = _reverse_mapping_insertions(manifest)
+
+    assert canonical_manifest_json(manifest).encode("utf-8") == (
+        canonical_manifest_json(reordered).encode("utf-8")
+    )
 
 
 def test_write_and_check_round_trip(tmp_path: Path) -> None:
