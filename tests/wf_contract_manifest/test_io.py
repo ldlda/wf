@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
@@ -49,6 +50,15 @@ def test_canonical_json_ignores_recursive_mapping_insertion_order() -> None:
     assert canonical_manifest_json(manifest).encode("utf-8") == (
         canonical_manifest_json(reordered).encode("utf-8")
     )
+
+
+@pytest.mark.parametrize("value", [math.nan, math.inf, -math.inf])
+def test_canonical_json_rejects_non_finite_numbers(value: float) -> None:
+    manifest = _manifest()
+    manifest["components"]["schemas"]["FreeJson"] = {"const": value}
+
+    with pytest.raises(ValueError, match="manifest is not canonically serializable"):
+        canonical_manifest_json(manifest)
 
 
 def test_write_and_check_round_trip(tmp_path: Path) -> None:

@@ -15,9 +15,20 @@ class ManifestDriftError(RuntimeError):
 
 def canonical_manifest_json(manifest: ContractManifest) -> str:
     try:
-        return json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+        return (
+            json.dumps(
+                manifest,
+                allow_nan=False,
+                ensure_ascii=False,
+                indent=2,
+                sort_keys=True,
+            )
+            + "\n"
+        )
     except (TypeError, ValueError) as error:
-        raise ValueError(f"manifest is not canonically serializable: {error}") from error
+        raise ValueError(
+            f"manifest is not canonically serializable: {error}"
+        ) from error
 
 
 def write_manifest(

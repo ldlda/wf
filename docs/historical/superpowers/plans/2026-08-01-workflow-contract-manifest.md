@@ -41,7 +41,7 @@
 - Produces: `ManifestError`, `JsonValue`, `JsonSchema`, `ContractManifest`, and `manifest_from_openrpc(document: Mapping[str, object]) -> ContractManifest`.
 - Contract: this task validates the manifest envelope and normalizes valid operations; Task 2 adds complete reference-graph validation.
 
-- [ ] **Step 1: Add the reusable synthetic OpenRPC fixture**
+- [x] **Step 1: Add the reusable synthetic OpenRPC fixture**
 
 Create `tests/wf_contract_manifest/fixtures.py` with a fixture that deliberately exercises ordering and schema preservation:
 
@@ -130,7 +130,7 @@ def synthetic_openrpc_document() -> dict[str, Any]:
     }
 ```
 
-- [ ] **Step 2: Write failing happy-path normalization tests**
+- [x] **Step 2: Write failing happy-path normalization tests**
 
 Create `tests/wf_contract_manifest/test_normalize.py`:
 
@@ -200,7 +200,7 @@ def test_preserves_conditional_schema_keywords() -> None:
     assert alpha["not"] == {"required": ["forbidden"]}
 ```
 
-- [ ] **Step 3: Run the tests and confirm the package is missing**
+- [x] **Step 3: Run the tests and confirm the package is missing**
 
 Run:
 
@@ -211,7 +211,7 @@ New-Item -ItemType Directory -Force -Path '.pytest-tmp\manifest-task1' | Out-Nul
 
 Expected: collection fails with `ModuleNotFoundError: No module named 'wf_contract_manifest'`.
 
-- [ ] **Step 4: Add the typed manifest model**
+- [x] **Step 4: Add the typed manifest model**
 
 Create `src/wf_contract_manifest/model.py` with these public definitions:
 
@@ -285,7 +285,7 @@ __all__ = [
 ]
 ```
 
-- [ ] **Step 5: Implement the minimal pure normalizer**
+- [x] **Step 5: Implement the minimal pure normalizer**
 
 Create `src/wf_contract_manifest/normalize.py`. Keep the envelope readers small and path-aware. The implementation must:
 
@@ -358,7 +358,7 @@ Then implement `manifest_from_openrpc()` using the helpers above:
 
 Use a short comment over `_json_value`: generated titles are removed recursively, while every other schema keyword and value is intentionally opaque.
 
-- [ ] **Step 6: Run focused tests and static checks**
+- [x] **Step 6: Run focused tests and static checks**
 
 Run:
 
@@ -370,7 +370,7 @@ Run:
 
 Expected: all normalization tests pass; Ruff and basedpyright report no errors.
 
-- [ ] **Step 7: Commit Task 1**
+- [x] **Step 7: Commit Task 1**
 
 ```powershell
 git add src\wf_contract_manifest tests\wf_contract_manifest
@@ -389,7 +389,7 @@ git commit -m "feat: normalize workflow OpenRPC manifests"
 - Consumes: `ManifestError`, normalized operation/component values from Task 1.
 - Produces: the same `manifest_from_openrpc()` interface, now rejecting malformed methods and invalid `$ref` graphs before returning.
 
-- [ ] **Step 1: Add failing malformed-envelope tests**
+- [x] **Step 1: Add failing malformed-envelope tests**
 
 Append parameterized tests to `tests/wf_contract_manifest/test_normalize.py`:
 
@@ -459,7 +459,7 @@ def test_rejects_malformed_openrpc_contracts(mutate, path: str, message: str) ->
 
 If basedpyright rejects untyped lambdas, define a `Protocol` named `DocumentMutation` and annotate the parameter, or replace the table with named mutation functions. Do not silence it with `Any` casts.
 
-- [ ] **Step 2: Add failing reference-graph tests**
+- [x] **Step 2: Add failing reference-graph tests**
 
 Add tests for every rejected reference class:
 
@@ -502,7 +502,7 @@ def test_accepts_nested_schema_and_error_component_references() -> None:
     ]
 ```
 
-- [ ] **Step 3: Run tests and verify fail-closed cases are red**
+- [x] **Step 3: Run tests and verify fail-closed cases are red**
 
 Run:
 
@@ -512,7 +512,7 @@ Run:
 
 Expected: new duplicate-method, generic-result, and invalid-reference cases fail because Task 1 does not yet reject them.
 
-- [ ] **Step 4: Implement strict method/result validation**
+- [x] **Step 4: Implement strict method/result validation**
 
 In `normalize.py`:
 
@@ -524,7 +524,7 @@ In `normalize.py`:
 
 This top-level result rule is intentionally stricter than nested JSON Schema. Every current successful operation has a named result component, which is the stable seam the TypeScript generator will consume.
 
-- [ ] **Step 5: Implement one complete reference-graph walk**
+- [x] **Step 5: Implement one complete reference-graph walk**
 
 Add these internal interfaces:
 
@@ -567,7 +567,7 @@ For every operation and component value, walk references and validate:
 
 Run this validation once after the whole manifest is assembled so forward references are valid.
 
-- [ ] **Step 6: Run focused tests and static checks**
+- [x] **Step 6: Run focused tests and static checks**
 
 ```powershell
 .venv\Scripts\python.exe -m pytest tests\wf_contract_manifest\test_normalize.py -n 0 --basetemp '.pytest-tmp\manifest-task2' -q
@@ -577,7 +577,7 @@ Run this validation once after the whole manifest is assembled so forward refere
 
 Expected: all normalization and validation tests pass; static checks are clean.
 
-- [ ] **Step 7: Commit Task 2**
+- [x] **Step 7: Commit Task 2**
 
 ```powershell
 git add src\wf_contract_manifest\normalize.py tests\wf_contract_manifest\test_normalize.py
@@ -599,7 +599,7 @@ git commit -m "feat: validate workflow contract references"
 - Consumes: `manifest_from_openrpc()` from Tasks 1-2, `wf_server.build_local_static_workflow_server`, and `wf_transport_rpc_http.create_rpc_app`.
 - Produces: `generate_manifest() -> ContractManifest`, `canonical_manifest_json(manifest) -> str`, `write_manifest(manifest, path) -> Path`, `check_manifest(manifest, path) -> None`, `ManifestDriftError`, and `DEFAULT_MANIFEST_PATH`.
 
-- [ ] **Step 1: Write the real-contract integration test**
+- [x] **Step 1: Write the real-contract integration test**
 
 Create `tests/wf_contract_manifest/test_generate.py`:
 
@@ -655,7 +655,7 @@ def test_generated_contract_contains_no_temporary_or_transport_state() -> None:
 
 If current auth result components use a narrower naming convention, replace `auth_result_names` with the exact current component names discovered from the real document and pin them explicitly. Do not weaken the assertion to a no-op.
 
-- [ ] **Step 2: Write canonical I/O tests**
+- [x] **Step 2: Write canonical I/O tests**
 
 Create `tests/wf_contract_manifest/test_io.py`:
 
@@ -711,7 +711,7 @@ def test_check_reports_drift_without_mutating_the_file(tmp_path: Path) -> None:
     assert path.read_bytes() == before
 ```
 
-- [ ] **Step 3: Run tests and verify generation/I/O modules are missing**
+- [x] **Step 3: Run tests and verify generation/I/O modules are missing**
 
 ```powershell
 .venv\Scripts\python.exe -m pytest tests\wf_contract_manifest\test_generate.py tests\wf_contract_manifest\test_io.py -n 0 --basetemp '.pytest-tmp\manifest-task3' -q
@@ -719,7 +719,7 @@ def test_check_reports_drift_without_mutating_the_file(tmp_path: Path) -> None:
 
 Expected: collection fails because `generate_manifest`, `ManifestDriftError`, and the I/O helpers are not exported.
 
-- [ ] **Step 4: Implement real in-process generation**
+- [x] **Step 4: Implement real in-process generation**
 
 Create `src/wf_contract_manifest/generate.py`:
 
@@ -749,7 +749,7 @@ def generate_manifest() -> ContractManifest:
 
 Do not start Uvicorn, bind a socket, read `.env`, or construct a remote client. The composed in-process app is the authoritative transport registration surface.
 
-- [ ] **Step 5: Implement byte-canonical I/O**
+- [x] **Step 5: Implement byte-canonical I/O**
 
 Create `src/wf_contract_manifest/io.py`:
 
@@ -799,7 +799,7 @@ def check_manifest(manifest: ContractManifest, path: Path = DEFAULT_MANIFEST_PAT
 
 Byte comparison is intentional: it catches semantic contract drift and non-canonical manual edits with the same deterministic remediation.
 
-- [ ] **Step 6: Export the generation and I/O interfaces**
+- [x] **Step 6: Export the generation and I/O interfaces**
 
 Update `src/wf_contract_manifest/__init__.py` so `__all__` also contains:
 
@@ -814,7 +814,7 @@ from .io import (
 )
 ```
 
-- [ ] **Step 7: Run focused tests and static checks**
+- [x] **Step 7: Run focused tests and static checks**
 
 ```powershell
 .venv\Scripts\python.exe -m pytest tests\wf_contract_manifest -n 0 --basetemp '.pytest-tmp\manifest-task3' -q
@@ -824,7 +824,7 @@ from .io import (
 
 Expected: synthetic and real-contract tests pass; static checks are clean.
 
-- [ ] **Step 8: Commit Task 3**
+- [x] **Step 8: Commit Task 3**
 
 ```powershell
 git add src\wf_contract_manifest tests\wf_contract_manifest
@@ -844,7 +844,7 @@ git commit -m "feat: generate canonical workflow contract"
 - Consumes: `generate_manifest`, `write_manifest`, `check_manifest`, `DEFAULT_MANIFEST_PATH`, and `ManifestDriftError` from Task 3.
 - Produces: `main(argv: Sequence[str] | None = None) -> int` and the supported commands `.venv\Scripts\python.exe -m wf_contract_manifest write|check`.
 
-- [ ] **Step 1: Write CLI behavior tests**
+- [x] **Step 1: Write CLI behavior tests**
 
 Create `tests/wf_contract_manifest/test_cli.py`:
 
@@ -900,7 +900,7 @@ def test_rejects_unknown_command() -> None:
 
 Use explicit pytest fixture types already established in the repository if basedpyright requires them; do not replace behavior assertions with subprocess-only smoke tests.
 
-- [ ] **Step 2: Run the CLI test and confirm it is red**
+- [x] **Step 2: Run the CLI test and confirm it is red**
 
 ```powershell
 .venv\Scripts\python.exe -m pytest tests\wf_contract_manifest\test_cli.py -n 0 --basetemp '.pytest-tmp\manifest-task4' -q
@@ -908,7 +908,7 @@ Use explicit pytest fixture types already established in the repository if based
 
 Expected: collection fails because `wf_contract_manifest.__main__` does not exist.
 
-- [ ] **Step 3: Implement the module CLI**
+- [x] **Step 3: Implement the module CLI**
 
 Create `src/wf_contract_manifest/__main__.py`:
 
@@ -952,7 +952,7 @@ if __name__ == "__main__":
 
 Do not add a `[project.scripts]` entry. The approved surface is the module command.
 
-- [ ] **Step 4: Run the CLI test and static checks**
+- [x] **Step 4: Run the CLI test and static checks**
 
 ```powershell
 .venv\Scripts\python.exe -m pytest tests\wf_contract_manifest\test_cli.py -n 0 --basetemp '.pytest-tmp\manifest-task4' -q
@@ -962,7 +962,7 @@ Do not add a `[project.scripts]` entry. The approved surface is the module comma
 
 Expected: CLI tests pass and static checks are clean.
 
-- [ ] **Step 5: Generate and independently check the committed artifact**
+- [x] **Step 5: Generate and independently check the committed artifact**
 
 ```powershell
 .venv\Scripts\python.exe -m wf_contract_manifest write
@@ -989,7 +989,7 @@ print(manifest["operations"][-1]["method"])
 
 Expected: `70`, `126`, `1`, followed by the lexically first and last method names.
 
-- [ ] **Step 6: Commit Task 4**
+- [x] **Step 6: Commit Task 4**
 
 ```powershell
 git add src\wf_contract_manifest\__main__.py tests\wf_contract_manifest\test_cli.py contracts\workflow-api.manifest.json
@@ -1011,7 +1011,7 @@ git commit -m "feat: check in workflow contract manifest"
 - Consumes: the real generator, canonical checker, and checked artifact from Tasks 3-4.
 - Produces: a deterministic pytest drift gate and current documentation pointing to the manifest seam and the next TypeScript generation slice.
 
-- [ ] **Step 1: Write the committed-manifest drift test**
+- [x] **Step 1: Write the committed-manifest drift test**
 
 Create `tests/wf_contract_manifest/test_committed_manifest.py`:
 
@@ -1023,7 +1023,7 @@ def test_committed_manifest_matches_the_python_workflow_contract() -> None:
     check_manifest(generate_manifest(), DEFAULT_MANIFEST_PATH)
 ```
 
-- [ ] **Step 2: Prove the drift gate fails without mutating the artifact**
+- [x] **Step 2: Prove the drift gate fails without mutating the artifact**
 
 Use a temporary backup and restore in one PowerShell `try/finally` block:
 
@@ -1041,7 +1041,7 @@ try {
 
 Expected: pytest fails with `ManifestDriftError` and guidance to run `python -m wf_contract_manifest write`; the `finally` block restores the exact original bytes.
 
-- [ ] **Step 3: Run the restored drift gate**
+- [x] **Step 3: Run the restored drift gate**
 
 ```powershell
 .venv\Scripts\python.exe -m pytest tests\wf_contract_manifest\test_committed_manifest.py -n 0 --basetemp '.pytest-tmp\manifest-task5-green' -q
@@ -1049,7 +1049,7 @@ Expected: pytest fails with `ManifestDriftError` and guidance to run `python -m 
 
 Expected: one test passes.
 
-- [ ] **Step 4: Update current documentation**
+- [x] **Step 4: Update current documentation**
 
 Read `docs/AGENTS.md` before editing these files.
 
@@ -1076,9 +1076,10 @@ Under `Important Entry Points`, add:
 
 In `docs/current_roadmap.md` under `Recently Completed Platform Milestones`, add a concise completed bullet linking the approved design spec and checked artifact, then state that generated TypeScript inventory/types and representative Effect translation are the next contract-parity slice. Do not claim TypeScript parity is complete.
 
-- [ ] **Step 5: Run the complete scoped verification gate**
+- [x] **Step 5: Run the complete scoped verification gate**
 
 ```powershell
+New-Item -ItemType Directory -Force -Path '.pytest-tmp' | Out-Null
 .venv\Scripts\python.exe -m pytest tests\wf_contract_manifest tests\wf_transport_rpc_http\test_openrpc_contract.py -n 0 --basetemp '.pytest-tmp\manifest-final' -q
 .venv\Scripts\python.exe -m wf_contract_manifest check
 .venv\Scripts\ruff.exe check src\wf_contract_manifest tests\wf_contract_manifest
@@ -1094,7 +1095,7 @@ Expected:
 - Ruff, basedpyright, and whitespace checks are clean;
 - status contains only files intentionally changed by this plan.
 
-- [ ] **Step 6: Run independent two-axis review and fix valid findings**
+- [x] **Step 6: Run independent two-axis review and fix valid findings**
 
 Dispatch a fresh reviewer that did not implement the slice. Give it:
 
@@ -1105,7 +1106,7 @@ Dispatch a fresh reviewer that did not implement the slice. Give it:
 
 Fix every valid Critical or Important finding and add a regression test for behavioral fixes. Re-run Step 5 after fixes. Record Minor deferrals with rationale in the final report rather than silently ignoring them.
 
-- [ ] **Step 7: Archive the completed plan and commit documentation**
+- [x] **Step 7: Archive the completed plan and commit documentation**
 
 Only after all code, tests, review fixes, and verification are complete:
 
@@ -1115,7 +1116,7 @@ git add ISSUES.md docs\project_map.md docs\current_roadmap.md docs\superpowers\p
 git commit -m "docs: record workflow contract manifest"
 ```
 
-- [ ] **Step 8: Remove only the plan-owned temporary pytest directory**
+- [x] **Step 8: Remove only the plan-owned temporary pytest directory**
 
 ```powershell
 $temp = (Resolve-Path '.pytest-tmp').Path

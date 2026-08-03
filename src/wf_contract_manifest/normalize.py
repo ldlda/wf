@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import math
 from collections.abc import Iterator, Mapping
+from typing import cast
 
 from .model import (
     ContractManifest,
@@ -13,11 +15,40 @@ from .model import (
 
 type ComponentIndex = dict[str, set[str]]
 
+_SCHEMA_MAP_KEYWORDS = {
+    "$defs",
+    "definitions",
+    "dependentSchemas",
+    "patternProperties",
+    "properties",
+}
+_SINGLE_SCHEMA_KEYWORDS = {
+    "additionalProperties",
+    "contains",
+    "contentSchema",
+    "else",
+    "if",
+    "items",
+    "not",
+    "propertyNames",
+    "then",
+    "unevaluatedItems",
+    "unevaluatedProperties",
+}
+_SCHEMA_ARRAY_KEYWORDS = {"allOf", "anyOf", "oneOf", "prefixItems"}
+
 
 def _mapping(value: object, path: str) -> Mapping[str, object]:
     if not isinstance(value, Mapping):
         raise ManifestError(path, "expected an object")
     return value
+
+
+def _string_key_mapping(value: object, path: str) -> Mapping[str, object]:
+    mapping = _mapping(value, path)
+    if any(not isinstance(key, str) for key in mapping):
+        raise ManifestError(path, "expected string object keys")
+    return cast("Mapping[str, object]", mapping)
 
 
 def _list(value: object, path: str) -> list[object]:
@@ -39,27 +70,81 @@ def _boolean(value: object, path: str) -> bool:
 
 
 def _json_value(value: object, path: str) -> JsonValue:
-    # Generated titles are removed recursively; every other schema keyword/value stays opaque.
-    if value is None or isinstance(value, bool | int | float | str):
+    if value is None or isinstance(value, bool | int | str):
+        return value
+    if isinstance(value, float):
+        if not math.isfinite(value):
+            raise ManifestError(path, "expected a finite JSON number")
         return value
     if isinstance(value, list):
-        return [_json_value(item, f"{path}[{index}]") for index, item in enumerate(value)]
+        return [
+            _json_value(item, f"{path}[{index}]") for index, item in enumerate(value)
+        ]
     if isinstance(value, Mapping):
         normalized: dict[str, JsonValue] = {}
         for key, item in value.items():
             if not isinstance(key, str):
                 raise ManifestError(path, "expected string object keys")
-            if key != "title":
-                normalized[key] = _json_value(item, f"{path}.{key}")
+            normalized[key] = _json_value(item, f"{path}.{key}")
         return normalized
     raise ManifestError(path, "expected a JSON value")
 
 
+def _schema_child(value: object, path: str) -> JsonValue:
+    if isinstance(value, Mapping):
+        return _schema(value, path)
+    if isinstance(value, list):
+        return [
+            _schema_child(item, f"{path}[{index}]") for index, item in enumerate(value)
+        ]
+    return _json_value(value, path)
+
+
+def _schema_map(value: object, path: str) -> JsonValue:
+    if not isinstance(value, Mapping):
+        return _json_value(value, path)
+    mapping = _string_key_mapping(value, path)
+    return {
+        key: _schema_child(child, f"{path}.{key}") for key, child in mapping.items()
+    }
+
+
 def _schema(value: object, path: str) -> JsonSchema:
-    normalized = _json_value(value, path)
-    if not isinstance(normalized, dict):
+    if not isinstance(value, Mapping):
         raise ManifestError(path, "expected a schema object")
+    mapping = _string_key_mapping(value, path)
+    normalized: JsonSchema = {}
+    for key, child in mapping.items():
+        child_path = f"{path}.{key}"
+        if key == "title":
+            continue
+        if key in _SCHEMA_MAP_KEYWORDS:
+            normalized[key] = _schema_map(child, child_path)
+        elif key in _SINGLE_SCHEMA_KEYWORDS:
+            normalized[key] = _schema_child(child, child_path)
+        elif key in _SCHEMA_ARRAY_KEYWORDS and isinstance(child, list):
+            normalized[key] = [
+                _schema_child(item, f"{child_path}[{index}]")
+                for index, item in enumerate(child)
+            ]
+        else:
+            normalized[key] = _json_value(child, child_path)
     return normalized
+
+
+def _error_component(value: object, path: str) -> JsonValue:
+    """Normalize an OpenRPC error object, whose ``data`` member is a schema."""
+    if not isinstance(value, Mapping):
+        return _json_value(value, path)
+    mapping = _string_key_mapping(value, path)
+    return {
+        key: (
+            _schema_child(child, f"{path}.{key}")
+            if key == "data"
+            else _json_value(child, f"{path}.{key}")
+        )
+        for key, child in mapping.items()
+    }
 
 
 def _walk_references(value: JsonValue, path: str) -> Iterator[tuple[str, str]]:
@@ -91,7 +176,9 @@ def _validate_references(
                     parameter["schema"],
                 )
             )
-        values.append((f"{operation_path}.result.schema", operation["result"]["schema"]))
+        values.append(
+            (f"{operation_path}.result.schema", operation["result"]["schema"])
+        )
         for error_index, error in enumerate(operation["errors"]):
             values.append((f"{operation_path}.errors[{error_index}]", error))
 
@@ -103,7 +190,9 @@ def _validate_references(
     for value_path, value in values:
         for reference_path, reference in _walk_references(value, value_path):
             if not reference.startswith("#/"):
-                raise ManifestError(reference_path, "external references are not supported")
+                raise ManifestError(
+                    reference_path, "external references are not supported"
+                )
 
             parts = reference[2:].split("/")
             if len(parts) != 3 or parts[0] != "components":
@@ -133,8 +222,10 @@ def manifest_from_openrpc(document: Mapping[str, object]) -> ContractManifest:
         )
     methods = _list(document.get("methods"), "$.methods")
     components = _mapping(document.get("components"), "$.components")
-    schemas = _mapping(components.get("schemas"), "$.components.schemas")
-    component_errors = _mapping(components.get("errors"), "$.components.errors")
+    schemas = _string_key_mapping(components.get("schemas"), "$.components.schemas")
+    component_errors = _string_key_mapping(
+        components.get("errors"), "$.components.errors"
+    )
 
     operations: list[ManifestOperation] = []
     seen_methods: set[str] = set()
@@ -193,9 +284,7 @@ def manifest_from_openrpc(document: Mapping[str, object]) -> ContractManifest:
         for error_index, error_value in enumerate(
             _list(method.get("errors"), f"{method_path}.errors")
         ):
-            errors.append(
-                _schema(error_value, f"{method_path}.errors[{error_index}]")
-            )
+            errors.append(_schema(error_value, f"{method_path}.errors[{error_index}]"))
 
         operations.append(
             {
@@ -213,7 +302,7 @@ def manifest_from_openrpc(document: Mapping[str, object]) -> ContractManifest:
         for key in sorted(schemas)
     }
     normalized_errors = {
-        key: _json_value(component_errors[key], f"$.components.errors.{key}")
+        key: _error_component(component_errors[key], f"$.components.errors.{key}")
         for key in sorted(component_errors)
     }
 

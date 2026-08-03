@@ -570,6 +570,16 @@
           "summary": {
             "$ref": "#/components/schemas/DraftWorkspaceSummary"
           },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "workspace_id": {
             "type": "string"
           },
@@ -1357,6 +1367,16 @@
           },
           "summary": {
             "$ref": "#/components/schemas/DraftWorkspaceSummary"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "workspace_id": {
             "type": "string"
@@ -3399,6 +3419,17 @@
             },
             "type": "array"
           },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
           "type": {
             "anyOf": [
               {
@@ -4119,6 +4150,9 @@
             },
             "type": "array"
           },
+          "title": {
+            "type": "string"
+          },
           "version": {
             "type": "integer"
           },
@@ -4281,6 +4315,9 @@
           "source_id": {
             "type": "string"
           },
+          "title": {
+            "type": "string"
+          },
           "version": {
             "type": "integer"
           },
@@ -4350,6 +4387,9 @@
             "type": "array"
           },
           "source_id": {
+            "type": "string"
+          },
+          "title": {
             "type": "string"
           },
           "version": {

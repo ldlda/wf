@@ -63,8 +63,15 @@ def synthetic_openrpc_document() -> dict[str, Any]:
                     "properties": {
                         "mode": {"title": "Mode", "const": "alpha"},
                         "payload": {},
+                        "title": {"title": "Display Title", "type": "string"},
                     },
-                    "required": ["mode", "payload"],
+                    "required": ["mode", "payload", "title"],
+                    "$defs": {
+                        "title": {
+                            "title": "Reusable Title",
+                            "type": "string",
+                        }
+                    },
                     "if": {"properties": {"mode": {"const": "alpha"}}},
                     "then": {"required": ["payload"]},
                     "not": {"required": ["forbidden"]},

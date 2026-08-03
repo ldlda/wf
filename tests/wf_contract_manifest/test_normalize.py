@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from copy import deepcopy
 from typing import Any, Protocol
 
@@ -14,9 +15,7 @@ class DocumentMutation(Protocol):
     def __call__(self, document: dict[str, Any]) -> object: ...
 
 
-def assert_manifest_error(
-    document: dict[str, Any], path: str, message: str
-) -> None:
+def assert_manifest_error(document: dict[str, Any], path: str, message: str) -> None:
     with pytest.raises(ManifestError) as error_info:
         manifest_from_openrpc(document)
 
@@ -44,9 +43,7 @@ def test_normalizes_operations_and_components_deterministically() -> None:
     assert manifest["operations"][0]["result"] == {
         "schema": {"$ref": "#/components/schemas/AlphaResult"}
     }
-    assert manifest["operations"][0]["errors"] == [
-        {"$ref": "#/components/errors/5000"}
-    ]
+    assert manifest["operations"][0]["errors"] == [{"$ref": "#/components/errors/5000"}]
     assert list(manifest["components"]["schemas"]) == [
         "AlphaResult",
         "FreeJson",
@@ -81,17 +78,34 @@ def test_removes_only_titles_and_preserves_unknown_schema_keywords() -> None:
     optional_schema = manifest["operations"][0]["params"][0]["schema"]
 
     assert "title" not in optional_schema
-    assert optional_schema["x-future-keyword"] == {"value": 1}
+    assert optional_schema["x-future-keyword"] == {
+        "title": "removed recursively",
+        "value": 1,
+    }
     assert manifest["components"]["schemas"]["FreeJson"] == {}
     assert manifest["components"]["schemas"]["ZetaResult"]["properties"] == {
         "extension": {"additionalProperties": True}
     }
 
 
+def test_preserves_named_title_entries_in_schema_maps() -> None:
+    alpha = manifest_from_openrpc(synthetic_openrpc_document())["components"][
+        "schemas"
+    ]["AlphaResult"]
+
+    assert alpha["required"] == ["mode", "payload", "title"]
+    properties = alpha["properties"]
+    definitions = alpha["$defs"]
+    assert isinstance(properties, dict)
+    assert isinstance(definitions, dict)
+    assert properties["title"] == {"type": "string"}
+    assert definitions["title"] == {"type": "string"}
+
+
 def test_preserves_conditional_schema_keywords() -> None:
-    alpha = manifest_from_openrpc(synthetic_openrpc_document())["components"]["schemas"][
-        "AlphaResult"
-    ]
+    alpha = manifest_from_openrpc(synthetic_openrpc_document())["components"][
+        "schemas"
+    ]["AlphaResult"]
 
     assert alpha["if"] == {"properties": {"mode": {"const": "alpha"}}}
     assert alpha["then"] == {"required": ["payload"]}
@@ -240,6 +254,36 @@ def test_rejects_invalid_method_error_schema_shape() -> None:
     )
 
 
+@pytest.mark.parametrize("value", [math.nan, math.inf, -math.inf])
+def test_rejects_non_finite_schema_numbers_with_exact_path(value: float) -> None:
+    document = synthetic_openrpc_document()
+    document["components"]["schemas"]["AlphaResult"]["properties"]["mode"]["const"] = (
+        value
+    )
+
+    assert_manifest_error(
+        document,
+        "$.components.schemas.AlphaResult.properties.mode.const",
+        "expected a finite JSON number",
+    )
+
+
+@pytest.mark.parametrize(
+    ("namespace", "path"),
+    [
+        ("schemas", "$.components.schemas"),
+        ("errors", "$.components.errors"),
+    ],
+)
+def test_rejects_non_string_component_keys_before_sorting(
+    namespace: str, path: str
+) -> None:
+    document = synthetic_openrpc_document()
+    document["components"][namespace][1] = {}
+
+    assert_manifest_error(document, path, "expected string object keys")
+
+
 @pytest.mark.parametrize(
     ("mutate", "path", "message"),
     [
@@ -248,7 +292,11 @@ def test_rejects_invalid_method_error_schema_shape() -> None:
             "$.openrpc",
             "unsupported OpenRPC version '2.0.0'; expected '1.2.6'",
         ),
-        (lambda document: document.update({"methods": {}}), "$.methods", "expected an array"),
+        (
+            lambda document: document.update({"methods": {}}),
+            "$.methods",
+            "expected an array",
+        ),
         (
             lambda document: document["methods"].append(
                 deepcopy(document["methods"][0])
@@ -338,9 +386,7 @@ def test_reports_reference_errors_at_original_method_path() -> None:
         "workflow.zeta.run",
         "workflow.alpha.inspect",
     ]
-    document["methods"][0]["errors"][0] = {
-        "$ref": "#/components/errors/Missing"
-    }
+    document["methods"][0]["errors"][0] = {"$ref": "#/components/errors/Missing"}
 
     with pytest.raises(ManifestError) as exc_info:
         manifest_from_openrpc(document)
