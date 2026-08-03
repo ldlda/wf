@@ -21,7 +21,16 @@ def _manifest() -> ContractManifest:
 def test_write_generates_once_and_writes_requested_contract(monkeypatch, tmp_path: Path) -> None:
     manifest = _manifest()
     calls: list[tuple[object, Path]] = []
-    monkeypatch.setattr("wf_contract_manifest.__main__.generate_manifest", lambda: manifest)
+    generate_calls = 0
+
+    def fake_generate_manifest() -> ContractManifest:
+        nonlocal generate_calls
+        generate_calls += 1
+        return manifest
+
+    monkeypatch.setattr(
+        "wf_contract_manifest.__main__.generate_manifest", fake_generate_manifest
+    )
     monkeypatch.setattr(
         "wf_contract_manifest.__main__.write_manifest",
         lambda value, path: calls.append((value, path)) or path,
@@ -30,6 +39,7 @@ def test_write_generates_once_and_writes_requested_contract(monkeypatch, tmp_pat
 
     assert main(["write"]) == 0
     assert calls == [(manifest, tmp_path / "manifest.json")]
+    assert generate_calls == 1
 
 
 def test_check_returns_nonzero_and_prints_drift_guidance(monkeypatch, capsys) -> None:

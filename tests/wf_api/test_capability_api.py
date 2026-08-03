@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+import wf_api.capabilities as capabilities_module
 from tests.wf_mcp.test_support import echo_tool
 from tests.wf_mcp.workflow_surface.conftest import echo_artifact, failing_tool
 from wf_api.capabilities import WorkflowCapabilityApi
@@ -230,6 +231,34 @@ async def test_create_draft_workspace_from_capability(tmp_path: Path) -> None:
     )
 
     assert fetched["draft"]["steps"]["call"]["use"] == "demo.personal.echo_tool"
+
+
+@pytest.mark.asyncio
+async def test_create_draft_workspace_validates_the_merged_result(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "cap_api_projection")
+    api, _service = _capability_api(artifact_store, register_echo=True)
+    projected: list[object] = []
+    projector = capabilities_module._PROJECT_CREATE_DRAFT_FROM_CAPABILITY
+
+    def capture_projection(value: object):
+        projected.append(value)
+        return projector(value)
+
+    monkeypatch.setattr(
+        capabilities_module,
+        "_PROJECT_CREATE_DRAFT_FROM_CAPABILITY",
+        capture_projection,
+    )
+
+    result = await api.create_draft_workspace_from_capability(
+        workspace_id="echo_projected",
+        capability_name="demo.personal.echo_tool",
+    )
+
+    assert projected == [result]
 
 
 @pytest.mark.asyncio

@@ -40,6 +40,8 @@ type CapabilitySummary = NodeSpecCapabilitySummary | WrapperArtifactCapabilitySu
 class ListCapabilitiesResult(PageMetadataPayload):
     """Cursor-paged planner-visible capability discovery result."""
 
+    # Keep this union inline: Pydantic otherwise emits a new named component
+    # and changes the established OpenRPC wire contract.
     capabilities: list[NodeSpecCapabilitySummary | WrapperArtifactCapabilitySummary]
 
 

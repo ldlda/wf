@@ -51,6 +51,9 @@ _PROJECT_NODE_SPEC_SUMMARY = JsonProjector(NodeSpecCapabilitySummary)
 _PROJECT_WRAPPER_SUMMARY = JsonProjector(WrapperArtifactCapabilitySummary)
 _PROJECT_NODE_SPEC_DETAIL = JsonProjector(NodeSpecCapabilityDetail)
 _PROJECT_WRAPPER_DETAIL = JsonProjector(WrapperArtifactCapabilityDetail)
+_PROJECT_CREATE_DRAFT_FROM_CAPABILITY = JsonProjector(
+    CreateDraftWorkspaceFromCapabilityResult
+)
 
 
 def _schema_field_names(schema: dict[str, Any]) -> list[str]:
@@ -421,13 +424,10 @@ class WorkflowCapabilityApi:
                 hints=dict(hints),
             ).model_dump(mode="json"),
         )
-        # Both merged extensions are independently validated or model-dumped,
-        # while the workspace payload was projected by the mutating API.
-        return cast(
-            CreateDraftWorkspaceFromCapabilityResult,
+        return _PROJECT_CREATE_DRAFT_FROM_CAPABILITY(
             {
                 **result,
                 "wrapper_hints": hints,
                 "next_actions": next_actions,
-            },
+            }
         )

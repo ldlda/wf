@@ -7,6 +7,7 @@ from typing import Any
 
 import pytest
 
+import wf_contract_manifest.io as manifest_io
 from wf_contract_manifest import (
     ManifestDriftError,
     canonical_manifest_json,
@@ -68,6 +69,16 @@ def test_write_and_check_round_trip(tmp_path: Path) -> None:
     check_manifest(_manifest(), path)
 
     assert path.read_bytes() == canonical_manifest_json(_manifest()).encode("utf-8")
+
+
+def test_default_write_refuses_to_target_a_non_checkout_parent(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    missing_marker = manifest_io.REPOSITORY_ROOT / "missing-pyproject.toml"
+    monkeypatch.setattr(manifest_io, "REPOSITORY_MARKER", missing_marker)
+
+    with pytest.raises(RuntimeError, match="repository checkout"):
+        write_manifest(_manifest())
 
 
 def test_check_reports_drift_without_mutating_the_file(tmp_path: Path) -> None:

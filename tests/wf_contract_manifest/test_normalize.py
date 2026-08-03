@@ -73,6 +73,15 @@ def test_preserves_parameter_order_optionality_and_nullability() -> None:
     assert operation["params"][1]["schema"]["additionalProperties"] is False
 
 
+def test_defaults_an_absent_parameter_required_flag_to_false() -> None:
+    document = synthetic_openrpc_document()
+    del document["methods"][1]["params"][0]["required"]
+
+    operation = manifest_from_openrpc(document)["operations"][0]
+
+    assert operation["params"][0]["required"] is False
+
+
 def test_removes_only_titles_and_preserves_unknown_schema_keywords() -> None:
     manifest = manifest_from_openrpc(synthetic_openrpc_document())
     optional_schema = manifest["operations"][0]["params"][0]["schema"]
@@ -199,7 +208,6 @@ def test_rejects_empty_or_malformed_dotted_method_names(
     ("field", "value", "missing", "message"),
     [
         ("required", "yes", False, "expected a boolean"),
-        ("required", None, True, "expected a boolean"),
         ("schema", [], False, "expected a schema object"),
         ("schema", None, True, "expected a schema object"),
     ],
@@ -228,7 +236,18 @@ def test_rejects_invalid_result_schema_shape() -> None:
     assert_manifest_error(
         document,
         "$.methods[1].result.schema",
-        "expected a schema object",
+        "success result must reference a named schema component",
+    )
+
+
+def test_reports_a_missing_success_result_schema() -> None:
+    document = synthetic_openrpc_document()
+    del document["methods"][1]["result"]["schema"]
+
+    assert_manifest_error(
+        document,
+        "$.methods[1].result.schema",
+        "missing success result schema",
     )
 
 
@@ -324,7 +343,7 @@ def test_rejects_non_string_component_keys_before_sorting(
         (
             lambda document: document["methods"][0].update({"result": {}}),
             "$.methods[0].result.schema",
-            "expected an object",
+            "missing success result schema",
         ),
         (
             lambda document: document["methods"][0]["result"].update(

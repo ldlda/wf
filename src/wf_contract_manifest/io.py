@@ -6,6 +6,7 @@ from pathlib import Path
 from .model import ContractManifest
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
+REPOSITORY_MARKER = REPOSITORY_ROOT / "pyproject.toml"
 DEFAULT_MANIFEST_PATH = REPOSITORY_ROOT / "contracts" / "workflow-api.manifest.json"
 
 
@@ -34,6 +35,11 @@ def canonical_manifest_json(manifest: ContractManifest) -> str:
 def write_manifest(
     manifest: ContractManifest, path: Path = DEFAULT_MANIFEST_PATH
 ) -> Path:
+    if path == DEFAULT_MANIFEST_PATH and not REPOSITORY_MARKER.is_file():
+        raise RuntimeError(
+            "cannot write the default manifest outside the repository checkout: "
+            f"missing {REPOSITORY_MARKER}"
+        )
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(canonical_manifest_json(manifest), encoding="utf-8", newline="\n")
     return path

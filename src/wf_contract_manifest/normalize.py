@@ -251,11 +251,12 @@ def manifest_from_openrpc(document: Mapping[str, object]) -> ContractManifest:
         ):
             parameter_path = f"{method_path}.params[{parameter_index}]"
             parameter = _mapping(parameter_value, parameter_path)
+            raw_required = parameter.get("required", False)
             params.append(
                 {
                     "name": _string(parameter.get("name"), f"{parameter_path}.name"),
                     "required": _boolean(
-                        parameter.get("required"), f"{parameter_path}.required"
+                        raw_required, f"{parameter_path}.required"
                     ),
                     "schema": _schema(
                         parameter.get("schema"), f"{parameter_path}.schema"
@@ -266,9 +267,11 @@ def manifest_from_openrpc(document: Mapping[str, object]) -> ContractManifest:
         result_path = f"{method_path}.result"
         result = _mapping(method.get("result"), result_path)
         if "schema" not in result:
-            raise ManifestError(f"{result_path}.schema", "expected an object")
+            raise ManifestError(
+                f"{result_path}.schema", "missing success result schema"
+            )
         raw_result_schema = result["schema"]
-        if isinstance(raw_result_schema, Mapping) and (
+        if not isinstance(raw_result_schema, Mapping) or (
             set(raw_result_schema) != {"$ref"}
             or not (
                 isinstance(raw_result_schema.get("$ref"), str)
