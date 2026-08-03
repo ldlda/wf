@@ -69,11 +69,15 @@
     collapses to a generic object.
   - `contracts/workflow-api.manifest.json` is the checked transport-neutral
     inventory, and `python -m wf_contract_manifest check` is the drift gate.
+  - `@lda/workflow-rpc` now generates `WorkflowOperationName`, raw parameter
+    and result types, and a 70-operation lookup map from that manifest.
+    `pnpm contract:check` detects TypeScript artifact drift.
   - The manifest does not authorize callers: browser authorization, operation
     metadata, and the 12 current Effect RPC implementations remain authored
     boundaries.
-  - The next slice is generated TypeScript operation names/raw types plus a
-    fail-closed representative JSON Schema-to-Effect translator.
+  - The next slice is a fail-closed representative JSON Schema-to-Effect
+    translator. Runtime decoder migration and broader callable client coverage
+    remain incomplete.
 - The stock `@open-rpc/generator` TypeScript client is not suitable here. It
   exhausted a 4 GB Node heap on the full contract and emitted invalid dotted
     class members plus `any` results for a minimal `workflow.health` contract.

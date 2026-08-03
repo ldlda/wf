@@ -10,8 +10,10 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "contract:check": "tsx scripts/workflow-contract.ts check",
+    "contract:write": "tsx scripts/workflow-contract.ts write",
     "test": "vitest run",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.scripts.json"
   },
   "dependencies": {
     "@effect/platform": "0.96.2",
@@ -20,6 +22,8 @@
   },
   "devDependencies": {
     "@types/node": "26.1.0",
+    "json-schema-to-typescript": "15.0.4",
+    "tsx": "4.22.4",
     "vitest": "4.1.9"
   }
 }

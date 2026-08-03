@@ -11,6 +11,9 @@ export {
 
 export { normalizeLoopbackTarget } from "./target-policy.js";
 
+// Compile-time wire inventory only; supported operations and browser policy stay authored.
+export * from "./generated/workflow-contract.js";
+
 export {
   WorkflowHealth,
   WorkflowSourcesList,

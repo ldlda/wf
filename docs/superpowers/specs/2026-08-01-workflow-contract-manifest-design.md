@@ -266,7 +266,7 @@ The following remain handwritten throughout the migration:
 
 After the manifest slice:
 
-1. generate TypeScript operation names and raw request/result types;
+1. Completed: generate TypeScript operation names and raw request/result types;
 2. build a fail-closed JSON Schema-to-Effect translator against representative
    schemas before applying it broadly;
 3. migrate the existing 12 RPC definitions by domain while comparing old and

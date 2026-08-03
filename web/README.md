@@ -77,6 +77,8 @@ so the workflow RPC server does not need a LAN binding.
 | `pnpm --dir web typecheck` | Run TypeScript type checking |
 | `pnpm --dir web build` | Build the React console for production |
 | `pnpm --dir web start` | Start the production Hono server |
+| `pnpm --dir web --filter @lda/workflow-rpc contract:write` | Regenerate TypeScript wire names and raw types from the checked workflow manifest |
+| `pnpm --dir web --filter @lda/workflow-rpc contract:check` | Fail when the generated TypeScript contract has drifted |
 | `pnpm --dir web --filter @lda/console test:presentation-sync:e2e:install` | Install the Chromium binary required by the browser smoke test |
 | `pnpm --dir web --filter @lda/console test:presentation-sync:e2e` | Run isolated two-context presentation synchronization smoke tests against a built server |
 

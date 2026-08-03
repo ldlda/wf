@@ -741,9 +741,12 @@ stable.
   transport-neutral manifest with a deterministic drift gate. Design:
   [`workflow contract manifest design`](superpowers/specs/2026-08-01-workflow-contract-manifest-design.md).
   Artifact: [`workflow-api.manifest.json`](../contracts/workflow-api.manifest.json).
-  Generated TypeScript operation names/raw types and a fail-closed
-  representative JSON Schema-to-Effect translator are the next contract-parity
-  slice; TypeScript parity is not complete.
+- Completed: `@lda/workflow-rpc` generates all 70 wire operation names plus raw
+  parameter/result types from the checked manifest. The generated artifact has
+  its own deterministic drift check and proves the 12 authored Effect RPCs are
+  a subset without broadening browser authorization. A fail-closed
+  representative JSON Schema-to-Effect translator is next; runtime TypeScript
+  parity is not complete.
 - `WorkflowApiSurface` is the protocol-neutral workflow operation contract.
 - `wf_transport_rpc_http` exposes local/static and MCP-backed `WorkflowServer`
   over JSON-RPC HTTP.

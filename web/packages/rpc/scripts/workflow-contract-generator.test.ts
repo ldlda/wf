@@ -1,0 +1,163 @@
+import { readFile } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
+import { describe, expect, it } from "vitest";
+import {
+  generateWorkflowContractSource,
+  parseWorkflowContractManifest,
+} from "./workflow-contract-generator.js";
+
+const packageRoot = fileURLToPath(new URL("..", import.meta.url));
+const repositoryRoot = fileURLToPath(new URL("../../../..", import.meta.url));
+
+const fixture = {
+  manifest_version: 1,
+  source: { format: "openrpc", openrpc_version: "1.2.6" },
+  components: {
+    errors: {},
+    schemas: {
+      HealthResult: {
+        additionalProperties: false,
+        properties: { status: { const: "ok", type: "string" } },
+        required: ["status"],
+        type: "object",
+      },
+      FailureResult: {
+        additionalProperties: false,
+        properties: { message: { type: "string" } },
+        required: ["message"],
+        type: "object",
+      },
+    },
+  },
+  operations: [
+    {
+      action: "inspect",
+      errors: [],
+      method: "workflow.widgets.inspect",
+      namespace: ["workflow", "widgets"],
+      params: [
+        {
+          name: "widget_id",
+          required: true,
+          schema: { minLength: 1, type: "string" },
+        },
+        {
+          name: "verbose",
+          required: false,
+          schema: { type: "boolean" },
+        },
+        {
+          name: "note",
+          required: false,
+          schema: { anyOf: [{ type: "string" }, { type: "null" }] },
+        },
+        {
+          name: "filter",
+          required: false,
+          schema: {
+            additionalProperties: false,
+            properties: { kind: { type: "string" } },
+            required: ["kind"],
+            type: "object",
+          },
+        },
+        {
+          name: "metadata",
+          required: false,
+          schema: { additionalProperties: true, type: "object" },
+        },
+      ],
+      result: {
+        schema: {
+          anyOf: [
+            { $ref: "#/components/schemas/HealthResult" },
+            { $ref: "#/components/schemas/FailureResult" },
+          ],
+        },
+      },
+    },
+    {
+      action: "health",
+      errors: [],
+      method: "workflow.health",
+      namespace: ["workflow"],
+      params: [],
+      result: { schema: { $ref: "#/components/schemas/HealthResult" } },
+    },
+  ],
+};
+const fixtureManifest = JSON.stringify(fixture);
+
+describe("workflow contract generator", () => {
+  it("generates lexical operation inventory and raw params/result maps", async () => {
+    const source = await generateWorkflowContractSource(fixtureManifest);
+
+    expect(source.indexOf('"workflow.health"')).toBeLessThan(
+      source.indexOf('"workflow.widgets.inspect"'),
+    );
+    expect(source).toContain("widget_id: string");
+    expect(source).toContain("verbose?: boolean");
+    expect(source).toContain("note?: string | null");
+    expect(source).toMatch(/filter\?: \{\s+kind: string;/);
+    expect(source).toMatch(/metadata\?: \{\s+\[k: string\]: unknown;/);
+    expect(source).toContain("params: Record<string, never>");
+    expect(source).toContain("result: HealthResult | FailureResult");
+    expect(source).toContain(
+      "export type WorkflowOperationParams<Name extends WorkflowOperationName>",
+    );
+    expect(source).toContain(
+      "export type WorkflowOperationResult<Name extends WorkflowOperationName>",
+    );
+    expect(source).not.toMatch(/\bany\b/);
+  });
+
+  it("rejects duplicate operation methods", () => {
+    const [firstOperation] = fixture.operations;
+    if (firstOperation === undefined) throw new Error("invalid test fixture");
+    const duplicate = {
+      ...fixture,
+      operations: [...fixture.operations, firstOperation],
+    };
+
+    expect(() => parseWorkflowContractManifest(JSON.stringify(duplicate))).toThrow(
+      /duplicate operation method workflow\.widgets\.inspect/i,
+    );
+  });
+
+  it("rejects duplicate parameter names before object projection", () => {
+    const [firstOperation] = fixture.operations;
+    const [firstParam] = firstOperation?.params ?? [];
+    if (firstOperation === undefined || firstParam === undefined) {
+      throw new Error("invalid test fixture");
+    }
+    const duplicate = {
+      ...fixture,
+      operations: [
+        {
+          ...firstOperation,
+          params: [...firstOperation.params, firstParam],
+        },
+        ...fixture.operations.slice(1),
+      ],
+    };
+
+    expect(() => parseWorkflowContractManifest(JSON.stringify(duplicate))).toThrow(
+      /duplicate parameter name widget_id.*workflow\.widgets\.inspect/i,
+    );
+  });
+
+  it("matches the checked generated contract for all server operations", async () => {
+    const manifestText = await readFile(
+      `${repositoryRoot}/contracts/workflow-api.manifest.json`,
+      "utf8",
+    );
+    const checkedSource = await readFile(
+      `${packageRoot}/src/generated/workflow-contract.ts`,
+      "utf8",
+    );
+
+    const generatedSource = await generateWorkflowContractSource(manifestText);
+    expect(generatedSource).toBe(checkedSource);
+    expect(generatedSource.match(/^  \| "workflow\./gm)).toHaveLength(70);
+  });
+});
