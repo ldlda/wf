@@ -17,12 +17,27 @@ def test_normalizes_operations_and_components_deterministically() -> None:
         "workflow.alpha.inspect",
         "workflow.zeta.run",
     ]
+    assert manifest["operations"][0]["namespace"] == ["workflow", "alpha"]
+    assert manifest["operations"][0]["action"] == "inspect"
+    assert manifest["operations"][1]["namespace"] == ["workflow", "zeta"]
+    assert manifest["operations"][1]["action"] == "run"
+    assert manifest["operations"][0]["result"] == {
+        "schema": {"$ref": "#/components/schemas/AlphaResult"}
+    }
+    assert manifest["operations"][0]["errors"] == [
+        {"$ref": "#/components/errors/5000"}
+    ]
     assert list(manifest["components"]["schemas"]) == [
         "AlphaResult",
         "FreeJson",
         "ZetaResult",
     ]
     assert list(manifest["components"]["errors"]) == ["5000"]
+    assert manifest["components"]["errors"]["5000"] == {
+        "code": 5000,
+        "message": "Workflow operation failed",
+        "data": {"type": "object", "additionalProperties": False},
+    }
 
 
 def test_preserves_parameter_order_optionality_and_nullability() -> None:
