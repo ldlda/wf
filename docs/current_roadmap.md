@@ -69,7 +69,9 @@ Implementation order:
    and mobile acceptance coverage. Implementation:
    [`workflow console workspace foundation plan`](historical/superpowers/plans/2026-08-04-workflow-console-workspace-foundation.md).
    The next console item is Slice 2: draft graph authoring, including explicit
-   mutation boundaries and mobile-safe graph inspection.
+   mutation boundaries, an MCP-Inspector-style schema form, and mobile-safe
+   graph inspection. Design:
+   [`draft authoring workbench`](superpowers/specs/2026-08-05-workflow-console-draft-authoring-workbench-design.md).
 5. Completed: the web console can operate the prepared
    `examples/lda_report_workflow/` deployment through run start, typed
    `issue_review` interrupt, resume, trace, and final output inspection.
