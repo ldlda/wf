@@ -1,5 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { connectToServer, callOperation } from "./api.js";
+import {
+  callOperation,
+  connectToServer,
+} from "./api.js";
 
 const mockFetch = vi.fn();
 vi.stubGlobal("fetch", mockFetch);
@@ -170,32 +173,35 @@ describe("error handling", () => {
       Promise.resolve(new Response("not json", { status: 200 })),
     );
 
-    await expect(
-      connectToServer("http://127.0.0.1:8000/rpc"),
-    ).rejects.toThrow("malformed JSON");
+    await expect(connectToServer("http://127.0.0.1:8000/rpc")).rejects.toMatchObject({
+      kind: "protocol",
+      message: "malformed JSON response from server",
+    });
   });
 
   it("throws for empty response", async () => {
     mockFetch.mockReturnValue(Promise.resolve(new Response("", { status: 200 })));
 
-    await expect(
-      connectToServer("http://127.0.0.1:8000/rpc"),
-    ).rejects.toThrow("console backend returned an empty response (HTTP 200)");
+    await expect(connectToServer("http://127.0.0.1:8000/rpc")).rejects.toMatchObject({
+      kind: "protocol",
+      message: "console backend returned an empty response (HTTP 200)",
+    });
   });
 
   it("throws for structurally malformed JSON response", async () => {
     mockFetch.mockReturnValue(jsonResponse({ ok: true, connection: {} }));
 
-    await expect(
-      connectToServer("http://127.0.0.1:8000/rpc"),
-    ).rejects.toThrow("malformed response from server:");
+    await expect(connectToServer("http://127.0.0.1:8000/rpc")).rejects.toMatchObject({
+      kind: "decode",
+    });
   });
 
   it("throws on network failure", async () => {
     mockFetch.mockReturnValue(Promise.reject(new Error("network error")));
 
-    await expect(
-      connectToServer("http://127.0.0.1:8000/rpc"),
-    ).rejects.toThrow("network error");
+    await expect(connectToServer("http://127.0.0.1:8000/rpc")).rejects.toMatchObject({
+      kind: "transport",
+      message: "network error",
+    });
   });
 });

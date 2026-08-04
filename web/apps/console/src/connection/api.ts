@@ -5,15 +5,39 @@ import type {
 } from "./contracts.js";
 import { parseConnectResponse, parseRpcResponse } from "./contracts.js";
 
+export type ConsoleApiErrorKind = "transport" | "protocol" | "decode";
+
+export class ConsoleApiError extends Error {
+  override readonly name = "ConsoleApiError";
+
+  constructor(
+    readonly kind: ConsoleApiErrorKind,
+    message: string,
+  ) {
+    super(message);
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
+const errorMessage = (error: unknown): string =>
+  error instanceof Error ? error.message : String(error);
+
 const fetchJson = async <T>(
   url: string,
   init: RequestInit,
   parse: (data: unknown) => T,
 ): Promise<T> => {
-  const res = await fetch(url, init);
-  const text = await res.text();
+  let res: Response;
+  let text: string;
+  try {
+    res = await fetch(url, init);
+    text = await res.text();
+  } catch (error) {
+    throw new ConsoleApiError("transport", errorMessage(error));
+  }
   if (!text) {
-    throw new Error(
+    throw new ConsoleApiError(
+      "protocol",
       `console backend returned an empty response (HTTP ${res.status})`,
     );
   }
@@ -21,9 +45,13 @@ const fetchJson = async <T>(
   try {
     data = JSON.parse(text);
   } catch {
-    throw new Error("malformed JSON response from server");
+    throw new ConsoleApiError("protocol", "malformed JSON response from server");
   }
-  return parse(data);
+  try {
+    return parse(data);
+  } catch (error) {
+    throw new ConsoleApiError("decode", errorMessage(error));
+  }
 };
 
 export const connectToServer = async (

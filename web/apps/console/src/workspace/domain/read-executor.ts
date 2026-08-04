@@ -1,4 +1,4 @@
-import { callOperation } from "../../connection/api.js";
+import { callOperation, ConsoleApiError } from "../../connection/api.js";
 import type {
   OperationName,
   RpcResponse,
@@ -36,6 +36,13 @@ const errorKindForCode = (code: string): ConsoleClientErrorKind => {
 
 const errorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
+
+const clientErrorKindForInvocation = (
+  error: unknown,
+): "decode" | "transport" =>
+  error instanceof ConsoleApiError && error.kind !== "transport"
+    ? "decode"
+    : "transport";
 
 export const createConsoleReadExecutor = (options: {
   readonly target: string;
@@ -83,7 +90,7 @@ export const createConsoleReadExecutor = (options: {
           0,
         );
         throw new ConsoleClientError(
-          "transport",
+          clientErrorKindForInvocation(error),
           operation,
           errorMessage(error),
         );

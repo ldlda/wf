@@ -12,7 +12,7 @@ const wrapperHints = {
 describe("capability models", () => {
   it("preserves discriminated node and wrapper summaries", () => {
     const page = decodeCapabilityPage({
-      items: [
+      capabilities: [
         {
           kind: "node_spec",
           name: "local.docs.read",
@@ -21,6 +21,7 @@ describe("capability models", () => {
           outcomes: ["ok", "error"],
           inputFields: ["names"],
           outputFields: ["documents"],
+          isAsync: false,
         },
         {
           kind: "wrapper_artifact",
@@ -30,15 +31,19 @@ describe("capability models", () => {
           outcomes: ["ok"],
           inputFields: [],
           outputFields: ["report"],
+          isAsync: true,
+          artifactId: "reports",
+          title: "Reports",
+          version: 2,
         },
       ],
       nextCursor: null,
       total: 2,
     });
 
-    expect(page.items[0]?.kind).toBe("node_spec");
-    expect(page.items[1]?.kind).toBe("wrapper_artifact");
-    expect(page.items[0]?.description).toBeNull();
+    expect(page.capabilities[0]?.kind).toBe("node_spec");
+    expect(page.capabilities[1]?.kind).toBe("wrapper_artifact");
+    expect(page.capabilities[0]?.description).toBeNull();
   });
 
   it("decodes nullable detail fields for both capability kinds", () => {

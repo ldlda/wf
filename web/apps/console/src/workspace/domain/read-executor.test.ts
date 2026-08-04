@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { ConsoleApiError } from "../../connection/api.js";
 import type { RpcResponse } from "../../connection/contracts.js";
 import { createConsoleReadExecutor } from "./read-executor.js";
 
@@ -102,6 +103,28 @@ describe("ConsoleReadExecutor", () => {
     ).rejects.toMatchObject({ kind: "transport" });
     expect(recordEvidence).toHaveBeenCalledTimes(1);
   });
+
+  it.each([
+    ["protocol", "malformed JSON response"],
+    ["decode", "malformed response from server"],
+  ] as const)(
+    "maps typed %s invocation failures to decode errors",
+    async (kind, message) => {
+      const recordEvidence = vi.fn();
+      const executor = createConsoleReadExecutor({
+        target: "http://console.test/rpc",
+        recordEvidence,
+        invoke: vi.fn(async () => {
+          throw new ConsoleApiError(kind, message);
+        }),
+      });
+
+      await expect(
+        executor.run("workflow.capabilities.list", {}, (value) => value),
+      ).rejects.toMatchObject({ kind: "decode", message });
+      expect(recordEvidence).toHaveBeenCalledTimes(1);
+    },
+  );
 
   it("keeps evidence ids unique across consecutive reads", async () => {
     const recordEvidence = vi.fn();

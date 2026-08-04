@@ -37,7 +37,7 @@ const CapabilitySummarySchema = v.variant("kind", [
 ]);
 
 const CapabilityPageSchema = v.object({
-  items: v.array(CapabilitySummarySchema),
+  capabilities: v.array(CapabilitySummarySchema),
   nextCursor: v.nullish(v.string(), null),
   total: v.number(),
 });
