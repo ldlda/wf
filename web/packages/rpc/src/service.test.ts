@@ -14,6 +14,7 @@ import {
   type OperationExchange,
   type WorkflowRpcOptions,
 } from "./service.js";
+import type { OperationName } from "./method-registry.js";
 
 type JsonRpcRequest = {
   readonly jsonrpc: "2.0";
@@ -51,7 +52,7 @@ const jsonResponse = (body: unknown, status = 200): Response =>
 
 const runOperation = (
   options: WorkflowRpcOptions,
-  operation: "workflow.health" | "workflow.sources.list" = "workflow.health",
+  operation: OperationName = "workflow.health",
   params: unknown = {},
 ): Promise<OperationExchange> =>
   Effect.gen(function* () {
@@ -745,7 +746,7 @@ describe("lifecycle operations", () => {
 
       const exchange = await runOperation(
         { fetch },
-        testCase.operation as "workflow.health" | "workflow.sources.list",
+        testCase.operation,
         testCase.params,
       );
 
@@ -772,7 +773,7 @@ describe("lifecycle operations", () => {
 
     const exchange = await runOperation(
       { fetch },
-      traceCase.operation as "workflow.health" | "workflow.sources.list",
+      traceCase.operation,
       traceCase.params,
     );
 
@@ -836,7 +837,7 @@ describe("lifecycle operations", () => {
 
     const exchange = await runOperation(
       { fetch },
-      startCase.operation as "workflow.health" | "workflow.sources.list",
+      startCase.operation,
       startCase.params,
     );
 

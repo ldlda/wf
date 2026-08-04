@@ -282,6 +282,7 @@ const parityCases: ReadonlyArray<ParityCase> = [
     payload: WorkflowDraftWorkspacesListPayloadSchema,
     success: WorkflowDraftWorkspacesListResultSchema,
     validPayload: {},
+    invalidPayload: { unexpected: true },
     validSuccess: {
       workspaces: [
         {

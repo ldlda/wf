@@ -116,6 +116,12 @@ const DraftWorkspaceSchema = Schema.Struct({
   workspace_id: Schema.String,
 });
 
+// Effect's empty Struct does not traverse excess keys; the impossible optional
+// field keeps the authored empty payload strict under onExcessProperty:error.
+const EmptyPayloadSchema = Schema.Struct({
+  __no_parameters: Schema.optional(Schema.Never),
+});
+
 export type AuthoredRpcFixture = {
   readonly payload: Schema.Schema.AnyNoContext;
   readonly success: Schema.Schema.AnyNoContext;
@@ -260,7 +266,7 @@ export const authoredRpcSchemas = {
     success: CapabilityDetailSchema,
   },
   "workflow.draft_workspaces.list": {
-    payload: Schema.Struct({}),
+    payload: EmptyPayloadSchema,
     success: Schema.Struct({
       workspaces: Schema.Array(DraftWorkspaceSchema),
     }),
