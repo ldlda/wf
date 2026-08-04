@@ -1,10 +1,16 @@
 import { cleanup, render, screen } from "@testing-library/react";
+import { readFileSync } from "node:fs";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { DraftWorkspace } from "../domain/draft-workspace-models.js";
 import type { DraftWorkspaceController } from "./useDraftWorkspace.js";
 import { useDraftWorkspace } from "./useDraftWorkspace.js";
-import { DraftDetailRoute } from "./DraftDetailRoute.js";
+import { DraftDetailRoute, formatBoundedJson } from "./DraftDetailRoute.js";
+
+const globalStyles = readFileSync(
+  "src/styles/global.css",
+  "utf8",
+);
 
 vi.mock("./useDraftWorkspace.js", () => ({
   useDraftWorkspace: vi.fn(),
@@ -99,6 +105,47 @@ describe("DraftDetailRoute", () => {
     expect(details).not.toHaveAttribute("open");
     expect(screen.queryByRole("button")).toBeNull();
     expect(screen.queryByRole("link", { name: /compile|artifact|save|edit|mutate/i })).toBeNull();
+  });
+
+  it("makes the raw JSON region focusable and names its horizontal scrolling behavior", () => {
+    renderRoute();
+
+    const rawJson = screen.getByRole("region", {
+      name: "Raw draft JSON, horizontally scrollable",
+    });
+    expect(rawJson).toHaveAttribute("tabindex", "0");
+  });
+
+  it("bounds JSON traversal without reading remote fields after the budget", () => {
+    const draft = {
+      first: "x".repeat(1_000),
+      get later() {
+        throw new Error("later field should not be read");
+      },
+    };
+
+    expect(() => formatBoundedJson(draft, 80)).not.toThrow();
+    expect(formatBoundedJson(draft, 80)).toHaveLength(80);
+    expect(formatBoundedJson(draft, 80)).toContain("truncated");
+  });
+
+  it("does not render a selected workspace whose identity differs from the URL", () => {
+    mockedUseDraftWorkspace.mockReturnValue(
+      controller({ selected: workspace({ workspaceId: "draft-old" }) }),
+    );
+    renderRoute("draft-new");
+
+    expect(screen.queryByRole("heading", { name: "Quarterly report" })).toBeNull();
+    expect(screen.getByText("draft-new")).toBeInTheDocument();
+  });
+
+  it("keeps detail panels stackable at the mobile workspace breakpoint", () => {
+    renderRoute();
+
+    expect(document.querySelector(".draft-detail__panels")).toBeInTheDocument();
+    expect(globalStyles).toMatch(
+      /@media \(max-width: 850px\)[\s\S]*?\.draft-detail__panels\s*\{[\s\S]*?grid-template-columns:\s*1fr/,
+    );
   });
 
   it("explains when the full draft document was not returned", () => {

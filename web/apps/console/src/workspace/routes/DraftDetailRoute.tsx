@@ -6,6 +6,7 @@ import type {
 import { useDraftWorkspace } from "./useDraftWorkspace.js";
 
 const MAX_RAW_DRAFT_CHARS = 12_000;
+const TRUNCATION_MARKER = "... truncated ...";
 
 const titleFor = (workspace: DraftWorkspace): string =>
   workspace.title?.trim() || workspace.workspaceId;
@@ -19,10 +20,77 @@ const formatValue = (value: unknown): string => {
   return encoded ?? String(value);
 };
 
-const boundedJson = (value: Record<string, unknown>): string => {
-  const encoded = JSON.stringify(value, null, 2);
-  if (encoded.length <= MAX_RAW_DRAFT_CHARS) return encoded;
-  return `${encoded.slice(0, MAX_RAW_DRAFT_CHARS)}\n... truncated ...`;
+// Traverse until the display budget is exhausted so a large remote object is
+// never fully materialized just to produce a clipped escape-hatch preview.
+export const formatBoundedJson = (value: unknown, maxChars = MAX_RAW_DRAFT_CHARS): string => {
+  const truncationMarker = TRUNCATION_MARKER.slice(0, Math.max(0, maxChars));
+  const contentLimit = Math.max(0, maxChars - truncationMarker.length);
+  let output = "";
+  let truncated = false;
+  const activeObjects = new WeakSet<object>();
+
+  const append = (chunk: string): void => {
+    if (truncated) return;
+    if (output.length + chunk.length > contentLimit) {
+      output += chunk.slice(0, Math.max(0, contentLimit - output.length));
+      truncated = true;
+      return;
+    }
+    output += chunk;
+  };
+
+  const visit = (current: unknown, depth: number): void => {
+    if (truncated) return;
+    if (current === null || typeof current !== "object") {
+      if (typeof current === "string") {
+        append(JSON.stringify(current));
+      } else if (typeof current === "number") {
+        append(Number.isFinite(current) ? String(current) : "null");
+      } else if (typeof current === "boolean") {
+        append(current ? "true" : "false");
+      } else {
+        append("null");
+      }
+      return;
+    }
+
+    if (activeObjects.has(current)) {
+      append('"[Circular]"');
+      return;
+    }
+    activeObjects.add(current);
+    const indent = "  ".repeat(depth);
+    const childIndent = "  ".repeat(depth + 1);
+
+    if (Array.isArray(current)) {
+      append("[");
+      let first = true;
+      for (const item of current) {
+        if (truncated) break;
+        append(first ? `\n${childIndent}` : `,\n${childIndent}`);
+        visit(item, depth + 1);
+        first = false;
+      }
+      if (!truncated) append(first ? "]" : `\n${indent}]`);
+    } else {
+      const record = current as Record<string, unknown>;
+      append("{");
+      let first = true;
+      for (const key in record) {
+        if (!Object.prototype.hasOwnProperty.call(current, key) || truncated) continue;
+        append(first ? `\n${childIndent}` : `,\n${childIndent}`);
+        append(JSON.stringify(key));
+        append(": ");
+        visit(record[key], depth + 1);
+        first = false;
+      }
+      if (!truncated) append(first ? "}" : `\n${indent}}`);
+    }
+    activeObjects.delete(current);
+  };
+
+  visit(value, 0);
+  return truncated ? `${output}${truncationMarker}` : output;
 };
 
 const Fact = ({ label, value }: { readonly label: string; readonly value: string }) => (
@@ -81,7 +149,13 @@ const RawDraft = ({ draft }: { readonly draft: Record<string, unknown> | null })
   <details className="draft-detail__raw">
     <summary>Raw draft document</summary>
     {draft ? (
-      <pre>{boundedJson(draft)}</pre>
+      <pre
+        aria-label="Raw draft JSON, horizontally scrollable"
+        role="region"
+        tabIndex={0}
+      >
+        {formatBoundedJson(draft)}
+      </pre>
     ) : (
       <p>Full draft document was not returned</p>
     )}
@@ -91,7 +165,8 @@ const RawDraft = ({ draft }: { readonly draft: Record<string, unknown> | null })
 export const DraftDetailRoute = () => {
   const { workspaceId = null } = useParams<{ workspaceId: string }>();
   const drafts = useDraftWorkspace(workspaceId);
-  const draft = drafts.selected;
+  const draft =
+    drafts.selected?.workspaceId === workspaceId ? drafts.selected : null;
 
   return (
     <div className="draft-detail">

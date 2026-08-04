@@ -48,9 +48,29 @@ reloads while a separate effect owns URL changes.
 The first route test run failed because both route modules did not exist. The
 index and detail implementations then passed their focused behavioral tests.
 
+## Review Fixes
+
+- Detail results now carry workspace id, target, and connection generation
+  provenance. The controller derives `selected` only when all three match the
+  current URL and connection; the route also fails closed on an id mismatch.
+- Target and URL changes are coordinated by one effect. Pending list/detail
+  guards coalesce repeated refreshes while forced navigation/reconnect reads
+  still invalidate stale generations.
+- `formatBoundedJson` traverses objects incrementally and stops at the display
+  budget instead of stringifying the full remote draft first.
+- The raw JSON `<pre>` is a named, keyboard-focusable region describing its
+  horizontal scrolling behavior.
+- Detail panels stack to one column at the existing `850px` workspace
+  breakpoint, with a route/style regression covering the rule.
+
+The review regression run initially failed on all five findings. The focused
+regressions now pass, including independent URL and target transition checks,
+duplicate-read coalescing, bounded traversal with an unread later getter,
+focus semantics, and mobile CSS coverage.
+
 ## Verification
 
-- `pnpm --dir web --filter @lda/console test -- src/workspace/routes/DraftIndexRoute.test.tsx src/workspace/routes/DraftDetailRoute.test.tsx src/workspace/routes/useDraftWorkspace.test.tsx`: passed; 3 files, 17 tests.
+- `pnpm --dir web --filter @lda/console test -- src/workspace/routes/DraftIndexRoute.test.tsx src/workspace/routes/DraftDetailRoute.test.tsx src/workspace/routes/useDraftWorkspace.test.tsx src/workspace/domain/draft-workspace-client.test.ts src/workspace/domain/draft-workspace-models.test.ts src/workspace/domain/read-executor.test.ts`: passed; 6 files, 39 tests.
 - `pnpm --dir web --filter @lda/console typecheck`: passed.
 - `pnpm --dir web --filter @lda/console test`: passed; 118 files, 995 tests, 1 todo.
 - `git diff --check`: passed.

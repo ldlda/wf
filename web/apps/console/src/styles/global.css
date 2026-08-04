@@ -1084,6 +1084,10 @@ tbody tr:nth-child(10) { animation-delay: 270ms; }
     grid-template-columns: 1fr;
   }
 
+  .draft-detail__panels {
+    grid-template-columns: 1fr;
+  }
+
   .capability-discovery__detail {
     position: static;
   }

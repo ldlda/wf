@@ -1,5 +1,5 @@
-import { act, renderHook, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ConnectionState } from "../../app/state.js";
 import { useConsoleWorkspace } from "../context.js";
 import type { DraftWorkspaceClient } from "../domain/draft-workspace-client.js";
@@ -87,6 +87,8 @@ beforeEach(() => {
   });
 });
 
+afterEach(() => cleanup());
+
 describe("useDraftWorkspace", () => {
   it("loads the list and URL-owned detail through the draft client", async () => {
     client.list.mockResolvedValue(page([workspace("draft-report")]));
@@ -127,6 +129,32 @@ describe("useDraftWorkspace", () => {
     expect(result.current.selected?.workspaceId).not.toBe("draft-first");
   });
 
+  it("does not expose a loaded detail during URL or target transitions", async () => {
+    client.list.mockResolvedValue(page([]));
+    client.load
+      .mockResolvedValueOnce(workspace("draft-first"))
+      .mockReturnValueOnce(deferred<DraftWorkspace>().promise)
+      .mockReturnValueOnce(deferred<DraftWorkspace>().promise);
+
+    const { result, rerender } = renderHook(
+      ({ workspaceId }: { workspaceId: string | null }) => useDraftWorkspace(workspaceId),
+      { initialProps: { workspaceId: "draft-first" } },
+    );
+    await waitFor(() => expect(result.current.selected?.workspaceId).toBe("draft-first"));
+
+    mockedUseConsoleWorkspace.mockReturnValue({
+      connection: connectedState,
+      connectedTarget: "http://new-workflow.example/rpc",
+      recordEvidence: vi.fn(),
+      readExecutor: {} as ConsoleReadExecutor,
+    });
+    rerender({ workspaceId: "draft-first" });
+    expect(result.current.selected).toBeNull();
+
+    rerender({ workspaceId: "draft-second" });
+    expect(result.current.selected).toBeNull();
+  });
+
   it("preserves the loaded list while refresh reloads the relevant reads", async () => {
     client.list
       .mockResolvedValueOnce(page([workspace("draft-old")]))
@@ -138,9 +166,39 @@ describe("useDraftWorkspace", () => {
     const { result } = renderHook(() => useDraftWorkspace("draft-old"));
     await waitFor(() => expect(result.current.selected?.workspaceId).toBe("draft-old"));
 
-    act(() => result.current.refresh());
+    act(() => {
+      result.current.refresh();
+      result.current.refresh();
+    });
 
     expect(result.current.items[0]?.workspaceId).toBe("draft-old");
+    expect(client.list).toHaveBeenCalledTimes(2);
+    expect(client.load).toHaveBeenCalledTimes(2);
+  });
+
+  it("coalesces a simultaneous target and URL change into one detail read", async () => {
+    client.list
+      .mockResolvedValueOnce(page([workspace("draft-old")]))
+      .mockResolvedValueOnce(page([workspace("draft-new")]));
+    client.load
+      .mockResolvedValueOnce(workspace("draft-old"))
+      .mockResolvedValueOnce(workspace("draft-new"));
+
+    const { result, rerender } = renderHook(
+      ({ workspaceId }: { workspaceId: string | null }) => useDraftWorkspace(workspaceId),
+      { initialProps: { workspaceId: "draft-old" } },
+    );
+    await waitFor(() => expect(result.current.selected?.workspaceId).toBe("draft-old"));
+
+    mockedUseConsoleWorkspace.mockReturnValue({
+      connection: connectedState,
+      connectedTarget: "http://new-workflow.example/rpc",
+      recordEvidence: vi.fn(),
+      readExecutor: {} as ConsoleReadExecutor,
+    });
+    rerender({ workspaceId: "draft-new" });
+
+    await waitFor(() => expect(result.current.selected?.workspaceId).toBe("draft-new"));
     expect(client.list).toHaveBeenCalledTimes(2);
     expect(client.load).toHaveBeenCalledTimes(2);
   });
