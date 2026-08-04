@@ -291,6 +291,167 @@ tbody tr:hover {
   display: none;
 }
 
+/* The workspace keeps connection, navigation, content, and receipts visible together. */
+.console-workspace {
+  display: grid;
+  grid-template-columns: minmax(9rem, 13rem) minmax(0, 1fr) minmax(18rem, 24rem);
+  grid-template-areas:
+    "header header header"
+    "nav main evidence";
+  gap: 0 1rem;
+  min-height: 100vh;
+  padding: 1rem;
+}
+
+.console-workspace__header {
+  grid-area: header;
+}
+
+.console-workspace__header > section[aria-label="Connection"] {
+  margin: 0 0 1rem;
+  padding: 0.75rem 0;
+  border: 0;
+  border-bottom: 1px solid var(--color-border);
+  border-radius: 0;
+  background: transparent;
+}
+
+.console-workspace__nav {
+  grid-area: nav;
+  align-self: start;
+  position: sticky;
+  top: 1rem;
+}
+
+.console-workspace__nav ul {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.console-workspace__nav a {
+  display: block;
+  padding: 0.5rem 0.65rem;
+  color: var(--color-slate);
+  text-decoration: none;
+  border-left: 3px solid transparent;
+  font-family: var(--font-heading);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.console-workspace__nav a:hover,
+.console-workspace__nav a:focus-visible,
+.console-workspace__nav a.active {
+  color: var(--color-ink);
+  border-left-color: var(--color-signal-green);
+  background: var(--color-surface);
+}
+
+.console-workspace > main {
+  grid-area: main;
+  min-width: 0;
+}
+
+.console-workspace__evidence {
+  grid-area: evidence;
+  align-self: start;
+  min-width: 0;
+  position: sticky;
+  top: 1rem;
+  max-height: calc(100vh - 2rem);
+  overflow: auto;
+  margin: 0;
+}
+
+.console-workspace__evidence h2 {
+  position: sticky;
+  top: 0;
+  background: var(--color-surface);
+}
+
+.workspace-route-pending {
+  min-height: 18rem;
+  margin: 0;
+}
+
+.workspace-route-pending__eyebrow {
+  margin: 0 0 0.35rem;
+  color: var(--color-signal-green);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+}
+
+.workspace-route-pending p:last-child {
+  color: var(--color-slate);
+}
+
+.evidence-ledger .evidence-list {
+  margin: 0;
+}
+
+.evidence-record {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.evidence-record summary {
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+  padding: 0.55rem 0;
+  cursor: pointer;
+  list-style-position: inside;
+}
+
+.evidence-record summary:focus-visible {
+  outline: 2px solid var(--color-signal-green);
+  outline-offset: -2px;
+}
+
+.evidence-record .evidence-op {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 0.75rem;
+}
+
+.evidence-record .evidence-label {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 0.8rem;
+}
+
+.evidence-record .evidence-duration {
+  white-space: nowrap;
+}
+
+.evidence-record .evidence-detail {
+  margin: 0 0 0.5rem;
+}
+
+.evidence-record .evidence-field dt {
+  color: var(--color-slate);
+  font-family: var(--font-heading);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.evidence-record .evidence-field dd {
+  margin: 0.25rem 0 0;
+}
+
+.evidence-record .evidence-field code {
+  overflow-wrap: anywhere;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+}
+
 .workflow-graph .react-flow {
   height: 100%;
 }
@@ -396,6 +557,47 @@ tbody tr:nth-child(10) { animation-delay: 270ms; }
 @media (max-width: 850px) {
   .app-layout {
     grid-template-columns: 1fr;
+  }
+
+  .console-workspace {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "header"
+      "nav"
+      "main"
+      "evidence";
+    gap: 1rem;
+  }
+
+  .console-workspace__nav,
+  .console-workspace__evidence {
+    position: static;
+  }
+
+  .console-workspace__nav {
+    overflow-x: auto;
+  }
+
+  .console-workspace__nav ul {
+    display: flex;
+    width: max-content;
+    min-width: 100%;
+  }
+
+  .console-workspace__nav a {
+    border-left: 0;
+    border-bottom: 3px solid transparent;
+    white-space: nowrap;
+  }
+
+  .console-workspace__nav a:hover,
+  .console-workspace__nav a:focus-visible,
+  .console-workspace__nav a.active {
+    border-bottom-color: var(--color-signal-green);
+  }
+
+  .console-workspace__evidence {
+    max-height: none;
   }
 }
 
