@@ -3,6 +3,8 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { ConsoleWorkspace } from "../workspace/ConsoleWorkspace.js";
 import { useConsoleWorkspace } from "../workspace/context.js";
 import { DiscoverRoute } from "../workspace/routes/DiscoverRoute.js";
+import { DraftDetailRoute } from "../workspace/routes/DraftDetailRoute.js";
+import { DraftIndexRoute } from "../workspace/routes/DraftIndexRoute.js";
 import { PresentationRoute } from "../presentation/PresentationRoute.js";
 
 const PresenterRoute = lazy(() => import("../presentation/presenter/PresenterRoute.js").then((module) => ({
@@ -39,8 +41,8 @@ export const AppRoutes = () => (
     <Route path="/console" element={<ConsoleWorkspace />}>
       <Route index element={<Navigate to="discover" replace />} />
       <Route path="discover" element={<DiscoverRoute />} />
-      <Route path="drafts" element={<WorkspaceRoutePending label="Drafts" />} />
-      <Route path="drafts/:workspaceId" element={<WorkspaceRoutePending label="Draft" />} />
+      <Route path="drafts" element={<DraftIndexRoute />} />
+      <Route path="drafts/:workspaceId" element={<DraftDetailRoute />} />
       <Route path="artifacts" element={<WorkspaceRoutePending label="Artifacts" />} />
       <Route path="artifacts/:artifactId/:version" element={<WorkspaceRoutePending label="Artifact" />} />
       <Route path="deployments" element={<WorkspaceRoutePending label="Deployments" />} />

@@ -412,6 +412,270 @@ tbody tr:hover {
   color: var(--color-slate);
 }
 
+/* Draft routes keep the inventory scannable while leaving opaque workflow
+   documents available only as an explicitly opened, bounded escape hatch. */
+.draft-workspaces,
+.draft-detail {
+  min-width: 0;
+}
+
+.draft-workspaces__header,
+.draft-detail__header {
+  margin-bottom: 1rem;
+}
+
+.draft-workspaces__header > p:not(.workspace-route-pending__eyebrow),
+.draft-detail__workspace-id,
+.draft-detail__breadcrumbs {
+  color: var(--color-slate);
+}
+
+.draft-workspaces__header button {
+  margin-top: 0.5rem;
+}
+
+.draft-workspaces__panel,
+.draft-detail__panel {
+  min-width: 0;
+  margin: 0 0 1rem;
+}
+
+.draft-workspaces__section-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.draft-workspaces__section-heading h2 {
+  margin-bottom: 0;
+}
+
+.draft-workspaces__count {
+  color: var(--color-slate);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.draft-workspaces__table-wrap {
+  overflow-x: auto;
+}
+
+.draft-workspaces table {
+  min-width: 42rem;
+}
+
+.draft-workspaces tbody th {
+  padding: 0.5rem;
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+  font-weight: 600;
+}
+
+.draft-workspaces tbody th a,
+.draft-detail__breadcrumbs a {
+  color: var(--color-ink);
+  text-decoration-thickness: 0.08em;
+  text-underline-offset: 0.15em;
+}
+
+.draft-workspaces tbody th a:hover,
+.draft-workspaces tbody th a:focus-visible,
+.draft-detail__breadcrumbs a:hover,
+.draft-detail__breadcrumbs a:focus-visible {
+  color: var(--color-signal-green);
+}
+
+.draft-workspaces__row-id {
+  display: block;
+  margin-top: 0.15rem;
+  color: var(--color-slate);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 400;
+  overflow-wrap: anywhere;
+}
+
+.draft-workspaces__status {
+  display: inline-block;
+  color: var(--color-ink);
+  font-family: var(--font-heading);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.draft-workspaces__status::before {
+  display: inline-block;
+  width: 0.55rem;
+  height: 0.55rem;
+  margin-right: 0.35rem;
+  border-radius: 50%;
+  background: var(--color-slate);
+  content: "";
+}
+
+.draft-workspaces__status[data-status="valid"]::before {
+  background: var(--color-signal-green);
+}
+
+.draft-workspaces__status[data-status="invalid"]::before {
+  background: var(--color-red);
+}
+
+.draft-workspaces__status[data-status="conflict"]::before {
+  background: var(--color-amber);
+}
+
+.draft-detail__breadcrumbs {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  overflow-wrap: anywhere;
+}
+
+.draft-detail__workspace-id {
+  margin: 0.25rem 0 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  overflow-wrap: anywhere;
+}
+
+.draft-detail__status-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: baseline;
+  margin: 0;
+}
+
+.draft-detail__panels {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(18rem, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.draft-detail__facts,
+.draft-detail__diagnostic dl {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0;
+}
+
+.draft-detail__facts {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-bottom: 1rem;
+}
+
+.draft-detail__facts div,
+.draft-detail__diagnostic dl {
+  min-width: 0;
+  padding: 0.55rem;
+  border: 1px solid var(--color-border);
+  background: #fff;
+}
+
+.draft-detail__facts dt,
+.draft-detail__diagnostic dt {
+  color: var(--color-slate);
+  font-family: var(--font-heading);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.draft-detail__facts dd,
+.draft-detail__diagnostic dd {
+  margin: 0.15rem 0 0;
+  overflow-wrap: anywhere;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+}
+
+.draft-detail__panel h3 {
+  margin-top: 1rem;
+}
+
+.draft-detail__steps,
+.draft-detail__diagnostics {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+  padding-left: 1.2rem;
+}
+
+.draft-detail__steps li {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  overflow-wrap: anywhere;
+}
+
+.draft-detail__diagnostics {
+  padding-left: 1.5rem;
+}
+
+.draft-detail__diagnostic {
+  padding-left: 0.25rem;
+}
+
+.draft-detail__diagnostic dl {
+  margin-bottom: 0.5rem;
+}
+
+.draft-detail__raw {
+  margin-bottom: 1rem;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.draft-detail__raw summary {
+  padding: 0.65rem 0.75rem;
+  cursor: pointer;
+  font-family: var(--font-heading);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.draft-detail__raw summary:focus-visible {
+  outline: 2px solid var(--color-signal-green);
+  outline-offset: -2px;
+}
+
+.draft-detail__raw pre {
+  max-height: 20rem;
+  max-width: 100%;
+  margin: 0;
+  overflow: auto;
+  padding: 0.75rem;
+  background: var(--color-ink);
+  color: var(--color-paper);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  line-height: 1.4;
+  white-space: pre;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* Capability discovery keeps the result list compact while reserving a readable
    contract pane for the selected capability. */
 .capability-discovery {
