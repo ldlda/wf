@@ -64,7 +64,12 @@ Implementation order:
    Implementation:
    [`workflow console lifecycle explorer plan`](historical/superpowers/plans/2026-07-02-workflow-console-lifecycle-explorer.md).
    Draft workspace inspection reuses the same shell after the first vertical
-   path.
+   path. Slice 1 is complete: the routed console now provides real-server
+   capability discovery and read-only draft workspace inspection with desktop
+   and mobile acceptance coverage. Implementation:
+   [`workflow console workspace foundation plan`](historical/superpowers/plans/2026-08-04-workflow-console-workspace-foundation.md).
+   The next console item is Slice 2: draft graph authoring, including explicit
+   mutation boundaries and mobile-safe graph inspection.
 5. Completed: the web console can operate the prepared
    `examples/lda_report_workflow/` deployment through run start, typed
    `issue_review` interrupt, resume, trace, and final output inspection.

@@ -8,6 +8,7 @@
   "scripts": {
     "dev": "concurrently --kill-others-on-fail --names server,console --prefix-colors blue,green \"pnpm --filter @lda/web-server dev\" \"pnpm --filter @lda/console dev\"",
     "test": "pnpm -r --if-present test",
+    "test:workflow-console:e2e": "pnpm build && pnpm --filter @lda/console exec playwright test e2e/workflow-console.spec.ts --workers=1",
     "typecheck": "pnpm -r --if-present typecheck",
     "build": "pnpm --filter @lda/workflow-rpc build && pnpm --filter @lda/presentation-sync build && pnpm --filter @lda/console build && pnpm --filter @lda/web-server build",
     "start": "pnpm --filter @lda/web-server start"

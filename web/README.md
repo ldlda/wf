@@ -1,8 +1,8 @@
 # lda.chat Workflow Console
 
 A local React console for inspecting workflow JSON-RPC servers. Connects to a
-loopback `wf-rpc-server` through a Hono proxy, displays source inventory and
-raw protocol evidence.
+loopback `wf-rpc-server` through a Hono proxy, displays capability and draft
+workspace reads, and keeps raw protocol evidence inspectable.
 
 ## Quick Start
 
@@ -15,7 +15,7 @@ pnpm --dir web install
 pnpm --dir web dev
 ```
 
-Open `http://127.0.0.1:5173` in the browser. Paste the target URL:
+Open `http://127.0.0.1:5173/console/discover` in the browser. Paste the target URL:
 
 ```text
 http://127.0.0.1:8765/rpc
@@ -25,8 +25,32 @@ Click **Connect**. The console will:
 
 1. Validate the target is a loopback address
 2. Call `workflow.health` on the upstream server
-3. Display connection status and source inventory
-4. Show raw protocol evidence for each operation
+3. Display the read-only capability catalog and preserve the connection while
+   navigating the console routes
+4. Show raw protocol evidence for each connection and workspace read
+
+## Workflow Console Routes
+
+The root route and `/console` redirect to `/console/discover`. The routed
+workspace currently exposes:
+
+- `/console/discover` for searchable, source-filtered capability discovery and
+  input/output contract inspection
+- `/console/drafts` for the persisted draft workspace index
+- `/console/drafts/:workspaceId` for revision, status, step, diagnostics, and
+  bounded raw-draft inspection
+- `/console/artifacts` and `/console/artifacts/:artifactId/:version` for the
+  existing read-only artifact explorer
+- `/console/deployments` and `/console/deployments/:deploymentId` for deployment
+  inspection
+- `/console/runs` and `/console/runs/:runId` for run, interrupt, and trace
+  inspection
+
+Enter a loopback RPC URL in **Workflow JSON-RPC URL** and click **Connect**.
+The health exchange establishes the target for the routed shell; subsequent
+read-only route calls go through the Hono `/api/rpc` boundary. The target and
+the operation-evidence ledger persist across console route navigation. The
+workspace does not expose draft graph authoring or mutation controls yet.
 
 ## Production Build
 
@@ -77,6 +101,7 @@ so the workflow RPC server does not need a LAN binding.
 | `pnpm --dir web typecheck` | Run TypeScript type checking |
 | `pnpm --dir web build` | Build the React console for production |
 | `pnpm --dir web start` | Start the production Hono server |
+| `pnpm --dir web test:workflow-console:e2e` | Build and run real-server desktop/mobile console acceptance tests |
 | `pnpm --dir web --filter @lda/workflow-rpc contract:write` | Regenerate TypeScript wire names and raw types from the checked workflow manifest |
 | `pnpm --dir web --filter @lda/workflow-rpc contract:check` | Fail when the generated TypeScript contract has drifted |
 | `pnpm --dir web --filter @lda/console test:presentation-sync:e2e:install` | Install the Chromium binary required by the browser smoke test |

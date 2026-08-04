@@ -31,6 +31,8 @@ For verified Python 3.14 dependency constraints and their removal criteria, see
 | `wf_contract_manifest` | Tooling that normalizes the composed workflow OpenRPC document into the checked transport-neutral contract manifest and detects drift. | Python and TypeScript contract generation and tests. |
 | `@lda/workflow-rpc` | Effect RPC client boundary plus generated compile-time inventory and raw wire types for all manifest operations. It includes a fail-closed representative JSON Schema-to-Effect translator; runtime decoders and supported operations remain authored subsets. | Web console, Hono server, future TypeScript workflow clients. |
 | `@lda/presentation-sync` | Shared, bounded wire contract for ephemeral LAN presentation rooms. | Browser `@lda/console` and Hono `@lda/web-server`. |
+| `@lda/console` | React console with a persistent routed shell, loopback connection flow, capability discovery, read-only draft workspace inspection, and routed artifact/deployment/run exploration. | Browser users and the built `@lda/web-server` static host. |
+| `@lda/web-server` | Hono API/static server that enforces the browser operation policy, proxies typed workflow reads, serves `console/dist`, and owns presentation room transport. | Browser `@lda/console` and local workflow operators. |
 
 The TypeScript presentation synchronization boundary is deliberately narrow.
 `@lda/web-server` owns room creation, membership, revision ordering, expiry,
@@ -39,6 +41,13 @@ semantics and publishes only canonical hashes through
 `@lda/presentation-sync`; no storyboard data or workflow operation enters the
 room service. Browser workflow operations remain behind the Hono server and
 can continue to reach a loopback-only workflow RPC server.
+
+The console workspace boundary is `web/apps/console/src/workspace`. Its
+`domain/` clients own capability, draft-workspace, and lifecycle read contracts;
+route modules consume those clients through the evidence-aware read executor
+instead of calling transport operation strings directly. `ConsoleShell` owns
+the persistent connection header, lifecycle navigation, and operation-evidence
+ledger while `/console/*` route modules own their read-only page projections.
 
 ## Important Entry Points
 

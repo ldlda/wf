@@ -1002,7 +1002,7 @@ git commit -m "refactor: route console lifecycle workspace"
 - Consumes: built console/server, `uv run wf-rpc-server`, example Python sources, and public browser routes.
 - Produces: deterministic full-stack acceptance coverage and current documentation.
 
-- [ ] **Step 1: Build a self-contained Playwright process harness**
+- [x] **Step 1: Build a self-contained Playwright process harness**
 
 Follow the process ownership pattern in `e2e/presentation-sync.spec.ts`: reserve
 ports, spawn only recorded child processes, collect output, wait for readiness,
@@ -1042,7 +1042,7 @@ node web/apps/server/dist/index.js
 Set `WEB_HOST=127.0.0.1` and the reserved web port for the Hono child. The built
 server serves `console/dist`; do not start Vite in this acceptance test.
 
-- [ ] **Step 2: Seed one real draft through direct JSON-RPC**
+- [x] **Step 2: Seed one real draft through direct JSON-RPC**
 
 After the Python server is healthy, POST this request directly to its `/rpc`
 endpoint. Direct seeding is test setup and does not broaden browser policy:
@@ -1063,7 +1063,7 @@ endpoint. Direct seeding is test setup and does not broaden browser policy:
 
 Assert the seed response has no JSON-RPC error before opening the browser.
 
-- [ ] **Step 3: Add desktop acceptance assertions**
+- [x] **Step 3: Add desktop acceptance assertions**
 
 At 1280 x 800:
 
@@ -1077,14 +1077,14 @@ At 1280 x 800:
 8. expand raw draft and assert `local.lda_docs.read_documents`; and
 9. expand evidence and assert capability list plus draft get receipts.
 
-- [ ] **Step 4: Add mobile inspection assertions**
+- [x] **Step 4: Add mobile inspection assertions**
 
 At 390 x 844, open the seeded draft detail directly after setting the target in
 session storage, then click Connect and wait for the detail read. Assert the
 lifecycle nav scrolls horizontally, summary and diagnostics remain readable,
 raw draft can open, and no graph-authoring control or mutation button exists.
 
-- [ ] **Step 5: Add the acceptance script**
+- [x] **Step 5: Add the acceptance script**
 
 Add:
 
@@ -1094,7 +1094,7 @@ Add:
 
 Do not add a second Playwright dependency or global process manager.
 
-- [ ] **Step 6: Run the full verification gate**
+- [x] **Step 6: Run the full verification gate**
 
 Run:
 
@@ -1111,13 +1111,13 @@ Expected: all tests, typechecks, builds, contract checks, and both Playwright
 viewports pass. The known Vite chunk-size warning may remain; no new warning is
 accepted silently.
 
-- [ ] **Step 7: Run final code review and fix valid findings**
+- [x] **Step 7: Run final code review and fix valid findings**
 
 Use the repository code-review workflow against the first task commit. Review
 both standards and this plan. Fix concrete correctness, security, accessibility,
 or spec findings and rerun their narrowest relevant tests before the full gate.
 
-- [ ] **Step 8: Update live documentation**
+- [x] **Step 8: Update live documentation**
 
 Document:
 
@@ -1130,7 +1130,7 @@ Document:
 Move this completed plan to the matching `docs/historical/` path and update any
 live link to the historical path.
 
-- [ ] **Step 9: Commit Task 8**
+- [x] **Step 9: Commit Task 8**
 
 ```powershell
 git add web/apps/console/e2e web/package.json web/README.md docs/current_roadmap.md docs/project_map.md docs/superpowers/plans docs/historical/superpowers/plans
@@ -1141,15 +1141,15 @@ git commit -m "test: verify console workspace foundation"
 
 ## Completion Checklist
 
-- [ ] The browser can call exactly the four new read operations and no new writes.
-- [ ] React route modules call domain clients, not `callOperation` or operation strings.
-- [ ] Artifact, deployment, and run reads also cross domain-client interfaces.
-- [ ] `/` and `/console` resolve to `/console/discover`.
-- [ ] Capability discovery supports search, source filter, inspect, and pagination.
-- [ ] Draft index and direct detail routes use backend workspace identity and revision.
-- [ ] Existing artifact/deployment/run exploration remains reachable through canonical routes.
-- [ ] The old flat `ConsoleHome` and dead console-only demo/source panels are removed.
-- [ ] Connection and evidence persist across console route navigation.
-- [ ] Desktop and mobile read-only acceptance passes against a real Python server.
-- [ ] Presentation and presenter routes remain unchanged in behavior.
-- [ ] Docs describe the implemented state rather than the target state of later slices.
+- [x] The browser can call exactly the four new read operations and no new writes.
+- [x] React route modules call domain clients, not `callOperation` or operation strings.
+- [x] Artifact, deployment, and run reads also cross domain-client interfaces.
+- [x] `/` and `/console` resolve to `/console/discover`.
+- [x] Capability discovery supports search, source filter, inspect, and pagination.
+- [x] Draft index and direct detail routes use backend workspace identity and revision.
+- [x] Existing artifact/deployment/run exploration remains reachable through canonical routes.
+- [x] The old flat `ConsoleHome` and dead console-only demo/source panels are removed.
+- [x] Connection and evidence persist across console route navigation.
+- [x] Desktop and mobile read-only acceptance passes against a real Python server.
+- [x] Presentation and presenter routes remain unchanged in behavior.
+- [x] Docs describe the implemented state rather than the target state of later slices.
