@@ -9,6 +9,10 @@ describe("browser operation policy", () => {
     expect(browserAllowedOperationNames).toEqual([
       "workflow.health",
       "workflow.sources.list",
+      "workflow.capabilities.list",
+      "workflow.capabilities.inspect",
+      "workflow.draft_workspaces.list",
+      "workflow.draft_workspaces.get",
       "workflow.artifacts.list",
       "workflow.artifacts.inspect",
       "workflow.deployments.list",

@@ -136,6 +136,32 @@ describe("callOperation", () => {
     );
     expect(body.params).toEqual({});
   });
+
+  it("accepts a draft workspace read success envelope", async () => {
+    mockFetch.mockReturnValue(
+      jsonResponse({
+        ok: true,
+        operation: "workflow.draft_workspaces.get",
+        label: "Get draft workspace",
+        interpreted: { workspace: { id: "draft-1" } },
+        exchange: { request: {}, response: {} },
+        equivalentCli: "uv run wf draft-workspace get",
+        durationMs: 4,
+      }),
+    );
+
+    const result = await callOperation(
+      "workflow.draft_workspaces.get",
+      "http://127.0.0.1:8000/rpc",
+      { workspaceId: "draft-1" },
+    );
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.operation).toBe("workflow.draft_workspaces.get");
+      expect(result.interpreted).toEqual({ workspace: { id: "draft-1" } });
+    }
+  });
 });
 
 describe("error handling", () => {

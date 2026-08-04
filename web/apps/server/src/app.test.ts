@@ -105,6 +105,32 @@ describe("POST /api/connect", () => {
 });
 
 describe("POST /api/rpc", () => {
+  it.each([
+    "workflow.capabilities.list",
+    "workflow.capabilities.inspect",
+    "workflow.draft_workspaces.list",
+    "workflow.draft_workspaces.get",
+  ] as const)("authorizes the read operation %s", async (operation) => {
+    const res = await app.request("/api/rpc", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        operation,
+        target: "http://127.0.0.1:8000/rpc",
+      }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.ok).toBe(true);
+    expect(body.operation).toBe(operation);
+    expect(okRunner).toHaveBeenCalledWith(
+      operation,
+      "http://127.0.0.1:8000/rpc",
+      {},
+    );
+  });
+
   it("invokes the requested operation", async () => {
     const res = await app.request("/api/rpc", {
       method: "POST",
@@ -142,6 +168,21 @@ describe("POST /api/rpc", () => {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         operation: "workflow.admin.auth.list",
+        target: "http://127.0.0.1:8000/rpc",
+      }),
+    });
+
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error.code).toBe("unknown_operation");
+  });
+
+  it("does not authorize draft workspace mutations", async () => {
+    const res = await app.request("/api/rpc", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        operation: "workflow.draft_workspaces.create_empty",
         target: "http://127.0.0.1:8000/rpc",
       }),
     });
