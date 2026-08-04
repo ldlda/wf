@@ -24,7 +24,7 @@ const formatValue = (value: unknown): string => {
 // never fully materialized just to produce a clipped escape-hatch preview.
 export const formatBoundedJson = (value: unknown, maxChars = MAX_RAW_DRAFT_CHARS): string => {
   const truncationMarker = TRUNCATION_MARKER.slice(0, Math.max(0, maxChars));
-  const contentLimit = Math.max(0, maxChars - truncationMarker.length);
+  const contentLimit = Math.max(0, maxChars);
   let output = "";
   let truncated = false;
   const activeObjects = new WeakSet<object>();
@@ -39,11 +39,36 @@ export const formatBoundedJson = (value: unknown, maxChars = MAX_RAW_DRAFT_CHARS
     output += chunk;
   };
 
+  const appendJsonString = (value: string): void => {
+    append('"');
+    for (let index = 0; index < value.length; index++) {
+      if (truncated) return;
+      const code = value.charCodeAt(index);
+      if (code === 0x22) append('\\"');
+      else if (code === 0x5c) append("\\\\");
+      else if (code < 0x20) append(`\\u${code.toString(16).padStart(4, "0")}`);
+      else if (code >= 0xd800 && code <= 0xdbff) {
+        const nextCode = value.charCodeAt(index + 1);
+        if (nextCode >= 0xdc00 && nextCode <= 0xdfff) {
+          append(value.slice(index, index + 2));
+          index++;
+        } else {
+          append(`\\u${code.toString(16).padStart(4, "0")}`);
+        }
+      } else if (code >= 0xdc00 && code <= 0xdfff) {
+        append(`\\u${code.toString(16).padStart(4, "0")}`);
+      } else {
+        append(value.charAt(index));
+      }
+    }
+    if (!truncated) append('"');
+  };
+
   const visit = (current: unknown, depth: number): void => {
     if (truncated) return;
     if (current === null || typeof current !== "object") {
       if (typeof current === "string") {
-        append(JSON.stringify(current));
+        appendJsonString(current);
       } else if (typeof current === "number") {
         append(Number.isFinite(current) ? String(current) : "null");
       } else if (typeof current === "boolean") {
@@ -79,7 +104,7 @@ export const formatBoundedJson = (value: unknown, maxChars = MAX_RAW_DRAFT_CHARS
       for (const key in record) {
         if (!Object.prototype.hasOwnProperty.call(current, key) || truncated) continue;
         append(first ? `\n${childIndent}` : `,\n${childIndent}`);
-        append(JSON.stringify(key));
+        appendJsonString(key);
         append(": ");
         visit(record[key], depth + 1);
         first = false;
@@ -90,7 +115,9 @@ export const formatBoundedJson = (value: unknown, maxChars = MAX_RAW_DRAFT_CHARS
   };
 
   visit(value, 0);
-  return truncated ? `${output}${truncationMarker}` : output;
+  if (!truncated) return output;
+  const markerStart = Math.max(0, contentLimit - truncationMarker.length);
+  return `${output.slice(0, markerStart)}${truncationMarker}`;
 };
 
 const Fact = ({ label, value }: { readonly label: string; readonly value: string }) => (

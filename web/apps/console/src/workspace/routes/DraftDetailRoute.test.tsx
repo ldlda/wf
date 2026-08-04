@@ -129,6 +129,22 @@ describe("DraftDetailRoute", () => {
     expect(formatBoundedJson(draft, 80)).toContain("truncated");
   });
 
+  it("keeps an exact-fit JSON document complete and valid", () => {
+    const draft = { step: "collect", count: 2 };
+    const completeJson = JSON.stringify(draft, null, 2);
+
+    expect(formatBoundedJson(draft, completeJson.length)).toBe(completeJson);
+    expect(JSON.parse(formatBoundedJson(draft, completeJson.length))).toEqual(draft);
+  });
+
+  it("does not truncate a complete document just below the boundary", () => {
+    const draft = { step: "collect", count: 2 };
+    const completeJson = JSON.stringify(draft, null, 2);
+
+    expect(formatBoundedJson(draft, completeJson.length + 1)).toBe(completeJson);
+    expect(formatBoundedJson(draft, completeJson.length - 1)).toContain("truncated");
+  });
+
   it("does not render a selected workspace whose identity differs from the URL", () => {
     mockedUseDraftWorkspace.mockReturnValue(
       controller({ selected: workspace({ workspaceId: "draft-old" }) }),

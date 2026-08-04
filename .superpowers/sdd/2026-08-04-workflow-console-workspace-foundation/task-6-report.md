@@ -68,8 +68,20 @@ regressions now pass, including independent URL and target transition checks,
 duplicate-read coalescing, bounded traversal with an unread later getter,
 focus semantics, and mobile CSS coverage.
 
+## Re-review Fix
+
+The formatter no longer reserves truncation-marker space before traversal. It
+returns complete valid JSON when the representation is exactly at or just
+under the configured limit, and replaces only the suffix after traversal
+actually exceeds the limit. String leaves and object keys are escaped
+incrementally rather than materialized through whole-value `JSON.stringify`.
+Exact-boundary, near-limit, and overflow regressions were added.
+
 ## Verification
 
+- `pnpm --dir web --filter @lda/console test -- src/workspace/routes/DraftIndexRoute.test.tsx src/workspace/routes/DraftDetailRoute.test.tsx src/workspace/routes/useDraftWorkspace.test.tsx`: passed; 3 files, 25 tests.
+- `pnpm --dir web --filter @lda/console typecheck`: passed.
+- `git diff --check`: passed.
 - `pnpm --dir web --filter @lda/console test -- src/workspace/routes/DraftIndexRoute.test.tsx src/workspace/routes/DraftDetailRoute.test.tsx src/workspace/routes/useDraftWorkspace.test.tsx src/workspace/domain/draft-workspace-client.test.ts src/workspace/domain/draft-workspace-models.test.ts src/workspace/domain/read-executor.test.ts`: passed; 6 files, 39 tests.
 - `pnpm --dir web --filter @lda/console typecheck`: passed.
 - `pnpm --dir web --filter @lda/console test`: passed; 118 files, 995 tests, 1 todo.
