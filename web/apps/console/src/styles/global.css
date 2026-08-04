@@ -412,6 +412,201 @@ tbody tr:hover {
   color: var(--color-slate);
 }
 
+/* Capability discovery keeps the result list compact while reserving a readable
+   contract pane for the selected capability. */
+.capability-discovery {
+  min-width: 0;
+}
+
+.capability-discovery__header {
+  margin-bottom: 1rem;
+}
+
+.capability-discovery__header > p:last-child,
+.capability-discovery__detail--empty p:last-child {
+  color: var(--color-slate);
+}
+
+.capability-discovery__filters {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(12rem, 0.55fr) auto;
+  align-items: end;
+  margin-bottom: 1rem;
+  padding: 0.85rem;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.capability-discovery__filters > div {
+  min-width: 0;
+}
+
+.capability-discovery__filters label {
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.capability-discovery__filters input[type="text"] {
+  width: 100%;
+  min-width: 0;
+}
+
+.capability-discovery__panes {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(18rem, 0.85fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.capability-discovery__results,
+.capability-discovery__detail {
+  min-width: 0;
+  margin: 0;
+}
+
+.capability-discovery__section-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.capability-discovery__count {
+  color: var(--color-slate);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.capability-discovery__list {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0;
+  margin: 0 0 1rem;
+  list-style: none;
+}
+
+.capability-discovery__row {
+  display: grid;
+  width: 100%;
+  gap: 0.35rem;
+  padding: 0.7rem 0.75rem;
+  border: 1px solid var(--color-border);
+  background: #fff;
+  color: var(--color-ink);
+  text-align: left;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.capability-discovery__row:hover,
+.capability-discovery__row[data-selected="true"] {
+  border-color: var(--color-signal-green);
+  background: #f6fbf7;
+}
+
+.capability-discovery__row-heading,
+.capability-discovery__kind,
+.capability-discovery__row-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.capability-discovery__row-heading {
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.capability-discovery__kind {
+  color: var(--color-signal-green);
+  font-family: var(--font-heading);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.capability-discovery__row-heading strong,
+.capability-discovery__row-meta,
+.capability-discovery__description {
+  overflow-wrap: anywhere;
+}
+
+.capability-discovery__row-heading strong {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+}
+
+.capability-discovery__row-meta {
+  flex-wrap: wrap;
+  color: var(--color-slate);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+}
+
+.capability-discovery__description {
+  color: var(--color-slate);
+  font-size: 0.82rem;
+}
+
+.capability-discovery__detail {
+  position: sticky;
+  top: 1rem;
+}
+
+.capability-discovery__facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin: 0 0 1rem;
+}
+
+.capability-discovery__facts div {
+  min-width: 0;
+  padding: 0.5rem;
+  border: 1px solid var(--color-border);
+  background: #fff;
+}
+
+.capability-discovery__facts dt {
+  color: var(--color-slate);
+  font-family: var(--font-heading);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.capability-discovery__facts dd {
+  margin: 0.15rem 0 0;
+  overflow-wrap: anywhere;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+}
+
+.capability-discovery__schemas {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.capability-discovery__schema-block h3 {
+  margin-bottom: 0.3rem;
+}
+
+.capability-discovery__schema-block pre {
+  max-height: 14rem;
+  margin: 0;
+  overflow: auto;
+  padding: 0.7rem;
+  background: var(--color-ink);
+  color: var(--color-paper);
+  border-radius: 3px;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  line-height: 1.4;
+}
+
 .evidence-ledger .evidence-list {
   margin: 0;
 }
@@ -619,6 +814,23 @@ tbody tr:nth-child(10) { animation-delay: 270ms; }
 
   .console-workspace__evidence {
     max-height: none;
+  }
+
+  .capability-discovery__panes {
+    grid-template-columns: 1fr;
+  }
+
+  .capability-discovery__detail {
+    position: static;
+  }
+
+  .capability-discovery__filters {
+    grid-template-columns: 1fr;
+  }
+
+  .capability-discovery__filters > div,
+  .capability-discovery__filters button {
+    width: 100%;
   }
 }
 

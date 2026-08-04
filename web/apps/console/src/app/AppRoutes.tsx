@@ -2,6 +2,7 @@ import { lazy, Suspense } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { ConsoleWorkspace } from "../workspace/ConsoleWorkspace.js";
 import { useConsoleWorkspace } from "../workspace/context.js";
+import { DiscoverRoute } from "../workspace/routes/DiscoverRoute.js";
 import { PresentationRoute } from "../presentation/PresentationRoute.js";
 
 const PresenterRoute = lazy(() => import("../presentation/presenter/PresenterRoute.js").then((module) => ({
@@ -37,7 +38,7 @@ export const AppRoutes = () => (
     <Route path="/" element={<Navigate to="/console/discover" replace />} />
     <Route path="/console" element={<ConsoleWorkspace />}>
       <Route index element={<Navigate to="discover" replace />} />
-      <Route path="discover" element={<WorkspaceRoutePending label="Discover" />} />
+      <Route path="discover" element={<DiscoverRoute />} />
       <Route path="drafts" element={<WorkspaceRoutePending label="Drafts" />} />
       <Route path="drafts/:workspaceId" element={<WorkspaceRoutePending label="Draft" />} />
       <Route path="artifacts" element={<WorkspaceRoutePending label="Artifacts" />} />
