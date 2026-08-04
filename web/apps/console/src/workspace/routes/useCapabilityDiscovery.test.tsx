@@ -143,7 +143,12 @@ describe("useCapabilityDiscovery", () => {
       .mockResolvedValueOnce(page([summary("local.documents.read")]))
       .mockResolvedValueOnce(page([summary("remote.documents.read", "remote.documents")]));
     client.inspect.mockResolvedValue(detail("local.documents.read"));
-    const { result, rerender } = renderHook(() => useCapabilityDiscovery());
+    const renders: Array<{ items: ReadonlyArray<CapabilitySummary>; selected: CapabilityDetail | null }> = [];
+    const { result, rerender } = renderHook(() => {
+      const current = useCapabilityDiscovery();
+      renders.push({ items: current.items, selected: current.selected });
+      return current;
+    });
     await waitFor(() => expect(result.current.phase).toBe("ready"));
     act(() => result.current.inspect("local.documents.read"));
     await waitFor(() => expect(result.current.selected?.name).toBe("local.documents.read"));
@@ -154,10 +159,35 @@ describe("useCapabilityDiscovery", () => {
       recordEvidence: vi.fn(),
       readExecutor: {} as ConsoleReadExecutor,
     });
+    const renderCountBeforeTargetChange = renders.length;
+    rerender();
+
+    expect(renders[renderCountBeforeTargetChange]?.items).toEqual([]);
+    expect(renders[renderCountBeforeTargetChange]?.selected).toBeNull();
+    await waitFor(() => expect(result.current.items[0]?.sourceId).toBe("remote.documents"));
+    expect(result.current.selected).toBeNull();
+    expect(client.list).toHaveBeenLastCalledWith({ limit: 50 });
+  });
+
+  it("reconnects with applied filters instead of unsubmitted filter edits", async () => {
+    client.list
+      .mockResolvedValueOnce(page([summary("local.documents.read")]))
+      .mockResolvedValue(page([summary("remote.documents.read", "remote.documents")]));
+    const { result, rerender } = renderHook(() => useCapabilityDiscovery());
+    await waitFor(() => expect(result.current.phase).toBe("ready"));
+
+    act(() => result.current.setQuery("unsubmitted-query"));
+    act(() => result.current.setSourceId("unsubmitted-source"));
+
+    mockedUseConsoleWorkspace.mockReturnValue({
+      connection: connectedState,
+      connectedTarget: "http://reconnected-workflow.example/rpc",
+      recordEvidence: vi.fn(),
+      readExecutor: {} as ConsoleReadExecutor,
+    });
     rerender();
 
     await waitFor(() => expect(result.current.items[0]?.sourceId).toBe("remote.documents"));
-    expect(result.current.selected).toBeNull();
     expect(client.list).toHaveBeenLastCalledWith({ limit: 50 });
   });
 

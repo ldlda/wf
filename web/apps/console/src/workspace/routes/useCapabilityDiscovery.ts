@@ -8,6 +8,7 @@ import type {
   CapabilityDetail,
   CapabilitySummary,
 } from "../domain/capability-models.js";
+import type { ConsoleReadExecutor } from "../domain/read-executor.js";
 
 const PAGE_LIMIT = 50;
 
@@ -36,6 +37,11 @@ type CapabilityFilters = {
 type DiscoveryStateWithAppliedFilters = DiscoveryState & {
   readonly appliedQuery: string;
   readonly appliedSourceId: string;
+};
+
+type ConnectionProvenance = {
+  readonly readExecutor: ConsoleReadExecutor;
+  readonly connectedTarget: string;
 };
 
 const initialState: DiscoveryStateWithAppliedFilters = {
@@ -78,6 +84,14 @@ const appendUnique = (
   return result;
 };
 
+const isSameConnection = (
+  left: ConnectionProvenance | null,
+  right: ConnectionProvenance | null,
+): boolean => {
+  if (left === null || right === null) return left === right;
+  return left.readExecutor === right.readExecutor && left.connectedTarget === right.connectedTarget;
+};
+
 export const useCapabilityDiscovery = (): CapabilityDiscoveryController => {
   const { connectedTarget, readExecutor } = useConsoleWorkspace();
   const client = useMemo<CapabilityClient | null>(
@@ -87,12 +101,24 @@ export const useCapabilityDiscovery = (): CapabilityDiscoveryController => {
   const [state, setState] = useState<DiscoveryStateWithAppliedFilters>(initialState);
   const listGenerationRef = useRef(0);
   const inspectGenerationRef = useRef(0);
+  const committedProvenanceRef = useRef<ConnectionProvenance | null>(null);
+  const listProvenanceRef = useRef<ConnectionProvenance | null>(null);
+  const selectedProvenanceRef = useRef<ConnectionProvenance | null>(null);
+  const currentProvenance = useMemo<ConnectionProvenance | null>(
+    () =>
+      readExecutor !== null && connectedTarget !== null
+        ? { readExecutor, connectedTarget }
+        : null,
+    [connectedTarget, readExecutor],
+  );
 
   const runList = useCallback(
     (filters: CapabilityFilters, cursor: string | undefined, append: boolean): void => {
-      if (!client) return;
+      if (!client || currentProvenance === null) return;
+      const requestProvenance = currentProvenance;
       const generation = ++listGenerationRef.current;
       if (append === false) inspectGenerationRef.current++;
+      listProvenanceRef.current = requestProvenance;
       setState((current) => ({
         ...current,
         appliedQuery: filters.query,
@@ -107,7 +133,10 @@ export const useCapabilityDiscovery = (): CapabilityDiscoveryController => {
       void client
         .list(requestParams(filters.query, filters.sourceId, cursor))
         .then((page) => {
-          if (generation !== listGenerationRef.current) return;
+          if (
+            generation !== listGenerationRef.current ||
+            !isSameConnection(requestProvenance, committedProvenanceRef.current)
+          ) return;
           setState((current) => ({
             ...current,
             phase: "ready",
@@ -117,7 +146,10 @@ export const useCapabilityDiscovery = (): CapabilityDiscoveryController => {
           }));
         })
         .catch((error: unknown) => {
-          if (generation !== listGenerationRef.current) return;
+          if (
+            generation !== listGenerationRef.current ||
+            !isSameConnection(requestProvenance, committedProvenanceRef.current)
+          ) return;
           setState((current) => ({
             ...current,
             phase: "error",
@@ -125,13 +157,16 @@ export const useCapabilityDiscovery = (): CapabilityDiscoveryController => {
           }));
         });
     },
-    [client],
+    [client, currentProvenance],
   );
 
   useEffect(() => {
+    committedProvenanceRef.current = currentProvenance;
     if (!client || !connectedTarget) {
       listGenerationRef.current++;
       inspectGenerationRef.current++;
+      listProvenanceRef.current = null;
+      selectedProvenanceRef.current = null;
       setState((current) => ({
         ...current,
         phase: "disconnected",
@@ -143,11 +178,15 @@ export const useCapabilityDiscovery = (): CapabilityDiscoveryController => {
       return;
     }
 
-    runList({ query: state.query, sourceId: state.sourceId }, undefined, false);
+    runList(
+      { query: state.appliedQuery, sourceId: state.appliedSourceId },
+      undefined,
+      false,
+    );
     // The executor identity changes with the connected target. Query and source
-    // filters are intentionally retained so reconnecting preserves the view.
+    // filters are intentionally retained so reconnecting preserves the submitted view.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [client, connectedTarget, runList]);
+  }, [client, connectedTarget, currentProvenance, readExecutor, runList]);
 
   const setQuery = useCallback((query: string) => {
     setState((current) => ({ ...current, query }));
@@ -182,24 +221,54 @@ export const useCapabilityDiscovery = (): CapabilityDiscoveryController => {
   const inspect = useCallback(
     (qualifiedName: string) => {
       if (!client) return;
+      if (currentProvenance === null) return;
       const generation = ++inspectGenerationRef.current;
+      const requestProvenance = currentProvenance;
+      selectedProvenanceRef.current = null;
       setState((current) => ({ ...current, phase: "loading", selected: null, message: null }));
       void client
         .inspect(qualifiedName)
         .then((detail) => {
-          if (generation !== inspectGenerationRef.current) return;
+          if (
+            generation !== inspectGenerationRef.current ||
+            !isSameConnection(requestProvenance, committedProvenanceRef.current)
+          ) return;
+          selectedProvenanceRef.current = requestProvenance;
           setState((current) => ({ ...current, phase: "ready", selected: detail, message: null }));
         })
         .catch((error: unknown) => {
-          if (generation !== inspectGenerationRef.current) return;
+          if (
+            generation !== inspectGenerationRef.current ||
+            !isSameConnection(requestProvenance, committedProvenanceRef.current)
+          ) return;
           setState((current) => ({ ...current, phase: "error", message: errorMessage(error) }));
         });
     },
-    [client],
+    [client, currentProvenance],
   );
+
+  const hasCurrentList = isSameConnection(
+    listProvenanceRef.current,
+    currentProvenance,
+  );
+  const hasCurrentSelection = isSameConnection(
+    selectedProvenanceRef.current,
+    currentProvenance,
+  );
+  const visiblePhase =
+    currentProvenance === null
+      ? "disconnected"
+      : hasCurrentList
+        ? state.phase
+        : "loading";
 
   return {
     ...state,
+    phase: visiblePhase,
+    items: hasCurrentList ? state.items : [],
+    selected: hasCurrentSelection ? state.selected : null,
+    nextCursor: hasCurrentList ? state.nextCursor : null,
+    message: hasCurrentList ? state.message : null,
     setQuery,
     setSourceId,
     search,

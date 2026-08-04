@@ -100,3 +100,12 @@ Repository-wide Python checks outside this TypeScript task are not clean:
 - No raw RPC invocation or mutation operation was added to the Task 6 route or
   controller seam.
 - Task 7 was not started.
+
+## Final Integration Review Fix
+
+- Draft list results now carry executor/target provenance and are
+  synchronously hidden across target transitions. Detail responses use the
+  same provenance gate, so old-target list rows and same-URL detail cannot
+  render before reconnect effects run.
+- The transition regression now records the first render after the target
+  change and asserts both list and detail data are absent.

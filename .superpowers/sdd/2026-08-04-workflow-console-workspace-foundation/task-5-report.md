@@ -63,6 +63,15 @@ loads, and adding `aria-pressed`/`aria-controls` semantics.
 - No future pending routes were changed. No Add-to-draft behavior was added;
   this slice remains read-only as required.
 
+## Final Integration Review Fix
+
+- Capability list and selected detail now carry executor/target provenance and
+  fail closed during render-time target transitions, including same-URL
+  reconnects and late response settlement.
+- Reconnect discovery reloads the last submitted `appliedQuery` and
+  `appliedSourceId`, not unsubmitted filter edits. Immediate transition and
+  reconnect-filter regressions are covered.
+
 ## Bugs
 
 - No known Task 5 review findings remain after the focused regression suite.

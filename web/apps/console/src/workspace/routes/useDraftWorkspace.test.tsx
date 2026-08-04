@@ -130,14 +130,19 @@ describe("useDraftWorkspace", () => {
   });
 
   it("does not expose a loaded detail during URL or target transitions", async () => {
-    client.list.mockResolvedValue(page([]));
+    client.list.mockResolvedValue(page([workspace("draft-first")]));
     client.load
       .mockResolvedValueOnce(workspace("draft-first"))
       .mockReturnValueOnce(deferred<DraftWorkspace>().promise)
       .mockReturnValueOnce(deferred<DraftWorkspace>().promise);
 
+    const renders: Array<{ items: ReadonlyArray<DraftWorkspace>; selected: DraftWorkspace | null }> = [];
     const { result, rerender } = renderHook(
-      ({ workspaceId }: { workspaceId: string | null }) => useDraftWorkspace(workspaceId),
+      ({ workspaceId }: { workspaceId: string | null }) => {
+        const current = useDraftWorkspace(workspaceId);
+        renders.push({ items: current.items, selected: current.selected });
+        return current;
+      },
       { initialProps: { workspaceId: "draft-first" } },
     );
     await waitFor(() => expect(result.current.selected?.workspaceId).toBe("draft-first"));
@@ -148,8 +153,10 @@ describe("useDraftWorkspace", () => {
       recordEvidence: vi.fn(),
       readExecutor: {} as ConsoleReadExecutor,
     });
+    const renderCountBeforeTargetChange = renders.length;
     rerender({ workspaceId: "draft-first" });
-    expect(result.current.selected).toBeNull();
+    expect(renders[renderCountBeforeTargetChange]?.items).toEqual([]);
+    expect(renders[renderCountBeforeTargetChange]?.selected).toBeNull();
 
     rerender({ workspaceId: "draft-second" });
     expect(result.current.selected).toBeNull();

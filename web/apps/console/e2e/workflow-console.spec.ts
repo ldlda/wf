@@ -54,6 +54,10 @@ const startChild = (
     cwd: repoRoot,
     env,
     stdio: ["pipe", "pipe", "pipe"],
+    // On POSIX this makes the recorded root the leader of an owned process
+    // group, so uv's Python descendants can be terminated without name/port
+    // based cleanup. Windows keeps its scoped taskkill tree path below.
+    detached: process.platform !== "win32",
   });
   let output = "";
   child.stdout.on("data", (chunk: Buffer) => {
@@ -91,28 +95,39 @@ const killWindowsTree = async (pid: number): Promise<void> => {
   });
 };
 
+const killPosixProcessGroup = (pid: number, signal: NodeJS.Signals): void => {
+  try {
+    process.kill(-pid, signal);
+  } catch (error: unknown) {
+    if (error instanceof Error && (error as NodeJS.ErrnoException).code === "ESRCH") return;
+    throw error;
+  }
+};
+
 const stopChild = async (managed: ManagedChild): Promise<void> => {
   const { child } = managed;
-  if (child.exitCode !== null) return;
 
   if (process.platform === "win32" && child.pid !== undefined) {
+    if (child.exitCode !== null) return;
     // uv owns a Python grandchild on Windows, so terminate only this recorded
     // process tree rather than sending a broad port- or name-based kill.
     await killWindowsTree(child.pid);
-  } else {
-    child.kill("SIGTERM");
+    await waitForChildExit(child);
+    if (child.exitCode === null) {
+      await killWindowsTree(child.pid);
+      await waitForChildExit(child, 2_000);
+    }
+    return;
   }
 
+  if (child.pid === undefined) return;
+  // The negative PID targets only the process group created by startChild.
+  killPosixProcessGroup(child.pid, "SIGTERM");
   await waitForChildExit(child);
-  if (child.exitCode !== null) return;
-
-  if (process.platform === "win32" && child.pid !== undefined) {
-    await killWindowsTree(child.pid);
-  } else {
-    child.kill("SIGKILL");
-  }
+  killPosixProcessGroup(child.pid, "SIGKILL");
   await waitForChildExit(child, 2_000);
 };
+
 
 const postJsonRpc = async (
   target: string,
@@ -177,13 +192,26 @@ const connect = async (page: Page): Promise<void> => {
   await expect(page.getByTestId("phase-label")).toHaveText("Connected");
 };
 
-const expandEvidence = async (page: Page, operation: string): Promise<void> => {
+const expandEvidence = async (
+  page: Page,
+  operation: string,
+  expected: {
+    readonly request: Record<string, unknown>;
+    readonly response: Record<string, unknown>;
+  },
+): Promise<void> => {
   const record = page.locator("details.evidence-record").filter({ hasText: operation }).first();
   await expect(record).toBeVisible();
   await record.locator("summary").click();
   await expect(record.locator(".evidence-detail")).toBeVisible();
   await expect(record).toContainText("Request");
   await expect(record).toContainText("Response");
+
+  const fields = record.locator(".evidence-field");
+  const request = JSON.parse(await fields.nth(1).locator("pre").innerText()) as Record<string, unknown>;
+  const response = JSON.parse(await fields.nth(2).locator("pre").innerText()) as Record<string, unknown>;
+  expect(request).toMatchObject(expected.request);
+  expect(response).toMatchObject(expected.response);
 };
 
 test.beforeAll(async () => {
@@ -287,8 +315,32 @@ test("verifies desktop discovery, draft inspection, and evidence receipts", asyn
       "local.lda_docs.read_documents",
     );
 
-    await expandEvidence(page, "workflow.capabilities.list");
-    await expandEvidence(page, "workflow.draft_workspaces.get");
+    await expandEvidence(page, "workflow.capabilities.list", {
+      request: {
+        jsonrpc: "2.0",
+        method: "workflow.capabilities.list",
+        params: { limit: 50 },
+      },
+      response: {
+        jsonrpc: "2.0",
+        result: { capabilities: expect.any(Array) },
+      },
+    });
+    await expandEvidence(page, "workflow.draft_workspaces.get", {
+      request: {
+        jsonrpc: "2.0",
+        method: "workflow.draft_workspaces.get",
+        params: { workspace_id: "console-e2e", include_draft: true },
+      },
+      response: {
+        jsonrpc: "2.0",
+        result: {
+          workspace_id: "console-e2e",
+          revision: 1,
+          draft: expect.any(Object),
+        },
+      },
+    });
   } finally {
     await context.close();
   }

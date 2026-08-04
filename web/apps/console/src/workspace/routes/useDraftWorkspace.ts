@@ -28,7 +28,12 @@ type StoredDraftSelection = {
   readonly workspace: DraftWorkspace;
   readonly workspaceId: string;
   readonly connectedTarget: string;
-  readonly connectionGeneration: number;
+  readonly readExecutor: ConsoleReadExecutor;
+};
+
+type DraftReadProvenance = {
+  readonly readExecutor: ConsoleReadExecutor;
+  readonly connectedTarget: string;
 };
 
 type DraftWorkspaceState = Omit<DraftWorkspaceController, "refresh" | "selected"> & {
@@ -46,6 +51,14 @@ const initialState: DraftWorkspaceState = {
 
 const errorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
+
+const isCurrentProvenance = (
+  current: DraftReadProvenance | null,
+  request: DraftReadProvenance,
+): boolean =>
+  current !== null &&
+  request.readExecutor === current.readExecutor &&
+  request.connectedTarget === current.connectedTarget;
 
 export const useDraftWorkspace = (
   workspaceId: string | null,
@@ -65,27 +78,27 @@ export const useDraftWorkspace = (
     readonly connectedTarget: string | null;
     readonly workspaceId: string | null;
   } | null>(null);
-  const connectionSignatureRef = useRef<{
-    readonly readExecutor: ConsoleReadExecutor | null;
-    readonly connectedTarget: string | null;
-  } | null>(null);
-  const connectionGenerationRef = useRef(0);
-  const connectionSignature = { readExecutor, connectedTarget };
-  const previousConnection = connectionSignatureRef.current;
-  if (
-    previousConnection === null ||
-    previousConnection.readExecutor !== readExecutor ||
-    previousConnection.connectedTarget !== connectedTarget
-  ) {
-    connectionGenerationRef.current++;
-    connectionSignatureRef.current = connectionSignature;
-  }
+  const listProvenanceRef = useRef<DraftReadProvenance | null>(null);
+  const committedProvenanceRef = useRef<DraftReadProvenance | null>(null);
+
+  const currentProvenance = useMemo<DraftReadProvenance | null>(
+    () =>
+      readExecutor !== null && connectedTarget !== null
+        ? {
+            readExecutor,
+            connectedTarget,
+          }
+        : null,
+    [connectedTarget, readExecutor],
+  );
 
   const runList = useCallback((force = false) => {
-    if (!client || !connectedTarget) return;
+    if (!client || currentProvenance === null) return;
     if (listPendingRef.current && !force) return;
     listPendingRef.current = false;
     const generation = ++listGenerationRef.current;
+    const requestProvenance = currentProvenance;
+    listProvenanceRef.current = requestProvenance;
     listPendingRef.current = true;
     setState((current) => ({
       ...current,
@@ -96,7 +109,10 @@ export const useDraftWorkspace = (
     void client
       .list()
       .then((page) => {
-        if (generation !== listGenerationRef.current) return;
+        if (
+          generation !== listGenerationRef.current ||
+          !isCurrentProvenance(committedProvenanceRef.current, requestProvenance)
+        ) return;
         setState((current) => ({
           ...current,
           listPhase: "ready",
@@ -105,7 +121,10 @@ export const useDraftWorkspace = (
         }));
       })
       .catch((error: unknown) => {
-        if (generation !== listGenerationRef.current) return;
+        if (
+          generation !== listGenerationRef.current ||
+          !isCurrentProvenance(committedProvenanceRef.current, requestProvenance)
+        ) return;
         setState((current) => ({
           ...current,
           listPhase: "error",
@@ -115,7 +134,7 @@ export const useDraftWorkspace = (
       .finally(() => {
         if (generation === listGenerationRef.current) listPendingRef.current = false;
       });
-  }, [client, connectedTarget]);
+  }, [client, currentProvenance]);
 
   const runDetail = useCallback(
     (nextWorkspaceId: string | null, force = false) => {
@@ -144,7 +163,7 @@ export const useDraftWorkspace = (
       }
 
       const requestTarget = connectedTarget;
-      const requestConnectionGeneration = connectionGenerationRef.current;
+      const requestProvenance = currentProvenance;
       detailPendingRef.current = true;
       setState((current) => ({
         ...current,
@@ -158,7 +177,8 @@ export const useDraftWorkspace = (
         .then((detail) => {
           if (
             generation !== detailGenerationRef.current ||
-            requestConnectionGeneration !== connectionGenerationRef.current
+            requestProvenance === null ||
+            !isCurrentProvenance(committedProvenanceRef.current, requestProvenance)
           ) return;
           setState((current) => ({
             ...current,
@@ -167,13 +187,17 @@ export const useDraftWorkspace = (
               workspace: detail,
               workspaceId: nextWorkspaceId,
               connectedTarget: requestTarget,
-              connectionGeneration: requestConnectionGeneration,
+              readExecutor: requestProvenance.readExecutor,
             },
             detailMessage: null,
           }));
         })
         .catch((error: unknown) => {
-          if (generation !== detailGenerationRef.current) return;
+          if (
+            generation !== detailGenerationRef.current ||
+            requestProvenance === null ||
+            !isCurrentProvenance(committedProvenanceRef.current, requestProvenance)
+          ) return;
           setState((current) => ({
             ...current,
             detailPhase: "error",
@@ -185,10 +209,11 @@ export const useDraftWorkspace = (
           if (generation === detailGenerationRef.current) detailPendingRef.current = false;
         });
     },
-    [client, connectedTarget],
+    [client, connectedTarget, currentProvenance],
   );
 
   useEffect(() => {
+    committedProvenanceRef.current = currentProvenance;
     const previousRequest = observedRequestRef.current;
     const connectionChanged =
       previousRequest === null ||
@@ -203,6 +228,7 @@ export const useDraftWorkspace = (
       detailGenerationRef.current++;
       listPendingRef.current = false;
       detailPendingRef.current = false;
+      listProvenanceRef.current = null;
       setState((current) => ({
         ...current,
         listPhase: "disconnected",
@@ -234,7 +260,7 @@ export const useDraftWorkspace = (
     } else if (workspaceChanged) {
       runDetail(workspaceId, true);
     }
-  }, [client, connectedTarget, readExecutor, runDetail, runList, workspaceId]);
+  }, [client, connectedTarget, currentProvenance, readExecutor, runDetail, runList, workspaceId]);
 
   const refresh = useCallback(() => {
     if (!client || !connectedTarget) return;
@@ -249,9 +275,34 @@ export const useDraftWorkspace = (
     connectedTarget !== null &&
     storedSelection.workspaceId === workspaceId &&
     storedSelection.connectedTarget === connectedTarget &&
-    storedSelection.connectionGeneration === connectionGenerationRef.current
+    storedSelection.readExecutor === readExecutor
       ? storedSelection.workspace
       : null;
 
-  return { ...state, selected, refresh };
+  const hasCurrentList =
+    currentProvenance !== null &&
+    listProvenanceRef.current !== null &&
+    isCurrentProvenance(currentProvenance, listProvenanceRef.current);
+  const visibleListPhase =
+    currentProvenance === null
+      ? "disconnected"
+      : hasCurrentList
+        ? state.listPhase
+        : "loading";
+  const visibleDetailPhase =
+    currentProvenance === null
+      ? "disconnected"
+      : storedSelection !== null && selected === null
+        ? "loading"
+        : state.detailPhase;
+
+  return {
+    ...state,
+    listPhase: visibleListPhase,
+    detailPhase: visibleDetailPhase,
+    items: hasCurrentList ? state.items : [],
+    listMessage: hasCurrentList ? state.listMessage : null,
+    selected,
+    refresh,
+  };
 };

@@ -7,6 +7,7 @@ import type {
   RunClient,
 } from "../workspace/domain/lifecycle-clients.js";
 import { useLifecycleExplorer } from "./useLifecycleExplorer.js";
+import type { LifecycleState } from "./state.js";
 import type {
   ArtifactDetail,
   ArtifactList,
@@ -188,6 +189,82 @@ describe("useLifecycleExplorer", () => {
       phase: "loaded",
       value: { items: [{ key: "new@1" }] },
     });
+  });
+
+  it("fails closed immediately when the lifecycle client bundle changes", async () => {
+    const oldArtifactList: ArtifactList = {
+      items: [{
+        key: "old@1",
+        artifactId: "old",
+        version: 1,
+        kind: "workflow",
+        displayName: "Old",
+        description: null,
+        outcomes: [],
+        requiredSources: [],
+        diagnosticCount: 0,
+      }],
+      total: 1,
+      nextCursor: null,
+    };
+    const oldDeploymentList: DeploymentList = {
+      items: [{
+        id: "old.default",
+        artifactId: "old",
+        artifactVersion: 1,
+        bindingCount: 0,
+        driftPolicy: "block",
+      }],
+    };
+    const oldRunList: RunList = {
+      items: [{
+        runId: "old-run",
+        deploymentId: "old.default",
+        artifactId: "old",
+        artifactVersion: 1,
+        status: "completed",
+        resumeReadiness: "not_applicable",
+        diagnosticCount: 0,
+      }],
+      total: 1,
+      nextCursor: null,
+    };
+    const first = makeClients({
+      artifacts: { list: vi.fn().mockResolvedValue(oldArtifactList) },
+      deployments: { list: vi.fn().mockResolvedValue(oldDeploymentList) },
+      runs: { list: vi.fn().mockResolvedValue(oldRunList) },
+    });
+    const never = <T,>(): Promise<T> => new Promise<T>(() => undefined);
+    const second = makeClients({
+      artifacts: { list: vi.fn().mockImplementation(() => never<ArtifactList>()) },
+      deployments: { list: vi.fn().mockImplementation(() => never<DeploymentList>()) },
+      runs: { list: vi.fn().mockImplementation(() => never<RunList>()) },
+    });
+    const renders: LifecycleState[] = [];
+    const { result, rerender } = renderHook(
+      ({ clients }: { clients: LifecycleClients | null }) => {
+        const current = useLifecycleExplorer(clients);
+        renders.push(current.state);
+        return current;
+      },
+      { initialProps: { clients: first } },
+    );
+
+    await waitFor(() => expect(result.current.state.artifactList.phase).toBe("loaded"));
+    act(() => result.current.selectArtifact("report@2"));
+    await waitFor(() => expect(result.current.state.artifactDetail).not.toBeNull());
+    const renderCountBeforeClientChange = renders.length;
+    rerender({ clients: second });
+
+    const transitionState = renders[renderCountBeforeClientChange];
+    expect(transitionState?.artifactList).toEqual({ phase: "idle" });
+    expect(transitionState?.deploymentList).toEqual({ phase: "idle" });
+    expect(transitionState?.runList).toEqual({ phase: "idle" });
+    expect(transitionState?.artifactDetail).toBeNull();
+    expect(transitionState?.deploymentDetail).toBeNull();
+    expect(transitionState?.deploymentValidation).toBeNull();
+    expect(transitionState?.runDetail).toBeNull();
+    expect(transitionState?.trace).toBeNull();
   });
 
   it("rejects a late artifact inspect after the URL-owned id changes", async () => {

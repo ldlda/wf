@@ -33,6 +33,7 @@ export const useLifecycleExplorer = (
   const deploymentDetailGenerationRef = useRef(0);
   const runListGenerationRef = useRef(0);
   const runDetailGenerationRef = useRef(0);
+  const committedClientsRef = useRef<LifecycleClients | null | undefined>(undefined);
 
   const invalidateDetailReads = useCallback((): void => {
     artifactDetailGenerationRef.current++;
@@ -119,6 +120,7 @@ export const useLifecycleExplorer = (
 
   useEffect(() => {
     const targetGeneration = ++generationRef.current;
+    committedClientsRef.current = clients;
     const artifactGeneration = ++artifactListGenerationRef.current;
     const deploymentGeneration = ++deploymentListGenerationRef.current;
     const runGeneration = ++runListGenerationRef.current;
@@ -130,7 +132,7 @@ export const useLifecycleExplorer = (
       runGeneration,
       targetGeneration,
     );
-  }, [invalidateDetailReads, startCollectionReads]);
+  }, [clients, invalidateDetailReads, startCollectionReads]);
 
   const selectArtifact = useCallback(
     (artifactKey: string | null): void => {
@@ -268,7 +270,12 @@ export const useLifecycleExplorer = (
   );
 
   return {
-    state,
+    // A client change is visible before passive effects run. Project the old
+    // reducer snapshot to an empty state until the new target is committed.
+    state:
+      committedClientsRef.current === clients
+        ? state
+        : initialLifecycleState,
     selectArtifact,
     selectDeployment,
     selectRun,
