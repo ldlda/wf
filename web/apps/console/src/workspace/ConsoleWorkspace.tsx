@@ -27,14 +27,17 @@ export const ConsoleWorkspace = () => {
   );
 
   const readExecutor = useMemo(
-    () =>
-      connectedTarget
-        ? createConsoleReadExecutor({
-            target: connectedTarget,
-            recordEvidence,
-            allocateEvidenceId,
-          })
-        : null,
+    () => {
+      if (!connectedTarget) return null;
+      const executorGeneration = connectGeneration.current;
+      return createConsoleReadExecutor({
+        target: connectedTarget,
+        recordEvidence,
+        allocateEvidenceId,
+        shouldRecordEvidence: () =>
+          connectGeneration.current === executorGeneration,
+      });
+    },
     [allocateEvidenceId, connectedTarget, recordEvidence],
   );
 

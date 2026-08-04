@@ -1,11 +1,14 @@
 import { describe, expect, it, vi } from "vitest";
 import { ConsoleApiError } from "../../connection/api.js";
-import type { RpcResponse } from "../../connection/contracts.js";
+import type { OperationName, RpcResponse } from "../../connection/contracts.js";
 import { createConsoleReadExecutor } from "./read-executor.js";
 
-const success = (interpreted: unknown): RpcResponse => ({
+const success = (
+  interpreted: unknown,
+  operation: OperationName = "workflow.capabilities.list",
+): RpcResponse => ({
   ok: true,
-  operation: "workflow.capabilities.list",
+  operation,
   label: "List capabilities",
   interpreted,
   exchange: { request: { sent: true }, response: { status: 200 } },
@@ -69,6 +72,33 @@ describe("ConsoleReadExecutor", () => {
       id: "workflow.capabilities.list-0",
       label: "workflow.capabilities.list failed",
       response: { status: 502 },
+    });
+  });
+
+  it("rejects a successful response for a different requested operation", async () => {
+    const recordEvidence = vi.fn();
+    const decode = vi.fn((value: unknown) => value);
+    const executor = createConsoleReadExecutor({
+      target: "http://console.test/rpc",
+      recordEvidence,
+      invoke: vi.fn(async () =>
+        success(null, "workflow.draft_workspaces.list"),
+      ),
+    });
+
+    await expect(
+      executor.run("workflow.capabilities.list", {}, decode),
+    ).rejects.toMatchObject({
+      kind: "operation",
+      operation: "workflow.capabilities.list",
+      message: "operation mismatch: requested workflow.capabilities.list, received workflow.draft_workspaces.list",
+    });
+    expect(decode).not.toHaveBeenCalled();
+    expect(recordEvidence).toHaveBeenCalledTimes(1);
+    expect(recordEvidence.mock.calls[0]?.[0]).toMatchObject({
+      operation: "workflow.capabilities.list",
+      label: "workflow.capabilities.list failed",
+      equivalentCli: "unavailable: response operation mismatch",
     });
   });
 
@@ -157,5 +187,19 @@ describe("ConsoleReadExecutor", () => {
     expect(recordEvidence.mock.calls[0]?.[0]?.id).toBe(
       "workspace-workflow.capabilities.list",
     );
+  });
+
+  it("does not record evidence when its connection generation is stale", async () => {
+    const recordEvidence = vi.fn();
+    const executor = createConsoleReadExecutor({
+      target: "http://console.test/rpc",
+      recordEvidence,
+      shouldRecordEvidence: () => false,
+      invoke: vi.fn(async () => success(null)),
+    });
+
+    await executor.run("workflow.capabilities.list", {}, (value) => value);
+
+    expect(recordEvidence).not.toHaveBeenCalled();
   });
 });

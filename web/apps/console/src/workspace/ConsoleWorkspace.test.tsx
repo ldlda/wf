@@ -39,6 +39,14 @@ const successfulRead = (): RpcResponse => ({
   durationMs: 4,
 });
 
+const deferred = <T,>() => {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((resolvePromise) => {
+    resolve = resolvePromise;
+  });
+  return { promise, resolve };
+};
+
 const OutletProbe = () => {
   const workspace = useConsoleWorkspace();
   const executorIdentity = useRef<NonNullable<typeof workspace.readExecutor> | null>(null);
@@ -148,6 +156,37 @@ describe("ConsoleWorkspace", () => {
       const ids = screen.getByTestId("evidence-ids").textContent?.split("|") ?? [];
       expect(ids).toHaveLength(4);
       expect(new Set(ids).size).toBe(ids.length);
+    });
+  });
+
+  it("drops a late read receipt from the old connection after reconnect", async () => {
+    const oldRead = deferred<RpcResponse>();
+    mockedConnectToServer
+      .mockResolvedValueOnce(successfulConnection("http://one.example/rpc"))
+      .mockResolvedValueOnce(successfulConnection("http://two.example/rpc"));
+    mockedCallOperation.mockReturnValueOnce(oldRead.promise);
+    renderWorkspace();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Connect" }));
+    await user.click(await screen.findByRole("button", { name: "Read capabilities" }));
+    expect(mockedCallOperation).toHaveBeenCalledTimes(1);
+
+    await user.click(screen.getByRole("button", { name: "Reconnect" }));
+    await waitFor(() => {
+      expect(screen.getByTestId("connected-target")).toHaveTextContent(
+        "http://two.example/rpc",
+      );
+      expect(screen.getByTestId("evidence-ids")).toHaveTextContent(
+        "workflow.health-0|workflow.health-1",
+      );
+    });
+
+    oldRead.resolve(successfulRead());
+    await waitFor(() => {
+      expect(screen.getByTestId("evidence-ids")).toHaveTextContent(
+        "workflow.health-0|workflow.health-1",
+      );
     });
   });
 

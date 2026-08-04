@@ -50,6 +50,7 @@ export const createConsoleReadExecutor = (options: {
   readonly target: string;
   readonly recordEvidence: (record: EvidenceRecord) => void;
   readonly allocateEvidenceId?: EvidenceIdAllocator;
+  readonly shouldRecordEvidence?: () => boolean;
   readonly invoke?: InvokeOperation;
 }): ConsoleReadExecutor => {
   let evidenceSequence = 0;
@@ -66,6 +67,7 @@ export const createConsoleReadExecutor = (options: {
     response: unknown,
     durationMs: number,
   ): void => {
+    if (options.shouldRecordEvidence?.() === false) return;
     options.recordEvidence({
       id: allocateEvidenceId(operation),
       operation,
@@ -115,6 +117,22 @@ export const createConsoleReadExecutor = (options: {
           errorKindForCode(response.error.code),
           operation,
           response.error.message,
+        );
+      }
+
+      if (response.operation !== operation) {
+        record(
+          operation,
+          `${operation} failed`,
+          "unavailable: response operation mismatch",
+          response.exchange.request,
+          response.exchange.response,
+          response.durationMs,
+        );
+        throw new ConsoleClientError(
+          "operation",
+          operation,
+          `operation mismatch: requested ${operation}, received ${response.operation}`,
         );
       }
 

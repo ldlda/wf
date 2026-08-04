@@ -16,6 +16,17 @@ DONE
 - Added a skip link before the shell header. It becomes visible on focus and
   targets `#console-workspace-main`.
 
+## Final Review Follow-up
+
+- Read executors now capture their connection generation and gate evidence
+  before allocator use. A read started on an old target can still settle for
+  its caller, but its late receipt is not appended after reconnect; intentional
+  evidence from completed current generations remains preserved.
+- The executor rejects successful envelopes whose `response.operation` differs
+  from the requested operation before decoding or recording success. The
+  mismatch is represented as an operation failure receipt and
+  `ConsoleClientError`.
+
 ## Changed Files
 
 - `web/apps/console/src/workspace/context.ts`
@@ -56,11 +67,21 @@ The review-fix red run reproduced the allocator reset, permanent connected
 source-loading flag, and missing skip link. The follow-up focused run passed
 with 5 files and 42 tests, plus the intentional deferred application todo.
 
+The final review red run reproduced late old-generation receipt attribution and
+accepted mismatched operation envelopes. The follow-up tests cover both cases.
+
 ## Verification
 
 - `pnpm --dir web --filter @lda/console test -- src/workspace/ConsoleWorkspace.test.tsx src/workspace/ConsoleShell.test.tsx src/workspace/EvidenceLedger.test.tsx src/app/App.test.tsx`: passed; 4 files and 12 tests.
 - `pnpm --dir web --filter @lda/console typecheck`: passed.
 - `git diff --check`: passed before final staging.
+
+Final cross-task verification:
+
+- `pnpm --dir web --filter @lda/console test -- src/connection src/workspace/domain src/workspace src/app`: passed; 12 files, 74 tests, and 1 intentional todo.
+- `pnpm --dir web --filter @lda/console typecheck`: passed.
+- `pnpm --dir web --filter @lda/web-server test`: passed; 11 files and 101 tests.
+- `pnpm --dir web --filter @lda/web-server typecheck`: passed.
 
 ## Deviations
 
@@ -78,3 +99,6 @@ with 5 files and 42 tests, plus the intentional deferred application todo.
   and restore those surfaces. `App.test.tsx` contains an explicit `it.todo`
   seam for restoring source, demo, and lifecycle application coverage at that
   point; no future modules are imported in Task 4.
+- Final review Minor numeric parity is deferred. The authored/generated
+  numeric-boundary mismatch is outside this focused integration fix and was
+  not changed here.
