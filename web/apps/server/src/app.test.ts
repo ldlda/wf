@@ -106,17 +106,27 @@ describe("POST /api/connect", () => {
 
 describe("POST /api/rpc", () => {
   it.each([
-    "workflow.capabilities.list",
-    "workflow.capabilities.inspect",
-    "workflow.draft_workspaces.list",
-    "workflow.draft_workspaces.get",
-  ] as const)("authorizes the read operation %s", async (operation) => {
+    { operation: "workflow.capabilities.list", params: {} },
+    {
+      operation: "workflow.capabilities.inspect",
+      params: { qualified_name: "workflow.health" },
+    },
+    { operation: "workflow.draft_workspaces.list", params: {} },
+    {
+      operation: "workflow.draft_workspaces.get",
+      params: { workspace_id: "draft-1" },
+    },
+  ] as const)("authorizes the read operation $operation", async ({
+    operation,
+    params,
+  }) => {
     const res = await app.request("/api/rpc", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         operation,
         target: "http://127.0.0.1:8000/rpc",
+        params,
       }),
     });
 
@@ -127,7 +137,7 @@ describe("POST /api/rpc", () => {
     expect(okRunner).toHaveBeenCalledWith(
       operation,
       "http://127.0.0.1:8000/rpc",
-      {},
+      params,
     );
   });
 

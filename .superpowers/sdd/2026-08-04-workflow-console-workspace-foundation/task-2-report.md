@@ -72,3 +72,35 @@ introduced in the console slice.
 None. The pre-implementation failures were the expected missing-feature red
 state, and the final tests confirm that admin operations and the draft workspace
 mutation remain rejected.
+
+## Fix Round 2
+
+### Review Finding Addressed
+
+The Task 2 review identified that the table-driven browser authorization test
+sent no params for any of the four reads. The test now uses per-operation
+`{ operation, params }` cases, including:
+
+- `{}` for `workflow.capabilities.list`.
+- `{ qualified_name: "workflow.health" }` for
+  `workflow.capabilities.inspect`.
+- `{}` for `workflow.draft_workspaces.list`.
+- `{ workspace_id: "draft-1" }` for `workflow.draft_workspaces.get`.
+
+The test asserts that the same params reach `runOperation`. No production code
+was changed because the existing Hono route already forwards the request's
+`params` value unchanged.
+
+### Fix Verification
+
+- `pnpm --dir web --filter @lda/web-server test -- src/app.test.ts src/browser-operation-policy.test.ts`:
+  passed; 2 test files and 22 tests passed.
+- `pnpm --dir web --filter @lda/console test -- src/connection/api.test.ts`:
+  passed; 1 test file and 10 tests passed.
+- `pnpm --dir web --filter @lda/web-server typecheck`: passed.
+- `pnpm --dir web --filter @lda/console typecheck`: passed.
+
+### Fix Deviations And Bugs
+
+None. This was a test-only coverage fix within Task 2; no Task 3 work was
+performed.
