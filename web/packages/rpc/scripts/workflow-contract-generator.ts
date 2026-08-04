@@ -92,6 +92,10 @@ const runtimeOperationNames = new Set([
   "workflow.deployments.inspect",
   "workflow.deployments.validate",
   "workflow.runs.list",
+  "workflow.runs.inspect",
+  "workflow.runs.start",
+  "workflow.runs.resume",
+  "workflow.runs.trace",
 ]);
 
 export const parseWorkflowContractManifest = (

@@ -2766,7 +2766,104 @@ export const workflowRuntimeContract = {
       ],
       "type": "object"
     },
+    "InterruptPayload": {
+      "description": "Persisted typed interrupt contract exposed to API clients.",
+      "properties": {
+        "frame_id": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "node_id": {
+          "type": "string"
+        },
+        "outcomes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "payload": {
+          "$ref": "#/components/schemas/JsonObject"
+        },
+        "request_schema": {
+          "$ref": "#/components/schemas/JsonSchema"
+        },
+        "resumable": {
+          "type": "boolean"
+        },
+        "resume_schema": {
+          "$ref": "#/components/schemas/JsonSchema"
+        },
+        "route": {
+          "anyOf": [
+            {
+              "$ref": "#/components/schemas/InterruptRoutePayload"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "typed": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "frame_id",
+        "node_id",
+        "kind",
+        "payload",
+        "resumable",
+        "route",
+        "outcomes",
+        "request_schema",
+        "resume_schema",
+        "typed"
+      ],
+      "type": "object"
+    },
+    "InterruptRoutePayload": {
+      "properties": {
+        "frame_id": {
+          "type": "string"
+        },
+        "lineage_id": {
+          "type": "string"
+        },
+        "node_id": {
+          "type": "string"
+        },
+        "parent_frame_id": {
+          "type": "string"
+        },
+        "scope_id": {
+          "type": "string"
+        },
+        "workflow_ref": {
+          "$ref": "#/components/schemas/WorkflowRefPayload"
+        }
+      },
+      "required": [
+        "frame_id",
+        "node_id",
+        "scope_id",
+        "lineage_id",
+        "parent_frame_id",
+        "workflow_ref"
+      ],
+      "type": "object"
+    },
     "JsonObject": {
+      "additionalProperties": true,
+      "type": "object"
+    },
+    "JsonSchema": {
       "additionalProperties": true,
       "type": "object"
     },
@@ -3044,6 +3141,126 @@ export const workflowRuntimeContract = {
     "ResumeReadiness": {
       "type": "string"
     },
+    "RunResult": {
+      "description": "Run operation result with an optional caller-requested trace slice.",
+      "properties": {
+        "artifact_id": {
+          "type": "string"
+        },
+        "artifact_version": {
+          "type": "integer"
+        },
+        "deployment_id": {
+          "type": "string"
+        },
+        "diagnostics": {
+          "items": {
+            "$ref": "#/components/schemas/DependencyDiagnosticPayload"
+          },
+          "type": "array"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "interrupt": {
+          "anyOf": [
+            {
+              "$ref": "#/components/schemas/InterruptPayload"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "next_actions": {
+          "$ref": "#/components/schemas/NextActionsPayload"
+        },
+        "outcome": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "output": {
+          "anyOf": [
+            {
+              "$ref": "#/components/schemas/JsonObject"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "resume_readiness": {
+          "anyOf": [
+            {
+              "$ref": "#/components/schemas/ResumeReadiness"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "run_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "$ref": "#/components/schemas/RunStatus"
+        },
+        "trace": {
+          "items": {
+            "$ref": "#/components/schemas/TraceEntryPayload"
+          },
+          "type": "array"
+        },
+        "trace_count": {
+          "type": "integer"
+        },
+        "trace_limit": {
+          "type": "integer"
+        },
+        "trace_start": {
+          "type": "integer"
+        },
+        "trace_truncated": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "artifact_id",
+        "artifact_version",
+        "diagnostics",
+        "next_actions",
+        "deployment_id",
+        "status",
+        "run_id",
+        "resume_readiness",
+        "interrupt",
+        "outcome",
+        "error",
+        "output",
+        "trace_count"
+      ],
+      "type": "object"
+    },
     "RunStatus": {
       "type": "string"
     },
@@ -3087,6 +3304,130 @@ export const workflowRuntimeContract = {
         "diagnostic_count",
         "created_at",
         "updated_at"
+      ],
+      "type": "object"
+    },
+    "RunTraceResult": {
+      "description": "Run result where a bounded trace slice is always present.",
+      "properties": {
+        "artifact_id": {
+          "type": "string"
+        },
+        "artifact_version": {
+          "type": "integer"
+        },
+        "deployment_id": {
+          "type": "string"
+        },
+        "diagnostics": {
+          "items": {
+            "$ref": "#/components/schemas/DependencyDiagnosticPayload"
+          },
+          "type": "array"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "interrupt": {
+          "anyOf": [
+            {
+              "$ref": "#/components/schemas/InterruptPayload"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "next_actions": {
+          "$ref": "#/components/schemas/NextActionsPayload"
+        },
+        "outcome": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "output": {
+          "anyOf": [
+            {
+              "$ref": "#/components/schemas/JsonObject"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "resume_readiness": {
+          "anyOf": [
+            {
+              "$ref": "#/components/schemas/ResumeReadiness"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "run_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "$ref": "#/components/schemas/RunStatus"
+        },
+        "trace": {
+          "items": {
+            "$ref": "#/components/schemas/TraceEntryPayload"
+          },
+          "type": "array"
+        },
+        "trace_count": {
+          "type": "integer"
+        },
+        "trace_limit": {
+          "type": "integer"
+        },
+        "trace_start": {
+          "type": "integer"
+        },
+        "trace_truncated": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "artifact_id",
+        "artifact_version",
+        "diagnostics",
+        "next_actions",
+        "deployment_id",
+        "status",
+        "run_id",
+        "resume_readiness",
+        "interrupt",
+        "outcome",
+        "error",
+        "output",
+        "trace_count",
+        "trace",
+        "trace_start",
+        "trace_limit",
+        "trace_truncated"
       ],
       "type": "object"
     },
@@ -3313,6 +3654,64 @@ export const workflowRuntimeContract = {
       ],
       "type": "object"
     },
+    "TraceEntryPayload": {
+      "properties": {
+        "frame_id": {
+          "type": "string"
+        },
+        "next_node_id": {
+          "type": "string"
+        },
+        "node_id": {
+          "type": "string"
+        },
+        "outcome": {
+          "type": "string"
+        },
+        "output": {
+          "$ref": "#/components/schemas/JsonObject"
+        },
+        "resolved_input": {
+          "$ref": "#/components/schemas/JsonObject"
+        },
+        "state_changes": {
+          "$ref": "#/components/schemas/JsonObject"
+        },
+        "step_type": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "frame_id",
+        "node_id",
+        "step_type",
+        "resolved_input",
+        "outcome",
+        "next_node_id",
+        "output",
+        "state_changes"
+      ],
+      "type": "object"
+    },
+    "TraceRangeParams": {
+      "additionalProperties": false,
+      "properties": {
+        "limit": {
+          "default": 20,
+          "description": "Maximum trace entries to return; full traces are never implicit.",
+          "maximum": 100,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "start": {
+          "default": 0,
+          "description": "Zero-based trace offset.",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
     "ValidateDeploymentResult": {
       "properties": {
         "artifact_id": {
@@ -3460,6 +3859,20 @@ export const workflowRuntimeContract = {
         "drift_policy"
       ],
       "type": "object"
+    },
+    "WorkflowRefPayload": {
+      "properties": {
+        "artifact_id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "integer"
+        }
+      },
+      "type": "object"
     }
   },
   "operations": {
@@ -3603,6 +4016,24 @@ export const workflowRuntimeContract = {
         "$ref": "#/components/schemas/HealthResult"
       }
     },
+    "workflow.runs.inspect": {
+      "payload": {
+        "additionalProperties": false,
+        "properties": {
+          "run_id": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id"
+        ],
+        "type": "object"
+      },
+      "success": {
+        "$ref": "#/components/schemas/RunResult"
+      }
+    },
     "workflow.runs.list": {
       "payload": {
         "additionalProperties": false,
@@ -3646,6 +4077,99 @@ export const workflowRuntimeContract = {
       },
       "success": {
         "$ref": "#/components/schemas/ListRunsResult"
+      }
+    },
+    "workflow.runs.resume": {
+      "payload": {
+        "additionalProperties": false,
+        "properties": {
+          "run_id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "resume_payload": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "resume_outcome": {
+            "default": "submitted",
+            "minLength": 1,
+            "type": "string"
+          },
+          "trace_range": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TraceRangeParams"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "run_id"
+        ],
+        "type": "object"
+      },
+      "success": {
+        "$ref": "#/components/schemas/RunResult"
+      }
+    },
+    "workflow.runs.start": {
+      "payload": {
+        "additionalProperties": false,
+        "properties": {
+          "deployment_id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "workflow_input": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "trace_range": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TraceRangeParams"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "deployment_id"
+        ],
+        "type": "object"
+      },
+      "success": {
+        "$ref": "#/components/schemas/RunResult"
+      }
+    },
+    "workflow.runs.trace": {
+      "payload": {
+        "additionalProperties": false,
+        "properties": {
+          "run_id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "trace_range": {
+            "$ref": "#/components/schemas/TraceRangeParams"
+          }
+        },
+        "required": [
+          "run_id",
+          "trace_range"
+        ],
+        "type": "object"
+      },
+      "success": {
+        "$ref": "#/components/schemas/RunTraceResult"
       }
     },
     "workflow.sources.list": {

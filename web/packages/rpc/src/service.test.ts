@@ -194,7 +194,19 @@ const lifecycleCases = [
       artifact_version: 1,
       status: "interrupted",
       resume_readiness: "ready",
-      interrupt: { kind: "review", payload: {}, outcomes: [] },
+      interrupt: {
+        id: "interrupt_1",
+        frame_id: "frame_1",
+        node_id: "review",
+        kind: "review",
+        payload: {},
+        resumable: true,
+        route: null,
+        outcomes: [],
+        request_schema: { type: "object" },
+        resume_schema: { type: "object" },
+        typed: true,
+      },
       outcome: null,
       error: null,
       output: null,
@@ -234,6 +246,9 @@ const lifecycleCases = [
       status: "interrupted",
       resume_readiness: "ready",
       interrupt: {
+        id: "interrupt_demo",
+        frame_id: "frame_review",
+        node_id: "review_issues",
         kind: "issue_review",
         payload: {
           report_markdown: "# lda.chat Thesis And Project Readiness Report",
@@ -246,6 +261,8 @@ const lifecycleCases = [
             },
           ],
         },
+        resumable: true,
+        route: null,
         outcomes: ["submitted", "cancelled"],
         request_schema: {
           type: "object",
@@ -324,18 +341,50 @@ const lifecycleCases = [
     params: { run_id: "run_1", trace_range: { start: 0, limit: 50 } },
     result: {
       run_id: "run_1",
+      deployment_id: "report.default",
+      artifact_id: "report",
+      artifact_version: 1,
       status: "interrupted",
+      resume_readiness: "ready",
+      interrupt: {
+        id: "interrupt_1",
+        frame_id: "frame_1",
+        node_id: "review",
+        kind: "review",
+        payload: {},
+        resumable: true,
+        route: null,
+        outcomes: ["submitted", "cancelled"],
+        request_schema: { type: "object" },
+        resume_schema: { type: "object" },
+        typed: true,
+      },
+      outcome: null,
+      error: null,
+      output: null,
+      diagnostics: [],
+      trace_count: 1,
+      next_actions: {
+        can_continue: true,
+        can_save_now: null,
+        recommended_next_tool: "wf.workflow.resume_run",
+        reason: "run is interrupted",
+        patch_examples: [],
+        warnings: [],
+      },
       trace_start: 0,
       trace_limit: 50,
       trace_truncated: false,
       trace: [
         {
+          frame_id: "frame_1",
           node_id: "review",
           step_type: "interrupt",
           resolved_input: { report: "..." },
           outcome: "submitted",
           output: {},
           state_changes: {},
+          next_node_id: "create_issues",
         },
       ],
     },
@@ -634,9 +683,11 @@ describe("lifecycle operations", () => {
     expect(exchange.interpreted).toMatchObject({
       frames: [
         {
+          frameId: "frame_1",
           nodeId: "review",
           stepType: "interrupt",
           outcome: "submitted",
+          nextNodeId: "create_issues",
         },
       ],
       traceStart: 0,
@@ -644,6 +695,31 @@ describe("lifecycle operations", () => {
       traceTruncated: false,
     });
     expect(exchange.interpreted).not.toHaveProperty("trace");
+  });
+
+  it("omits absent optional trace-range flags from the equivalent CLI", async () => {
+    const traceCase = lifecycleCases.find(
+      (testCase) => testCase.operation === "workflow.runs.trace",
+    );
+    expect(traceCase).toBeDefined();
+    if (!traceCase) return;
+
+    const fetch: typeof globalThis.fetch = async (input, init) => {
+      const request = await requestBody(input, init);
+      return jsonResponse({
+        jsonrpc: "2.0",
+        id: request.id,
+        result: traceCase.result,
+      });
+    };
+
+    const exchange = await runOperation(
+      { fetch },
+      "workflow.runs.trace",
+      { run_id: "run_1", trace_range: {} },
+    );
+
+    expect(exchange.equivalentCli).toBe("uv run wf run trace run_1");
   });
 
   it("interprets typed interrupt contracts from run start", async () => {

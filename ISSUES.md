@@ -73,8 +73,9 @@
     and result types, and a 70-operation lookup map from that manifest.
     `pnpm contract:check` detects TypeScript artifact drift.
   - The manifest does not authorize callers: browser authorization, operation
-    metadata, and the 12 current Effect RPC implementations remain authored
-    boundaries.
+    metadata, and membership in the 12-operation Effect `RpcGroup` remain
+    authored boundaries even though their payload/result decoders are
+    generated.
   - A fail-closed representative JSON Schema-to-Effect translator now proves
     constrained primitives, objects, arrays, `anyOf`, local references, and
     structurally guarded recursion against synthetic schemas plus
@@ -83,17 +84,18 @@
     weakening them.
   - A test-only parity harness translates the payload and success schemas for
     all 12 authored RPCs: all 24 sides are inside the supported translator
-    subset. Eight mismatches are pinned for the current representative result
-    fixtures. Run inspect/start/resume use a reduced authored interrupt instead
-    of the complete manifest interrupt in both acceptance directions; run trace
-    uses a compact trace-page envelope and omits canonical frame identifiers.
-  - Runtime decoder migration and broader callable client coverage remain
-    incomplete. Health, source list, artifact list/inspect, deployment
-    list/inspect/validate, and run list now use generated runtime decoders with
-    a 64-container request/response value-depth guard. Resolve the run
-    detail/trace result
-    contract deliberately before migrating those four operations. The browser
-    allowlist remains authored.
+    subset. Frozen pre-migration schemas pin eight former result mismatches.
+    Run inspect/start/resume used a reduced interrupt instead of the complete
+    manifest interrupt in both acceptance directions; run trace used a compact
+    trace-page envelope and omitted canonical frame identifiers.
+  - Runtime decoder migration is complete for the 12 current Effect RPCs. Run
+    inspect/start/resume now require the canonical full interrupt contract, and
+    run trace requires the full run envelope plus canonical `frame_id` and
+    `next_node_id` values. Frozen pre-migration schemas keep the eight old
+    bidirectional mismatches visible as compatibility evidence. All generated
+    decoders apply a 64-container request/response value-depth guard. Broader
+    callable client coverage remains incomplete, and the browser allowlist
+    remains authored.
 - The stock `@open-rpc/generator` TypeScript client is not suitable here. It
   exhausted a 4 GB Node heap on the full contract and emitted invalid dotted
     class members plus `any` results for a minimal `workflow.health` contract.

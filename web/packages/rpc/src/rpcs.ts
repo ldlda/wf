@@ -2,29 +2,14 @@ import { Rpc, RpcGroup } from "@effect/rpc";
 import { Schema } from "effect";
 import { runtimeSchemasFor } from "./json-schema/runtime-schema.js";
 
-const NonNegativeIntegerSchema = Schema.Number.pipe(
-  Schema.int(),
-  Schema.between(0, Number.MAX_SAFE_INTEGER),
-);
-
 const PositiveIntegerSchema = Schema.Number.pipe(
   Schema.int(),
   Schema.between(1, Number.MAX_SAFE_INTEGER),
 );
 
-const JsonObjectSchema = Schema.Record({
-  key: Schema.String,
-  value: Schema.Unknown,
-});
-
 export const ArtifactRefSchema = Schema.Struct({
   artifact_id: Schema.String,
   version: PositiveIntegerSchema,
-});
-
-export const TraceRangeSchema = Schema.Struct({
-  start: NonNegativeIntegerSchema,
-  limit: PositiveIntegerSchema,
 });
 
 const healthSchemas = runtimeSchemasFor("workflow.health");
@@ -121,43 +106,9 @@ export const WorkflowRunsList = Rpc.make("workflow.runs.list", {
   error: Schema.Never,
 });
 
-export const WorkflowRunsInspectPayloadSchema = Schema.Struct({
-  run_id: Schema.String,
-});
-
-const RunInterruptSchema = Schema.Struct({
-  kind: Schema.String,
-  payload: JsonObjectSchema,
-  outcomes: Schema.Array(Schema.String),
-  request_schema: Schema.optional(JsonObjectSchema),
-  resume_schema: Schema.optional(JsonObjectSchema),
-  typed: Schema.optional(Schema.Boolean),
-});
-
-const RunNextActionsSchema = Schema.Struct({
-  can_continue: Schema.Boolean,
-  can_save_now: Schema.NullOr(Schema.Boolean),
-  recommended_next_tool: Schema.NullOr(Schema.String),
-  reason: Schema.String,
-  patch_examples: Schema.Array(Schema.Unknown),
-  warnings: Schema.Array(Schema.String),
-});
-
-export const WorkflowRunsInspectResultSchema = Schema.Struct({
-  run_id: Schema.String,
-  deployment_id: Schema.String,
-  artifact_id: Schema.String,
-  artifact_version: PositiveIntegerSchema,
-  status: Schema.String,
-  resume_readiness: Schema.String,
-  interrupt: Schema.NullOr(RunInterruptSchema),
-  outcome: Schema.NullOr(Schema.String),
-  error: Schema.NullOr(Schema.String),
-  output: Schema.NullOr(JsonObjectSchema),
-  diagnostics: Schema.Array(Schema.Unknown),
-  trace_count: NonNegativeIntegerSchema,
-  next_actions: RunNextActionsSchema,
-});
+const runInspectSchemas = runtimeSchemasFor("workflow.runs.inspect");
+export const WorkflowRunsInspectPayloadSchema = runInspectSchemas.payload;
+export const WorkflowRunsInspectResultSchema = runInspectSchemas.success;
 
 export const WorkflowRunsInspect = Rpc.make("workflow.runs.inspect", {
   payload: WorkflowRunsInspectPayloadSchema,
@@ -165,53 +116,27 @@ export const WorkflowRunsInspect = Rpc.make("workflow.runs.inspect", {
   error: Schema.Never,
 });
 
-export const WorkflowRunsStartPayloadSchema = Schema.Struct({
-  deployment_id: Schema.String,
-  workflow_input: JsonObjectSchema,
-  trace_range: Schema.optional(Schema.NullOr(TraceRangeSchema)),
-});
+const runStartSchemas = runtimeSchemasFor("workflow.runs.start");
+export const WorkflowRunsStartPayloadSchema = runStartSchemas.payload;
 
-export const WorkflowRunsResumePayloadSchema = Schema.Struct({
-  run_id: Schema.String,
-  resume_payload: JsonObjectSchema,
-  resume_outcome: Schema.optional(Schema.String),
-  trace_range: Schema.optional(Schema.NullOr(TraceRangeSchema)),
-});
+const runResumeSchemas = runtimeSchemasFor("workflow.runs.resume");
+export const WorkflowRunsResumePayloadSchema = runResumeSchemas.payload;
 
 export const WorkflowRunsStart = Rpc.make("workflow.runs.start", {
   payload: WorkflowRunsStartPayloadSchema,
-  success: WorkflowRunsInspectResultSchema,
+  success: runStartSchemas.success,
   error: Schema.Never,
 });
 
 export const WorkflowRunsResume = Rpc.make("workflow.runs.resume", {
   payload: WorkflowRunsResumePayloadSchema,
-  success: WorkflowRunsInspectResultSchema,
+  success: runResumeSchemas.success,
   error: Schema.Never,
 });
 
-export const WorkflowRunsTracePayloadSchema = Schema.Struct({
-  run_id: Schema.String,
-  trace_range: TraceRangeSchema,
-});
-
-const TraceFrameSchema = Schema.Struct({
-  node_id: Schema.String,
-  step_type: Schema.String,
-  resolved_input: JsonObjectSchema,
-  outcome: Schema.String,
-  output: JsonObjectSchema,
-  state_changes: JsonObjectSchema,
-});
-
-export const WorkflowRunsTraceResultSchema = Schema.Struct({
-  run_id: Schema.String,
-  status: Schema.String,
-  trace: Schema.Array(TraceFrameSchema),
-  trace_start: NonNegativeIntegerSchema,
-  trace_limit: PositiveIntegerSchema,
-  trace_truncated: Schema.Boolean,
-});
+const runTraceSchemas = runtimeSchemasFor("workflow.runs.trace");
+export const WorkflowRunsTracePayloadSchema = runTraceSchemas.payload;
+export const WorkflowRunsTraceResultSchema = runTraceSchemas.success;
 
 export const WorkflowRunsTrace = Rpc.make("workflow.runs.trace", {
   payload: WorkflowRunsTracePayloadSchema,

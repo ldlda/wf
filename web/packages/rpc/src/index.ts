@@ -29,7 +29,6 @@ export {
   WorkflowRunsTrace,
   WorkflowRpcs,
   ArtifactRefSchema,
-  TraceRangeSchema,
 } from "./rpcs.js";
 
 export { WorkflowRpc, makeWorkflowRpcLayer } from "./service.js";

@@ -2,50 +2,54 @@ import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { Either, Schema } from "effect";
 import { beforeAll, describe, expect, it } from "vitest";
-import {
-  WorkflowRunsInspectPayloadSchema,
-  WorkflowRunsInspectResultSchema,
-  WorkflowRunsResumePayloadSchema,
-  WorkflowRunsStartPayloadSchema,
-  WorkflowRunsTracePayloadSchema,
-  WorkflowRunsTraceResultSchema,
-  WorkflowRpcs,
-} from "../rpcs.js";
-import { authoredCleanRpcSchemas } from "./authored-rpc-fixtures.js";
+import { WorkflowRpcs } from "../rpcs.js";
+import { authoredRpcSchemas } from "./authored-rpc-fixtures.js";
 import { translateJsonSchema } from "./translator.js";
 
 const WorkflowHealthPayloadSchema =
-  authoredCleanRpcSchemas["workflow.health"].payload;
+  authoredRpcSchemas["workflow.health"].payload;
 const WorkflowHealthResultSchema =
-  authoredCleanRpcSchemas["workflow.health"].success;
+  authoredRpcSchemas["workflow.health"].success;
 const WorkflowSourcesListPayloadSchema =
-  authoredCleanRpcSchemas["workflow.sources.list"].payload;
+  authoredRpcSchemas["workflow.sources.list"].payload;
 const WorkflowSourcesListResultSchema =
-  authoredCleanRpcSchemas["workflow.sources.list"].success;
+  authoredRpcSchemas["workflow.sources.list"].success;
 const WorkflowArtifactsListPayloadSchema =
-  authoredCleanRpcSchemas["workflow.artifacts.list"].payload;
+  authoredRpcSchemas["workflow.artifacts.list"].payload;
 const WorkflowArtifactsListResultSchema =
-  authoredCleanRpcSchemas["workflow.artifacts.list"].success;
+  authoredRpcSchemas["workflow.artifacts.list"].success;
 const WorkflowArtifactsInspectPayloadSchema =
-  authoredCleanRpcSchemas["workflow.artifacts.inspect"].payload;
+  authoredRpcSchemas["workflow.artifacts.inspect"].payload;
 const WorkflowArtifactsInspectResultSchema =
-  authoredCleanRpcSchemas["workflow.artifacts.inspect"].success;
+  authoredRpcSchemas["workflow.artifacts.inspect"].success;
 const WorkflowDeploymentsListPayloadSchema =
-  authoredCleanRpcSchemas["workflow.deployments.list"].payload;
+  authoredRpcSchemas["workflow.deployments.list"].payload;
 const WorkflowDeploymentsListResultSchema =
-  authoredCleanRpcSchemas["workflow.deployments.list"].success;
+  authoredRpcSchemas["workflow.deployments.list"].success;
 const WorkflowDeploymentsInspectPayloadSchema =
-  authoredCleanRpcSchemas["workflow.deployments.inspect"].payload;
+  authoredRpcSchemas["workflow.deployments.inspect"].payload;
 const WorkflowDeploymentsInspectResultSchema =
-  authoredCleanRpcSchemas["workflow.deployments.inspect"].success;
+  authoredRpcSchemas["workflow.deployments.inspect"].success;
 const WorkflowDeploymentsValidatePayloadSchema =
-  authoredCleanRpcSchemas["workflow.deployments.validate"].payload;
+  authoredRpcSchemas["workflow.deployments.validate"].payload;
 const WorkflowDeploymentsValidateResultSchema =
-  authoredCleanRpcSchemas["workflow.deployments.validate"].success;
+  authoredRpcSchemas["workflow.deployments.validate"].success;
 const WorkflowRunsListPayloadSchema =
-  authoredCleanRpcSchemas["workflow.runs.list"].payload;
+  authoredRpcSchemas["workflow.runs.list"].payload;
 const WorkflowRunsListResultSchema =
-  authoredCleanRpcSchemas["workflow.runs.list"].success;
+  authoredRpcSchemas["workflow.runs.list"].success;
+const WorkflowRunsInspectPayloadSchema =
+  authoredRpcSchemas["workflow.runs.inspect"].payload;
+const WorkflowRunsInspectResultSchema =
+  authoredRpcSchemas["workflow.runs.inspect"].success;
+const WorkflowRunsStartPayloadSchema =
+  authoredRpcSchemas["workflow.runs.start"].payload;
+const WorkflowRunsResumePayloadSchema =
+  authoredRpcSchemas["workflow.runs.resume"].payload;
+const WorkflowRunsTracePayloadSchema =
+  authoredRpcSchemas["workflow.runs.trace"].payload;
+const WorkflowRunsTraceResultSchema =
+  authoredRpcSchemas["workflow.runs.trace"].success;
 
 const repositoryRoot = fileURLToPath(new URL("../../../../..", import.meta.url));
 const decodeJson = Schema.decodeUnknownSync(Schema.parseJson(Schema.Unknown));

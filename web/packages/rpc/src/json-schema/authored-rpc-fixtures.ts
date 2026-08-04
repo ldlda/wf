@@ -64,8 +64,52 @@ const RunNodeSchema = Schema.Struct({
   updated_at: Schema.String,
 });
 
+const TraceRangeSchema = Schema.Struct({
+  start: NonNegativeIntegerSchema,
+  limit: PositiveIntegerSchema,
+});
+const RunInterruptSchema = Schema.Struct({
+  kind: Schema.String,
+  payload: JsonObjectSchema,
+  outcomes: Schema.Array(Schema.String),
+  request_schema: Schema.optional(JsonObjectSchema),
+  resume_schema: Schema.optional(JsonObjectSchema),
+  typed: Schema.optional(Schema.Boolean),
+});
+const RunNextActionsSchema = Schema.Struct({
+  can_continue: Schema.Boolean,
+  can_save_now: Schema.NullOr(Schema.Boolean),
+  recommended_next_tool: Schema.NullOr(Schema.String),
+  reason: Schema.String,
+  patch_examples: Schema.Array(Schema.Unknown),
+  warnings: Schema.Array(Schema.String),
+});
+const RunResultSchema = Schema.Struct({
+  run_id: Schema.String,
+  deployment_id: Schema.String,
+  artifact_id: Schema.String,
+  artifact_version: PositiveIntegerSchema,
+  status: Schema.String,
+  resume_readiness: Schema.String,
+  interrupt: Schema.NullOr(RunInterruptSchema),
+  outcome: Schema.NullOr(Schema.String),
+  error: Schema.NullOr(Schema.String),
+  output: Schema.NullOr(JsonObjectSchema),
+  diagnostics: Schema.Array(Schema.Unknown),
+  trace_count: NonNegativeIntegerSchema,
+  next_actions: RunNextActionsSchema,
+});
+const TraceFrameSchema = Schema.Struct({
+  node_id: Schema.String,
+  step_type: Schema.String,
+  resolved_input: JsonObjectSchema,
+  outcome: Schema.String,
+  output: JsonObjectSchema,
+  state_changes: JsonObjectSchema,
+});
+
 /** Frozen pre-migration schemas used only to detect generated-decoder drift. */
-export const authoredCleanRpcSchemas = {
+export const authoredRpcSchemas = {
   "workflow.health": {
     payload: Schema.Struct({}),
     success: Schema.Struct({
@@ -173,6 +217,41 @@ export const authoredCleanRpcSchemas = {
       cursor: Schema.NullOr(Schema.String),
       next_cursor: Schema.NullOr(Schema.String),
       limit: PositiveIntegerSchema,
+    }),
+  },
+  "workflow.runs.inspect": {
+    payload: Schema.Struct({ run_id: Schema.String }),
+    success: RunResultSchema,
+  },
+  "workflow.runs.start": {
+    payload: Schema.Struct({
+      deployment_id: Schema.String,
+      workflow_input: JsonObjectSchema,
+      trace_range: Schema.optional(Schema.NullOr(TraceRangeSchema)),
+    }),
+    success: RunResultSchema,
+  },
+  "workflow.runs.resume": {
+    payload: Schema.Struct({
+      run_id: Schema.String,
+      resume_payload: JsonObjectSchema,
+      resume_outcome: Schema.optional(Schema.String),
+      trace_range: Schema.optional(Schema.NullOr(TraceRangeSchema)),
+    }),
+    success: RunResultSchema,
+  },
+  "workflow.runs.trace": {
+    payload: Schema.Struct({
+      run_id: Schema.String,
+      trace_range: TraceRangeSchema,
+    }),
+    success: Schema.Struct({
+      run_id: Schema.String,
+      status: Schema.String,
+      trace: Schema.Array(TraceFrameSchema),
+      trace_start: NonNegativeIntegerSchema,
+      trace_limit: PositiveIntegerSchema,
+      trace_truncated: Schema.Boolean,
     }),
   },
 };

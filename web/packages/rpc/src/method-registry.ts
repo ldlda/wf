@@ -77,12 +77,12 @@ const shellArg = (value: string | number): string => {
 
 /** Adapts a snake_case run detail from the server into camelCase for the browser. */
 const interpretRunDetail = (decoded: {
-  readonly run_id: string;
+  readonly run_id: string | null;
   readonly deployment_id: string;
   readonly artifact_id: string;
   readonly artifact_version: number;
   readonly status: string;
-  readonly resume_readiness: string;
+  readonly resume_readiness: string | null;
   readonly interrupt: unknown;
   readonly outcome: string | null;
   readonly error: string | null;
@@ -350,21 +350,7 @@ const operationEntries: ReadonlyArray<OperationMeta> = [
       const decoded = Schema.decodeUnknownSync(WorkflowRunsInspectResultSchema)(
         result,
       );
-      return {
-        runId: decoded.run_id,
-        deploymentId: decoded.deployment_id,
-        artifactId: decoded.artifact_id,
-        artifactVersion: decoded.artifact_version,
-        status: decoded.status,
-        resumeReadiness: decoded.resume_readiness,
-        interrupt: decoded.interrupt,
-        outcome: decoded.outcome,
-        error: decoded.error,
-        output: decoded.output,
-        diagnostics: decoded.diagnostics,
-        traceCount: decoded.trace_count,
-        nextActions: interpretNextActions(decoded.next_actions),
-      };
+      return interpretRunDetail(decoded);
     },
   },
   {
@@ -417,14 +403,23 @@ const operationEntries: ReadonlyArray<OperationMeta> = [
         params,
         { onExcessProperty: "error" },
       );
-      return `uv run wf run trace ${shellArg(p.run_id)} --from ${p.trace_range.start} --limit ${p.trace_range.limit}`;
+      const parts = ["uv run wf run trace", shellArg(p.run_id)];
+      if (p.trace_range.start != null) {
+        parts.push(`--from ${p.trace_range.start}`);
+      }
+      if (p.trace_range.limit != null) {
+        parts.push(`--limit ${p.trace_range.limit}`);
+      }
+      return parts.join(" ");
     },
     interpret: (result) => {
       const decoded = Schema.decodeUnknownSync(WorkflowRunsTraceResultSchema)(result);
       const trace = decoded.trace.map((entry) => ({
+        frameId: entry.frame_id,
         nodeId: entry.node_id,
         stepType: entry.step_type,
         outcome: entry.outcome,
+        nextNodeId: entry.next_node_id,
         resolvedInput: entry.resolved_input,
         output: entry.output,
         stateChanges: entry.state_changes,
