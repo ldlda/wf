@@ -24,6 +24,9 @@ DONE
     pagination visibility, and absence of Add-to-draft actions.
 - `web/apps/console/src/app/AppRoutes.tsx`
   - Replaced only the pending `/console/discover` leaf with `DiscoverRoute`.
+- `web/apps/console/src/app/App.test.tsx`
+  - Updated only the discover redirect and disconnected-state expectations to
+    match the Task 5 route; future pending lifecycle routes remain unchanged.
 - `web/apps/console/src/styles/global.css`
   - Added scoped discovery layout, row, schema, state, and mobile stacking
     styles.
@@ -41,25 +44,25 @@ keystroke. The controller was then changed so source edits are applied by the
 explicit Search action, while connected-target changes still reload and clear
 selection.
 
+The review-fix red run reproduced all four targeted findings: draft filters were
+sent with an old cursor, duplicate names within a new page survived, repeated
+load-more activation started multiple reads, and selected rows had no semantic
+state or detail association. Focused regressions now pass after separating draft
+and applied filters, incrementally updating the dedupe set, guarding pending
+loads, and adding `aria-pressed`/`aria-controls` semantics.
+
 ## Verification
 
-- `pnpm --dir web --filter @lda/console test -- src/workspace/routes/DiscoverRoute.test.tsx src/workspace/routes/useCapabilityDiscovery.test.tsx`: passed; 2 files and 16 tests.
+- `pnpm --dir web --filter @lda/console test -- src/workspace/routes/DiscoverRoute.test.tsx src/workspace/routes/useCapabilityDiscovery.test.tsx src/app/App.test.tsx`: passed; 3 files, 25 tests, and 1 intentional todo.
 - `pnpm --dir web --filter @lda/console typecheck`: passed.
 - `pnpm --dir web --filter @lda/console test -- src/workspace/ConsoleWorkspace.test.tsx src/workspace/ConsoleShell.test.tsx`: passed.
 - `git diff --check`: passed.
 
 ## Deviations
 
-- `src/app/App.test.tsx` was not modified because it is outside the Task 5
-  brief's file list. Its pending-discover assertions now describe the route
-  that Task 5 intentionally replaces; the specified Task 5 tests and typecheck
-  pass.
-- No Add-to-draft behavior was added. This slice remains read-only as required.
+- No future pending routes were changed. No Add-to-draft behavior was added;
+  this slice remains read-only as required.
 
 ## Bugs
 
-- Existing `web/apps/console/src/app/App.test.tsx` has three stale expectations:
-  two still look for a heading named `Discover`, and one still looks for the
-  removed pending-route messages. The production route now exposes the required
-  `Discover capabilities` surface and the new route tests cover its disconnected
-  state.
+- No known Task 5 review findings remain after the focused regression suite.

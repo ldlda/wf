@@ -102,6 +102,30 @@ describe("DiscoverRoute", () => {
     expect(screen.queryByRole("button", { name: /add to draft/i })).toBeNull();
   });
 
+  it("exposes selected row state and associates the result with its detail", () => {
+    mockedUseCapabilityDiscovery.mockReturnValue(
+      controller({
+        selected: {
+          ...summary,
+          isAsync: false,
+          inputSchema: {},
+          outputSchema: {},
+          wrapperHints: {},
+          acceptsContext: true,
+        },
+      }),
+    );
+    render(<DiscoverRoute />);
+
+    const row = screen.getByRole("button", { name: /local\.documents\.read/i });
+    expect(row).toHaveAttribute("aria-pressed", "true");
+    expect(row).toHaveAttribute("aria-controls", "capability-detail");
+    expect(screen.getByRole("region", { name: "local.documents.read" })).toHaveAttribute(
+      "id",
+      "capability-detail",
+    );
+  });
+
   it("shows load more only when the controller has a next cursor", async () => {
     const loadMore = vi.fn();
     mockedUseCapabilityDiscovery.mockReturnValue(
@@ -116,5 +140,14 @@ describe("DiscoverRoute", () => {
     mockedUseCapabilityDiscovery.mockReturnValue(controller());
     render(<DiscoverRoute />);
     expect(screen.queryByRole("button", { name: "Load more capabilities" })).toBeNull();
+  });
+
+  it("disables load more while the controller is loading", () => {
+    mockedUseCapabilityDiscovery.mockReturnValue(
+      controller({ phase: "loading", nextCursor: "page-2" }),
+    );
+    render(<DiscoverRoute />);
+
+    expect(screen.getByRole("button", { name: "Load more capabilities" })).toBeDisabled();
   });
 });

@@ -39,6 +39,8 @@ const CapabilityRow = ({
     <button
       className="capability-discovery__row"
       data-selected={selected}
+      aria-controls="capability-detail"
+      aria-pressed={selected}
       onClick={() => onInspect(item.name)}
       type="button"
     >
@@ -61,7 +63,7 @@ const CapabilityRow = ({
 );
 
 const DetailView = ({ detail }: { readonly detail: CapabilityDetail }) => (
-  <section aria-labelledby="capability-detail-heading" className="capability-discovery__detail">
+  <section aria-labelledby="capability-detail-heading" className="capability-discovery__detail" id="capability-detail">
     <p className="workspace-route-pending__eyebrow">Selected contract</p>
     <h2 id="capability-detail-heading">{detail.name}</h2>
     <dl className="capability-discovery__facts">
@@ -151,7 +153,11 @@ export const DiscoverRoute = () => {
             </ul>
           )}
           {discovery.nextCursor && (
-            <button onClick={discovery.loadMore} type="button">
+            <button
+              disabled={discovery.phase === "loading"}
+              onClick={discovery.loadMore}
+              type="button"
+            >
               Load more capabilities
             </button>
           )}
@@ -160,7 +166,7 @@ export const DiscoverRoute = () => {
         {discovery.selected ? (
           <DetailView detail={discovery.selected} />
         ) : (
-          <section aria-labelledby="capability-detail-empty-heading" className="capability-discovery__detail capability-discovery__detail--empty">
+          <section aria-labelledby="capability-detail-empty-heading" className="capability-discovery__detail capability-discovery__detail--empty" id="capability-detail">
             <p className="workspace-route-pending__eyebrow">Contract detail</p>
             <h2 id="capability-detail-empty-heading">Select a capability</h2>
             <p>Choose a result to inspect its input, output, and wrapper contract.</p>

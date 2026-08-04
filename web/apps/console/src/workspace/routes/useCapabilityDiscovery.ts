@@ -28,10 +28,22 @@ export type CapabilityDiscoveryController = {
 
 type DiscoveryState = Omit<CapabilityDiscoveryController, "setQuery" | "setSourceId" | "search" | "loadMore" | "inspect">;
 
-const initialState: DiscoveryState = {
+type CapabilityFilters = {
+  readonly query: string;
+  readonly sourceId: string;
+};
+
+type DiscoveryStateWithAppliedFilters = DiscoveryState & {
+  readonly appliedQuery: string;
+  readonly appliedSourceId: string;
+};
+
+const initialState: DiscoveryStateWithAppliedFilters = {
   phase: "disconnected",
   query: "",
   sourceId: "",
+  appliedQuery: "",
+  appliedSourceId: "",
   items: [],
   selected: null,
   nextCursor: null,
@@ -57,7 +69,13 @@ const appendUnique = (
   additions: ReadonlyArray<CapabilitySummary>,
 ): ReadonlyArray<CapabilitySummary> => {
   const names = new Set(existing.map((item) => item.name));
-  return [...existing, ...additions.filter((item) => !names.has(item.name))];
+  const result = [...existing];
+  for (const item of additions) {
+    if (names.has(item.name)) continue;
+    names.add(item.name);
+    result.push(item);
+  }
+  return result;
 };
 
 export const useCapabilityDiscovery = (): CapabilityDiscoveryController => {
@@ -66,17 +84,19 @@ export const useCapabilityDiscovery = (): CapabilityDiscoveryController => {
     () => (readExecutor ? createCapabilityClient(readExecutor) : null),
     [readExecutor],
   );
-  const [state, setState] = useState<DiscoveryState>(initialState);
+  const [state, setState] = useState<DiscoveryStateWithAppliedFilters>(initialState);
   const listGenerationRef = useRef(0);
   const inspectGenerationRef = useRef(0);
 
   const runList = useCallback(
-    (query: string, sourceId: string, cursor: string | undefined, append: boolean): void => {
+    (filters: CapabilityFilters, cursor: string | undefined, append: boolean): void => {
       if (!client) return;
       const generation = ++listGenerationRef.current;
       if (append === false) inspectGenerationRef.current++;
       setState((current) => ({
         ...current,
+        appliedQuery: filters.query,
+        appliedSourceId: filters.sourceId,
         phase: "loading",
         items: append ? current.items : [],
         selected: append ? current.selected : null,
@@ -85,7 +105,7 @@ export const useCapabilityDiscovery = (): CapabilityDiscoveryController => {
       }));
 
       void client
-        .list(requestParams(query, sourceId, cursor))
+        .list(requestParams(filters.query, filters.sourceId, cursor))
         .then((page) => {
           if (generation !== listGenerationRef.current) return;
           setState((current) => ({
@@ -123,7 +143,7 @@ export const useCapabilityDiscovery = (): CapabilityDiscoveryController => {
       return;
     }
 
-    runList(state.query, state.sourceId, undefined, false);
+    runList({ query: state.query, sourceId: state.sourceId }, undefined, false);
     // The executor identity changes with the connected target. Query and source
     // filters are intentionally retained so reconnecting preserves the view.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -141,13 +161,23 @@ export const useCapabilityDiscovery = (): CapabilityDiscoveryController => {
   );
 
   const search = useCallback(() => {
-    runList(state.query, state.sourceId, undefined, false);
+    runList({ query: state.query, sourceId: state.sourceId }, undefined, false);
   }, [runList, state.query, state.sourceId]);
 
   const loadMore = useCallback(() => {
-    if (!state.nextCursor) return;
-    runList(state.query, state.sourceId, state.nextCursor, true);
-  }, [runList, state.nextCursor, state.query, state.sourceId]);
+    if (!state.nextCursor || state.phase === "loading") return;
+    runList(
+      { query: state.appliedQuery, sourceId: state.appliedSourceId },
+      state.nextCursor,
+      true,
+    );
+  }, [
+    runList,
+    state.appliedQuery,
+    state.appliedSourceId,
+    state.nextCursor,
+    state.phase,
+  ]);
 
   const inspect = useCallback(
     (qualifiedName: string) => {

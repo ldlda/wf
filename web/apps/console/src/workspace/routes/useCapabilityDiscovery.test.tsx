@@ -165,7 +165,11 @@ describe("useCapabilityDiscovery", () => {
     client.list
       .mockResolvedValueOnce(page([summary("local.documents.read")], "page-2"))
       .mockResolvedValueOnce(
-        page([summary("local.documents.read"), summary("local.documents.write")]),
+        page([
+          summary("local.documents.read"),
+          summary("local.documents.write"),
+          summary("local.documents.write"),
+        ]),
       );
     const { result } = renderHook(() => useCapabilityDiscovery());
     await waitFor(() => expect(result.current.nextCursor).toBe("page-2"));
@@ -178,6 +182,36 @@ describe("useCapabilityDiscovery", () => {
       "local.documents.read",
       "local.documents.write",
     ]);
+  });
+
+  it("uses the applied filters when loading more after draft edits", async () => {
+    client.list
+      .mockResolvedValueOnce(page([summary("local.documents.read")], "page-2"))
+      .mockResolvedValueOnce(page([summary("local.documents.write")]));
+    const { result } = renderHook(() => useCapabilityDiscovery());
+    await waitFor(() => expect(result.current.nextCursor).toBe("page-2"));
+
+    act(() => result.current.setQuery("draft-query"));
+    act(() => result.current.setSourceId("draft-source"));
+    act(() => result.current.loadMore());
+
+    await waitFor(() => expect(result.current.items).toHaveLength(2));
+    expect(client.list).toHaveBeenLastCalledWith({ cursor: "page-2", limit: 50 });
+  });
+
+  it("does not start a second load-more request while the page is pending", async () => {
+    const nextPage = deferred<CapabilityPage>();
+    client.list.mockResolvedValueOnce(page([summary("local.documents.read")], "page-2"));
+    client.list.mockReturnValueOnce(nextPage.promise);
+    const { result } = renderHook(() => useCapabilityDiscovery());
+    await waitFor(() => expect(result.current.nextCursor).toBe("page-2"));
+
+    act(() => result.current.loadMore());
+    act(() => result.current.loadMore());
+
+    expect(client.list).toHaveBeenCalledTimes(2);
+    nextPage.resolve(page([summary("local.documents.write")]));
+    await waitFor(() => expect(result.current.items).toHaveLength(2));
   });
 
   it("loads the selected capability detail", async () => {

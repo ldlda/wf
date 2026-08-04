@@ -11,8 +11,8 @@ describe("AppRoutes", () => {
   it.todo("restores source, demo, and lifecycle application coverage after Task 5-7");
 
   it.each([
-    ["/", "Discover"],
-    ["/console", "Discover"],
+    ["/", "Discover capabilities"],
+    ["/console", "Discover capabilities"],
   ])("redirects %s to the discover workspace leaf", async (entry, label) => {
     render(
       <MemoryRouter initialEntries={[entry]}>
@@ -47,7 +47,7 @@ describe("AppRoutes", () => {
     expect(screen.queryByRole("navigation", { name: "Workflow lifecycle" })).toBeNull();
   });
 
-  it("shows the connection prompt and pending route message while disconnected", () => {
+  it("shows the connection prompt and discovery state while disconnected", () => {
     render(
       <MemoryRouter initialEntries={["/console/discover"]}>
         <AppRoutes />
@@ -55,10 +55,10 @@ describe("AppRoutes", () => {
     );
 
     expect(screen.getByLabelText("Workflow JSON-RPC URL")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Discover capabilities" })).toBeInTheDocument();
     expect(
-      screen.getByText("Discover is unavailable until a workflow server is connected."),
+      screen.getByText("Connect a workflow server to discover capabilities."),
     ).toBeInTheDocument();
-    expect(screen.getByText("Connect a workflow server to view Discover.")).toBeInTheDocument();
   });
 
   it("navigates between lifecycle links without leaving the workspace shell", async () => {
