@@ -27,9 +27,18 @@ export const useLifecycleExplorer = (
 ): LifecycleExplorerController => {
   const [state, dispatch] = useReducer(lifecycleReducer, initialLifecycleState);
   const generationRef = useRef(0);
-  const artifactGenerationRef = useRef(0);
-  const deploymentGenerationRef = useRef(0);
-  const runGenerationRef = useRef(0);
+  const artifactListGenerationRef = useRef(0);
+  const artifactDetailGenerationRef = useRef(0);
+  const deploymentListGenerationRef = useRef(0);
+  const deploymentDetailGenerationRef = useRef(0);
+  const runListGenerationRef = useRef(0);
+  const runDetailGenerationRef = useRef(0);
+
+  const invalidateDetailReads = useCallback((): void => {
+    artifactDetailGenerationRef.current++;
+    deploymentDetailGenerationRef.current++;
+    runDetailGenerationRef.current++;
+  }, []);
 
   const executeRead = useCallback(
     async <T>(
@@ -83,7 +92,7 @@ export const useLifecycleExplorer = (
       void executeRead(
         () => clients.artifacts.list({ limit: 50 }),
         artifactGeneration,
-        artifactGenerationRef,
+        artifactListGenerationRef,
         targetGeneration,
         (value) => dispatch({ type: "setArtifactListPhase", phase: "loaded", value }),
         (message) => dispatch({ type: "setArtifactListPhase", phase: "error", message }),
@@ -91,7 +100,7 @@ export const useLifecycleExplorer = (
       void executeRead(
         () => clients.deployments.list(),
         deploymentGeneration,
-        deploymentGenerationRef,
+        deploymentListGenerationRef,
         targetGeneration,
         (value) => dispatch({ type: "setDeploymentListPhase", phase: "loaded", value }),
         (message) => dispatch({ type: "setDeploymentListPhase", phase: "error", message }),
@@ -99,7 +108,7 @@ export const useLifecycleExplorer = (
       void executeRead(
         () => clients.runs.list({ limit: 50 }),
         runGeneration,
-        runGenerationRef,
+        runListGenerationRef,
         targetGeneration,
         (value) => dispatch({ type: "setRunListPhase", phase: "loaded", value }),
         (message) => dispatch({ type: "setRunListPhase", phase: "error", message }),
@@ -110,9 +119,10 @@ export const useLifecycleExplorer = (
 
   useEffect(() => {
     const targetGeneration = ++generationRef.current;
-    const artifactGeneration = ++artifactGenerationRef.current;
-    const deploymentGeneration = ++deploymentGenerationRef.current;
-    const runGeneration = ++runGenerationRef.current;
+    const artifactGeneration = ++artifactListGenerationRef.current;
+    const deploymentGeneration = ++deploymentListGenerationRef.current;
+    const runGeneration = ++runListGenerationRef.current;
+    invalidateDetailReads();
     dispatch({ type: "targetChanged" });
     startCollectionReads(
       artifactGeneration,
@@ -120,65 +130,65 @@ export const useLifecycleExplorer = (
       runGeneration,
       targetGeneration,
     );
-  }, [startCollectionReads]);
+  }, [invalidateDetailReads, startCollectionReads]);
 
   const selectArtifact = useCallback(
     (artifactKey: string | null): void => {
+      invalidateDetailReads();
       dispatch({ type: "selectArtifact", artifactId: artifactKey });
       if (!artifactKey || !clients) return;
-      artifactGenerationRef.current++;
-      const generation = artifactGenerationRef.current;
+      const generation = artifactDetailGenerationRef.current;
       const separator = artifactKey.lastIndexOf("@");
       const artifactId = artifactKey.slice(0, separator);
       const version = Number(artifactKey.slice(separator + 1));
       void executeRead(
         () => clients.artifacts.inspect(artifactId, version),
         generation,
-        artifactGenerationRef,
+        artifactDetailGenerationRef,
         generationRef.current,
         (value) => dispatch({ type: "setArtifactDetail", detail: value }),
       );
     },
-    [clients, executeRead],
+    [clients, executeRead, invalidateDetailReads],
   );
 
   const selectDeployment = useCallback(
     (deploymentId: string | null): void => {
+      invalidateDetailReads();
       dispatch({ type: "selectDeployment", deploymentId });
       if (!deploymentId || !clients) return;
-      deploymentGenerationRef.current++;
-      const generation = deploymentGenerationRef.current;
+      const generation = deploymentDetailGenerationRef.current;
       const targetGeneration = generationRef.current;
       // Inspection and validation describe one URL-owned deployment selection.
       void executeRead(
         () => clients.deployments.inspect(deploymentId),
         generation,
-        deploymentGenerationRef,
+        deploymentDetailGenerationRef,
         targetGeneration,
         (value) => dispatch({ type: "setDeploymentDetail", detail: value }),
       );
       void executeRead(
         () => clients.deployments.validate(deploymentId),
         generation,
-        deploymentGenerationRef,
+        deploymentDetailGenerationRef,
         targetGeneration,
         (value) => dispatch({ type: "setDeploymentValidation", validation: value }),
       );
     },
-    [clients, executeRead],
+    [clients, executeRead, invalidateDetailReads],
   );
 
   const selectRun = useCallback(
     (runId: string | null): void => {
+      invalidateDetailReads();
       dispatch({ type: "selectRun", runId });
       if (!runId || !clients) return;
-      runGenerationRef.current++;
-      const generation = runGenerationRef.current;
+      const generation = runDetailGenerationRef.current;
       const targetGeneration = generationRef.current;
       void executeRead(
         () => clients.runs.inspect(runId),
         generation,
-        runGenerationRef,
+        runDetailGenerationRef,
         targetGeneration,
         (value) => {
           dispatch({ type: "setRunDetail", detail: value });
@@ -186,7 +196,7 @@ export const useLifecycleExplorer = (
             void executeRead(
               () => clients.runs.trace(runId, 0, 50),
               generation,
-              runGenerationRef,
+              runDetailGenerationRef,
               targetGeneration,
               (trace) => dispatch({ type: "setTrace", trace }),
             );
@@ -194,33 +204,33 @@ export const useLifecycleExplorer = (
         },
       );
     },
-    [clients, executeRead],
+    [clients, executeRead, invalidateDetailReads],
   );
 
   const refresh = useCallback((): void => {
     if (!clients) return;
     generationRef.current++;
-    artifactGenerationRef.current++;
-    deploymentGenerationRef.current++;
-    runGenerationRef.current++;
+    invalidateDetailReads();
+    artifactListGenerationRef.current++;
+    deploymentListGenerationRef.current++;
+    runListGenerationRef.current++;
     startCollectionReads(
-      artifactGenerationRef.current,
-      deploymentGenerationRef.current,
-      runGenerationRef.current,
+      artifactListGenerationRef.current,
+      deploymentListGenerationRef.current,
+      runListGenerationRef.current,
       generationRef.current,
     );
-  }, [clients, startCollectionReads]);
+  }, [clients, invalidateDetailReads, startCollectionReads]);
 
   const loadMoreArtifacts = useCallback((): void => {
     const current = state.artifactList;
     if (current.phase !== "loaded" || !current.value.nextCursor || !clients) return;
     const cursor = current.value.nextCursor;
-    artifactGenerationRef.current++;
-    const generation = artifactGenerationRef.current;
+    const generation = ++artifactListGenerationRef.current;
     void executeRead(
       () => clients.artifacts.list({ cursor, limit: 50 }),
       generation,
-      artifactGenerationRef,
+      artifactListGenerationRef,
       generationRef.current,
       (value) => dispatch({ type: "appendArtifactList", value }),
     );
@@ -230,12 +240,11 @@ export const useLifecycleExplorer = (
     const current = state.runList;
     if (current.phase !== "loaded" || !current.value.nextCursor || !clients) return;
     const cursor = current.value.nextCursor;
-    runGenerationRef.current++;
-    const generation = runGenerationRef.current;
+    const generation = ++runListGenerationRef.current;
     void executeRead(
       () => clients.runs.list({ cursor, limit: 50 }),
       generation,
-      runGenerationRef,
+      runListGenerationRef,
       generationRef.current,
       (value) => dispatch({ type: "appendRunList", value }),
     );
@@ -244,14 +253,13 @@ export const useLifecycleExplorer = (
   const loadTrace = useCallback(
     (start: number, limit: number): void => {
       if (!state.selectedRunId || !clients) return;
-      runGenerationRef.current++;
-      const generation = runGenerationRef.current;
+      const generation = ++runDetailGenerationRef.current;
       const targetGeneration = generationRef.current;
       const runId = state.selectedRunId;
       void executeRead(
         () => clients.runs.trace(runId, start, limit),
         generation,
-        runGenerationRef,
+        runDetailGenerationRef,
         targetGeneration,
         (value) => dispatch({ type: "setTrace", trace: value }),
       );

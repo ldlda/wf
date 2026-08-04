@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { LifecycleExplorer } from "../../lifecycle/LifecycleExplorer.js";
 import { useLifecycleExplorer } from "../../lifecycle/useLifecycleExplorer.js";
+import type { LifecycleState } from "../../lifecycle/state.js";
 import { createLifecycleClients } from "../domain/lifecycle-clients.js";
 import { useConsoleWorkspace } from "../context.js";
 
@@ -29,6 +30,46 @@ const decodeRouteParam = (value: string): string => {
   } catch {
     return value;
   }
+};
+
+const visibleStateForRoute = (
+  state: LifecycleState,
+  kind: LifecycleRouteKind,
+  artifactIdentity: string | null,
+  deploymentIdentity: string | null,
+  runIdentity: string | null,
+): LifecycleState => {
+  const selectedArtifactId = kind === "artifact" ? artifactIdentity : state.selectedArtifactId;
+  const selectedDeploymentId = kind === "deployment" ? deploymentIdentity : state.selectedDeploymentId;
+  const selectedRunId = kind === "run" ? runIdentity : state.selectedRunId;
+  const artifactDetail =
+    state.artifactDetail &&
+    selectedArtifactId === `${state.artifactDetail.artifactId}@${state.artifactDetail.version}`
+      ? state.artifactDetail
+      : null;
+  const deploymentDetail =
+    state.deploymentDetail && state.deploymentDetail.id === selectedDeploymentId
+      ? state.deploymentDetail
+      : null;
+  const deploymentValidation =
+    state.deploymentValidation &&
+    state.deploymentValidation.deploymentId === selectedDeploymentId
+      ? state.deploymentValidation
+      : null;
+  const runDetail =
+    state.runDetail && state.runDetail.runId === selectedRunId ? state.runDetail : null;
+
+  return {
+    ...state,
+    selectedArtifactId,
+    selectedDeploymentId,
+    selectedRunId,
+    artifactDetail,
+    deploymentDetail,
+    deploymentValidation,
+    runDetail,
+    trace: runDetail ? state.trace : null,
+  };
 };
 
 export const LifecycleRoute = ({ kind }: LifecycleRouteProps) => {
@@ -62,6 +103,16 @@ export const LifecycleRoute = ({ kind }: LifecycleRouteProps) => {
       : null;
   const runIdentity =
     kind === "run" && params.runId ? decodeRouteParam(params.runId) : null;
+  const visibleState = useMemo(
+    () => visibleStateForRoute(
+      state,
+      kind,
+      artifactIdentity,
+      deploymentIdentity,
+      runIdentity,
+    ),
+    [artifactIdentity, deploymentIdentity, kind, runIdentity, state],
+  );
 
   useEffect(() => {
     if (kind === "artifact") {
@@ -136,6 +187,7 @@ export const LifecycleRoute = ({ kind }: LifecycleRouteProps) => {
       <LifecycleExplorer
         controller={{
           ...controller,
+          state: visibleState,
           selectArtifact: onSelectArtifact,
           selectDeployment: onSelectDeployment,
           selectRun: onSelectRun,

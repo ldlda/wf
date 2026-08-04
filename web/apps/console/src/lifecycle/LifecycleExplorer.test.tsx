@@ -48,6 +48,18 @@ describe("LifecycleExplorer", () => {
     expect(screen.queryByRole("button", { name: "Raw" })).toBeNull();
   });
 
+  it("renders the primary lifecycle collection first in DOM order", () => {
+    const { container } = render(
+      <LifecycleExplorer controller={createMockController()} primaryKind="run" />,
+    );
+
+    expect(
+      [...container.querySelectorAll<HTMLElement>("[data-lifecycle-kind]")].map(
+        (column) => column.dataset.lifecycleKind,
+      ),
+    ).toEqual(["run", "artifact", "deployment"]);
+  });
+
   it("renders artifact buttons when loaded", () => {
     const controller = createMockController({
       artifactList: {

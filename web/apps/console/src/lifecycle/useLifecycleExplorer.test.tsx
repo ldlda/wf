@@ -15,6 +15,7 @@ import type {
   DeploymentValidation,
   RunDetail,
   RunList,
+  TracePage,
 } from "./models.js";
 
 const artifactList: ArtifactList = { items: [], total: 0, nextCursor: null };
@@ -105,6 +106,14 @@ const makeClients = (overrides: Partial<{
     ...overrides.runs,
   },
 });
+
+const deferred = <T,>() => {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((resolvePromise) => {
+    resolve = resolvePromise;
+  });
+  return { promise, resolve };
+};
 
 beforeEach(() => vi.restoreAllMocks());
 
@@ -201,6 +210,153 @@ describe("useLifecycleExplorer", () => {
 
     expect(result.current.state.selectedArtifactId).toBe("report@2");
     expect(result.current.state.artifactDetail?.version).toBe(2);
+  });
+
+  it("rejects a late artifact detail after a null selection", async () => {
+    const detail = deferred<ArtifactDetail>();
+    const clients = makeClients({
+      artifacts: { inspect: vi.fn().mockReturnValue(detail.promise) },
+    });
+    const { result } = renderHook(() => useLifecycleExplorer(clients));
+
+    act(() => result.current.selectArtifact("report@2"));
+    act(() => result.current.selectArtifact(null));
+    detail.resolve(artifactDetail);
+    await act(async () => await detail.promise);
+
+    expect(result.current.state.selectedArtifactId).toBeNull();
+    expect(result.current.state.artifactDetail).toBeNull();
+  });
+
+  it("rejects a late artifact detail after a cross-kind selection", async () => {
+    const detail = deferred<ArtifactDetail>();
+    const clients = makeClients({
+      artifacts: { inspect: vi.fn().mockReturnValue(detail.promise) },
+    });
+    const { result } = renderHook(() => useLifecycleExplorer(clients));
+
+    act(() => result.current.selectArtifact("report@2"));
+    act(() => result.current.selectDeployment("report.default"));
+    detail.resolve(artifactDetail);
+    await act(async () => await detail.promise);
+
+    expect(result.current.state.artifactDetail).toBeNull();
+  });
+
+  it("rejects late deployment validation after a cross-kind selection", async () => {
+    const validation = deferred<DeploymentValidation>();
+    const clients = makeClients({
+      deployments: { validate: vi.fn().mockReturnValue(validation.promise) },
+    });
+    const { result } = renderHook(() => useLifecycleExplorer(clients));
+
+    act(() => result.current.selectDeployment("report.default"));
+    act(() => result.current.selectArtifact(null));
+    validation.resolve(deploymentValidation);
+    await act(async () => await validation.promise);
+
+    expect(result.current.state.deploymentValidation).toBeNull();
+  });
+
+  it("rejects a late deployment detail after a null selection", async () => {
+    const detail = deferred<DeploymentDetail>();
+    const clients = makeClients({
+      deployments: { inspect: vi.fn().mockReturnValue(detail.promise) },
+    });
+    const { result } = renderHook(() => useLifecycleExplorer(clients));
+
+    act(() => result.current.selectDeployment("report.default"));
+    act(() => result.current.selectDeployment(null));
+    detail.resolve(deploymentDetail);
+    await act(async () => await detail.promise);
+
+    expect(result.current.state.selectedDeploymentId).toBeNull();
+    expect(result.current.state.deploymentDetail).toBeNull();
+  });
+
+  it("rejects a late run detail after a cross-kind selection", async () => {
+    const detail = deferred<RunDetail>();
+    const clients = makeClients({
+      runs: { inspect: vi.fn().mockReturnValue(detail.promise) },
+    });
+    const { result } = renderHook(() => useLifecycleExplorer(clients));
+
+    act(() => result.current.selectRun("run_123"));
+    act(() => result.current.selectArtifact(null));
+    detail.resolve(runDetail);
+    await act(async () => await detail.promise);
+
+    expect(result.current.state.selectedRunId).toBeNull();
+    expect(result.current.state.runDetail).toBeNull();
+  });
+
+  it("rejects a late run trace after a null selection", async () => {
+    const trace = deferred<TracePage>();
+    const clients = makeClients({
+      runs: {
+        inspect: vi.fn().mockResolvedValue({ ...runDetail, traceCount: 1 }),
+        trace: vi.fn().mockReturnValue(trace.promise),
+      },
+    });
+    const { result } = renderHook(() => useLifecycleExplorer(clients));
+
+    act(() => result.current.selectRun("run_123"));
+    await waitFor(() => expect(clients.runs.trace).toHaveBeenCalledWith("run_123", 0, 50));
+    act(() => result.current.selectDeployment(null));
+    trace.resolve({ frames: [], traceStart: 0, traceLimit: 50, traceTruncated: false });
+    await act(async () => await trace.promise);
+
+    expect(result.current.state.selectedRunId).toBeNull();
+    expect(result.current.state.trace).toBeNull();
+  });
+
+  it("rejects a late run trace after a cross-kind selection", async () => {
+    const trace = deferred<TracePage>();
+    const clients = makeClients({
+      runs: {
+        inspect: vi.fn().mockResolvedValue({ ...runDetail, traceCount: 1 }),
+        trace: vi.fn().mockReturnValue(trace.promise),
+      },
+    });
+    const { result } = renderHook(() => useLifecycleExplorer(clients));
+
+    act(() => result.current.selectRun("run_123"));
+    await waitFor(() => expect(clients.runs.trace).toHaveBeenCalledWith("run_123", 0, 50));
+    act(() => result.current.selectArtifact(null));
+    trace.resolve({ frames: [], traceStart: 0, traceLimit: 50, traceTruncated: false });
+    await act(async () => await trace.promise);
+
+    expect(result.current.state.trace).toBeNull();
+  });
+
+  it("finishes every collection load when a direct detail selection starts first", async () => {
+    const artifacts = deferred<ArtifactList>();
+    const deployments = deferred<DeploymentList>();
+    const runs = deferred<RunList>();
+    const clients = makeClients({
+      artifacts: { list: vi.fn().mockReturnValue(artifacts.promise) },
+      deployments: { list: vi.fn().mockReturnValue(deployments.promise) },
+      runs: { list: vi.fn().mockReturnValue(runs.promise) },
+    });
+    const { result } = renderHook(() => useLifecycleExplorer(clients));
+
+    act(() => {
+      result.current.selectArtifact("report@2");
+      result.current.selectDeployment("report.default");
+      result.current.selectRun("run_123");
+    });
+    artifacts.resolve(artifactList);
+    deployments.resolve(deploymentList);
+    runs.resolve(runList);
+    await act(async () => await Promise.all([
+      artifacts.promise,
+      deployments.promise,
+      runs.promise,
+    ]));
+
+    expect(result.current.state.artifactList.phase).toBe("loaded");
+    expect(result.current.state.deploymentList.phase).toBe("loaded");
+    expect(result.current.state.runList.phase).toBe("loaded");
   });
 
   it("clears lifecycle state when the client bundle is disconnected", async () => {

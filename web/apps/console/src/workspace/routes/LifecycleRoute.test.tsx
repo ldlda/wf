@@ -117,6 +117,31 @@ describe("LifecycleRoute", () => {
     expect(currentController.selectArtifact).not.toHaveBeenCalled();
   });
 
+  it("suppresses stale detail synchronously until it matches the URL identity", () => {
+    const currentController = controller({
+      ...emptyState(),
+      selectedArtifactId: "old@1",
+      artifactDetail: {
+        artifactId: "old",
+        version: 1,
+        title: "Old artifact",
+        kind: "workflow",
+        description: null,
+        outcomes: [],
+        plan: { nodes: [], edges: [] },
+        requiredCapabilities: [],
+        workflowDependencies: {},
+        createdFromCatalogVersion: null,
+      },
+    });
+    mockUseLifecycleExplorer.mockReturnValue(currentController);
+
+    renderRoute("/console/artifacts/report/2");
+
+    expect(screen.queryByText("Old artifact")).toBeNull();
+    expect(currentController.selectArtifact).toHaveBeenCalledWith("report@2");
+  });
+
   it("navigates to the canonical detail URL before selection follows it", async () => {
     const currentController = controller({
       ...emptyState(),
