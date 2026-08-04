@@ -757,6 +757,13 @@ stable.
   the current representative run inspect/start/resume interrupt fixtures and
   the compact run-trace envelope/frame shape.
   No runtime decoder or browser authorization behavior changed.
+- Completed: the parity-clean eight-operation cohort now uses generated Effect
+  runtime decoders for health, source list, artifact list/inspect, deployment
+  list/inspect/validate, and run list. The checked generator embeds only those
+  operation schemas and reachable components, and a 64-container guard rejects
+  adversarial request or response nesting before recursive JSON decoding. The
+  four run-detail RPCs
+  and the authored browser allowlist are unchanged.
 - `WorkflowApiSurface` is the protocol-neutral workflow operation contract.
 - `wf_transport_rpc_http` exposes local/static and MCP-backed `WorkflowServer`
   over JSON-RPC HTTP.

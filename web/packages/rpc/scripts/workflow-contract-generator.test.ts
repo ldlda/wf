@@ -111,6 +111,20 @@ describe("workflow contract generator", () => {
     expect(source).not.toMatch(/\bany\b/);
   });
 
+  it("embeds only reachable runtime schemas for the selected RPC cohort", async () => {
+    const source = await generateWorkflowContractSource(fixtureManifest);
+    const runtimeSource = source.slice(
+      source.indexOf("export const workflowRuntimeContract"),
+    );
+
+    expect(runtimeSource).toContain('"workflow.health"');
+    expect(runtimeSource).toContain('"HealthResult"');
+    expect(runtimeSource).toContain('"additionalProperties": false');
+    expect(runtimeSource).toContain('"properties": {}');
+    expect(runtimeSource).not.toContain('"workflow.widgets.inspect"');
+    expect(runtimeSource).not.toContain('"FailureResult"');
+  });
+
   it("rejects duplicate operation methods", () => {
     const [firstOperation] = fixture.operations;
     if (firstOperation === undefined) throw new Error("invalid test fixture");

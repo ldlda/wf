@@ -83,6 +83,17 @@ const booleanAt = (value: unknown, path: string): boolean => {
 const compareText = (left: string, right: string): number =>
   left < right ? -1 : left > right ? 1 : 0;
 
+const runtimeOperationNames = new Set([
+  "workflow.health",
+  "workflow.sources.list",
+  "workflow.artifacts.list",
+  "workflow.artifacts.inspect",
+  "workflow.deployments.list",
+  "workflow.deployments.inspect",
+  "workflow.deployments.validate",
+  "workflow.runs.list",
+]);
+
 export const parseWorkflowContractManifest = (
   manifestText: string,
 ): WorkflowContractManifest => {
@@ -189,6 +200,79 @@ const paramsSchemaFor = (operation: WorkflowContractOperation): JsonObject =>
         type: "object",
       };
 
+const runtimeParamsSchemaFor = (
+  operation: WorkflowContractOperation,
+): JsonObject => ({
+  additionalProperties: false,
+  properties: Object.fromEntries(
+    operation.params.map((param) => [param.name, param.schema]),
+  ),
+  required: operation.params
+    .filter((param) => param.required)
+    .map((param) => param.name),
+  type: "object",
+});
+
+const runtimeContractSource = (manifest: WorkflowContractManifest): string => {
+  const operations = manifest.operations.filter(({ method }) =>
+    runtimeOperationNames.has(method),
+  );
+  const referencedSchemas = new Set<string>();
+  const visit = (value: JsonValue): void => {
+    if (Array.isArray(value)) {
+      value.forEach(visit);
+      return;
+    }
+    if (value === null || typeof value !== "object") return;
+    for (const [key, item] of Object.entries(value)) {
+      if (
+        key === "$ref" &&
+        typeof item === "string" &&
+        item.startsWith("#/components/schemas/")
+      ) {
+        const name = item.slice("#/components/schemas/".length);
+        if (referencedSchemas.has(name)) continue;
+        const schema = manifest.schemas[name];
+        if (schema === undefined) {
+          throw new Error(`missing runtime component schema ${name}`);
+        }
+        referencedSchemas.add(name);
+        visit(schema);
+      } else {
+        visit(item);
+      }
+    }
+  };
+
+  for (const operation of operations) {
+    visit(runtimeParamsSchemaFor(operation));
+    visit(operation.resultSchema);
+  }
+
+  const runtimeContract = {
+    components: Object.fromEntries(
+      Array.from(referencedSchemas)
+        .sort(compareText)
+        .map((name) => [name, manifest.schemas[name]]),
+    ),
+    operations: Object.fromEntries(
+      operations.map((operation) => [
+        operation.method,
+        {
+          payload: runtimeParamsSchemaFor(operation),
+          success: operation.resultSchema,
+        },
+      ]),
+    ),
+  };
+  return [
+    "",
+    "// Runtime JSON Schema is limited to parity-verified authored RPCs.",
+    `export const workflowRuntimeContract = ${JSON.stringify(runtimeContract, null, 2)};`,
+    "",
+  ].join("\n");
+};
+
 const compilerSchemaFor = (manifest: WorkflowContractManifest): JsonObject => ({
   additionalProperties: false,
   definitions: rewriteComponentRefs(manifest.schemas),
@@ -259,7 +343,7 @@ export const generateWorkflowContractSource = async (
     '  WorkflowContractMap[Name]["result"];',
     "",
   ].join("\n");
-  return `${inventorySource(manifest.operations.map(({ method }) => method))}${compiled.trim()}\n${helpers}`;
+  return `${inventorySource(manifest.operations.map(({ method }) => method))}${compiled.trim()}\n${helpers}${runtimeContractSource(manifest)}`;
 };
 
 export const writeWorkflowContract = async (

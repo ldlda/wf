@@ -428,6 +428,70 @@ describe("WorkflowRpc", () => {
     });
   });
 
+  it("decodes the canonical expanded source list result", async () => {
+    const fetch: typeof globalThis.fetch = async (input, init) => {
+      const request = await requestBody(input, init);
+      return jsonResponse({
+        jsonrpc: "2.0",
+        id: request.id,
+        result: {
+          sources: [
+            {
+              id: "local.demo",
+              kind: "python",
+              enabled: true,
+              visibility: {
+                planner: true,
+                client: true,
+                admin_dashboard: true,
+              },
+              permissions: {
+                safe_for_workflow: true,
+                calls_upstream: false,
+                mutates_config: false,
+                mutates_auth: false,
+              },
+              policy: { platform: false, binding_required: true },
+              description: "Local demo source",
+              tool_count: 1,
+              node_spec_count: 0,
+              reducer_count: 0,
+              prompt_count: 0,
+              resource_count: 0,
+              preview: {
+                tools: ["generate"],
+                node_specs: [],
+                reducers: [],
+                prompts: [],
+                resources: [],
+              },
+              has_more: {
+                tools: false,
+                node_specs: false,
+                reducers: false,
+                prompts: false,
+                resources: false,
+              },
+            },
+          ],
+          next_cursor: null,
+          total: 1,
+        },
+      });
+    };
+
+    const exchange = await runOperation(
+      { fetch },
+      "workflow.sources.list",
+      { limit: 50 },
+    );
+
+    expect(exchange.interpreted).toMatchObject({
+      total: 1,
+      sources: [{ id: "local.demo", counts: { tools: 1 } }],
+    });
+  });
+
   it("rejects invalid source count shapes as decode errors", async () => {
     const fetch: typeof globalThis.fetch = async (input, init) => {
       const request = await requestBody(input, init);

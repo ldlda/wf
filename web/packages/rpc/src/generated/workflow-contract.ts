@@ -2569,3 +2569,1113 @@ export type WorkflowOperationParams<Name extends WorkflowOperationName> =
 
 export type WorkflowOperationResult<Name extends WorkflowOperationName> =
   WorkflowContractMap[Name]["result"];
+
+// Runtime JSON Schema is limited to parity-verified authored RPCs.
+export const workflowRuntimeContract = {
+  "components": {
+    "ArtifactCatalogEntryPayload": {
+      "description": "Compact artifact row returned by discovery operations.",
+      "properties": {
+        "artifact_id": {
+          "type": "string"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "diagnostics": {
+          "items": {
+            "$ref": "#/components/schemas/DependencyDiagnosticPayload"
+          },
+          "type": "array"
+        },
+        "display_name": {
+          "type": "string"
+        },
+        "input_schema": {
+          "$ref": "#/components/schemas/JsonObject"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "outcomes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "output_schema": {
+          "$ref": "#/components/schemas/JsonObject"
+        },
+        "required_sources": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "version": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "name",
+        "artifact_id",
+        "version",
+        "kind",
+        "display_name",
+        "description",
+        "outcomes",
+        "input_schema",
+        "output_schema",
+        "required_sources",
+        "diagnostics"
+      ],
+      "type": "object"
+    },
+    "ArtifactKindPayload": {
+      "enum": [
+        "workflow",
+        "wrapper"
+      ],
+      "type": "string"
+    },
+    "CapabilityKindPayload": {
+      "enum": [
+        "tool",
+        "resource",
+        "prompt",
+        "node_spec",
+        "reducer",
+        "workflow"
+      ],
+      "type": "string"
+    },
+    "CapabilityRefPayload": {
+      "properties": {
+        "capability_key": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "source",
+        "capability_key"
+      ],
+      "type": "object"
+    },
+    "DependencyDiagnosticPayload": {
+      "additionalProperties": true,
+      "description": "JSON projection of one deployment dependency diagnostic.",
+      "properties": {
+        "bound_source": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "code": {
+          "type": "string"
+        },
+        "logical_ref": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "repair_hint": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "severity": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "severity",
+        "code",
+        "logical_ref",
+        "bound_source",
+        "message",
+        "repair_hint"
+      ],
+      "type": "object"
+    },
+    "DeploymentSummary": {
+      "description": "Compact deployment row used by list operations.",
+      "properties": {
+        "artifact_id": {
+          "type": "string"
+        },
+        "artifact_version": {
+          "type": "integer"
+        },
+        "binding_count": {
+          "type": "integer"
+        },
+        "drift_policy": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "artifact_id",
+        "artifact_version",
+        "id",
+        "binding_count",
+        "drift_policy"
+      ],
+      "type": "object"
+    },
+    "HealthResult": {
+      "description": "Health response shared by self-describing workflow transports.",
+      "properties": {
+        "status": {
+          "const": "ok",
+          "type": "string"
+        },
+        "store_root": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "store_root"
+      ],
+      "type": "object"
+    },
+    "JsonObject": {
+      "additionalProperties": true,
+      "type": "object"
+    },
+    "ListArtifactsResult": {
+      "properties": {
+        "next_cursor": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "nodes": {
+          "items": {
+            "$ref": "#/components/schemas/ArtifactCatalogEntryPayload"
+          },
+          "type": "array"
+        },
+        "total": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "next_cursor",
+        "total",
+        "nodes"
+      ],
+      "type": "object"
+    },
+    "ListDeploymentsResult": {
+      "properties": {
+        "deployments": {
+          "items": {
+            "$ref": "#/components/schemas/DeploymentSummary"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "deployments"
+      ],
+      "type": "object"
+    },
+    "ListRunsResult": {
+      "properties": {
+        "cursor": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "limit": {
+          "type": "integer"
+        },
+        "next_cursor": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "runs": {
+          "items": {
+            "$ref": "#/components/schemas/RunSummary"
+          },
+          "type": "array"
+        },
+        "total": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "runs",
+        "total",
+        "cursor",
+        "next_cursor",
+        "limit"
+      ],
+      "type": "object"
+    },
+    "ListSourcesResult": {
+      "description": "Cursor-paged compact source discovery result.",
+      "properties": {
+        "next_cursor": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "sources": {
+          "items": {
+            "$ref": "#/components/schemas/SourceStatusPayload"
+          },
+          "type": "array"
+        },
+        "total": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "next_cursor",
+        "total",
+        "sources"
+      ],
+      "type": "object"
+    },
+    "NextActionPatchExamplePayload": {
+      "description": "Concrete follow-up operation suggested to an API caller.",
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "request": {
+          "$ref": "#/components/schemas/JsonObject"
+        },
+        "tool": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "description",
+        "tool",
+        "request"
+      ],
+      "type": "object"
+    },
+    "NextActionsPayload": {
+      "description": "JSON projection of advisory workflow continuation guidance.",
+      "properties": {
+        "can_continue": {
+          "type": "boolean"
+        },
+        "can_save_now": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "patch_examples": {
+          "items": {
+            "$ref": "#/components/schemas/NextActionPatchExamplePayload"
+          },
+          "type": "array"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "recommended_next_tool": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "warnings": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "can_continue",
+        "can_save_now",
+        "recommended_next_tool",
+        "reason",
+        "patch_examples",
+        "warnings"
+      ],
+      "type": "object"
+    },
+    "RequiredCapabilityPayload": {
+      "description": "Saved dependency contract for one artifact capability reference.",
+      "properties": {
+        "input_schema_hash": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "input_schema_snapshot": {
+          "anyOf": [
+            {
+              "$ref": "#/components/schemas/JsonObject"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "kind": {
+          "$ref": "#/components/schemas/CapabilityKindPayload"
+        },
+        "observed_at_epoch_ms": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "observed_concrete_source": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "output_schema_hash": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "output_schema_snapshot": {
+          "anyOf": [
+            {
+              "$ref": "#/components/schemas/JsonObject"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "ref": {
+          "$ref": "#/components/schemas/CapabilityRefPayload"
+        }
+      },
+      "required": [
+        "ref",
+        "kind",
+        "input_schema_hash",
+        "input_schema_snapshot",
+        "output_schema_hash",
+        "output_schema_snapshot",
+        "observed_concrete_source",
+        "observed_at_epoch_ms"
+      ],
+      "type": "object"
+    },
+    "ResumeReadiness": {
+      "type": "string"
+    },
+    "RunStatus": {
+      "type": "string"
+    },
+    "RunSummary": {
+      "properties": {
+        "artifact_id": {
+          "type": "string"
+        },
+        "artifact_version": {
+          "type": "integer"
+        },
+        "created_at": {
+          "type": "string"
+        },
+        "deployment_id": {
+          "type": "string"
+        },
+        "diagnostic_count": {
+          "type": "integer"
+        },
+        "resume_readiness": {
+          "$ref": "#/components/schemas/ResumeReadiness"
+        },
+        "run_id": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/components/schemas/RunStatus"
+        },
+        "updated_at": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "artifact_id",
+        "artifact_version",
+        "run_id",
+        "deployment_id",
+        "status",
+        "resume_readiness",
+        "diagnostic_count",
+        "created_at",
+        "updated_at"
+      ],
+      "type": "object"
+    },
+    "SourceBindingPayload": {
+      "description": "JSON projection of a logical-to-concrete deployment source binding.",
+      "properties": {
+        "concrete_source": {
+          "type": "string"
+        },
+        "logical_source": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "logical_source",
+        "concrete_source"
+      ],
+      "type": "object"
+    },
+    "SourceCapabilityHasMorePayload": {
+      "description": "Whether each compact capability preview omitted owned names.",
+      "properties": {
+        "node_specs": {
+          "type": "boolean"
+        },
+        "prompts": {
+          "type": "boolean"
+        },
+        "reducers": {
+          "type": "boolean"
+        },
+        "resources": {
+          "type": "boolean"
+        },
+        "tools": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "tools",
+        "node_specs",
+        "reducers",
+        "prompts",
+        "resources"
+      ],
+      "type": "object"
+    },
+    "SourceCapabilityPreviewPayload": {
+      "description": "Small sorted capability-name sample used by compact source rows.",
+      "properties": {
+        "node_specs": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "prompts": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "reducers": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "resources": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "tools": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "tools",
+        "node_specs",
+        "reducers",
+        "prompts",
+        "resources"
+      ],
+      "type": "object"
+    },
+    "SourcePermissionsPayload": {
+      "description": "JSON projection of source permission flags.",
+      "properties": {
+        "calls_upstream": {
+          "type": "boolean"
+        },
+        "mutates_auth": {
+          "type": "boolean"
+        },
+        "mutates_config": {
+          "type": "boolean"
+        },
+        "safe_for_workflow": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "safe_for_workflow",
+        "calls_upstream",
+        "mutates_config",
+        "mutates_auth"
+      ],
+      "type": "object"
+    },
+    "SourcePolicyPayload": {
+      "description": "JSON projection of deployment-binding policy for one source.",
+      "properties": {
+        "binding_required": {
+          "type": "boolean"
+        },
+        "platform": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "platform",
+        "binding_required"
+      ],
+      "type": "object"
+    },
+    "SourceStatusPayload": {
+      "description": "Compact source metadata returned by source discovery.",
+      "properties": {
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "has_more": {
+          "$ref": "#/components/schemas/SourceCapabilityHasMorePayload"
+        },
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "system",
+            "connection",
+            "python"
+          ],
+          "type": "string"
+        },
+        "node_spec_count": {
+          "type": "integer"
+        },
+        "permissions": {
+          "$ref": "#/components/schemas/SourcePermissionsPayload"
+        },
+        "policy": {
+          "$ref": "#/components/schemas/SourcePolicyPayload"
+        },
+        "preview": {
+          "$ref": "#/components/schemas/SourceCapabilityPreviewPayload"
+        },
+        "prompt_count": {
+          "type": "integer"
+        },
+        "reducer_count": {
+          "type": "integer"
+        },
+        "resource_count": {
+          "type": "integer"
+        },
+        "tool_count": {
+          "type": "integer"
+        },
+        "visibility": {
+          "$ref": "#/components/schemas/SourceVisibilityPayload"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "enabled",
+        "visibility",
+        "permissions",
+        "policy",
+        "description",
+        "tool_count",
+        "node_spec_count",
+        "reducer_count",
+        "prompt_count",
+        "resource_count",
+        "preview",
+        "has_more"
+      ],
+      "type": "object"
+    },
+    "SourceVisibilityPayload": {
+      "description": "JSON projection of source visibility flags.",
+      "properties": {
+        "admin_dashboard": {
+          "type": "boolean"
+        },
+        "client": {
+          "type": "boolean"
+        },
+        "planner": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "planner",
+        "client",
+        "admin_dashboard"
+      ],
+      "type": "object"
+    },
+    "ValidateDeploymentResult": {
+      "properties": {
+        "artifact_id": {
+          "type": "string"
+        },
+        "artifact_version": {
+          "type": "integer"
+        },
+        "deployment_id": {
+          "type": "string"
+        },
+        "diagnostics": {
+          "items": {
+            "$ref": "#/components/schemas/DependencyDiagnosticPayload"
+          },
+          "type": "array"
+        },
+        "next_actions": {
+          "$ref": "#/components/schemas/NextActionsPayload"
+        },
+        "status": {
+          "enum": [
+            "runnable",
+            "unrunnable"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "artifact_id",
+        "artifact_version",
+        "diagnostics",
+        "next_actions",
+        "deployment_id",
+        "status"
+      ],
+      "type": "object"
+    },
+    "WorkflowArtifactPayload": {
+      "description": "Normalized immutable artifact returned by inspect operations.",
+      "properties": {
+        "created_from_catalog_version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "id": {
+          "type": "string"
+        },
+        "input_schema": {
+          "$ref": "#/components/schemas/JsonObject"
+        },
+        "kind": {
+          "$ref": "#/components/schemas/ArtifactKindPayload"
+        },
+        "outcomes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "output_schema": {
+          "$ref": "#/components/schemas/JsonObject"
+        },
+        "plan": {
+          "$ref": "#/components/schemas/JsonObject"
+        },
+        "required_capabilities": {
+          "items": {
+            "$ref": "#/components/schemas/RequiredCapabilityPayload"
+          },
+          "type": "array"
+        },
+        "title": {
+          "type": "string"
+        },
+        "version": {
+          "type": "integer"
+        },
+        "workflow_dependencies": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "type": "object"
+        }
+      },
+      "required": [
+        "id",
+        "version",
+        "title",
+        "kind",
+        "description",
+        "input_schema",
+        "output_schema",
+        "outcomes",
+        "plan",
+        "required_capabilities",
+        "workflow_dependencies",
+        "created_from_catalog_version"
+      ],
+      "type": "object"
+    },
+    "WorkflowDeploymentPayload": {
+      "description": "Serialized deployment accepted and returned by workflow API surfaces.",
+      "properties": {
+        "artifact_id": {
+          "type": "string"
+        },
+        "artifact_version": {
+          "type": "integer"
+        },
+        "bindings": {
+          "items": {
+            "$ref": "#/components/schemas/SourceBindingPayload"
+          },
+          "type": "array"
+        },
+        "drift_policy": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "artifact_id",
+        "artifact_version",
+        "id",
+        "bindings",
+        "drift_policy"
+      ],
+      "type": "object"
+    }
+  },
+  "operations": {
+    "workflow.artifacts.inspect": {
+      "payload": {
+        "additionalProperties": false,
+        "properties": {
+          "artifact_id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "version": {
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "artifact_id",
+          "version"
+        ],
+        "type": "object"
+      },
+      "success": {
+        "$ref": "#/components/schemas/WorkflowArtifactPayload"
+      }
+    },
+    "workflow.artifacts.list": {
+      "payload": {
+        "additionalProperties": false,
+        "properties": {
+          "query": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "workflow",
+                  "wrapper"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "limit": {
+            "default": 50,
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "success": {
+        "$ref": "#/components/schemas/ListArtifactsResult"
+      }
+    },
+    "workflow.deployments.inspect": {
+      "payload": {
+        "additionalProperties": false,
+        "properties": {
+          "deployment_id": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "deployment_id"
+        ],
+        "type": "object"
+      },
+      "success": {
+        "$ref": "#/components/schemas/WorkflowDeploymentPayload"
+      }
+    },
+    "workflow.deployments.list": {
+      "payload": {
+        "additionalProperties": false,
+        "properties": {},
+        "required": [],
+        "type": "object"
+      },
+      "success": {
+        "$ref": "#/components/schemas/ListDeploymentsResult"
+      }
+    },
+    "workflow.deployments.validate": {
+      "payload": {
+        "additionalProperties": false,
+        "properties": {
+          "deployment_id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "live_check": {
+            "default": false,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "deployment_id"
+        ],
+        "type": "object"
+      },
+      "success": {
+        "$ref": "#/components/schemas/ValidateDeploymentResult"
+      }
+    },
+    "workflow.health": {
+      "payload": {
+        "additionalProperties": false,
+        "properties": {},
+        "required": [],
+        "type": "object"
+      },
+      "success": {
+        "$ref": "#/components/schemas/HealthResult"
+      }
+    },
+    "workflow.runs.list": {
+      "payload": {
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "completed",
+                  "failed",
+                  "interrupted"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "limit": {
+            "default": 50,
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "success": {
+        "$ref": "#/components/schemas/ListRunsResult"
+      }
+    },
+    "workflow.sources.list": {
+      "payload": {
+        "additionalProperties": false,
+        "properties": {
+          "cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "limit": {
+            "default": 50,
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "success": {
+        "$ref": "#/components/schemas/ListSourcesResult"
+      }
+    }
+  }
+};

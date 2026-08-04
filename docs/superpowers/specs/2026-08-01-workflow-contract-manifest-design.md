@@ -272,7 +272,8 @@ After the manifest slice:
 3. In progress: migrate the existing 12 RPC definitions by domain while
    comparing old and generated decoders. The test-only parity harness covers
    all 24 payload/result sides and pins eight mismatches for representative
-   run-result fixtures;
+   run-result fixtures. The parity-clean eight-operation cohort now uses
+   generated runtime decoders; the four run-detail operations remain authored;
 4. remove duplicated operation-name guards only after equivalent generated
    inventory is in use; and
 5. expand client coverage when a product caller needs each operation.
@@ -286,8 +287,8 @@ after checking version compatibility with the repository's pinned Effect and
 The completed prototype translates boolean schemas, primitive `type` schemas,
 primitive `const` and `enum`, numeric and collection constraints, objects,
 `anyOf`, local component references, and structurally guarded recursive
-reference graphs. Tests
-exercise both synthetic contracts and checked `HealthResult` / `RunResult`
+reference graphs. Tests exercise both synthetic contracts and checked
+`HealthResult` / `RunResult`
 manifest components.
 
 The translator returns a typed `JsonSchemaTranslationError` and fails closed on
@@ -298,15 +299,17 @@ the representative subset, as are property names that collide with the object
 prototype. Those constructs must not be approximated with a broader Effect
 schema. Recursive translation is covered synthetically; checked manifest
 coverage currently exercises representative non-recursive components and a
-real rejected `oneOf` boundary. The prototype is not exported from the package
-root and is not wired into an RPC, service dispatch, operation allowlist, or
-browser authorization boundary.
+real rejected `oneOf` boundary. The translator is not exported from the package
+root. Generated runtime use is limited to the eight parity-clean authored RPCs;
+it does not change service dispatch, operation metadata, or browser
+authorization.
 
-Before recursive generated schemas become runtime decoders, the migration must
-add a bounded input-depth policy. Effect's recursive schema decoder does not
-independently prevent stack exhaustion on adversarially deep values; the
-prototype's structural recursion guard prevents non-productive schema cycles,
-not unbounded runtime nesting.
+Generated runtime schemas apply an iterative 64-container value-depth check to
+requests and responses before Effect decoding. Effect's recursive schema
+decoder does not independently prevent stack exhaustion on adversarially deep
+values; the translator's
+structural recursion guard prevents non-productive schema cycles, while the
+runtime guard bounds values presented to recursive decoders.
 
 The authored-RPC parity harness found no additional translator blockers for
 the current 12 operations. Health, sources, artifacts, deployments, and run

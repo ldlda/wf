@@ -88,10 +88,12 @@
     of the complete manifest interrupt in both acceptance directions; run trace
     uses a compact trace-page envelope and omits canonical frame identifiers.
   - Runtime decoder migration and broader callable client coverage remain
-    incomplete. Migrate the non-run domains first, then resolve the run result
-    contract deliberately. Add an input-depth boundary before recursive
-    generated decoders become runtime-facing, and keep the browser allowlist
-    authored.
+    incomplete. Health, source list, artifact list/inspect, deployment
+    list/inspect/validate, and run list now use generated runtime decoders with
+    a 64-container request/response value-depth guard. Resolve the run
+    detail/trace result
+    contract deliberately before migrating those four operations. The browser
+    allowlist remains authored.
 - The stock `@open-rpc/generator` TypeScript client is not suitable here. It
   exhausted a 4 GB Node heap on the full contract and emitted invalid dotted
     class members plus `any` results for a minimal `workflow.health` contract.

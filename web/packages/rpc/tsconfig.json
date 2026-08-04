@@ -11,5 +11,8 @@
     "outDir": "dist"
   },
   "include": ["src"],
-  "exclude": ["src/**/*.test.ts"]
+  "exclude": [
+    "src/**/*.test.ts",
+    "src/json-schema/authored-rpc-fixtures.ts"
+  ]
 }
