@@ -288,6 +288,19 @@ recorded process trees.
 - full artifact, deployment, and run view redesign; and
 - local implementation of complete JSON Schema validation.
 
+Deferred product actions are still represented in the interface. The
+workbench toolbar and context inspector show disabled, clearly marked
+affordances for deleting nodes or routes, adding other step kinds, undo/redo,
+and creating an artifact. Later lifecycle surfaces continue to expose the
+intended deployment, run, and results progression. Each unavailable control
+uses visible `Later` or equivalent explanatory text, remains keyboard
+discoverable where appropriate, and never dispatches an operation. The UI
+therefore communicates the planned workflow IDE without pretending the
+behavior is implemented.
+
+Collaboration is represented as product status rather than an interactive
+control because no collaboration session model exists yet.
+
 The next independent console slice will redesign artifact, deployment, and run
 inspection using the schema and graph primitives established here.
 
@@ -302,4 +315,6 @@ inspection using the schema and graph primitives established here.
 - Discover uses interpreted schema controls and can hand off to authoring.
 - Every mutation is independently authorized, typed, evidenced, and protected
   against stale targets and revisions.
+- Deferred workflow actions remain visibly discoverable and explicitly marked
+  unavailable rather than disappearing from the product model.
 - Desktop and mobile real-server acceptance passes.
