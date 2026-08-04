@@ -19,8 +19,27 @@ describe("generated workflow contract", () => {
   it("contains every authored Effect operation without broadening its boundary", () => {
     const generatedNames = new Set<string>(workflowOperationNames);
     const supportedNames = listOperations().map(({ method }) => method);
+    const expectedMethods = [
+      "workflow.health",
+      "workflow.sources.list",
+      "workflow.capabilities.list",
+      "workflow.capabilities.inspect",
+      "workflow.draft_workspaces.list",
+      "workflow.draft_workspaces.get",
+      "workflow.artifacts.list",
+      "workflow.artifacts.inspect",
+      "workflow.deployments.list",
+      "workflow.deployments.inspect",
+      "workflow.deployments.validate",
+      "workflow.runs.list",
+      "workflow.runs.inspect",
+      "workflow.runs.start",
+      "workflow.runs.resume",
+      "workflow.runs.trace",
+    ];
 
-    expect(supportedNames).toHaveLength(12);
+    expect(supportedNames).toHaveLength(16);
+    expect(supportedNames).toEqual(expectedMethods);
     expect(supportedNames.every((method) => generatedNames.has(method))).toBe(true);
     expect(workflowRpcOperationNames).toEqual(supportedNames);
     expect(workflowRpcOperationNames).toEqual(

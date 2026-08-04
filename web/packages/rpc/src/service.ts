@@ -31,6 +31,10 @@ import {
   WorkflowHealthPayloadSchema,
   WorkflowRpcs,
   WorkflowSourcesListPayloadSchema,
+  WorkflowCapabilitiesListPayloadSchema,
+  WorkflowCapabilitiesInspectPayloadSchema,
+  WorkflowDraftWorkspacesListPayloadSchema,
+  WorkflowDraftWorkspacesGetPayloadSchema,
   WorkflowArtifactsListPayloadSchema,
   WorkflowArtifactsInspectPayloadSchema,
   WorkflowDeploymentsListPayloadSchema,
@@ -275,6 +279,34 @@ const executeImpl =
               params,
             );
             return yield* client.workflow["sources.list"](payload);
+          }
+          case "workflow.capabilities.list": {
+            const payload = yield* decodeParams(
+              WorkflowCapabilitiesListPayloadSchema,
+              params,
+            );
+            return yield* client.workflow["capabilities.list"](payload);
+          }
+          case "workflow.capabilities.inspect": {
+            const payload = yield* decodeParams(
+              WorkflowCapabilitiesInspectPayloadSchema,
+              params,
+            );
+            return yield* client.workflow["capabilities.inspect"](payload);
+          }
+          case "workflow.draft_workspaces.list": {
+            const payload = yield* decodeParams(
+              WorkflowDraftWorkspacesListPayloadSchema,
+              params,
+            );
+            return yield* client.workflow["draft_workspaces.list"](payload);
+          }
+          case "workflow.draft_workspaces.get": {
+            const payload = yield* decodeParams(
+              WorkflowDraftWorkspacesGetPayloadSchema,
+              params,
+            );
+            return yield* client.workflow["draft_workspaces.get"](payload);
           }
           case "workflow.artifacts.list": {
             const payload = yield* decodeParams(

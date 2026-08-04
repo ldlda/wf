@@ -75,6 +75,102 @@ const runEither = (
 
 const lifecycleCases = [
   {
+    operation: "workflow.capabilities.list" as const,
+    params: { query: "document", source_id: "local.lda_docs", limit: 25 },
+    result: {
+      capabilities: [
+        {
+          kind: "node_spec",
+          name: "local.lda_docs.read_documents",
+          source_id: "local.lda_docs",
+          description: "Read selected project documents.",
+          outcomes: ["ok", "error"],
+          is_async: false,
+          input_fields: ["names"],
+          output_fields: ["documents"],
+        },
+      ],
+      next_cursor: null,
+      total: 1,
+    },
+  },
+  {
+    operation: "workflow.capabilities.inspect" as const,
+    params: { qualified_name: "local.lda_docs.read_documents" },
+    result: {
+      kind: "node_spec",
+      name: "local.lda_docs.read_documents",
+      source_id: "local.lda_docs",
+      description: "Read selected project documents.",
+      is_async: false,
+      accepts_context: false,
+      outcomes: ["ok", "error"],
+      input_schema: { type: "object", properties: { names: { type: "array" } } },
+      output_schema: { type: "object", properties: { documents: { type: "array" } } },
+      wrapper_hints: {
+        capability_name: "local.lda_docs.read_documents",
+        confidence: "high",
+        declared_outcomes: ["ok", "error"],
+        input_map: { names: "input.names" },
+        input_schema: { type: "object" },
+        missing_decisions: [],
+        notes: [],
+        outcome_candidates: [],
+        outcome_policy: "preserve_declared",
+        output_map: { documents: "output.documents" },
+        output_schema: { type: "object" },
+        state_schema: { type: "object" },
+        suggested_wrapper_outcomes: ["ok", "error"],
+      },
+    },
+  },
+  {
+    operation: "workflow.draft_workspaces.list" as const,
+    params: {},
+    result: {
+      workspaces: [
+        {
+          workspace_id: "console.demo",
+          revision: 1,
+          title: "Console demo",
+          status: "valid",
+          diagnostics: [],
+          summary: {
+            name: "console.demo",
+            start: "read",
+            step_count: 1,
+            route_count: 1,
+            steps: ["read"],
+          },
+        },
+      ],
+    },
+  },
+  {
+    operation: "workflow.draft_workspaces.get" as const,
+    params: { workspace_id: "console.demo", include_draft: true },
+    result: {
+      workspace_id: "console.demo",
+      revision: 1,
+      title: "Console demo",
+      status: "valid",
+      diagnostics: [],
+      summary: {
+        name: "console.demo",
+        start: "read",
+        step_count: 1,
+        route_count: 1,
+        steps: ["read"],
+      },
+      draft: {
+        name: "console.demo",
+        start: "read",
+        steps: { read: { use: "local.lda_docs.read_documents" } },
+        routes: { read: { ok: "__end__" } },
+      },
+    },
+  },
+  {
     operation: "workflow.artifacts.list" as const,
     params: { limit: 50 },
     result: {

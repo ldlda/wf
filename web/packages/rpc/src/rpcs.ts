@@ -32,6 +32,69 @@ export const WorkflowSourcesList = Rpc.make("workflow.sources.list", {
   error: Schema.Never,
 });
 
+const capabilityListSchemas = runtimeSchemasFor("workflow.capabilities.list");
+export const WorkflowCapabilitiesListPayloadSchema =
+  capabilityListSchemas.payload;
+export const WorkflowCapabilitiesListResultSchema =
+  capabilityListSchemas.success;
+
+export const WorkflowCapabilitiesList = Rpc.make("workflow.capabilities.list", {
+  payload: WorkflowCapabilitiesListPayloadSchema,
+  success: WorkflowCapabilitiesListResultSchema,
+  error: Schema.Never,
+});
+
+const capabilityInspectSchemas = runtimeSchemasFor(
+  "workflow.capabilities.inspect",
+);
+export const WorkflowCapabilitiesInspectPayloadSchema =
+  capabilityInspectSchemas.payload;
+export const WorkflowCapabilitiesInspectResultSchema =
+  capabilityInspectSchemas.success;
+
+export const WorkflowCapabilitiesInspect = Rpc.make(
+  "workflow.capabilities.inspect",
+  {
+    payload: WorkflowCapabilitiesInspectPayloadSchema,
+    success: WorkflowCapabilitiesInspectResultSchema,
+    error: Schema.Never,
+  },
+);
+
+const draftWorkspacesListSchemas = runtimeSchemasFor(
+  "workflow.draft_workspaces.list",
+);
+export const WorkflowDraftWorkspacesListPayloadSchema =
+  draftWorkspacesListSchemas.payload;
+export const WorkflowDraftWorkspacesListResultSchema =
+  draftWorkspacesListSchemas.success;
+
+export const WorkflowDraftWorkspacesList = Rpc.make(
+  "workflow.draft_workspaces.list",
+  {
+    payload: WorkflowDraftWorkspacesListPayloadSchema,
+    success: WorkflowDraftWorkspacesListResultSchema,
+    error: Schema.Never,
+  },
+);
+
+const draftWorkspacesGetSchemas = runtimeSchemasFor(
+  "workflow.draft_workspaces.get",
+);
+export const WorkflowDraftWorkspacesGetPayloadSchema =
+  draftWorkspacesGetSchemas.payload;
+export const WorkflowDraftWorkspacesGetResultSchema =
+  draftWorkspacesGetSchemas.success;
+
+export const WorkflowDraftWorkspacesGet = Rpc.make(
+  "workflow.draft_workspaces.get",
+  {
+    payload: WorkflowDraftWorkspacesGetPayloadSchema,
+    success: WorkflowDraftWorkspacesGetResultSchema,
+    error: Schema.Never,
+  },
+);
+
 // Artifacts
 const artifactListSchemas = runtimeSchemasFor("workflow.artifacts.list");
 export const WorkflowArtifactsListPayloadSchema = artifactListSchemas.payload;
@@ -147,6 +210,10 @@ export const WorkflowRunsTrace = Rpc.make("workflow.runs.trace", {
 export const WorkflowRpcs = RpcGroup.make(
   WorkflowHealth,
   WorkflowSourcesList,
+  WorkflowCapabilitiesList,
+  WorkflowCapabilitiesInspect,
+  WorkflowDraftWorkspacesList,
+  WorkflowDraftWorkspacesGet,
   WorkflowArtifactsList,
   WorkflowArtifactsInspect,
   WorkflowDeploymentsList,

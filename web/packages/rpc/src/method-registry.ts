@@ -1,9 +1,20 @@
 import { Schema } from "effect";
-import type { WorkflowOperationName } from "./generated/workflow-contract.js";
+import type {
+  NodeSpecCapabilitySummary,
+  WorkflowOperationName,
+  WrapperArtifactCapabilitySummary,
+} from "./generated/workflow-contract.js";
 import {
   WorkflowHealthResultSchema,
   WorkflowSourcesListPayloadSchema,
   WorkflowSourcesListResultSchema,
+  WorkflowCapabilitiesListPayloadSchema,
+  WorkflowCapabilitiesListResultSchema,
+  WorkflowCapabilitiesInspectPayloadSchema,
+  WorkflowCapabilitiesInspectResultSchema,
+  WorkflowDraftWorkspacesListResultSchema,
+  WorkflowDraftWorkspacesGetPayloadSchema,
+  WorkflowDraftWorkspacesGetResultSchema,
   WorkflowArtifactsListPayloadSchema,
   WorkflowArtifactsListResultSchema,
   WorkflowArtifactsInspectPayloadSchema,
@@ -55,6 +66,43 @@ export type WorkflowSourcesListInterpreted = {
   readonly total: number;
 };
 
+export type CapabilitySummaryInterpreted = {
+  readonly kind: "node_spec" | "wrapper_artifact";
+  readonly name: string;
+  readonly sourceId: string;
+  readonly description: string | null;
+  readonly outcomes: ReadonlyArray<string>;
+  readonly isAsync: boolean;
+  readonly inputFields: ReadonlyArray<string>;
+  readonly outputFields: ReadonlyArray<string>;
+  readonly artifactId?: string;
+  readonly version?: number;
+  readonly title?: string;
+};
+
+export type DraftWorkspaceInterpreted = {
+  readonly workspaceId: string;
+  readonly revision: number;
+  readonly title: string | null;
+  readonly status: "valid" | "invalid" | "conflict";
+  readonly diagnostics: ReadonlyArray<{
+    readonly code: string;
+    readonly path: string;
+    readonly message: string;
+    readonly stepId: string | null;
+    readonly repairHint: string | null;
+    readonly details: Readonly<Record<string, unknown>>;
+  }>;
+  readonly summary: {
+    readonly name: unknown;
+    readonly start: unknown;
+    readonly stepCount: number;
+    readonly routeCount: number;
+    readonly steps: ReadonlyArray<string>;
+  };
+  readonly draft: Readonly<Record<string, unknown>> | null;
+};
+
 const interpretNextActions = (nextActions: {
   readonly can_continue: boolean;
   readonly can_save_now: boolean | null;
@@ -75,6 +123,74 @@ const shellArg = (value: string | number): string => {
   const text = String(value);
   return /^[A-Za-z0-9._/@:-]+$/.test(text) ? text : `'${text.replace(/'/g, "''")}'`;
 };
+
+const interpretCapabilitySummary = (
+  capability: NodeSpecCapabilitySummary | WrapperArtifactCapabilitySummary,
+): CapabilitySummaryInterpreted => {
+  const interpreted = {
+    kind: capability.kind,
+    name: capability.name,
+    sourceId: capability.source_id,
+    description: capability.description,
+    outcomes: capability.outcomes,
+    isAsync: capability.is_async,
+    inputFields: capability.input_fields,
+    outputFields: capability.output_fields,
+  };
+  if (capability.kind === "wrapper_artifact") {
+    return {
+      ...interpreted,
+      artifactId: capability.artifact_id,
+      version: capability.version,
+      title: capability.title,
+    };
+  }
+  return interpreted;
+};
+
+const interpretDraftWorkspace = (decoded: {
+  readonly diagnostics: ReadonlyArray<{
+    readonly code: string;
+    readonly details?: Record<string, unknown>;
+    readonly message: string;
+    readonly path: string;
+    readonly repair_hint?: string | null;
+    readonly step_id?: string | null;
+  }>;
+  readonly draft?: Record<string, unknown>;
+  readonly revision: number;
+  readonly status: "valid" | "invalid" | "conflict";
+  readonly summary: {
+    readonly name: unknown;
+    readonly route_count: number;
+    readonly start: unknown;
+    readonly step_count: number;
+    readonly steps: ReadonlyArray<string>;
+  };
+  readonly title: string | null;
+  readonly workspace_id: string;
+}): DraftWorkspaceInterpreted => ({
+  workspaceId: decoded.workspace_id,
+  revision: decoded.revision,
+  title: decoded.title,
+  status: decoded.status,
+  diagnostics: decoded.diagnostics.map((diagnostic) => ({
+    code: diagnostic.code,
+    path: diagnostic.path,
+    message: diagnostic.message,
+    stepId: diagnostic.step_id ?? null,
+    repairHint: diagnostic.repair_hint ?? null,
+    details: diagnostic.details ?? {},
+  })),
+  summary: {
+    name: decoded.summary.name,
+    start: decoded.summary.start,
+    stepCount: decoded.summary.step_count,
+    routeCount: decoded.summary.route_count,
+    steps: decoded.summary.steps,
+  },
+  draft: decoded.draft ?? null,
+});
 
 /** Adapts a snake_case run detail from the server into camelCase for the browser. */
 const interpretRunDetail = (decoded: {
@@ -159,6 +275,110 @@ const operationEntries = defineOperationEntries([
         nextCursor: decoded.next_cursor,
         total: decoded.total,
       };
+    },
+  },
+  {
+    method: "workflow.capabilities.list",
+    label: "List capabilities",
+    explanation: "List workflow-authorable capabilities with pagination",
+    idempotency: "read",
+    equivalentCli: (params) => {
+      const p = Schema.decodeUnknownSync(WorkflowCapabilitiesListPayloadSchema)(
+        params,
+        { onExcessProperty: "error" },
+      );
+      const parts = ["uv run wf cap list"];
+      if (p.query != null) parts.push(`--query ${shellArg(p.query)}`);
+      if (p.source_id != null) parts.push(`--source ${shellArg(p.source_id)}`);
+      if (p.cursor != null) parts.push(`--cursor ${shellArg(p.cursor)}`);
+      if (p.limit != null) parts.push(`--limit ${p.limit}`);
+      return parts.join(" ");
+    },
+    interpret: (result) => {
+      const decoded = Schema.decodeUnknownSync(
+        WorkflowCapabilitiesListResultSchema,
+      )(result);
+      return {
+        capabilities: decoded.capabilities.map(interpretCapabilitySummary),
+        nextCursor: decoded.next_cursor,
+        total: decoded.total,
+      };
+    },
+  },
+  {
+    method: "workflow.capabilities.inspect",
+    label: "Inspect capability",
+    explanation: "Inspect one workflow-authorable capability",
+    idempotency: "read",
+    equivalentCli: (params) => {
+      const p = Schema.decodeUnknownSync(
+        WorkflowCapabilitiesInspectPayloadSchema,
+      )(params, { onExcessProperty: "error" });
+      return `uv run wf cap inspect ${shellArg(p.qualified_name)}`;
+    },
+    interpret: (result) => {
+      const decoded = Schema.decodeUnknownSync(
+        WorkflowCapabilitiesInspectResultSchema,
+      )(result);
+      const base = {
+        kind: decoded.kind,
+        name: decoded.name,
+        sourceId: decoded.source_id,
+        description: decoded.description,
+        isAsync: decoded.is_async,
+        outcomes: decoded.outcomes,
+        inputSchema: decoded.input_schema,
+        outputSchema: decoded.output_schema,
+        wrapperHints: decoded.wrapper_hints,
+      };
+      if (decoded.kind === "wrapper_artifact") {
+        return {
+          ...base,
+          artifactId: decoded.artifact_id,
+          title: decoded.title,
+          version: decoded.version,
+          requiredCapabilities: decoded.required_capabilities,
+        };
+      }
+      return {
+        ...base,
+        acceptsContext: decoded.accepts_context,
+      };
+    },
+  },
+  {
+    method: "workflow.draft_workspaces.list",
+    label: "List draft workspaces",
+    explanation: "List persisted workflow draft workspaces",
+    idempotency: "read",
+    equivalentCli: () => "uv run wf draft list",
+    interpret: (result) => {
+      const decoded = Schema.decodeUnknownSync(
+        WorkflowDraftWorkspacesListResultSchema,
+      )(result);
+      return {
+        items: decoded.workspaces.map(interpretDraftWorkspace),
+      };
+    },
+  },
+  {
+    method: "workflow.draft_workspaces.get",
+    label: "Inspect draft workspace",
+    explanation: "Inspect one persisted workflow draft workspace",
+    idempotency: "read",
+    equivalentCli: (params) => {
+      const p = Schema.decodeUnknownSync(
+        WorkflowDraftWorkspacesGetPayloadSchema,
+      )(params, { onExcessProperty: "error" });
+      const parts = ["uv run wf draft inspect", shellArg(p.workspace_id)];
+      if (p.include_draft === true) parts.push("--include-draft");
+      return parts.join(" ");
+    },
+    interpret: (result) => {
+      const decoded = Schema.decodeUnknownSync(
+        WorkflowDraftWorkspacesGetResultSchema,
+      )(result);
+      return interpretDraftWorkspace(decoded);
     },
   },
   {

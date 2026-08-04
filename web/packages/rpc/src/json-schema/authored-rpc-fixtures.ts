@@ -13,6 +13,114 @@ const JsonObjectSchema = Schema.Record({
   value: Schema.Unknown,
 });
 
+const WrapperHintsSchema = Schema.Struct({
+  capability_name: Schema.String,
+  confidence: Schema.Literal("high", "medium", "low"),
+  declared_outcomes: Schema.Array(Schema.String),
+  input_map: Schema.Record({ key: Schema.String, value: Schema.String }),
+  input_schema: JsonObjectSchema,
+  missing_decisions: Schema.Array(Schema.Unknown),
+  notes: Schema.Array(Schema.String),
+  outcome_candidates: Schema.Array(Schema.Unknown),
+  outcome_policy: Schema.Literal(
+    "preserve_declared",
+    "manual_mapping_required",
+  ),
+  output_map: Schema.Record({ key: Schema.String, value: Schema.String }),
+  output_schema: JsonObjectSchema,
+  state_schema: JsonObjectSchema,
+  suggested_wrapper_outcomes: Schema.Array(Schema.String),
+});
+
+const CapabilitySummarySchema = Schema.Union(
+  Schema.Struct({
+    kind: Schema.Literal("node_spec"),
+    name: Schema.String,
+    source_id: Schema.String,
+    description: Schema.NullOr(Schema.String),
+    outcomes: Schema.Array(Schema.String),
+    is_async: Schema.Boolean,
+    input_fields: Schema.Array(Schema.String),
+    output_fields: Schema.Array(Schema.String),
+  }),
+  Schema.Struct({
+    kind: Schema.Literal("wrapper_artifact"),
+    name: Schema.String,
+    source_id: Schema.String,
+    description: Schema.NullOr(Schema.String),
+    outcomes: Schema.Array(Schema.String),
+    is_async: Schema.Boolean,
+    input_fields: Schema.Array(Schema.String),
+    output_fields: Schema.Array(Schema.String),
+    artifact_id: Schema.String,
+    version: PositiveIntegerSchema,
+    title: Schema.String,
+  }),
+);
+
+const CapabilityDetailSchema = Schema.Union(
+  Schema.Struct({
+    accepts_context: Schema.Boolean,
+    description: Schema.NullOr(Schema.String),
+    input_schema: JsonObjectSchema,
+    is_async: Schema.Boolean,
+    kind: Schema.Literal("node_spec"),
+    name: Schema.String,
+    outcomes: Schema.Array(Schema.String),
+    output_schema: JsonObjectSchema,
+    source_id: Schema.String,
+    wrapper_hints: WrapperHintsSchema,
+  }),
+  Schema.Struct({
+    artifact_id: Schema.String,
+    description: Schema.NullOr(Schema.String),
+    input_schema: JsonObjectSchema,
+    is_async: Schema.Boolean,
+    kind: Schema.Literal("wrapper_artifact"),
+    name: Schema.String,
+    outcomes: Schema.Array(Schema.String),
+    output_schema: JsonObjectSchema,
+    required_capabilities: Schema.Record({
+      key: Schema.String,
+      value: Schema.Unknown,
+    }),
+    source_id: Schema.String,
+    title: Schema.String,
+    version: PositiveIntegerSchema,
+    wrapper_hints: WrapperHintsSchema,
+  }),
+);
+
+const DraftDiagnosticSchema = Schema.Struct({
+  code: Schema.String,
+  details: Schema.optional(JsonObjectSchema),
+  message: Schema.String,
+  path: Schema.String,
+  repair_hint: Schema.optional(Schema.NullOr(Schema.String)),
+  step_id: Schema.optional(Schema.NullOr(Schema.String)),
+});
+
+const DraftWorkspaceSchema = Schema.Struct({
+  diagnostics: Schema.Array(DraftDiagnosticSchema),
+  draft: Schema.optional(JsonObjectSchema),
+  revision: PositiveIntegerSchema,
+  status: Schema.Literal("valid", "invalid", "conflict"),
+  summary: Schema.Struct({
+    name: Schema.Unknown,
+    route_count: NonNegativeIntegerSchema,
+    start: Schema.Unknown,
+    step_count: NonNegativeIntegerSchema,
+    steps: Schema.Array(Schema.String),
+  }),
+  title: Schema.NullOr(Schema.String),
+  workspace_id: Schema.String,
+});
+
+export type AuthoredRpcFixture = {
+  readonly payload: Schema.Schema.AnyNoContext;
+  readonly success: Schema.Schema.AnyNoContext;
+};
+
 const SourceSummarySchema = Schema.Struct({
   id: Schema.String,
   kind: Schema.String,
@@ -129,6 +237,40 @@ export const authoredRpcSchemas = {
       next_cursor: Schema.NullOr(Schema.String),
       total: NonNegativeIntegerSchema,
     }),
+  },
+  "workflow.capabilities.list": {
+    payload: Schema.Struct({
+      query: Schema.optional(Schema.NullOr(Schema.String)),
+      source_id: Schema.optional(Schema.NullOr(Schema.String)),
+      cursor: Schema.optional(Schema.NullOr(Schema.String)),
+      limit: Schema.optional(
+        Schema.Number.pipe(Schema.int(), Schema.between(1, 200)),
+      ),
+    }),
+    success: Schema.Struct({
+      capabilities: Schema.Array(CapabilitySummarySchema),
+      next_cursor: Schema.NullOr(Schema.String),
+      total: NonNegativeIntegerSchema,
+    }),
+  },
+  "workflow.capabilities.inspect": {
+    payload: Schema.Struct({
+      qualified_name: Schema.String.pipe(Schema.minLength(1)),
+    }),
+    success: CapabilityDetailSchema,
+  },
+  "workflow.draft_workspaces.list": {
+    payload: Schema.Struct({}),
+    success: Schema.Struct({
+      workspaces: Schema.Array(DraftWorkspaceSchema),
+    }),
+  },
+  "workflow.draft_workspaces.get": {
+    payload: Schema.Struct({
+      workspace_id: Schema.String.pipe(Schema.minLength(1)),
+      include_draft: Schema.optional(Schema.Boolean),
+    }),
+    success: DraftWorkspaceSchema,
   },
   "workflow.artifacts.list": {
     payload: Schema.Struct({
@@ -254,4 +396,4 @@ export const authoredRpcSchemas = {
       trace_truncated: Schema.Boolean,
     }),
   },
-};
+} satisfies Readonly<Record<string, AuthoredRpcFixture>>;

@@ -17,6 +17,10 @@ export * from "./generated/workflow-contract.js";
 export {
   WorkflowHealth,
   WorkflowSourcesList,
+  WorkflowCapabilitiesList,
+  WorkflowCapabilitiesInspect,
+  WorkflowDraftWorkspacesList,
+  WorkflowDraftWorkspacesGet,
   WorkflowArtifactsList,
   WorkflowArtifactsInspect,
   WorkflowDeploymentsList,
@@ -27,6 +31,14 @@ export {
   WorkflowRunsStart,
   WorkflowRunsResume,
   WorkflowRunsTrace,
+  WorkflowCapabilitiesListPayloadSchema,
+  WorkflowCapabilitiesListResultSchema,
+  WorkflowCapabilitiesInspectPayloadSchema,
+  WorkflowCapabilitiesInspectResultSchema,
+  WorkflowDraftWorkspacesListPayloadSchema,
+  WorkflowDraftWorkspacesListResultSchema,
+  WorkflowDraftWorkspacesGetPayloadSchema,
+  WorkflowDraftWorkspacesGetResultSchema,
   WorkflowRpcs,
   ArtifactRefSchema,
 } from "./rpcs.js";
@@ -45,6 +57,8 @@ export type {
   OperationMeta,
   WorkflowHealthInterpreted,
   WorkflowSourcesListInterpreted,
+  CapabilitySummaryInterpreted,
+  DraftWorkspaceInterpreted,
 } from "./method-registry.js";
 
 export {

@@ -14,6 +14,22 @@ const WorkflowSourcesListPayloadSchema =
   authoredRpcSchemas["workflow.sources.list"].payload;
 const WorkflowSourcesListResultSchema =
   authoredRpcSchemas["workflow.sources.list"].success;
+const WorkflowCapabilitiesListPayloadSchema =
+  authoredRpcSchemas["workflow.capabilities.list"].payload;
+const WorkflowCapabilitiesListResultSchema =
+  authoredRpcSchemas["workflow.capabilities.list"].success;
+const WorkflowCapabilitiesInspectPayloadSchema =
+  authoredRpcSchemas["workflow.capabilities.inspect"].payload;
+const WorkflowCapabilitiesInspectResultSchema =
+  authoredRpcSchemas["workflow.capabilities.inspect"].success;
+const WorkflowDraftWorkspacesListPayloadSchema =
+  authoredRpcSchemas["workflow.draft_workspaces.list"].payload;
+const WorkflowDraftWorkspacesListResultSchema =
+  authoredRpcSchemas["workflow.draft_workspaces.list"].success;
+const WorkflowDraftWorkspacesGetPayloadSchema =
+  authoredRpcSchemas["workflow.draft_workspaces.get"].payload;
+const WorkflowDraftWorkspacesGetResultSchema =
+  authoredRpcSchemas["workflow.draft_workspaces.get"].success;
 const WorkflowArtifactsListPayloadSchema =
   authoredRpcSchemas["workflow.artifacts.list"].payload;
 const WorkflowArtifactsListResultSchema =
@@ -176,6 +192,173 @@ const parityCases: ReadonlyArray<ParityCase> = [
       ],
       next_cursor: null,
       total: 1,
+    },
+  },
+  {
+    method: "workflow.capabilities.list",
+    payload: WorkflowCapabilitiesListPayloadSchema,
+    success: WorkflowCapabilitiesListResultSchema,
+    validPayload: { query: "document", source_id: "local.lda_docs", limit: 25 },
+    invalidPayload: { limit: 0 },
+    validSuccess: {
+      capabilities: [
+        {
+          kind: "node_spec",
+          name: "local.lda_docs.read_documents",
+          source_id: "local.lda_docs",
+          description: "Read selected project documents.",
+          outcomes: ["ok", "error"],
+          is_async: false,
+          input_fields: ["names"],
+          output_fields: ["documents"],
+        },
+      ],
+      next_cursor: null,
+      total: 1,
+    },
+    invalidSuccess: {
+      capabilities: [
+        {
+          kind: "node_spec",
+          name: "local.lda_docs.read_documents",
+          source_id: "local.lda_docs",
+          description: null,
+          outcomes: ["ok"],
+          is_async: false,
+          input_fields: [1],
+          output_fields: ["documents"],
+        },
+      ],
+      next_cursor: null,
+      total: 1,
+    },
+  },
+  {
+    method: "workflow.capabilities.inspect",
+    payload: WorkflowCapabilitiesInspectPayloadSchema,
+    success: WorkflowCapabilitiesInspectResultSchema,
+    validPayload: { qualified_name: "local.lda_docs.read_documents" },
+    invalidPayload: { qualified_name: "" },
+    validSuccess: {
+      kind: "node_spec",
+      name: "local.lda_docs.read_documents",
+      source_id: "local.lda_docs",
+      description: "Read selected project documents.",
+      is_async: false,
+      accepts_context: false,
+      outcomes: ["ok", "error"],
+      input_schema: { type: "object" },
+      output_schema: { type: "object" },
+      wrapper_hints: {
+        capability_name: "local.lda_docs.read_documents",
+        confidence: "high",
+        declared_outcomes: ["ok", "error"],
+        input_map: {},
+        input_schema: { type: "object" },
+        missing_decisions: [],
+        notes: [],
+        outcome_candidates: [],
+        outcome_policy: "preserve_declared",
+        output_map: {},
+        output_schema: { type: "object" },
+        state_schema: { type: "object" },
+        suggested_wrapper_outcomes: ["ok", "error"],
+      },
+    },
+    invalidSuccess: {
+      kind: "node_spec",
+      name: "local.lda_docs.read_documents",
+      source_id: "local.lda_docs",
+      description: null,
+      is_async: false,
+      accepts_context: false,
+      outcomes: ["ok"],
+      input_schema: { type: "object" },
+      output_schema: { type: "object" },
+    },
+  },
+  {
+    method: "workflow.draft_workspaces.list",
+    payload: WorkflowDraftWorkspacesListPayloadSchema,
+    success: WorkflowDraftWorkspacesListResultSchema,
+    validPayload: {},
+    validSuccess: {
+      workspaces: [
+        {
+          workspace_id: "console.demo",
+          revision: 1,
+          title: "Console demo",
+          status: "valid",
+          diagnostics: [],
+          summary: {
+            name: "console.demo",
+            start: "read",
+            step_count: 1,
+            route_count: 1,
+            steps: ["read"],
+          },
+        },
+      ],
+    },
+    invalidSuccess: {
+      workspaces: [
+        {
+          workspace_id: "console.demo",
+          revision: 1,
+          title: "Console demo",
+          status: "valid",
+          diagnostics: [],
+          summary: {
+            name: "console.demo",
+            start: "read",
+            step_count: 1,
+            route_count: 1,
+            steps: [1],
+          },
+        },
+      ],
+    },
+  },
+  {
+    method: "workflow.draft_workspaces.get",
+    payload: WorkflowDraftWorkspacesGetPayloadSchema,
+    success: WorkflowDraftWorkspacesGetResultSchema,
+    validPayload: { workspace_id: "console.demo", include_draft: true },
+    invalidPayload: { include_draft: true },
+    validSuccess: {
+      workspace_id: "console.demo",
+      revision: 1,
+      title: "Console demo",
+      status: "valid",
+      diagnostics: [],
+      summary: {
+        name: "console.demo",
+        start: "read",
+        step_count: 1,
+        route_count: 1,
+        steps: ["read"],
+      },
+      draft: {
+        name: "console.demo",
+        start: "read",
+        steps: { read: { use: "local.lda_docs.read_documents" } },
+        routes: { read: { ok: "__end__" } },
+      },
+    },
+    invalidSuccess: {
+      workspace_id: "console.demo",
+      revision: 1,
+      title: "Console demo",
+      status: "valid",
+      diagnostics: [],
+      summary: {
+        name: "console.demo",
+        start: "read",
+        step_count: 1,
+        route_count: 1,
+        steps: ["read"],
+      },
+      draft: null,
     },
   },
   {
@@ -500,6 +683,10 @@ describe("authored RPC and manifest schema parity", () => {
     const expectedMethods = [
       "workflow.health",
       "workflow.sources.list",
+      "workflow.capabilities.list",
+      "workflow.capabilities.inspect",
+      "workflow.draft_workspaces.list",
+      "workflow.draft_workspaces.get",
       "workflow.artifacts.list",
       "workflow.artifacts.inspect",
       "workflow.deployments.list",

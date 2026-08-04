@@ -2749,6 +2749,126 @@ export const workflowRuntimeContract = {
       ],
       "type": "object"
     },
+    "DraftDiagnosticPayload": {
+      "description": "One validation or revision diagnostic attached to a draft workspace.",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "details": {
+          "$ref": "#/components/schemas/JsonObject"
+        },
+        "message": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "repair_hint": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "step_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "code",
+        "path",
+        "message"
+      ],
+      "type": "object"
+    },
+    "DraftWorkspaceResult": {
+      "description": "Canonical persisted workspace envelope returned after reads and edits.",
+      "properties": {
+        "diagnostics": {
+          "items": {
+            "$ref": "#/components/schemas/DraftDiagnosticPayload"
+          },
+          "type": "array"
+        },
+        "draft": {
+          "$ref": "#/components/schemas/JsonObject"
+        },
+        "revision": {
+          "type": "integer"
+        },
+        "status": {
+          "enum": [
+            "valid",
+            "invalid",
+            "conflict"
+          ],
+          "type": "string"
+        },
+        "summary": {
+          "$ref": "#/components/schemas/DraftWorkspaceSummary"
+        },
+        "title": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "workspace_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "workspace_id",
+        "revision",
+        "title",
+        "status",
+        "diagnostics",
+        "summary"
+      ],
+      "type": "object"
+    },
+    "DraftWorkspaceSummary": {
+      "description": "Compact graph facts included with every persisted workspace result.",
+      "properties": {
+        "name": {},
+        "route_count": {
+          "type": "integer"
+        },
+        "start": {},
+        "step_count": {
+          "type": "integer"
+        },
+        "steps": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "name",
+        "start",
+        "step_count",
+        "route_count",
+        "steps"
+      ],
+      "type": "object"
+    },
     "HealthResult": {
       "description": "Health response shared by self-describing workflow transports.",
       "properties": {
@@ -2765,6 +2885,16 @@ export const workflowRuntimeContract = {
         "store_root"
       ],
       "type": "object"
+    },
+    "InspectCapabilityResult": {
+      "anyOf": [
+        {
+          "$ref": "#/components/schemas/NodeSpecCapabilityDetail"
+        },
+        {
+          "$ref": "#/components/schemas/WrapperArtifactCapabilityDetail"
+        }
+      ]
     },
     "InterruptPayload": {
       "description": "Persisted typed interrupt contract exposed to API clients.",
@@ -2896,6 +3026,43 @@ export const workflowRuntimeContract = {
       ],
       "type": "object"
     },
+    "ListCapabilitiesResult": {
+      "description": "Cursor-paged planner-visible capability discovery result.",
+      "properties": {
+        "capabilities": {
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NodeSpecCapabilitySummary"
+              },
+              {
+                "$ref": "#/components/schemas/WrapperArtifactCapabilitySummary"
+              }
+            ]
+          },
+          "type": "array"
+        },
+        "next_cursor": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "total": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "next_cursor",
+        "total",
+        "capabilities"
+      ],
+      "type": "object"
+    },
     "ListDeploymentsResult": {
       "properties": {
         "deployments": {
@@ -2907,6 +3074,21 @@ export const workflowRuntimeContract = {
       },
       "required": [
         "deployments"
+      ],
+      "type": "object"
+    },
+    "ListDraftWorkspacesResult": {
+      "description": "All persisted draft-workspace summaries.",
+      "properties": {
+        "workspaces": {
+          "items": {
+            "$ref": "#/components/schemas/DraftWorkspaceResult"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "workspaces"
       ],
       "type": "object"
     },
@@ -3053,6 +3235,122 @@ export const workflowRuntimeContract = {
         "reason",
         "patch_examples",
         "warnings"
+      ],
+      "type": "object"
+    },
+    "NodeSpecCapabilityDetail": {
+      "description": "Full executable contract for one source node spec.",
+      "properties": {
+        "accepts_context": {
+          "type": "boolean"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "input_schema": {
+          "$ref": "#/components/schemas/JsonObject"
+        },
+        "is_async": {
+          "type": "boolean"
+        },
+        "kind": {
+          "const": "node_spec",
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "outcomes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "output_schema": {
+          "$ref": "#/components/schemas/JsonObject"
+        },
+        "source_id": {
+          "type": "string"
+        },
+        "wrapper_hints": {
+          "$ref": "#/components/schemas/WrapperAuthoringHintsPayload"
+        }
+      },
+      "required": [
+        "name",
+        "source_id",
+        "description",
+        "outcomes",
+        "is_async",
+        "input_schema",
+        "output_schema",
+        "wrapper_hints",
+        "kind",
+        "accepts_context"
+      ],
+      "type": "object"
+    },
+    "NodeSpecCapabilitySummary": {
+      "description": "Compact discovery row for one executable source node spec.",
+      "properties": {
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "input_fields": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "is_async": {
+          "type": "boolean"
+        },
+        "kind": {
+          "const": "node_spec",
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "outcomes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "output_fields": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "source_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "source_id",
+        "description",
+        "outcomes",
+        "is_async",
+        "input_fields",
+        "output_fields",
+        "kind"
       ],
       "type": "object"
     },
@@ -3873,6 +4171,302 @@ export const workflowRuntimeContract = {
         }
       },
       "type": "object"
+    },
+    "WrapperArtifactCapabilityDetail": {
+      "description": "Full callable contract for one saved wrapper artifact.",
+      "properties": {
+        "artifact_id": {
+          "type": "string"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "input_schema": {
+          "$ref": "#/components/schemas/JsonObject"
+        },
+        "is_async": {
+          "type": "boolean"
+        },
+        "kind": {
+          "const": "wrapper_artifact",
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "outcomes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "output_schema": {
+          "$ref": "#/components/schemas/JsonObject"
+        },
+        "required_capabilities": {
+          "additionalProperties": {
+            "$ref": "#/components/schemas/RequiredCapabilityPayload"
+          },
+          "type": "object"
+        },
+        "source_id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "version": {
+          "type": "integer"
+        },
+        "wrapper_hints": {
+          "$ref": "#/components/schemas/WrapperAuthoringHintsPayload"
+        }
+      },
+      "required": [
+        "name",
+        "source_id",
+        "description",
+        "outcomes",
+        "is_async",
+        "input_schema",
+        "output_schema",
+        "wrapper_hints",
+        "kind",
+        "artifact_id",
+        "version",
+        "title",
+        "required_capabilities"
+      ],
+      "type": "object"
+    },
+    "WrapperArtifactCapabilitySummary": {
+      "description": "Compact discovery row for one saved wrapper artifact.",
+      "properties": {
+        "artifact_id": {
+          "type": "string"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "input_fields": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "is_async": {
+          "type": "boolean"
+        },
+        "kind": {
+          "const": "wrapper_artifact",
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "outcomes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "output_fields": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "source_id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "version": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "name",
+        "source_id",
+        "description",
+        "outcomes",
+        "is_async",
+        "input_fields",
+        "output_fields",
+        "kind",
+        "artifact_id",
+        "version",
+        "title"
+      ],
+      "type": "object"
+    },
+    "WrapperAuthoringHintsPayload": {
+      "description": "Transport-neutral projection of conservative wrapper scaffolding hints.",
+      "properties": {
+        "capability_name": {
+          "type": "string"
+        },
+        "confidence": {
+          "enum": [
+            "high",
+            "medium",
+            "low"
+          ],
+          "type": "string"
+        },
+        "declared_outcomes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "input_map": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "input_schema": {
+          "$ref": "#/components/schemas/JsonObject"
+        },
+        "missing_decisions": {
+          "items": {
+            "$ref": "#/components/schemas/WrapperMissingDecisionPayload"
+          },
+          "type": "array"
+        },
+        "notes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "outcome_candidates": {
+          "items": {
+            "$ref": "#/components/schemas/WrapperOutcomeCandidatePayload"
+          },
+          "type": "array"
+        },
+        "outcome_policy": {
+          "enum": [
+            "preserve_declared",
+            "manual_mapping_required"
+          ],
+          "type": "string"
+        },
+        "output_map": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "output_schema": {
+          "$ref": "#/components/schemas/JsonObject"
+        },
+        "state_schema": {
+          "$ref": "#/components/schemas/JsonObject"
+        },
+        "suggested_wrapper_outcomes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "capability_name",
+        "confidence",
+        "declared_outcomes",
+        "suggested_wrapper_outcomes",
+        "outcome_policy",
+        "input_schema",
+        "state_schema",
+        "output_schema",
+        "input_map",
+        "output_map",
+        "outcome_candidates",
+        "missing_decisions",
+        "notes"
+      ],
+      "type": "object"
+    },
+    "WrapperMissingDecisionPayload": {
+      "description": "One unresolved wrapper-authoring decision.",
+      "properties": {
+        "kind": {
+          "enum": [
+            "choose_output_fields",
+            "review_nested_output",
+            "confirm_boolean_outcomes",
+            "choose_error_mapping"
+          ],
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "message"
+      ],
+      "type": "object"
+    },
+    "WrapperOutcomeCandidatePayload": {
+      "description": "Possible wrapper outcome mapping that still requires caller judgment.",
+      "properties": {
+        "automatic": {
+          "type": "boolean"
+        },
+        "candidate_outcomes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "confidence": {
+          "enum": [
+            "high",
+            "medium",
+            "low"
+          ],
+          "type": "string"
+        },
+        "kind": {
+          "const": "boolean_control_field",
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "source",
+        "candidate_outcomes",
+        "confidence",
+        "reason",
+        "automatic"
+      ],
+      "type": "object"
     }
   },
   "operations": {
@@ -3954,6 +4548,75 @@ export const workflowRuntimeContract = {
         "$ref": "#/components/schemas/ListArtifactsResult"
       }
     },
+    "workflow.capabilities.inspect": {
+      "payload": {
+        "additionalProperties": false,
+        "properties": {
+          "qualified_name": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "qualified_name"
+        ],
+        "type": "object"
+      },
+      "success": {
+        "$ref": "#/components/schemas/InspectCapabilityResult"
+      }
+    },
+    "workflow.capabilities.list": {
+      "payload": {
+        "additionalProperties": false,
+        "properties": {
+          "query": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "source_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "limit": {
+            "default": 50,
+            "maximum": 200,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "success": {
+        "$ref": "#/components/schemas/ListCapabilitiesResult"
+      }
+    },
     "workflow.deployments.inspect": {
       "payload": {
         "additionalProperties": false,
@@ -4003,6 +4666,39 @@ export const workflowRuntimeContract = {
       },
       "success": {
         "$ref": "#/components/schemas/ValidateDeploymentResult"
+      }
+    },
+    "workflow.draft_workspaces.get": {
+      "payload": {
+        "additionalProperties": false,
+        "properties": {
+          "workspace_id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "include_draft": {
+            "default": false,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "workspace_id"
+        ],
+        "type": "object"
+      },
+      "success": {
+        "$ref": "#/components/schemas/DraftWorkspaceResult"
+      }
+    },
+    "workflow.draft_workspaces.list": {
+      "payload": {
+        "additionalProperties": false,
+        "properties": {},
+        "required": [],
+        "type": "object"
+      },
+      "success": {
+        "$ref": "#/components/schemas/ListDraftWorkspacesResult"
       }
     },
     "workflow.health": {
