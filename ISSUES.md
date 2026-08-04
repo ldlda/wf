@@ -81,11 +81,17 @@
     representative checked manifest components. It rejects unsupported
     `oneOf`, conditional, composition, and unknown-keyword semantics instead of
     weakening them.
+  - A test-only parity harness translates the payload and success schemas for
+    all 12 authored RPCs: all 24 sides are inside the supported translator
+    subset. Eight mismatches are pinned for the current representative result
+    fixtures. Run inspect/start/resume use a reduced authored interrupt instead
+    of the complete manifest interrupt in both acceptance directions; run trace
+    uses a compact trace-page envelope and omits canonical frame identifiers.
   - Runtime decoder migration and broader callable client coverage remain
-    incomplete. The next parity slice must extend only the semantics required
-    by the existing 12 RPCs, compare generated and authored decoding behavior,
-    add an input-depth boundary before recursive generated decoders become
-    runtime-facing, and keep the browser allowlist authored.
+    incomplete. Migrate the non-run domains first, then resolve the run result
+    contract deliberately. Add an input-depth boundary before recursive
+    generated decoders become runtime-facing, and keep the browser allowlist
+    authored.
 - The stock `@open-rpc/generator` TypeScript client is not suitable here. It
   exhausted a 4 GB Node heap on the full contract and emitted invalid dotted
     class members plus `any` results for a minimal `workflow.health` contract.

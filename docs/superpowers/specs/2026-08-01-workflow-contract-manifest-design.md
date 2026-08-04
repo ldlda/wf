@@ -269,8 +269,10 @@ After the manifest slice:
 1. Completed: generate TypeScript operation names and raw request/result types;
 2. Completed: build a fail-closed JSON Schema-to-Effect translator against
    representative schemas before applying it broadly;
-3. migrate the existing 12 RPC definitions by domain while comparing old and
-   generated decoders;
+3. In progress: migrate the existing 12 RPC definitions by domain while
+   comparing old and generated decoders. The test-only parity harness covers
+   all 24 payload/result sides and pins eight mismatches for representative
+   run-result fixtures;
 4. remove duplicated operation-name guards only after equivalent generated
    inventory is in use; and
 5. expand client coverage when a product caller needs each operation.
@@ -305,6 +307,16 @@ add a bounded input-depth policy. Effect's recursive schema decoder does not
 independently prevent stack exhaustion on adversarially deep values; the
 prototype's structural recursion guard prevents non-productive schema cycles,
 not unbounded runtime nesting.
+
+The authored-RPC parity harness found no additional translator blockers for
+the current 12 operations. Health, sources, artifacts, deployments, and run
+list agree on representative accepted and rejected values. Run inspect, start,
+and resume differ because the authored decoder accepts a reduced interrupt and
+rejects the complete manifest interrupt. Run trace differs because the authored
+decoder expects a compact trace page while the manifest returns the full run
+result with a required trace slice; the authored trace frame also omits the
+canonical `frame_id` and `next_node_id`. These are contract decisions for
+migration, not reasons to broaden the translator.
 
 ## Success Criteria
 

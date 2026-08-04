@@ -751,6 +751,12 @@ stable.
   checked-manifest coverage. Unsupported union and conditional semantics remain
   typed translation failures. No runtime RPC or browser authorization behavior
   changed; runtime TypeScript parity is not complete.
+- Completed: a test-only parity harness translates all 24 payload/result sides
+  of the 12 authored Effect RPCs. Health, sources, artifacts, deployments, and
+  run-list fixtures agree; eight bidirectional result mismatches are pinned for
+  the current representative run inspect/start/resume interrupt fixtures and
+  the compact run-trace envelope/frame shape.
+  No runtime decoder or browser authorization behavior changed.
 - `WorkflowApiSurface` is the protocol-neutral workflow operation contract.
 - `wf_transport_rpc_http` exposes local/static and MCP-backed `WorkflowServer`
   over JSON-RPC HTTP.
