@@ -8,7 +8,7 @@ import {
 const translatedSchema = (
   schema: unknown,
   components: Readonly<Record<string, unknown>> = {},
-): Schema.Schema.Any => {
+): Schema.Schema.AnyNoContext => {
   const result = translateJsonSchema(schema, { components });
   if (Either.isLeft(result)) {
     throw new Error(`${result.left.path}: ${result.left.message}`);
@@ -16,7 +16,7 @@ const translatedSchema = (
   return result.right;
 };
 
-const accepts = (schema: Schema.Schema.Any, value: unknown): boolean =>
+const accepts = (schema: Schema.Schema.AnyNoContext, value: unknown): boolean =>
   Either.isRight(
     Schema.decodeUnknownEither(schema)(value, { onExcessProperty: "error" }),
   );

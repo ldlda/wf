@@ -32,6 +32,10 @@ const isRecord = (value: unknown): value is Record<string, unknown> => {
   return prototype === Object.prototype || prototype === null;
 };
 
+type NoContextStructField =
+  | Schema.Schema.AnyNoContext
+  | Schema.optional<Schema.Schema.AnyNoContext>;
+
 const isJsonValue = (input: unknown): input is JsonValue => {
   const visiting = new Set<object>();
   const visit = (value: unknown): boolean => {
@@ -100,10 +104,10 @@ const ANNOTATION_KEYWORDS = new Set([
 ]);
 
 const decodedObject = (
-  fields: Readonly<Record<string, Schema.Struct.Field>>,
-  target: Schema.Schema.Any,
+  fields: Readonly<Record<string, NoContextStructField>>,
+  target: Schema.Schema.AnyNoContext,
   closed: boolean,
-): Schema.Schema.Any => {
+): Schema.Schema.AnyNoContext => {
   const allowedKeys = new Set(Object.keys(fields));
   const encodedObject = Schema.Unknown.pipe(
     Schema.filter(
@@ -247,7 +251,7 @@ const literalMatchesType = (
 const codePointLength = (value: string): number => Array.from(value).length;
 
 class Translator {
-  readonly #cache = new Map<string, Schema.Schema.Any>();
+  readonly #cache = new Map<string, Schema.Schema.AnyNoContext>();
   readonly #components: Readonly<Record<string, unknown>>;
   readonly #resolvingAtDepth = new Map<string, number>();
 
@@ -259,7 +263,7 @@ class Translator {
     value: unknown,
     path = "$",
     structuralDepth = 0,
-  ): Either.Either<Schema.Schema.Any, JsonSchemaTranslationError> {
+  ): Either.Either<Schema.Schema.AnyNoContext, JsonSchemaTranslationError> {
     if (value === true) return Either.right(JsonValueSchema);
     if (value === false) return Either.right(RejectAllSchema);
     if (!isRecord(value)) {
@@ -319,7 +323,7 @@ class Translator {
     value: Readonly<Record<string, unknown>>,
     path: string,
     structuralDepth: number,
-  ): Either.Either<Schema.Schema.Any, JsonSchemaTranslationError> {
+  ): Either.Either<Schema.Schema.AnyNoContext, JsonSchemaTranslationError> {
     const unsupported = unsupportedKeyword(value, new Set(["$ref"]), path);
     if (unsupported !== null) return Either.left(unsupported);
     if (typeof value.$ref !== "string") {
@@ -375,13 +379,13 @@ class Translator {
     value: Readonly<Record<string, unknown>>,
     path: string,
     structuralDepth: number,
-  ): Either.Either<Schema.Schema.Any, JsonSchemaTranslationError> {
+  ): Either.Either<Schema.Schema.AnyNoContext, JsonSchemaTranslationError> {
     const unsupported = unsupportedKeyword(value, new Set(["anyOf"]), path);
     if (unsupported !== null) return Either.left(unsupported);
     if (!Array.isArray(value.anyOf) || value.anyOf.length === 0) {
       return failure(path, "anyOf must be a non-empty array", "anyOf");
     }
-    const members: Schema.Schema.Any[] = [];
+    const members: Schema.Schema.AnyNoContext[] = [];
     for (const [index, member] of value.anyOf.entries()) {
       const translated = this.translate(
         member,
@@ -397,7 +401,7 @@ class Translator {
   #translateConst(
     value: Readonly<Record<string, unknown>>,
     path: string,
-  ): Either.Either<Schema.Schema.Any, JsonSchemaTranslationError> {
+  ): Either.Either<Schema.Schema.AnyNoContext, JsonSchemaTranslationError> {
     const unsupported = unsupportedKeyword(value, new Set(["const", "type"]), path);
     if (unsupported !== null) return Either.left(unsupported);
     const declaredType = primitiveTypeAt(value.type, path);
@@ -413,7 +417,7 @@ class Translator {
   #translateEnum(
     value: Readonly<Record<string, unknown>>,
     path: string,
-  ): Either.Either<Schema.Schema.Any, JsonSchemaTranslationError> {
+  ): Either.Either<Schema.Schema.AnyNoContext, JsonSchemaTranslationError> {
     const unsupported = unsupportedKeyword(value, new Set(["enum", "type"]), path);
     if (unsupported !== null) return Either.left(unsupported);
     if (!Array.isArray(value.enum) || value.enum.length === 0) {
@@ -439,7 +443,7 @@ class Translator {
   #translateString(
     value: Readonly<Record<string, unknown>>,
     path: string,
-  ): Either.Either<Schema.Schema.Any, JsonSchemaTranslationError> {
+  ): Either.Either<Schema.Schema.AnyNoContext, JsonSchemaTranslationError> {
     const unsupported = unsupportedKeyword(
       value,
       new Set(["maxLength", "minLength", "pattern", "type"]),
@@ -487,7 +491,7 @@ class Translator {
     value: Readonly<Record<string, unknown>>,
     path: string,
     integer: boolean,
-  ): Either.Either<Schema.Schema.Any, JsonSchemaTranslationError> {
+  ): Either.Either<Schema.Schema.AnyNoContext, JsonSchemaTranslationError> {
     const unsupported = unsupportedKeyword(
       value,
       new Set([
@@ -536,7 +540,7 @@ class Translator {
     value: Readonly<Record<string, unknown>>,
     path: string,
     structuralDepth: number,
-  ): Either.Either<Schema.Schema.Any, JsonSchemaTranslationError> {
+  ): Either.Either<Schema.Schema.AnyNoContext, JsonSchemaTranslationError> {
     const unsupported = unsupportedKeyword(
       value,
       new Set(["items", "maxItems", "minItems", "type"]),
@@ -569,7 +573,7 @@ class Translator {
     value: Readonly<Record<string, unknown>>,
     path: string,
     structuralDepth: number,
-  ): Either.Either<Schema.Schema.Any, JsonSchemaTranslationError> {
+  ): Either.Either<Schema.Schema.AnyNoContext, JsonSchemaTranslationError> {
     const unsupported = unsupportedKeyword(
       value,
       new Set(["additionalProperties", "properties", "required", "type"]),
@@ -614,7 +618,7 @@ class Translator {
       }
     }
 
-    const fieldEntries: Array<[string, Schema.Struct.Field]> = [];
+    const fieldEntries: Array<[string, NoContextStructField]> = [];
     for (const name of Object.keys(properties).sort()) {
       const property = this.translate(
         properties[name],
@@ -677,7 +681,7 @@ class Translator {
   #translateBoolean(
     value: Readonly<Record<string, unknown>>,
     path: string,
-  ): Either.Either<Schema.Schema.Any, JsonSchemaTranslationError> {
+  ): Either.Either<Schema.Schema.AnyNoContext, JsonSchemaTranslationError> {
     const unsupported = unsupportedKeyword(value, new Set(["type"]), path);
     return unsupported === null
       ? Either.right(Schema.Boolean)
@@ -687,7 +691,7 @@ class Translator {
   #translateNull(
     value: Readonly<Record<string, unknown>>,
     path: string,
-  ): Either.Either<Schema.Schema.Any, JsonSchemaTranslationError> {
+  ): Either.Either<Schema.Schema.AnyNoContext, JsonSchemaTranslationError> {
     const unsupported = unsupportedKeyword(value, new Set(["type"]), path);
     return unsupported === null ? Either.right(Schema.Null) : Either.left(unsupported);
   }
@@ -701,5 +705,5 @@ class Translator {
 export const translateJsonSchema = (
   schema: unknown,
   options: JsonSchemaTranslationOptions = {},
-): Either.Either<Schema.Schema.Any, JsonSchemaTranslationError> =>
+): Either.Either<Schema.Schema.AnyNoContext, JsonSchemaTranslationError> =>
   new Translator(options.components ?? {}).translate(schema);
