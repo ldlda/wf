@@ -75,9 +75,17 @@
   - The manifest does not authorize callers: browser authorization, operation
     metadata, and the 12 current Effect RPC implementations remain authored
     boundaries.
-  - The next slice is a fail-closed representative JSON Schema-to-Effect
-    translator. Runtime decoder migration and broader callable client coverage
-    remain incomplete.
+  - A fail-closed representative JSON Schema-to-Effect translator now proves
+    constrained primitives, objects, arrays, `anyOf`, local references, and
+    structurally guarded recursion against synthetic schemas plus
+    representative checked manifest components. It rejects unsupported
+    `oneOf`, conditional, composition, and unknown-keyword semantics instead of
+    weakening them.
+  - Runtime decoder migration and broader callable client coverage remain
+    incomplete. The next parity slice must extend only the semantics required
+    by the existing 12 RPCs, compare generated and authored decoding behavior,
+    add an input-depth boundary before recursive generated decoders become
+    runtime-facing, and keep the browser allowlist authored.
 - The stock `@open-rpc/generator` TypeScript client is not suitable here. It
   exhausted a 4 GB Node heap on the full contract and emitted invalid dotted
     class members plus `any` results for a minimal `workflow.health` contract.

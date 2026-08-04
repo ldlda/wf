@@ -267,8 +267,8 @@ The following remain handwritten throughout the migration:
 After the manifest slice:
 
 1. Completed: generate TypeScript operation names and raw request/result types;
-2. build a fail-closed JSON Schema-to-Effect translator against representative
-   schemas before applying it broadly;
+2. Completed: build a fail-closed JSON Schema-to-Effect translator against
+   representative schemas before applying it broadly;
 3. migrate the existing 12 RPC definitions by domain while comparing old and
    generated decoders;
 4. remove duplicated operation-name guards only after equivalent generated
@@ -278,6 +278,33 @@ After the manifest slice:
 Direct reverse conversion through newer Effect APIs may be reconsidered only
 after checking version compatibility with the repository's pinned Effect and
 `@effect/rpc` versions. This design does not require an Effect upgrade.
+
+### Representative Effect Translator Boundary
+
+The completed prototype translates boolean schemas, primitive `type` schemas,
+primitive `const` and `enum`, numeric and collection constraints, objects,
+`anyOf`, local component references, and structurally guarded recursive
+reference graphs. Tests
+exercise both synthetic contracts and checked `HealthResult` / `RunResult`
+manifest components.
+
+The translator returns a typed `JsonSchemaTranslationError` and fails closed on
+unknown keywords, external or dangling references, `oneOf`, `allOf`,
+conditionals, `not`, and typed additional properties mixed with fixed fields.
+Required names supplied only through `additionalProperties` are also outside
+the representative subset, as are property names that collide with the object
+prototype. Those constructs must not be approximated with a broader Effect
+schema. Recursive translation is covered synthetically; checked manifest
+coverage currently exercises representative non-recursive components and a
+real rejected `oneOf` boundary. The prototype is not exported from the package
+root and is not wired into an RPC, service dispatch, operation allowlist, or
+browser authorization boundary.
+
+Before recursive generated schemas become runtime decoders, the migration must
+add a bounded input-depth policy. Effect's recursive schema decoder does not
+independently prevent stack exhaustion on adversarially deep values; the
+prototype's structural recursion guard prevents non-productive schema cycles,
+not unbounded runtime nesting.
 
 ## Success Criteria
 

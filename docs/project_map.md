@@ -29,7 +29,7 @@ For verified Python 3.14 dependency constraints and their removal criteria, see
 | `wf_mcp` | MCP frontend/compatibility package: legacy `wf-mcp` entrypoints, broker glue, proxy/admin tools, and shims while extraction continues. | Compatibility callers and MCP transport work. |
 | `wf_cli` | Command-line frontend over local or remote workflow APIs. | Humans, scripts, agent skills. |
 | `wf_contract_manifest` | Tooling that normalizes the composed workflow OpenRPC document into the checked transport-neutral contract manifest and detects drift. | Python and TypeScript contract generation and tests. |
-| `@lda/workflow-rpc` | Effect RPC client boundary plus generated compile-time inventory and raw wire types for all manifest operations. Runtime decoders and supported operations remain authored subsets. | Web console, Hono server, future TypeScript workflow clients. |
+| `@lda/workflow-rpc` | Effect RPC client boundary plus generated compile-time inventory and raw wire types for all manifest operations. It includes a fail-closed representative JSON Schema-to-Effect translator; runtime decoders and supported operations remain authored subsets. | Web console, Hono server, future TypeScript workflow clients. |
 | `@lda/presentation-sync` | Shared, bounded wire contract for ephemeral LAN presentation rooms. | Browser `@lda/console` and Hono `@lda/web-server`. |
 
 The TypeScript presentation synchronization boundary is deliberately narrow.

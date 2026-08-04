@@ -744,9 +744,13 @@ stable.
 - Completed: `@lda/workflow-rpc` generates all 70 wire operation names plus raw
   parameter/result types from the checked manifest. The generated artifact has
   its own deterministic drift check and proves the 12 authored Effect RPCs are
-  a subset without broadening browser authorization. A fail-closed
-  representative JSON Schema-to-Effect translator is next; runtime TypeScript
-  parity is not complete.
+  a subset without broadening browser authorization.
+- Completed: a fail-closed representative JSON Schema-to-Effect translator
+  handles constrained primitives, objects, arrays, `anyOf`, local references,
+  and structurally guarded recursive synthetic schemas, with representative
+  checked-manifest coverage. Unsupported union and conditional semantics remain
+  typed translation failures. No runtime RPC or browser authorization behavior
+  changed; runtime TypeScript parity is not complete.
 - `WorkflowApiSurface` is the protocol-neutral workflow operation contract.
 - `wf_transport_rpc_http` exposes local/static and MCP-backed `WorkflowServer`
   over JSON-RPC HTTP.
