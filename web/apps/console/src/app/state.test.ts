@@ -3,9 +3,7 @@ import {
   connectionReducer,
   initialState,
   type EvidenceRecord,
-  type SourceRecord,
   type ConnectionState,
-  type ConnectionAction,
   STORAGE_KEY,
 } from "./state.js";
 
@@ -32,20 +30,6 @@ const evidence: EvidenceRecord = {
   response: {},
   durationMs: 12,
 };
-
-const sources: ReadonlyArray<SourceRecord> = [
-  {
-    id: "local.demo",
-    kind: "python",
-    enabled: true,
-    description: null,
-    toolCount: 1,
-    nodeSpecCount: 1,
-    reducerCount: 0,
-    promptCount: 0,
-    resourceCount: 0,
-  },
-];
 
 beforeEach(() => {
   try {
@@ -148,7 +132,6 @@ describe("success", () => {
     expect(next.serverStatus).toBe("ok");
     expect(next.storeRoot).toBe("/tmp/store");
     expect(next.durationMs).toBe(10);
-    expect(next.sourcesLoading).toBe(false);
   });
 
   it("persists target to sessionStorage when available", () => {
@@ -279,46 +262,7 @@ describe("draft_changed", () => {
   });
 });
 
-describe("source inventory", () => {
-  it("sets loading state for source refreshes", () => {
-    const state: ConnectionState = {
-      ...initialState(),
-      sourceError: "old error",
-    };
-    const next = connectionReducer(state, { type: "sources_loading" });
-    expect(next.sourcesLoading).toBe(true);
-    expect(next.sourceError).toBeNull();
-  });
-
-  it("records loaded sources and evidence", () => {
-    const state = connectionReducer(initialState(), {
-      type: "sources_loading",
-    });
-    const next = connectionReducer(state, {
-      type: "sources_loaded",
-      sources,
-      evidence,
-    });
-    expect(next.sources).toBe(sources);
-    expect(next.sourcesLoading).toBe(false);
-    expect(next.sourceError).toBeNull();
-    expect(next.evidence).toEqual([evidence]);
-  });
-
-  it("records source errors and optional evidence", () => {
-    const state = connectionReducer(initialState(), {
-      type: "sources_loading",
-    });
-    const next = connectionReducer(state, {
-      type: "sources_error",
-      message: "source list failed",
-      evidence,
-    });
-    expect(next.sourcesLoading).toBe(false);
-    expect(next.sourceError).toBe("source list failed");
-    expect(next.evidence).toEqual([evidence]);
-  });
-
+describe("evidence", () => {
   it("appends protocol evidence records", () => {
     const state = initialState();
     const next = connectionReducer(state, {

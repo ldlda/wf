@@ -1,17 +1,7 @@
-import { useReducer, useEffect, useRef, useCallback, type MutableRefObject } from "react";
-import { callOperation } from "../connection/api.js";
-import type { OperationName } from "../connection/contracts.js";
-import {
-  decodeArtifactList,
-  decodeArtifactDetail,
-  decodeDeploymentList,
-  decodeDeploymentDetail,
-  decodeDeploymentValidation,
-  decodeRunList,
-  decodeRunDetail,
-  decodeTracePage,
-} from "./models.js";
-import { lifecycleReducer, initialLifecycleState, type LifecycleState, type EvidenceRecord } from "./state.js";
+import { useCallback, useEffect, useReducer, useRef, type MutableRefObject } from "react";
+import { ConsoleClientError } from "../workspace/domain/errors.js";
+import type { LifecycleClients } from "../workspace/domain/lifecycle-clients.js";
+import { lifecycleReducer, initialLifecycleState, type LifecycleState } from "./state.js";
 
 export type LifecycleExplorerController = {
   readonly state: LifecycleState;
@@ -24,85 +14,47 @@ export type LifecycleExplorerController = {
   readonly loadTrace: (start: number, limit: number) => void;
 };
 
+type ReadFailure = (message: string, operation: string) => void;
+
+const readErrorMessage = (error: unknown): string =>
+  error instanceof Error ? error.message : String(error);
+
+const readErrorOperation = (error: unknown): string =>
+  error instanceof ConsoleClientError ? error.operation : "lifecycle";
+
 export const useLifecycleExplorer = (
-  target: string | null,
-  recordEvidence: (record: EvidenceRecord) => void,
+  clients: LifecycleClients | null,
 ): LifecycleExplorerController => {
   const [state, dispatch] = useReducer(lifecycleReducer, initialLifecycleState);
   const generationRef = useRef(0);
   const artifactGenerationRef = useRef(0);
   const deploymentGenerationRef = useRef(0);
   const runGenerationRef = useRef(0);
-  const rawEvidenceRef = useRef<ReadonlyArray<EvidenceRecord>>([]);
-  const evidenceSeqRef = useRef(0);
 
-  const executeOperation = useCallback(
-    async (
-      operation: OperationName,
-      params: unknown,
+  const executeRead = useCallback(
+    async <T>(
+      read: () => Promise<T>,
       generation: number,
       checkGenerationRef: MutableRefObject<number>,
-      onSuccess: (interpreted: unknown) => void,
-      onFailure?: (message: string) => void,
-    ) => {
-      if (!target) return;
+      targetGeneration: number,
+      onSuccess: (value: T) => void,
+      onFailure?: ReadFailure,
+    ): Promise<void> => {
       try {
-        const result = await callOperation(operation, target, params);
-        if (generation !== checkGenerationRef.current) return;
-        if (result.ok) {
-          const seq = evidenceSeqRef.current++;
-          const record: EvidenceRecord = {
-            id: `${result.operation}-${seq}`,
-            operation: result.operation,
-            label: result.operation,
-            equivalentCli: result.equivalentCli,
-            request: result.exchange.request,
-            response: result.exchange.response,
-            durationMs: result.durationMs,
-          };
-          recordEvidence(record);
-          rawEvidenceRef.current = [...rawEvidenceRef.current, record];
-          dispatch({ type: "setRawEvidence", evidence: rawEvidenceRef.current });
-          try {
-            onSuccess(result.interpreted);
-          } catch (decodeError) {
-            dispatch({
-              type: "pushError",
-              error: {
-                operation: result.operation,
-                message: decodeError instanceof Error ? decodeError.message : String(decodeError),
-                timestamp: Date.now(),
-              },
-            });
-          }
-        } else {
-          onFailure?.(result.error.message);
-          const seq = evidenceSeqRef.current++;
-          const record: EvidenceRecord = {
-            id: `${operation}-${seq}`,
-            operation,
-            label: `${operation} failed`,
-            equivalentCli: "unavailable: operation failed before CLI metadata",
-            request: result.exchange.request,
-            response: result.exchange.response,
-            durationMs: 0,
-          };
-          recordEvidence(record);
-          rawEvidenceRef.current = [...rawEvidenceRef.current, record];
-          dispatch({ type: "setRawEvidence", evidence: rawEvidenceRef.current });
-          dispatch({
-            type: "pushError",
-            error: {
-              operation,
-              message: result.error.message,
-              timestamp: Date.now(),
-            },
-          });
-        }
-      } catch (rpcError) {
-        if (generation !== checkGenerationRef.current) return;
-        const message = rpcError instanceof Error ? rpcError.message : String(rpcError);
-        onFailure?.(message);
+        const value = await read();
+        if (
+          targetGeneration !== generationRef.current ||
+          generation !== checkGenerationRef.current
+        ) return;
+        onSuccess(value);
+      } catch (error) {
+        if (
+          targetGeneration !== generationRef.current ||
+          generation !== checkGenerationRef.current
+        ) return;
+        const message = readErrorMessage(error);
+        const operation = readErrorOperation(error);
+        onFailure?.(message, operation);
         dispatch({
           type: "pushError",
           error: {
@@ -113,199 +65,198 @@ export const useLifecycleExplorer = (
         });
       }
     },
-    [target, recordEvidence],
+    [],
+  );
+
+  const startCollectionReads = useCallback(
+    (
+      artifactGeneration: number,
+      deploymentGeneration: number,
+      runGeneration: number,
+      targetGeneration: number,
+    ): void => {
+      if (!clients) return;
+      dispatch({ type: "setArtifactListPhase", phase: "loading" });
+      dispatch({ type: "setDeploymentListPhase", phase: "loading" });
+      dispatch({ type: "setRunListPhase", phase: "loading" });
+
+      void executeRead(
+        () => clients.artifacts.list({ limit: 50 }),
+        artifactGeneration,
+        artifactGenerationRef,
+        targetGeneration,
+        (value) => dispatch({ type: "setArtifactListPhase", phase: "loaded", value }),
+        (message) => dispatch({ type: "setArtifactListPhase", phase: "error", message }),
+      );
+      void executeRead(
+        () => clients.deployments.list(),
+        deploymentGeneration,
+        deploymentGenerationRef,
+        targetGeneration,
+        (value) => dispatch({ type: "setDeploymentListPhase", phase: "loaded", value }),
+        (message) => dispatch({ type: "setDeploymentListPhase", phase: "error", message }),
+      );
+      void executeRead(
+        () => clients.runs.list({ limit: 50 }),
+        runGeneration,
+        runGenerationRef,
+        targetGeneration,
+        (value) => dispatch({ type: "setRunListPhase", phase: "loaded", value }),
+        (message) => dispatch({ type: "setRunListPhase", phase: "error", message }),
+      );
+    },
+    [clients, executeRead],
   );
 
   useEffect(() => {
-    if (!target) return;
-    generationRef.current++;
-    artifactGenerationRef.current++;
-    deploymentGenerationRef.current++;
-    runGenerationRef.current++;
-    const generation = generationRef.current;
-    rawEvidenceRef.current = [];
+    const targetGeneration = ++generationRef.current;
+    const artifactGeneration = ++artifactGenerationRef.current;
+    const deploymentGeneration = ++deploymentGenerationRef.current;
+    const runGeneration = ++runGenerationRef.current;
     dispatch({ type: "targetChanged" });
-    dispatch({ type: "setArtifactListPhase", phase: "loading" });
-    dispatch({ type: "setDeploymentListPhase", phase: "loading" });
-    dispatch({ type: "setRunListPhase", phase: "loading" });
-
-    executeOperation("workflow.artifacts.list", { limit: 50 }, generation, generationRef, (interpreted) => {
-      dispatch({ type: "setArtifactListPhase", phase: "loaded", value: decodeArtifactList(interpreted) });
-    }, (message) => {
-      dispatch({ type: "setArtifactListPhase", phase: "error", message });
-    });
-
-    executeOperation("workflow.deployments.list", {}, generation, generationRef, (interpreted) => {
-      dispatch({ type: "setDeploymentListPhase", phase: "loaded", value: decodeDeploymentList(interpreted) });
-    }, (message) => {
-      dispatch({ type: "setDeploymentListPhase", phase: "error", message });
-    });
-
-    executeOperation("workflow.runs.list", { limit: 50 }, generation, generationRef, (interpreted) => {
-      dispatch({ type: "setRunListPhase", phase: "loaded", value: decodeRunList(interpreted) });
-    }, (message) => {
-      dispatch({ type: "setRunListPhase", phase: "error", message });
-    });
-  }, [target, executeOperation]);
+    startCollectionReads(
+      artifactGeneration,
+      deploymentGeneration,
+      runGeneration,
+      targetGeneration,
+    );
+  }, [startCollectionReads]);
 
   const selectArtifact = useCallback(
-    (artifactId: string | null) => {
-      dispatch({ type: "selectArtifact", artifactId });
-      if (!artifactId || !target) return;
+    (artifactKey: string | null): void => {
+      dispatch({ type: "selectArtifact", artifactId: artifactKey });
+      if (!artifactKey || !clients) return;
       artifactGenerationRef.current++;
       const generation = artifactGenerationRef.current;
-      const [id, version] = artifactId.split("@");
-      executeOperation(
-        "workflow.artifacts.inspect",
-        { artifact_id: id, version: Number(version) },
+      const separator = artifactKey.lastIndexOf("@");
+      const artifactId = artifactKey.slice(0, separator);
+      const version = Number(artifactKey.slice(separator + 1));
+      void executeRead(
+        () => clients.artifacts.inspect(artifactId, version),
         generation,
         artifactGenerationRef,
-        (interpreted) => {
-          dispatch({ type: "setArtifactDetail", detail: decodeArtifactDetail(interpreted) });
-        },
+        generationRef.current,
+        (value) => dispatch({ type: "setArtifactDetail", detail: value }),
       );
     },
-    [target, executeOperation],
+    [clients, executeRead],
   );
 
   const selectDeployment = useCallback(
-    (deploymentId: string | null) => {
+    (deploymentId: string | null): void => {
       dispatch({ type: "selectDeployment", deploymentId });
-      if (!deploymentId || !target) return;
+      if (!deploymentId || !clients) return;
       deploymentGenerationRef.current++;
       const generation = deploymentGenerationRef.current;
-      // Deployment selection fans out to inspect + validate. Both describe the
-      // same selected deployment, so they must share one generation token.
-      executeOperation(
-        "workflow.deployments.inspect",
-        { deployment_id: deploymentId },
+      const targetGeneration = generationRef.current;
+      // Inspection and validation describe one URL-owned deployment selection.
+      void executeRead(
+        () => clients.deployments.inspect(deploymentId),
         generation,
         deploymentGenerationRef,
-        (interpreted) => {
-          dispatch({ type: "setDeploymentDetail", detail: decodeDeploymentDetail(interpreted) });
-        },
+        targetGeneration,
+        (value) => dispatch({ type: "setDeploymentDetail", detail: value }),
       );
-      executeOperation(
-        "workflow.deployments.validate",
-        { deployment_id: deploymentId },
+      void executeRead(
+        () => clients.deployments.validate(deploymentId),
         generation,
         deploymentGenerationRef,
-        (interpreted) => {
-          dispatch({ type: "setDeploymentValidation", validation: decodeDeploymentValidation(interpreted) });
-        },
+        targetGeneration,
+        (value) => dispatch({ type: "setDeploymentValidation", validation: value }),
       );
     },
-    [target, executeOperation],
+    [clients, executeRead],
   );
 
   const selectRun = useCallback(
-    (runId: string | null) => {
+    (runId: string | null): void => {
       dispatch({ type: "selectRun", runId });
-      if (!runId || !target) return;
+      if (!runId || !clients) return;
       runGenerationRef.current++;
       const generation = runGenerationRef.current;
-      executeOperation(
-        "workflow.runs.inspect",
-        { run_id: runId },
+      const targetGeneration = generationRef.current;
+      void executeRead(
+        () => clients.runs.inspect(runId),
         generation,
         runGenerationRef,
-        (interpreted) => {
-          const detail = decodeRunDetail(interpreted);
-          dispatch({ type: "setRunDetail", detail });
-          if (detail.traceCount > 0) {
-            executeOperation(
-              "workflow.runs.trace",
-              { run_id: runId, trace_range: { start: 0, limit: 50 } },
+        targetGeneration,
+        (value) => {
+          dispatch({ type: "setRunDetail", detail: value });
+          if (value.traceCount > 0) {
+            void executeRead(
+              () => clients.runs.trace(runId, 0, 50),
               generation,
               runGenerationRef,
-              (traceInterpreted) => {
-                dispatch({ type: "setTrace", trace: decodeTracePage(traceInterpreted) });
-              },
+              targetGeneration,
+              (trace) => dispatch({ type: "setTrace", trace }),
             );
           }
         },
       );
     },
-    [target, executeOperation],
+    [clients, executeRead],
   );
 
-  const refresh = useCallback(() => {
-    if (!target) return;
+  const refresh = useCallback((): void => {
+    if (!clients) return;
     generationRef.current++;
     artifactGenerationRef.current++;
     deploymentGenerationRef.current++;
     runGenerationRef.current++;
-    const artifactGeneration = artifactGenerationRef.current;
-    const deploymentGeneration = deploymentGenerationRef.current;
-    const runGeneration = runGenerationRef.current;
-    dispatch({ type: "setArtifactListPhase", phase: "loading" });
-    dispatch({ type: "setDeploymentListPhase", phase: "loading" });
-    dispatch({ type: "setRunListPhase", phase: "loading" });
-    executeOperation("workflow.artifacts.list", { limit: 50 }, artifactGeneration, artifactGenerationRef, (interpreted) => {
-      dispatch({ type: "setArtifactListPhase", phase: "loaded", value: decodeArtifactList(interpreted) });
-    }, (message) => {
-      dispatch({ type: "setArtifactListPhase", phase: "error", message });
-    });
-    executeOperation("workflow.deployments.list", {}, deploymentGeneration, deploymentGenerationRef, (interpreted) => {
-      dispatch({ type: "setDeploymentListPhase", phase: "loaded", value: decodeDeploymentList(interpreted) });
-    }, (message) => {
-      dispatch({ type: "setDeploymentListPhase", phase: "error", message });
-    });
-    executeOperation("workflow.runs.list", { limit: 50 }, runGeneration, runGenerationRef, (interpreted) => {
-      dispatch({ type: "setRunListPhase", phase: "loaded", value: decodeRunList(interpreted) });
-    }, (message) => {
-      dispatch({ type: "setRunListPhase", phase: "error", message });
-    });
-  }, [target, executeOperation]);
+    startCollectionReads(
+      artifactGenerationRef.current,
+      deploymentGenerationRef.current,
+      runGenerationRef.current,
+      generationRef.current,
+    );
+  }, [clients, startCollectionReads]);
 
-  const loadMoreArtifacts = useCallback(() => {
+  const loadMoreArtifacts = useCallback((): void => {
     const current = state.artifactList;
-    if (current.phase !== "loaded" || !current.value.nextCursor || !target) return;
+    if (current.phase !== "loaded" || !current.value.nextCursor || !clients) return;
+    const cursor = current.value.nextCursor;
     artifactGenerationRef.current++;
     const generation = artifactGenerationRef.current;
-    executeOperation(
-      "workflow.artifacts.list",
-      { cursor: current.value.nextCursor, limit: 50 },
+    void executeRead(
+      () => clients.artifacts.list({ cursor, limit: 50 }),
       generation,
       artifactGenerationRef,
-      (interpreted) => {
-        dispatch({ type: "appendArtifactList", value: decodeArtifactList(interpreted) });
-      },
+      generationRef.current,
+      (value) => dispatch({ type: "appendArtifactList", value }),
     );
-  }, [state.artifactList, target, executeOperation]);
+  }, [clients, executeRead, state.artifactList]);
 
-  const loadMoreRuns = useCallback(() => {
+  const loadMoreRuns = useCallback((): void => {
     const current = state.runList;
-    if (current.phase !== "loaded" || !current.value.nextCursor || !target) return;
+    if (current.phase !== "loaded" || !current.value.nextCursor || !clients) return;
+    const cursor = current.value.nextCursor;
     runGenerationRef.current++;
     const generation = runGenerationRef.current;
-    executeOperation(
-      "workflow.runs.list",
-      { cursor: current.value.nextCursor, limit: 50 },
+    void executeRead(
+      () => clients.runs.list({ cursor, limit: 50 }),
       generation,
       runGenerationRef,
-      (interpreted) => {
-        dispatch({ type: "appendRunList", value: decodeRunList(interpreted) });
-      },
+      generationRef.current,
+      (value) => dispatch({ type: "appendRunList", value }),
     );
-  }, [state.runList, target, executeOperation]);
+  }, [clients, executeRead, state.runList]);
 
   const loadTrace = useCallback(
-    (start: number, limit: number) => {
-      if (!state.selectedRunId || !target) return;
+    (start: number, limit: number): void => {
+      if (!state.selectedRunId || !clients) return;
       runGenerationRef.current++;
       const generation = runGenerationRef.current;
-      executeOperation(
-        "workflow.runs.trace",
-        { run_id: state.selectedRunId, trace_range: { start, limit } },
+      const targetGeneration = generationRef.current;
+      const runId = state.selectedRunId;
+      void executeRead(
+        () => clients.runs.trace(runId, start, limit),
         generation,
         runGenerationRef,
-        (interpreted) => {
-          dispatch({ type: "setTrace", trace: decodeTracePage(interpreted) });
-        },
+        targetGeneration,
+        (value) => dispatch({ type: "setTrace", trace: value }),
       );
     },
-    [state.selectedRunId, target, executeOperation],
+    [clients, executeRead, state.selectedRunId],
   );
 
   return {

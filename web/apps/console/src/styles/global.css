@@ -250,19 +250,6 @@ tbody tr:hover {
   line-height: 1.4;
 }
 
-/* Layout grid */
-.app-layout {
-  display: grid;
-  grid-template-columns: minmax(24rem, 0.9fr) minmax(30rem, 1.1fr);
-  gap: 1rem;
-  align-items: start;
-  padding: 1.5rem;
-}
-
-.app-layout > section[aria-label="Connection"] {
-  grid-column: 1 / -1;
-}
-
 .graph-content,
 .workflow-graph {
   height: 34rem;
@@ -281,14 +268,6 @@ tbody tr:hover {
   border-radius: 4px;
   background: #fff;
   overflow: hidden;
-}
-
-[data-panel="lifecycle-explorer"]:has(.graph-content) {
-  grid-column: 1 / -1;
-}
-
-.app-layout:has(.graph-content) > [data-panel="source-inventory"] {
-  display: none;
 }
 
 /* The workspace keeps connection, navigation, content, and receipts visible together. */
@@ -373,6 +352,28 @@ tbody tr:hover {
   background: var(--color-surface);
 }
 
+.console-workspace__nav-later {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.65rem;
+  padding: 0.5rem 0.65rem;
+  color: var(--color-slate);
+  border-left: 3px solid transparent;
+  font-family: var(--font-heading);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.console-workspace__nav-later small {
+  color: var(--color-amber);
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+}
+
 .console-workspace > main {
   grid-area: main;
   min-width: 0;
@@ -410,6 +411,77 @@ tbody tr:hover {
 
 .workspace-route-pending p:last-child {
   color: var(--color-slate);
+}
+
+.lifecycle-route {
+  min-width: 0;
+}
+
+.lifecycle-route__header {
+  margin-bottom: 1rem;
+}
+
+.lifecycle-route__header > p:last-child {
+  color: var(--color-slate);
+}
+
+.lifecycle-columns {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  align-items: start;
+}
+
+.lifecycle-column {
+  min-width: 0;
+  padding: 0.75rem;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.lifecycle-column--primary {
+  order: -1;
+  border-color: var(--color-signal-green);
+  box-shadow: 0 2px 0 var(--color-signal-green);
+}
+
+.lifecycle-column h3 {
+  margin-top: 0;
+}
+
+.lifecycle-column ul {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.lifecycle-column button[role="option"] {
+  width: 100%;
+  text-align: left;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.lifecycle-content {
+  display: grid;
+  gap: 1rem;
+}
+
+.lifecycle-status {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.lifecycle-status p {
+  margin: 0;
+}
+
+@media (max-width: 850px) {
+  .lifecycle-columns {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Draft routes keep the inventory scannable while leaving opaque workflow
@@ -1035,10 +1107,6 @@ tbody tr:nth-child(10) { animation-delay: 270ms; }
 
 /* Responsive */
 @media (max-width: 850px) {
-  .app-layout {
-    grid-template-columns: 1fr;
-  }
-
   .console-workspace {
     grid-template-columns: 1fr;
     grid-template-areas:
@@ -1100,60 +1168,6 @@ tbody tr:nth-child(10) { animation-delay: 270ms; }
   .capability-discovery__filters button {
     width: 100%;
   }
-}
-
-/* Demo panel */
-.demo-panel {
-  grid-column: 1 / -1;
-}
-
-.demo-panel__header,
-.demo-panel__actions {
-  display: flex;
-  gap: 1rem;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-}
-
-.demo-panel pre {
-  max-height: 18rem;
-  overflow: auto;
-  padding: 0.75rem;
-  background: var(--color-ink);
-  color: var(--color-paper);
-  border-radius: 3px;
-}
-
-.demo-panel fieldset {
-  border: 1px solid var(--color-border);
-  margin: 1rem 0;
-  padding: 0.75rem;
-}
-
-.demo-panel__issue {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 0.75rem;
-  align-items: start;
-  padding: 0.65rem 0;
-  text-transform: none;
-  letter-spacing: normal;
-  font-family: var(--font-body);
-}
-
-.demo-panel__issue span span,
-.demo-panel__issue small {
-  display: block;
-}
-
-.demo-panel textarea {
-  width: 100%;
-  min-height: 5rem;
-  margin-top: 0.35rem;
-  padding: 0.5rem;
-  border: 1px solid var(--color-border);
-  font: inherit;
 }
 
 @media (max-width: 560px) {

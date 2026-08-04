@@ -7,6 +7,7 @@ type RecordColumnsProps = {
   readonly selectedArtifactId: string | null;
   readonly selectedDeploymentId: string | null;
   readonly selectedRunId: string | null;
+  readonly primaryKind: "artifact" | "deployment" | "run";
   readonly onSelectArtifact: (artifactId: string | null) => void;
   readonly onSelectDeployment: (deploymentId: string | null) => void;
   readonly onSelectRun: (runId: string | null) => void;
@@ -23,6 +24,7 @@ export const RecordColumns = ({
   selectedArtifactId,
   selectedDeploymentId,
   selectedRunId,
+  primaryKind,
   onSelectArtifact,
   onSelectDeployment,
   onSelectRun,
@@ -32,7 +34,10 @@ export const RecordColumns = ({
   hasMoreRuns,
 }: RecordColumnsProps) => (
   <div className="lifecycle-columns">
-    <div className="lifecycle-column">
+    <div
+      className={`lifecycle-column lifecycle-column--artifact${primaryKind === "artifact" ? " lifecycle-column--primary" : ""}`}
+      data-lifecycle-kind="artifact"
+    >
       <h3>Artifacts</h3>
       {artifacts.length === 0 ? (
         <p className="empty-state">No artifacts</p>
@@ -58,7 +63,10 @@ export const RecordColumns = ({
         </button>
       )}
     </div>
-    <div className="lifecycle-column">
+    <div
+      className={`lifecycle-column lifecycle-column--deployment${primaryKind === "deployment" ? " lifecycle-column--primary" : ""}`}
+      data-lifecycle-kind="deployment"
+    >
       <h3>Deployments</h3>
       {deployments.length === 0 ? (
         <p className="empty-state">No deployments</p>
@@ -79,7 +87,10 @@ export const RecordColumns = ({
         </ul>
       )}
     </div>
-    <div className="lifecycle-column">
+    <div
+      className={`lifecycle-column lifecycle-column--run${primaryKind === "run" ? " lifecycle-column--primary" : ""}`}
+      data-lifecycle-kind="run"
+    >
       <h3>Runs</h3>
       {runs.length === 0 ? (
         <p className="empty-state">No runs</p>

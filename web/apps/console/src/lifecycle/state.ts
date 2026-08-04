@@ -15,16 +15,6 @@ export type LoadState<T> =
   | { readonly phase: "loaded"; readonly value: T }
   | { readonly phase: "error"; readonly message: string; readonly previous: T | null };
 
-export type EvidenceRecord = {
-  readonly id: string;
-  readonly operation: string;
-  readonly label: string;
-  readonly equivalentCli: string;
-  readonly request: unknown;
-  readonly response: unknown;
-  readonly durationMs: number;
-};
-
 export type LifecycleError = {
   readonly operation: string;
   readonly message: string;
@@ -43,7 +33,6 @@ export type LifecycleState = {
   readonly selectedRunId: string | null;
   readonly runDetail: RunDetail | null;
   readonly trace: TracePage | null;
-  readonly rawEvidence: ReadonlyArray<EvidenceRecord>;
   readonly errors: ReadonlyArray<LifecycleError>;
 };
 
@@ -59,7 +48,6 @@ export const initialLifecycleState: LifecycleState = {
   selectedRunId: null,
   runDetail: null,
   trace: null,
-  rawEvidence: [],
   errors: [],
 };
 
@@ -81,7 +69,6 @@ export type LifecycleAction =
   | { readonly type: "setDeploymentValidation"; readonly validation: DeploymentValidation | null }
   | { readonly type: "setRunDetail"; readonly detail: RunDetail | null }
   | { readonly type: "setTrace"; readonly trace: TracePage | null }
-  | { readonly type: "setRawEvidence"; readonly evidence: ReadonlyArray<EvidenceRecord> }
   | { readonly type: "pushError"; readonly error: LifecycleError };
 
 const setLoadPhase = <T>(
@@ -222,12 +209,6 @@ export const lifecycleReducer = (
       return {
         ...state,
         trace: action.trace,
-      };
-
-    case "setRawEvidence":
-      return {
-        ...state,
-        rawEvidence: action.evidence,
       };
 
     case "pushError":

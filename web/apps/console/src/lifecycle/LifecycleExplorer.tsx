@@ -10,9 +10,10 @@ import type { LoadState } from "./state.js";
 
 type LifecycleExplorerProps = {
   readonly controller: LifecycleExplorerController;
+  readonly primaryKind: "artifact" | "deployment" | "run";
 };
 
-type FocusMode = "lifecycle" | "graph" | "execution" | "raw";
+type FocusMode = "lifecycle" | "graph" | "execution";
 
 const loadedItems = <T,>(
   state: LoadState<{ readonly items: ReadonlyArray<T> }>,
@@ -25,7 +26,7 @@ const listStatus = <T,>(label: string, state: LoadState<T>) => {
   return null;
 };
 
-export const LifecycleExplorer = ({ controller }: LifecycleExplorerProps) => {
+export const LifecycleExplorer = ({ controller, primaryKind }: LifecycleExplorerProps) => {
   const { state } = controller;
   const [focusMode, setFocusMode] = useState<FocusMode>("lifecycle");
 
@@ -49,7 +50,7 @@ export const LifecycleExplorer = ({ controller }: LifecycleExplorerProps) => {
   }, [state.trace]);
 
   return (
-    <div className="lifecycle-explorer">
+    <div className="lifecycle-explorer" data-primary-lifecycle-kind={primaryKind}>
       <nav className="focus-nav" aria-label="Focus modes">
         <button
           onClick={() => setFocusMode("lifecycle")}
@@ -70,12 +71,6 @@ export const LifecycleExplorer = ({ controller }: LifecycleExplorerProps) => {
           className={focusMode === "execution" ? "active" : ""}
         >
           Execution
-        </button>
-        <button
-          onClick={() => setFocusMode("raw")}
-          className={focusMode === "raw" ? "active" : ""}
-        >
-          Raw
         </button>
       </nav>
 
@@ -98,6 +93,7 @@ export const LifecycleExplorer = ({ controller }: LifecycleExplorerProps) => {
             selectedArtifactId={state.selectedArtifactId}
             selectedDeploymentId={state.selectedDeploymentId}
             selectedRunId={state.selectedRunId}
+            primaryKind={primaryKind}
             onSelectArtifact={controller.selectArtifact}
             onSelectDeployment={controller.selectDeployment}
             onSelectRun={controller.selectRun}
@@ -136,36 +132,6 @@ export const LifecycleExplorer = ({ controller }: LifecycleExplorerProps) => {
         </div>
       )}
 
-      {focusMode === "raw" && (
-        <div className="raw-content">
-          <h3>Protocol Evidence</h3>
-          {state.rawEvidence.length === 0 ? (
-            <p className="empty-state">No evidence recorded yet.</p>
-          ) : (
-            <ul className="evidence-list">
-              {state.rawEvidence.map((record) => (
-                <li key={record.id}>
-                  <span className="evidence-op">{record.operation}</span>
-                  <span className="evidence-label">{record.label}</span>
-                  <span className="evidence-duration">{record.durationMs}ms</span>
-                  <details>
-                    <summary>Equivalent CLI</summary>
-                    <pre><code>{record.equivalentCli}</code></pre>
-                  </details>
-                  <details>
-                    <summary>Request</summary>
-                    <pre><code>{JSON.stringify(record.request, null, 2)}</code></pre>
-                  </details>
-                  <details>
-                    <summary>Response</summary>
-                    <pre><code>{JSON.stringify(record.response, null, 2)}</code></pre>
-                  </details>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
     </div>
   );
 };

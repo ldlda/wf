@@ -53,10 +53,12 @@ describe("ConsoleShell", () => {
       { label: "Artifacts", href: "/console/artifacts" },
       { label: "Deployments", href: "/console/deployments" },
       { label: "Runs", href: "/console/runs" },
-      { label: "Results", href: "/console/results" },
     ]) {
       expect(screen.getByRole("link", { name: label })).toHaveAttribute("href", href);
     }
+    expect(screen.getByText("Results")).toBeInTheDocument();
+    expect(screen.getByText("Later")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Results" })).toBeNull();
   });
 
   it("provides a keyboard skip link to the workspace main region", async () => {

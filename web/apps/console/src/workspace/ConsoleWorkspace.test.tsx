@@ -61,7 +61,6 @@ const OutletProbe = () => {
       <output data-testid="executor-stable">
         {workspace.readExecutor === executorIdentity.current ? "yes" : "no"}
       </output>
-      <output data-testid="sources-loading">{String(workspace.connection.sourcesLoading)}</output>
       <output data-testid="evidence-ids">
         {workspace.connection.evidence.map((record) => record.id).join("|")}
       </output>
@@ -122,7 +121,6 @@ describe("ConsoleWorkspace", () => {
     );
     expect(screen.getByTestId("executor-state")).toHaveTextContent("available");
     expect(screen.getByTestId("executor-stable")).toHaveTextContent("yes");
-    expect(screen.getByTestId("sources-loading")).toHaveTextContent("false");
     expect(screen.getAllByText("Health check")).toHaveLength(1);
     expect(mockedCallOperation).not.toHaveBeenCalled();
 

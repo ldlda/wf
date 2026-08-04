@@ -78,11 +78,13 @@ const requireTraceRange = (
   requirePositiveInteger(operation, limit, "trace limit");
 };
 
-export const createLifecycleClients = (executor: ConsoleReadExecutor): {
+export type LifecycleClients = {
   readonly artifacts: ArtifactClient;
   readonly deployments: DeploymentClient;
   readonly runs: RunClient;
-} => {
+};
+
+export const createLifecycleClients = (executor: ConsoleReadExecutor): LifecycleClients => {
   const artifacts: ArtifactClient = {
     list: (input) => {
       const params: Record<string, string | number> = {};

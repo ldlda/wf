@@ -23,7 +23,6 @@ const createMockController = (
     selectedRunId: null,
     runDetail: null,
     trace: null,
-    rawEvidence: [],
     errors: [],
     ...overrides,
   },
@@ -37,6 +36,18 @@ const createMockController = (
 });
 
 describe("LifecycleExplorer", () => {
+  it("marks the route collection and omits the explorer-local raw evidence mode", () => {
+    const { container } = render(
+      <LifecycleExplorer controller={createMockController()} primaryKind="deployment" />,
+    );
+
+    expect(container.querySelector(".lifecycle-explorer")).toHaveAttribute(
+      "data-primary-lifecycle-kind",
+      "deployment",
+    );
+    expect(screen.queryByRole("button", { name: "Raw" })).toBeNull();
+  });
+
   it("renders artifact buttons when loaded", () => {
     const controller = createMockController({
       artifactList: {
@@ -61,7 +72,7 @@ describe("LifecycleExplorer", () => {
       },
     });
 
-    render(<LifecycleExplorer controller={controller} />);
+    render(<LifecycleExplorer controller={controller} primaryKind="artifact" />);
     expect(screen.getByRole("option", { name: /Report version 1/i })).toBeVisible();
   });
 
@@ -83,7 +94,7 @@ describe("LifecycleExplorer", () => {
       },
     });
 
-    render(<LifecycleExplorer controller={controller} />);
+    render(<LifecycleExplorer controller={controller} primaryKind="deployment" />);
     expect(screen.getByRole("option", { name: /report.default/i })).toBeVisible();
   });
 
@@ -109,7 +120,7 @@ describe("LifecycleExplorer", () => {
       },
     });
 
-    render(<LifecycleExplorer controller={controller} />);
+    render(<LifecycleExplorer controller={controller} primaryKind="run" />);
     expect(screen.getByRole("option", { name: /run_1 interrupted/i })).toBeVisible();
   });
 
@@ -137,7 +148,7 @@ describe("LifecycleExplorer", () => {
       },
     });
 
-    render(<LifecycleExplorer controller={controller} />);
+    render(<LifecycleExplorer controller={controller} primaryKind="artifact" />);
     fireEvent.click(screen.getAllByRole("option", { name: /Report version 1/i })[0]!);
     expect(controller.selectArtifact).toHaveBeenCalledWith("report@1");
   });
@@ -147,7 +158,7 @@ describe("LifecycleExplorer", () => {
       artifactList: { phase: "loaded", value: { items: [], total: 0, nextCursor: null } },
     });
 
-    render(<LifecycleExplorer controller={controller} />);
+    render(<LifecycleExplorer controller={controller} primaryKind="artifact" />);
     expect(screen.getAllByText(/no artifacts/i)[0]).toBeVisible();
   });
 
@@ -194,7 +205,7 @@ describe("LifecycleExplorer", () => {
       },
     });
 
-    render(<LifecycleExplorer controller={controller} />);
+    render(<LifecycleExplorer controller={controller} primaryKind="run" />);
 
     expect(screen.getByText(/loading artifacts/i)).toBeVisible();
     expect(screen.getByRole("alert")).toHaveTextContent(/could not load runs: network down/i);

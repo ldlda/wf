@@ -7,9 +7,6 @@ import { AppRoutes } from "./AppRoutes.js";
 afterEach(() => cleanup());
 
 describe("AppRoutes", () => {
-  // Task 5-7 replace pending leaves and restore the deferred ConsoleHome surfaces.
-  it.todo("restores source, demo, and lifecycle application coverage after Task 5-7");
-
   it.each([
     ["/", "Discover capabilities"],
     ["/console", "Discover capabilities"],
@@ -70,7 +67,7 @@ describe("AppRoutes", () => {
 
     await userEvent.click(screen.getByRole("link", { name: "Runs" }));
 
-    expect(await screen.findByRole("heading", { name: "Runs" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Runs", level: 1 })).toBeInTheDocument();
     expect(screen.getByRole("navigation", { name: "Workflow lifecycle" })).toBeInTheDocument();
   });
 });

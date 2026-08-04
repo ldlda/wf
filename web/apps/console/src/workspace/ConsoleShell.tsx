@@ -17,7 +17,6 @@ const lifecycleLinks = [
   { label: "Artifacts", to: "/console/artifacts" },
   { label: "Deployments", to: "/console/deployments" },
   { label: "Runs", to: "/console/runs" },
-  { label: "Results", to: "/console/results" },
 ] as const;
 
 export const ConsoleShell = ({
@@ -49,6 +48,12 @@ export const ConsoleShell = ({
             </NavLink>
           </li>
         ))}
+        <li>
+          <span className="console-workspace__nav-later">
+            <span>Results</span>
+            <small>Later</small>
+          </span>
+        </li>
       </ul>
     </nav>
     <main id="console-workspace-main" aria-label="Console workspace">
