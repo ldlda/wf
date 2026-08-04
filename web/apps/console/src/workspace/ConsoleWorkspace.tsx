@@ -13,6 +13,7 @@ import type { ConsoleWorkspaceContextValue } from "./context.js";
 export const ConsoleWorkspace = () => {
   const [state, dispatch] = useReducer(connectionReducer, null, initialState);
   const connectGeneration = useRef(0);
+  const evidenceSequence = useRef(0);
   const connectedTarget = state.phase === "connected" ? state.connectedTarget : null;
 
   const recordEvidence = useCallback(
@@ -20,12 +21,21 @@ export const ConsoleWorkspace = () => {
     [],
   );
 
+  const allocateEvidenceId = useCallback(
+    (operation: string): string => `${operation}-${evidenceSequence.current++}`,
+    [],
+  );
+
   const readExecutor = useMemo(
     () =>
       connectedTarget
-        ? createConsoleReadExecutor({ target: connectedTarget, recordEvidence })
+        ? createConsoleReadExecutor({
+            target: connectedTarget,
+            recordEvidence,
+            allocateEvidenceId,
+          })
         : null,
-    [connectedTarget, recordEvidence],
+    [allocateEvidenceId, connectedTarget, recordEvidence],
   );
 
   const onDraftChange = useCallback(
@@ -45,7 +55,7 @@ export const ConsoleWorkspace = () => {
           dispatch({
             type: "evidence_recorded",
             record: {
-              id: `health-${Date.now()}`,
+              id: allocateEvidenceId("workflow.health"),
               operation: "workflow.health",
               label: "Health check",
               equivalentCli: response.equivalentCli,
@@ -71,7 +81,7 @@ export const ConsoleWorkspace = () => {
         });
       },
     );
-  }, []);
+  }, [allocateEvidenceId]);
 
   const workspaceContext = useMemo<ConsoleWorkspaceContextValue>(
     () => ({

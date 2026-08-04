@@ -27,6 +27,9 @@ export const ConsoleShell = ({
   children,
 }: Props) => (
   <div className="console-workspace">
+    <a className="console-skip-link" href="#console-workspace-main">
+      Skip to main content
+    </a>
     <header className="console-workspace__header">
       <ConnectionHeader
         state={connection}

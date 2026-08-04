@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { cleanup } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
@@ -56,5 +57,26 @@ describe("ConsoleShell", () => {
     ]) {
       expect(screen.getByRole("link", { name: label })).toHaveAttribute("href", href);
     }
+  });
+
+  it("provides a keyboard skip link to the workspace main region", async () => {
+    render(
+      <MemoryRouter>
+        <ConsoleShell
+          connection={initialState()}
+          onConnect={() => undefined}
+          onDraftChange={() => undefined}
+        >
+          <p>Content</p>
+        </ConsoleShell>
+      </MemoryRouter>,
+    );
+
+    const skipLink = screen.getByRole("link", { name: "Skip to main content" });
+    expect(skipLink).toHaveAttribute("href", "#console-workspace-main");
+
+    await userEvent.tab();
+
+    expect(skipLink).toHaveFocus();
   });
 });

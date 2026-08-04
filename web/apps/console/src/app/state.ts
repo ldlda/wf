@@ -122,7 +122,8 @@ export const connectionReducer = (
         storeRoot: action.data.connection.storeRoot,
         durationMs: action.data.connection.durationMs,
         message: null,
-        sourcesLoading: true,
+        // The routed workspace does not fetch sources until a later task owns that surface.
+        sourcesLoading: false,
       };
     }
 

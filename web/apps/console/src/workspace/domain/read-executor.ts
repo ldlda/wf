@@ -20,6 +20,8 @@ type InvokeOperation = (
   params: unknown,
 ) => Promise<RpcResponse>;
 
+type EvidenceIdAllocator = (operation: string) => string;
+
 const errorKindForCode = (code: string): ConsoleClientErrorKind => {
   switch (code) {
     case "invalid_target":
@@ -47,10 +49,14 @@ const clientErrorKindForInvocation = (
 export const createConsoleReadExecutor = (options: {
   readonly target: string;
   readonly recordEvidence: (record: EvidenceRecord) => void;
+  readonly allocateEvidenceId?: EvidenceIdAllocator;
   readonly invoke?: InvokeOperation;
 }): ConsoleReadExecutor => {
   let evidenceSequence = 0;
   const invoke = options.invoke ?? callOperation;
+  const allocateEvidenceId =
+    options.allocateEvidenceId ??
+    ((operation: string): string => `${operation}-${evidenceSequence++}`);
 
   const record = (
     operation: OperationName,
@@ -61,7 +67,7 @@ export const createConsoleReadExecutor = (options: {
     durationMs: number,
   ): void => {
     options.recordEvidence({
-      id: `${operation}-${evidenceSequence++}`,
+      id: allocateEvidenceId(operation),
       operation,
       label,
       equivalentCli,

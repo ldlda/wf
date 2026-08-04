@@ -7,6 +7,9 @@ import { AppRoutes } from "./AppRoutes.js";
 afterEach(() => cleanup());
 
 describe("AppRoutes", () => {
+  // Task 5-7 replace pending leaves and restore the deferred ConsoleHome surfaces.
+  it.todo("restores source, demo, and lifecycle application coverage after Task 5-7");
+
   it.each([
     ["/", "Discover"],
     ["/console", "Discover"],

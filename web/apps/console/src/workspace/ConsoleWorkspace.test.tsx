@@ -4,7 +4,7 @@ import { useRef } from "react";
 import { MemoryRouter, Outlet, Route, Routes, useNavigate } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { connectToServer, callOperation } from "../connection/api.js";
-import type { ConnectResponse } from "../connection/contracts.js";
+import type { ConnectResponse, RpcResponse } from "../connection/contracts.js";
 import { useConsoleWorkspace } from "./context.js";
 import { ConsoleWorkspace } from "./ConsoleWorkspace.js";
 
@@ -29,6 +29,16 @@ const successfulConnection = (target: string): ConnectResponse => ({
   equivalentCli: "uv run wf status",
 });
 
+const successfulRead = (): RpcResponse => ({
+  ok: true,
+  operation: "workflow.capabilities.list",
+  label: "List capabilities",
+  interpreted: { items: [], nextCursor: null, total: 0 },
+  exchange: { request: {}, response: { status: 200 } },
+  equivalentCli: "uv run wf cap list",
+  durationMs: 4,
+});
+
 const OutletProbe = () => {
   const workspace = useConsoleWorkspace();
   const executorIdentity = useRef<NonNullable<typeof workspace.readExecutor> | null>(null);
@@ -43,7 +53,20 @@ const OutletProbe = () => {
       <output data-testid="executor-stable">
         {workspace.readExecutor === executorIdentity.current ? "yes" : "no"}
       </output>
+      <output data-testid="sources-loading">{String(workspace.connection.sourcesLoading)}</output>
+      <output data-testid="evidence-ids">
+        {workspace.connection.evidence.map((record) => record.id).join("|")}
+      </output>
       <button type="button" onClick={() => navigate("/console/drafts")}>Navigate to drafts</button>
+      <button
+        type="button"
+        disabled={workspace.readExecutor === null}
+        onClick={() => {
+          void workspace.readExecutor?.run("workflow.capabilities.list", {}, (value) => value);
+        }}
+      >
+        Read capabilities
+      </button>
       <Outlet />
     </>
   );
@@ -91,6 +114,7 @@ describe("ConsoleWorkspace", () => {
     );
     expect(screen.getByTestId("executor-state")).toHaveTextContent("available");
     expect(screen.getByTestId("executor-stable")).toHaveTextContent("yes");
+    expect(screen.getByTestId("sources-loading")).toHaveTextContent("false");
     expect(screen.getAllByText("Health check")).toHaveLength(1);
     expect(mockedCallOperation).not.toHaveBeenCalled();
 
@@ -99,6 +123,32 @@ describe("ConsoleWorkspace", () => {
     expect(await screen.findByText("Drafts route")).toBeInTheDocument();
     expect(screen.getAllByText("Health check")).toHaveLength(1);
     expect(screen.getByTestId("connected-target")).toHaveTextContent("http://one.example/rpc");
+  });
+
+  it("keeps health and read evidence ids unique across reconnects", async () => {
+    mockedConnectToServer.mockResolvedValue(successfulConnection("http://one.example/rpc"));
+    mockedCallOperation.mockResolvedValue(successfulRead());
+    renderWorkspace();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Connect" }));
+    await user.click(await screen.findByRole("button", { name: "Read capabilities" }));
+    await waitFor(() => {
+      expect(screen.getByTestId("evidence-ids")).toHaveTextContent(
+        "workflow.health-0|workflow.capabilities.list-1",
+      );
+    });
+
+    await user.click(screen.getByRole("button", { name: "Reconnect" }));
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Read capabilities" })).toBeEnabled();
+    });
+    await user.click(screen.getByRole("button", { name: "Read capabilities" }));
+    await waitFor(() => {
+      const ids = screen.getByTestId("evidence-ids").textContent?.split("|") ?? [];
+      expect(ids).toHaveLength(4);
+      expect(new Set(ids).size).toBe(ids.length);
+    });
   });
 
   it("ignores a stale health response after a newer target connects", async () => {

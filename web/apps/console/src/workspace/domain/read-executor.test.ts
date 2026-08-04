@@ -140,4 +140,22 @@ describe("ConsoleReadExecutor", () => {
     const ids = recordEvidence.mock.calls.map(([record]) => record.id);
     expect(new Set(ids).size).toBe(2);
   });
+
+  it("uses a caller-owned allocator when evidence spans executor lifetimes", async () => {
+    const recordEvidence = vi.fn();
+    const allocateEvidenceId = vi.fn((operation: string) => `workspace-${operation}`);
+    const executor = createConsoleReadExecutor({
+      target: "http://console.test/rpc",
+      recordEvidence,
+      allocateEvidenceId,
+      invoke: vi.fn(async () => success(null)),
+    });
+
+    await executor.run("workflow.capabilities.list", {}, (value) => value);
+
+    expect(allocateEvidenceId).toHaveBeenCalledWith("workflow.capabilities.list");
+    expect(recordEvidence.mock.calls[0]?.[0]?.id).toBe(
+      "workspace-workflow.capabilities.list",
+    );
+  });
 });

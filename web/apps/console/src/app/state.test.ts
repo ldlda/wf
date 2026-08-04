@@ -148,6 +148,7 @@ describe("success", () => {
     expect(next.serverStatus).toBe("ok");
     expect(next.storeRoot).toBe("/tmp/store");
     expect(next.durationMs).toBe(10);
+    expect(next.sourcesLoading).toBe(false);
   });
 
   it("persists target to sessionStorage when available", () => {

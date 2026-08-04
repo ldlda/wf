@@ -303,6 +303,27 @@ tbody tr:hover {
   padding: 1rem;
 }
 
+.console-skip-link {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  z-index: 10;
+  padding: 0.5rem 0.75rem;
+  color: var(--color-paper);
+  background: var(--color-ink);
+  font-family: var(--font-heading);
+  font-weight: 600;
+  text-decoration: none;
+  transform: translateY(-180%);
+}
+
+.console-skip-link:focus,
+.console-skip-link:focus-visible {
+  outline: 2px solid var(--color-signal-green);
+  outline-offset: 2px;
+  transform: translateY(0);
+}
+
 .console-workspace__header {
   grid-area: header;
 }

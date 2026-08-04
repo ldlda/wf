@@ -4,6 +4,18 @@
 
 DONE
 
+## Review Fixes
+
+- Evidence IDs now come from one workspace-owned monotonic allocator shared by
+  health receipts and every target-scoped read executor. The allocator survives
+  reconnects while the reducer preserves the evidence ledger, so IDs do not
+  depend on wall-clock time or reset with an executor.
+- Successful connection state no longer claims sources are loading. Task 4
+  intentionally performs no source read; the later source surface can enter a
+  real loading state when it owns that request.
+- Added a skip link before the shell header. It becomes visible on focus and
+  targets `#console-workspace-main`.
+
 ## Changed Files
 
 - `web/apps/console/src/workspace/context.ts`
@@ -40,6 +52,10 @@ The initial scoped test run failed on the absent workspace modules and old
 `ConsoleHome` route behavior. After adding the route-facing tests and minimal
 shell implementation, the same suite passed with 4 files and 12 tests.
 
+The review-fix red run reproduced the allocator reset, permanent connected
+source-loading flag, and missing skip link. The follow-up focused run passed
+with 5 files and 42 tests, plus the intentional deferred application todo.
+
 ## Verification
 
 - `pnpm --dir web --filter @lda/console test -- src/workspace/ConsoleWorkspace.test.tsx src/workspace/ConsoleShell.test.tsx src/workspace/EvidenceLedger.test.tsx src/app/App.test.tsx`: passed; 4 files and 12 tests.
@@ -58,3 +74,7 @@ shell implementation, the same suite passed with 4 files and 12 tests.
 - `ConsoleHome.tsx` remains in place but is no longer mounted by application
   routes. Its source/demo/lifecycle reads are intentionally outside the routed
   Task 4 workspace and are not imported by the new shell.
+- Review finding 4 is deferred to Tasks 5-7, which replace the pending leaves
+  and restore those surfaces. `App.test.tsx` contains an explicit `it.todo`
+  seam for restoring source, demo, and lifecycle application coverage at that
+  point; no future modules are imported in Task 4.
