@@ -245,8 +245,10 @@ The manifest describes all server operations. It does not authorize their use.
 Future TypeScript work must keep these concepts separate:
 
 - `WorkflowOperationName`: generated inventory of all wire operations;
-- `SupportedOperationName`: operations implemented by the Effect client;
-- `BrowserAllowedOperationName`: authored Hono security/product allowlist;
+- `OperationName`: operations implemented by the Effect client, inferred from
+  its authored metadata registry and checked against `WorkflowOperationName`;
+- `BrowserAllowedOperationName`: independently authored Hono security/product
+  allowlist, constrained to `OperationName`;
 - `OperationMeta`: authored labels, explanations, idempotency, equivalent CLI,
   and semantic interpretation.
 
@@ -275,8 +277,10 @@ After the manifest slice:
    eight old run-result mismatches. Runtime run schemas now follow the canonical
    manifest: complete interrupts for inspect/start/resume and a full run
    envelope with canonical frame identifiers for trace;
-4. remove duplicated operation-name guards only after equivalent generated
-   inventory is in use; and
+4. Completed: remove duplicated Effect-client operation-name unions and guards
+   after checking the metadata registry against generated inventory. Keep the
+   Hono browser allowlist separate so client expansion cannot broaden browser
+   authorization implicitly; and
 5. expand client coverage when a product caller needs each operation.
 
 Direct reverse conversion through newer Effect APIs may be reconsidered only

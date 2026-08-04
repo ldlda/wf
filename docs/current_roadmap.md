@@ -764,6 +764,11 @@ stable.
   reachable components, and a 64-container guard rejects adversarial request
   or response nesting before recursive JSON decoding. The authored browser
   allowlist remains unchanged.
+- Completed: duplicated Effect-client operation-name unions and guards now come
+  from the authored operation metadata registry, with every name checked
+  against the generated 70-operation inventory. The Hono browser proxy retains
+  an independently authored, typed 12-operation allowlist so future client
+  expansion does not broaden browser authorization implicitly.
 - `WorkflowApiSurface` is the protocol-neutral workflow operation contract.
 - `wf_transport_rpc_http` exposes local/static and MCP-backed `WorkflowServer`
   over JSON-RPC HTTP.

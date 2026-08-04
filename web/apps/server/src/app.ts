@@ -2,7 +2,6 @@ import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import {
-  listOperations,
   type OperationExchange,
   type OperationName,
   type WorkflowHealthInterpreted,
@@ -10,6 +9,7 @@ import {
 import type { upgradeWebSocket } from "@hono/node-server";
 import { addPresentationSyncRoutes } from "./presentation-sync/routes.js";
 import type { PresentationRoomService } from "./presentation-sync/rooms.js";
+import { isBrowserAllowedOperationName } from "./browser-operation-policy.js";
 import { addStaticRoutes, validateConsoleRoot } from "./static.js";
 
 export type RunOperation = (
@@ -27,13 +27,6 @@ type BrowserErrorCode =
   | "rpc_protocol_error"
   | "rpc_decode_error"
   | "response_too_large";
-
-const VALID_OPERATIONS: ReadonlySet<string> = new Set(
-  listOperations().map((operation) => operation.method),
-);
-
-const isOperationName = (value: string): value is OperationName =>
-  VALID_OPERATIONS.has(value);
 
 const isHealthInterpreted = (
   value: unknown,
@@ -180,7 +173,7 @@ export function createApp(dependencies: {
     if (
       !body.operation ||
       typeof body.operation !== "string" ||
-      !isOperationName(body.operation)
+      !isBrowserAllowedOperationName(body.operation)
     ) {
       return c.json(
         {

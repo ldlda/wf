@@ -32,13 +32,16 @@ export {
 } from "./rpcs.js";
 
 export { WorkflowRpc, makeWorkflowRpcLayer } from "./service.js";
-export type { OperationExchange, WorkflowRpcError, OperationName } from "./service.js";
+export type { OperationExchange, WorkflowRpcError } from "./service.js";
 
 export {
   getOperationMeta,
+  isOperationName,
   listOperations,
+  workflowRpcOperationNames,
 } from "./method-registry.js";
 export type {
+  OperationName,
   OperationMeta,
   WorkflowHealthInterpreted,
   WorkflowSourcesListInterpreted,

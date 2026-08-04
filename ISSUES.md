@@ -96,6 +96,10 @@
     decoders apply a 64-container request/response value-depth guard. Broader
     callable client coverage remains incomplete, and the browser allowlist
     remains authored.
+  - The Effect client operation union, runtime list, and guard are now inferred
+    from the authored metadata registry and checked against generated
+    `WorkflowOperationName`. Hono keeps a separate typed allowlist so adding
+    client support cannot automatically expose an operation to the browser.
 - The stock `@open-rpc/generator` TypeScript client is not suitable here. It
   exhausted a 4 GB Node heap on the full contract and emitted invalid dotted
     class members plus `any` results for a minimal `workflow.health` contract.

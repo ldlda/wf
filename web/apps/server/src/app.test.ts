@@ -136,6 +136,21 @@ describe("POST /api/rpc", () => {
     expect(body.error.code).toBe("unknown_operation");
   });
 
+  it("does not authorize generated operations outside the console boundary", async () => {
+    const res = await app.request("/api/rpc", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        operation: "workflow.admin.auth.list",
+        target: "http://127.0.0.1:8000/rpc",
+      }),
+    });
+
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error.code).toBe("unknown_operation");
+  });
+
   it("returns 400 for invalid JSON body", async () => {
     const res = await app.request("/api/rpc", {
       method: "POST",

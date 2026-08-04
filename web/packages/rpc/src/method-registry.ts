@@ -1,4 +1,5 @@
 import { Schema } from "effect";
+import type { WorkflowOperationName } from "./generated/workflow-contract.js";
 import {
   WorkflowHealthResultSchema,
   WorkflowSourcesListPayloadSchema,
@@ -23,7 +24,7 @@ import {
 } from "./rpcs.js";
 
 export type OperationMeta = {
-  readonly method: string;
+  readonly method: WorkflowOperationName;
   readonly label: string;
   readonly explanation: string;
   readonly idempotency: "read" | "write";
@@ -106,7 +107,11 @@ const interpretRunDetail = (decoded: {
   nextActions: interpretNextActions(decoded.next_actions),
 });
 
-const operationEntries: ReadonlyArray<OperationMeta> = [
+const defineOperationEntries = <
+  const Entries extends ReadonlyArray<OperationMeta>,
+>(entries: Entries): Entries => entries;
+
+const operationEntries = defineOperationEntries([
   {
     method: "workflow.health",
     label: "Health check",
@@ -434,7 +439,17 @@ const operationEntries: ReadonlyArray<OperationMeta> = [
       };
     },
   },
-];
+]);
+
+export type OperationName = (typeof operationEntries)[number]["method"];
+
+export const workflowRpcOperationNames: ReadonlyArray<OperationName> =
+  Object.freeze(operationEntries.map(({ method }) => method));
+
+const operationNameSet: ReadonlySet<string> = new Set(workflowRpcOperationNames);
+
+export const isOperationName = (value: string): value is OperationName =>
+  operationNameSet.has(value);
 
 const registry: ReadonlyMap<string, OperationMeta> = new Map(
   operationEntries.map((entry) => [entry.method, entry]),

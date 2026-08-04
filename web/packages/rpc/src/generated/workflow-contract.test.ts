@@ -1,7 +1,11 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
 import {
+  isOperationName,
   listOperations,
+  WorkflowRpcs,
+  workflowRpcOperationNames,
   workflowOperationNames,
+  type OperationName,
   type WorkflowOperationParams,
   type WorkflowOperationResult,
 } from "../index.js";
@@ -18,6 +22,15 @@ describe("generated workflow contract", () => {
 
     expect(supportedNames).toHaveLength(12);
     expect(supportedNames.every((method) => generatedNames.has(method))).toBe(true);
+    expect(workflowRpcOperationNames).toEqual(supportedNames);
+    expect(workflowRpcOperationNames).toEqual(
+      Array.from(WorkflowRpcs.requests.keys()),
+    );
+    expect(isOperationName("workflow.health")).toBe(true);
+    expect(isOperationName("workflow.admin.auth.list")).toBe(false);
+    expectTypeOf<OperationName>().toEqualTypeOf<
+      (typeof workflowRpcOperationNames)[number]
+    >();
   });
 
   it("exposes operation-specific raw parameter and result types", () => {
