@@ -2,6 +2,32 @@ import * as v from "valibot";
 
 export type JsonObject = Record<string, unknown>;
 
+export type InputPath =
+  | string
+  | {
+      readonly parts: string[];
+      readonly root: "input" | "state" | "context";
+    };
+
+export type LocalInputPath =
+  | string
+  | {
+      readonly parts: string[];
+      readonly root: "local";
+    };
+
+export type InputPathBinding = {
+  readonly path: InputPath;
+  readonly target: LocalInputPath;
+};
+
+export type InputValueBinding = {
+  readonly target: LocalInputPath;
+  readonly value: JsonObject;
+};
+
+export type InputBinding = InputPathBinding | InputValueBinding;
+
 export type CreateEmptyDraftInput = {
   readonly workspaceId: string;
   readonly name: string;
@@ -36,7 +62,7 @@ export type AddCapabilityStepInput = {
   readonly routeFromOutcome?: string;
   readonly routes?: Record<string, string> | null;
   readonly inputMap?: Record<string, string> | null;
-  readonly inputBindings?: ReadonlyArray<unknown> | null;
+  readonly inputBindings?: ReadonlyArray<InputBinding> | null;
   readonly bindOutputs?: Record<string, string>;
   readonly description?: string | null;
   readonly retry?: number | null;
@@ -49,7 +75,7 @@ export type UpdateCapabilityStepInput = {
   readonly stepId: string;
   readonly update: {
     readonly description?: string | null;
-    readonly input?: ReadonlyArray<unknown> | null;
+    readonly input?: ReadonlyArray<InputBinding> | null;
     readonly retry?: number | null;
     readonly timeoutSeconds?: number | null;
   };

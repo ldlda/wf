@@ -5,6 +5,7 @@ import {
   type CreateEmptyDraftInput,
   type CreateFromCapabilityInput,
   type DraftWorkspace,
+  type InputBinding,
   type SetDraftRouteInput,
   type UpdateCapabilityStepInput,
 } from "./draft-workspace-models.js";
@@ -49,6 +50,11 @@ const ifDefined = <T>(
 ): void => {
   if (value !== undefined) target[key] = value;
 };
+
+const copyBindings = (
+  bindings: ReadonlyArray<InputBinding> | null | undefined,
+): InputBinding[] | null | undefined =>
+  bindings === undefined || bindings === null ? bindings : [...bindings];
 
 export const createDraftAuthoringClient = (
   executor: ConsoleWriteExecutor,
@@ -114,7 +120,7 @@ export const createDraftAuthoringClient = (
     );
     ifDefined(params, "routes", input.routes);
     ifDefined(params, "input_map", input.inputMap);
-    ifDefined(params, "input_bindings", input.inputBindings);
+    ifDefined(params, "input_bindings", copyBindings(input.inputBindings));
     ifDefined(params, "bind_outputs", input.bindOutputs);
     ifDefined(params, "desc", input.description);
     ifDefined(params, "retry", input.retry);
@@ -126,7 +132,7 @@ export const createDraftAuthoringClient = (
     const operation = "workflow.draft_workspaces.update_capability_step";
     const update: Record<string, unknown> = {};
     ifDefined(update, "desc", input.update.description);
-    ifDefined(update, "input", input.update.input);
+    ifDefined(update, "input", copyBindings(input.update.input));
     ifDefined(update, "retry", input.update.retry);
     ifDefined(update, "timeout_seconds", input.update.timeoutSeconds);
     return executor.run(

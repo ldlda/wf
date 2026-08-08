@@ -5,6 +5,9 @@ import {
   type AddCapabilityStepInput,
   type CreateEmptyDraftInput,
   type CreateFromCapabilityInput,
+  type InputBinding,
+  type InputPathBinding,
+  type InputValueBinding,
   type SetDraftRouteInput,
   type UpdateCapabilityStepInput,
 } from "./draft-workspace-models.js";
@@ -26,6 +29,18 @@ const canonicalWorkspace = {
   },
   draft: { steps: [] },
 };
+
+const pathBinding = {
+  target: "text",
+  path: "input.text",
+} satisfies InputPathBinding;
+
+const valueBinding = {
+  target: "mode",
+  value: { value: "full" },
+} satisfies InputValueBinding;
+
+const canonicalBindings = [pathBinding, valueBinding] satisfies ReadonlyArray<InputBinding>;
 
 const createExecutor = () => {
   const run = vi.fn();
@@ -79,7 +94,7 @@ describe("DraftAuthoringClient", () => {
       routeFromOutcome: "  success  ",
       routes: { success: "enrich" },
       inputMap: { text: "input.text" },
-      inputBindings: [{ target: "text", path: "input.text" }],
+      inputBindings: canonicalBindings,
       bindOutputs: { result: "state.result" },
       description: "Enrich report",
       retry: 2,
@@ -91,7 +106,7 @@ describe("DraftAuthoringClient", () => {
       stepId: "  enrich  ",
       update: {
         description: "Updated",
-        input: [{ target: "text", value: "updated" }],
+        input: [valueBinding],
         retry: null,
         timeoutSeconds: 45,
       },
@@ -162,7 +177,7 @@ describe("DraftAuthoringClient", () => {
         route_from_outcome: "success",
         routes: { success: "enrich" },
         input_map: { text: "input.text" },
-        input_bindings: [{ target: "text", path: "input.text" }],
+        input_bindings: canonicalBindings,
         bind_outputs: { result: "state.result" },
         desc: "Enrich report",
         retry: 2,
@@ -179,7 +194,7 @@ describe("DraftAuthoringClient", () => {
         step_id: "enrich",
         update: {
           desc: "Updated",
-          input: [{ target: "text", value: "updated" }],
+          input: [valueBinding],
           retry: null,
           timeout_seconds: 45,
         },

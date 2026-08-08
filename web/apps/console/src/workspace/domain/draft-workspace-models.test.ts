@@ -4,6 +4,7 @@ import {
   decodeDraftWorkspacePage,
   type AddCapabilityStepInput,
   type CreateEmptyDraftInput,
+  type InputBinding,
 } from "./draft-workspace-models.js";
 
 const summary = {
@@ -15,6 +16,25 @@ const summary = {
 };
 
 describe("draft workspace models", () => {
+  it("requires canonical path or value binding shapes", () => {
+    const canonicalBinding = {
+      target: "text",
+      path: "input.text",
+    } satisfies InputBinding;
+
+    const invalidInput: AddCapabilityStepInput = {
+      workspaceId: "draft-report",
+      revision: 1,
+      stepId: "read",
+      capabilityName: "demo.read",
+      // @ts-expect-error Binding payloads must use canonical path/value keys.
+      inputBindings: [{ sourcePath: "input.text", targetPath: "text" }],
+    };
+
+    expect(canonicalBinding).toEqual({ target: "text", path: "input.text" });
+    expect(invalidInput).toBeDefined();
+  });
+
   it("exposes camelCase inputs for draft authoring", () => {
     const emptyInput = {
       workspaceId: "draft-report",
