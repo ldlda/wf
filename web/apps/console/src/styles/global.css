@@ -747,6 +747,205 @@ tbody tr:hover {
   border: 0;
 }
 
+/* Schema forms keep native controls close to the JSON contract while making
+   fallback reasons and server diagnostics visible at the field boundary. */
+.schema-form {
+  display: grid;
+  align-items: stretch;
+  gap: 0.9rem;
+}
+
+.schema-form label {
+  display: block;
+  flex-basis: auto;
+  margin-bottom: 0.3rem;
+}
+
+.schema-form__group,
+.schema-form__source {
+  min-width: 0;
+  margin: 0;
+  border: 1px solid var(--color-border);
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.schema-form__group {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.9rem;
+}
+
+.schema-form__group > legend,
+.schema-form__source > legend {
+  padding: 0 0.35rem;
+  color: var(--color-ink);
+  font-family: var(--font-heading);
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.schema-form__group > p,
+.schema-form__field > p {
+  margin: 0;
+  color: var(--color-slate);
+  font-size: 0.82rem;
+}
+
+.schema-form__field {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.schema-form__field > label {
+  margin: 0;
+}
+
+.schema-form__source {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.55rem 0.65rem;
+  background: var(--color-paper);
+}
+
+.schema-form__source-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.schema-form__source-options label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin: 0;
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.schema-form__source-path {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.schema-form input[type="text"],
+.schema-form input[type="number"],
+.schema-form textarea,
+.schema-form select {
+  width: 100%;
+  min-width: 0;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--color-border);
+  border-radius: 3px;
+  background: #fff;
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+}
+
+.schema-form textarea {
+  min-height: 4.5rem;
+  resize: vertical;
+}
+
+.schema-form input[type="radio"],
+.schema-form input[type="checkbox"] {
+  accent-color: var(--color-signal-green);
+}
+
+.schema-form input:focus-visible,
+.schema-form textarea:focus-visible,
+.schema-form select:focus-visible,
+.schema-form button:focus-visible {
+  outline: 2px solid var(--color-signal-green);
+  outline-offset: 2px;
+}
+
+.schema-form [aria-invalid="true"] {
+  border-color: var(--color-red);
+}
+
+.schema-form__diagnostics {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.45rem 0.6rem;
+  border-left: 3px solid var(--color-red);
+  background: #fff5f3;
+  color: var(--color-red);
+  font-size: 0.82rem;
+}
+
+.schema-form__diagnostics p {
+  margin: 0;
+}
+
+.schema-form__fallback-reason {
+  margin: 0;
+  padding: 0.45rem 0.6rem;
+  border-left: 3px solid var(--color-amber);
+  background: #fffaf0;
+  color: var(--color-slate);
+  font-size: 0.8rem;
+}
+
+.schema-form__array-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.6rem;
+  align-items: end;
+}
+
+.schema-form__secondary-action {
+  padding: 0.4rem 0.7rem;
+  background: transparent;
+  color: var(--color-ink);
+  font-size: 0.78rem;
+}
+
+.schema-form__secondary-action:hover:not(:disabled) {
+  background: var(--color-surface);
+  color: var(--color-ink);
+}
+
+.schema-form__raw {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.schema-form__raw summary {
+  padding: 0.6rem 0.7rem;
+  cursor: pointer;
+  font-family: var(--font-heading);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.schema-form__raw summary:focus-visible {
+  outline: 2px solid var(--color-signal-green);
+  outline-offset: -2px;
+}
+
+.schema-form__raw pre {
+  max-height: 18rem;
+  max-width: 100%;
+  margin: 0;
+  overflow: auto;
+  padding: 0.7rem;
+  background: var(--color-ink);
+  color: var(--color-paper);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  line-height: 1.4;
+  white-space: pre;
+}
+
 /* Capability discovery keeps the result list compact while reserving a readable
    contract pane for the selected capability. */
 .capability-discovery {
