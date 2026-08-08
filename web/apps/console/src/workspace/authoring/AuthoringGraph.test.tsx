@@ -43,6 +43,10 @@ describe("AuthoringGraph", () => {
       "data-active",
       "true",
     );
+    expect(container.querySelector('[data-node-id="review"]')).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
   });
 
   it("selects a connector by its source step and outcome", () => {
@@ -51,7 +55,7 @@ describe("AuthoringGraph", () => {
       <AuthoringGraph draft={workspace.draft} selection={{ kind: "canvas" }} onSelectionChange={onSelectionChange} />,
     );
 
-    const edgeButton = container.querySelector('[data-edge-id="e-collect-review-0"]');
+    const edgeButton = container.querySelector('[data-edge-id="e-7:collect2:ok6:review"]');
     expect(edgeButton).not.toBeNull();
     fireEvent.click(edgeButton!);
 

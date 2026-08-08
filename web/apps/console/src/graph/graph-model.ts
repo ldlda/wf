@@ -48,6 +48,15 @@ export type WorkflowGraphLayoutOptions = {
   readonly label?: (node: Readonly<Record<string, unknown>>) => string | undefined;
 };
 
+const encodeEdgePart = (value: string): string => `${value.length}:${value}`;
+
+/** Build a connector id from its complete semantic identity, not array order. */
+export const workflowGraphEdgeId = (
+  source: string,
+  outcome: string,
+  target: string,
+): string => `e-${encodeEdgePart(source)}${encodeEdgePart(outcome)}${encodeEdgePart(target)}`;
+
 const DEFAULT_LAYOUT: Required<Omit<WorkflowGraphLayoutOptions, "label">> = {
   direction: "TB",
   nodeWidth: 180,
@@ -162,12 +171,11 @@ export const buildWorkflowGraph = (
     };
   });
 
-  let edgeIndex = 0;
   const edges: WorkflowGraphEdge[] = plan.edges.map((edge) => {
     const source = String(edge.from);
     const target = String(edge.to);
     const label = String(edge.outcome ?? "");
-    const id = `e-${source}-${target}-${edgeIndex++}`;
+    const id = workflowGraphEdgeId(source, label, target);
     return { id, source, target, label };
   });
 

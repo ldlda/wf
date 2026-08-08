@@ -52,6 +52,7 @@ const CustomNode = ({ data, selected }: { data: WorkflowGraphNodeData; selected:
       role="button"
       tabIndex={0}
       onKeyDown={handleKeyDown}
+      aria-pressed={selected}
       data-active={isActive}
       data-node-id={data.nodeId}
       className={`graph-node graph-node--${data.kind} ${selected ? "graph-node--selected" : ""} ${isActive ? "graph-node--active" : ""}`}
@@ -85,6 +86,7 @@ export const WorkflowGraph = ({
         id: n.id,
         type: "custom",
         position: n.position,
+        selected: activeNodeId === n.id,
         data: { ...n.data, isActive: activeNodeId === n.id, onSelect: onNodeSelect },
       })),
     [model.nodes, activeNodeId, onNodeSelect],

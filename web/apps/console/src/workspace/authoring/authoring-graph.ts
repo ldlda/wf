@@ -25,7 +25,14 @@ const stringValue = (value: unknown): string | null =>
   typeof value === "string" && value.length > 0 ? value : null;
 
 const stringList = (value: unknown): string[] =>
-  Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+  (() => {
+    const values: string[] = [];
+    if (!Array.isArray(value)) return values;
+    for (const item of value) {
+      if (typeof item === "string") values.push(item);
+    }
+    return values;
+  })();
 
 const stepKind = (step: JsonRecord): string => {
   for (const kind of [
@@ -75,17 +82,43 @@ const nodeForStep = (id: string, step: JsonRecord): JsonRecord => {
   return node;
 };
 
-const sortedRecords = (value: JsonRecord | null): Array<[string, JsonRecord]> =>
-  value === null
-    ? []
-    : Object.entries(value)
-        .filter((entry): entry is [string, JsonRecord] => isRecord(entry[1]))
-        .toSorted(([left], [right]) => left.localeCompare(right));
+const sortedRecords = (value: JsonRecord | null): Array<[string, JsonRecord]> => {
+  if (value === null) return [];
+  const records: Array<[string, JsonRecord]> = [];
+  for (const [key, item] of Object.entries(value)) {
+    if (isRecord(item)) records.push([key, item]);
+  }
+  return records.toSorted(([left], [right]) => left.localeCompare(right));
+};
 
 const sortedEntries = (value: JsonRecord | null): Array<[string, unknown]> =>
   value === null
     ? []
     : Object.entries(value).toSorted(([left], [right]) => left.localeCompare(right));
+
+const recordArray = (value: unknown): JsonRecord[] => {
+  const records: JsonRecord[] = [];
+  if (!Array.isArray(value)) return records;
+  for (const item of value) {
+    if (isRecord(item)) records.push(item);
+  }
+  return records;
+};
+
+const copiedRecordArray = (value: unknown): Array<Record<string, unknown>> => {
+  const records: Array<Record<string, unknown>> = [];
+  for (const item of recordArray(value)) records.push({ ...item });
+  return records;
+};
+
+const nodeIdsFor = (nodes: ReadonlyArray<JsonRecord>): Set<string> => {
+  const nodeIds = new Set<string>();
+  for (const node of nodes) {
+    const id = stringValue(node.id);
+    if (id !== null) nodeIds.add(id);
+  }
+  return nodeIds;
+};
 
 const routesForSteps = (routes: JsonRecord | null): Array<Record<string, unknown>> => {
   if (routes === null) return [];
@@ -104,14 +137,12 @@ const compiledPlan = (draft: JsonRecord): {
   readonly nodes: Array<JsonRecord>;
   readonly edges: Array<Record<string, unknown>>;
 } => {
-  const rawNodes = Array.isArray(draft.nodes)
-    ? draft.nodes.filter(isRecord)
-    : [];
+  const rawNodes = recordArray(draft.nodes);
   const rawEdges = Array.isArray(draft.edges)
-    ? draft.edges.filter(isRecord).map((edge) => ({ ...edge }))
+    ? copiedRecordArray(draft.edges)
     : routesForSteps(recordValue(draft.routes));
-  const nodes = rawNodes.map((node) => ({ ...node }));
-  const nodeIds = new Set(nodes.map((node) => stringValue(node.id)).filter((id): id is string => id !== null));
+  const nodes = rawNodes;
+  const nodeIds = nodeIdsFor(nodes);
 
   for (const edge of rawEdges) {
     const target = stringValue(edge.to);
@@ -130,9 +161,10 @@ const keyedPlan = (draft: JsonRecord): {
 } => {
   const steps = recordValue(draft.steps);
   if (steps === null) return { nodes: [], edges: [] };
-  const nodes = sortedRecords(steps).map(([id, step]) => nodeForStep(id, step));
+  const nodes: JsonRecord[] = [];
+  for (const [id, step] of sortedRecords(steps)) nodes.push(nodeForStep(id, step));
   const edges = routesForSteps(recordValue(draft.routes));
-  const nodeIds = new Set(nodes.map((node) => stringValue(node.id)).filter((id): id is string => id !== null));
+  const nodeIds = nodeIdsFor(nodes);
   if (edges.some((edge) => edge.to === "__end__") && !nodeIds.has("__end__")) {
     nodes.push({ id: "__end__", type: "end", outcome: "ok" });
   }

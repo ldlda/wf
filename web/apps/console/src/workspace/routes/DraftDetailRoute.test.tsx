@@ -5,7 +5,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { DraftWorkspace } from "../domain/draft-workspace-models.js";
 import type { DraftWorkspaceController } from "./useDraftWorkspace.js";
 import { useDraftWorkspace } from "./useDraftWorkspace.js";
-import { DraftDetailRoute, formatBoundedJson } from "./DraftDetailRoute.js";
+import { DraftDetailRoute } from "./DraftDetailRoute.js";
+import { formatBoundedJson } from "../authoring/format-bounded-json.js";
 
 const globalStyles = readFileSync(
   "src/styles/global.css",
@@ -115,35 +116,6 @@ describe("DraftDetailRoute", () => {
       name: "Raw draft JSON, horizontally scrollable",
     });
     expect(rawJson).toHaveAttribute("tabindex", "0");
-  });
-
-  it("bounds JSON traversal without reading remote fields after the budget", () => {
-    const draft = {
-      first: "x".repeat(1_000),
-      get later() {
-        throw new Error("later field should not be read");
-      },
-    };
-
-    expect(() => formatBoundedJson(draft, 80)).not.toThrow();
-    expect(formatBoundedJson(draft, 80)).toHaveLength(80);
-    expect(formatBoundedJson(draft, 80)).toContain("truncated");
-  });
-
-  it("keeps an exact-fit JSON document complete and valid", () => {
-    const draft = { step: "collect", count: 2 };
-    const completeJson = JSON.stringify(draft, null, 2);
-
-    expect(formatBoundedJson(draft, completeJson.length)).toBe(completeJson);
-    expect(JSON.parse(formatBoundedJson(draft, completeJson.length))).toEqual(draft);
-  });
-
-  it("does not truncate a complete document just below the boundary", () => {
-    const draft = { step: "collect", count: 2 };
-    const completeJson = JSON.stringify(draft, null, 2);
-
-    expect(formatBoundedJson(draft, completeJson.length + 1)).toBe(completeJson);
-    expect(formatBoundedJson(draft, completeJson.length - 1)).toContain("truncated");
   });
 
   it("does not render a selected workspace whose identity differs from the URL", () => {

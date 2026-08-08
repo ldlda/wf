@@ -13,9 +13,11 @@ type DraftWorkbenchProps = {
   readonly onSelectionChange?: (selection: WorkbenchSelection) => void;
 };
 
+const EMPTY_CAPABILITIES: ReadonlyArray<CapabilitySummary> = [];
+
 export const DraftWorkbench = ({
   draft,
-  capabilities = [],
+  capabilities = EMPTY_CAPABILITIES,
   initialSelection = { kind: "canvas" },
   onSelectionChange,
 }: DraftWorkbenchProps) => {

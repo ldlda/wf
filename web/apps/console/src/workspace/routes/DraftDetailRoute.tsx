@@ -3,7 +3,6 @@ import type {
   DraftWorkspace,
 } from "../domain/draft-workspace-models.js";
 import { DraftWorkbench } from "../authoring/DraftWorkbench.js";
-export { formatBoundedJson } from "../authoring/ContextInspector.js";
 import { useDraftWorkspace } from "./useDraftWorkspace.js";
 
 const titleFor = (workspace: DraftWorkspace): string =>

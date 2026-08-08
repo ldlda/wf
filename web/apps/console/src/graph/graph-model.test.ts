@@ -87,6 +87,31 @@ describe("buildWorkflowGraph", () => {
     expect(model.edges.length).toBe(5);
   });
 
+  it("keeps an edge id stable when an earlier route is inserted or removed", () => {
+    const basePlan = {
+      nodes: [{ id: "b" }, { id: "c" }, { id: "d" }, { id: "e" }],
+      edges: [
+        { from: "b", outcome: "ok", to: "c" },
+        { from: "d", outcome: "ok", to: "e" },
+      ],
+    };
+    const earlierRoute = { from: "a", outcome: "ok", to: "b" };
+
+    const base = buildWorkflowGraph(basePlan);
+    const expanded = buildWorkflowGraph({
+      nodes: [{ id: "a" }, ...basePlan.nodes],
+      edges: [earlierRoute, ...basePlan.edges],
+    });
+    const restored = buildWorkflowGraph(basePlan);
+
+    const baseRoute = base.edges.find((edge) => edge.source === "d");
+    const expandedRoute = expanded.edges.find((edge) => edge.source === "d");
+    const restoredRoute = restored.edges.find((edge) => edge.source === "d");
+
+    expect(expandedRoute?.id).toBe(baseRoute?.id);
+    expect(restoredRoute?.id).toBe(baseRoute?.id);
+  });
+
   it("labels edges with outcome names", () => {
     const model = buildWorkflowGraph(samplePlan);
     const okEdge = model.edges.find(

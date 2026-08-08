@@ -32,10 +32,10 @@ describe("projectAuthoringGraph", () => {
       ["collect", "use"],
       ["review", "interrupt"],
     ]);
-    expect(model.edges.map((edge) => [edge.id, edge.source, edge.label, edge.target])).toEqual([
-      ["e-collect-review-0", "collect", "ok", "review"],
-      ["e-review-__end__-1", "review", "approved", "__end__"],
-      ["e-review-collect-2", "review", "needs_changes", "collect"],
+    expect(model.edges.map((edge) => [edge.source, edge.label, edge.target])).toEqual([
+      ["collect", "ok", "review"],
+      ["review", "approved", "__end__"],
+      ["review", "needs_changes", "collect"],
     ]);
     expect(model.nodes.find((node) => node.id === "collect")?.data.nodeRef).toBe(
       "demo.collect",
