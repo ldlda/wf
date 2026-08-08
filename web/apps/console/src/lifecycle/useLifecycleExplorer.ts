@@ -33,12 +33,14 @@ export const useLifecycleExplorer = (
   const deploymentDetailGenerationRef = useRef(0);
   const runListGenerationRef = useRef(0);
   const runDetailGenerationRef = useRef(0);
+  const runTraceGenerationRef = useRef(0);
   const committedClientsRef = useRef<LifecycleClients | null | undefined>(undefined);
 
   const invalidateDetailReads = useCallback((): void => {
     artifactDetailGenerationRef.current++;
     deploymentDetailGenerationRef.current++;
     runDetailGenerationRef.current++;
+    runTraceGenerationRef.current++;
   }, []);
 
   const executeRead = useCallback(
@@ -141,8 +143,10 @@ export const useLifecycleExplorer = (
       if (!artifactKey || !clients) return;
       const generation = artifactDetailGenerationRef.current;
       const separator = artifactKey.lastIndexOf("@");
+      if (separator <= 0 || separator === artifactKey.length - 1) return;
       const artifactId = artifactKey.slice(0, separator);
       const version = Number(artifactKey.slice(separator + 1));
+      if (!Number.isSafeInteger(version) || version < 0) return;
       void executeRead(
         () => clients.artifacts.inspect(artifactId, version),
         generation,
@@ -186,6 +190,7 @@ export const useLifecycleExplorer = (
       dispatch({ type: "selectRun", runId });
       if (!runId || !clients) return;
       const generation = runDetailGenerationRef.current;
+      const traceGeneration = runTraceGenerationRef.current;
       const targetGeneration = generationRef.current;
       void executeRead(
         () => clients.runs.inspect(runId),
@@ -194,11 +199,16 @@ export const useLifecycleExplorer = (
         targetGeneration,
         (value) => {
           dispatch({ type: "setRunDetail", detail: value });
-          if (value.traceCount > 0) {
+          // Do not let the automatic first page overwrite a trace page the
+          // operator requested while run inspection was still pending.
+          if (
+            value.traceCount > 0 &&
+            traceGeneration === runTraceGenerationRef.current
+          ) {
             void executeRead(
               () => clients.runs.trace(runId, 0, 50),
-              generation,
-              runDetailGenerationRef,
+              traceGeneration,
+              runTraceGenerationRef,
               targetGeneration,
               (trace) => dispatch({ type: "setTrace", trace }),
             );
@@ -222,7 +232,23 @@ export const useLifecycleExplorer = (
       runListGenerationRef.current,
       generationRef.current,
     );
-  }, [clients, invalidateDetailReads, startCollectionReads]);
+    // Refresh owns both collection and selected-detail freshness. Invalidating
+    // a detail without replacing it would leave the URL pointing at a record
+    // whose completed response is silently discarded.
+    if (state.selectedArtifactId) selectArtifact(state.selectedArtifactId);
+    else if (state.selectedDeploymentId) selectDeployment(state.selectedDeploymentId);
+    else if (state.selectedRunId) selectRun(state.selectedRunId);
+  }, [
+    clients,
+    invalidateDetailReads,
+    selectArtifact,
+    selectDeployment,
+    selectRun,
+    startCollectionReads,
+    state.selectedArtifactId,
+    state.selectedDeploymentId,
+    state.selectedRunId,
+  ]);
 
   const loadMoreArtifacts = useCallback((): void => {
     const current = state.artifactList;
@@ -255,13 +281,13 @@ export const useLifecycleExplorer = (
   const loadTrace = useCallback(
     (start: number, limit: number): void => {
       if (!state.selectedRunId || !clients) return;
-      const generation = ++runDetailGenerationRef.current;
+      const generation = ++runTraceGenerationRef.current;
       const targetGeneration = generationRef.current;
       const runId = state.selectedRunId;
       void executeRead(
         () => clients.runs.trace(runId, start, limit),
         generation,
-        runDetailGenerationRef,
+        runTraceGenerationRef,
         targetGeneration,
         (value) => dispatch({ type: "setTrace", trace: value }),
       );

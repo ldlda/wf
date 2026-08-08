@@ -60,8 +60,12 @@ const WorkflowRunsInspectResultSchema =
   authoredRpcSchemas["workflow.runs.inspect"].success;
 const WorkflowRunsStartPayloadSchema =
   authoredRpcSchemas["workflow.runs.start"].payload;
+const WorkflowRunsStartResultSchema =
+  authoredRpcSchemas["workflow.runs.start"].success;
 const WorkflowRunsResumePayloadSchema =
   authoredRpcSchemas["workflow.runs.resume"].payload;
+const WorkflowRunsResumeResultSchema =
+  authoredRpcSchemas["workflow.runs.resume"].success;
 const WorkflowRunsTracePayloadSchema =
   authoredRpcSchemas["workflow.runs.trace"].payload;
 const WorkflowRunsTraceResultSchema =
@@ -168,6 +172,7 @@ const parityCases: ReadonlyArray<ParityCase> = [
     payload: WorkflowHealthPayloadSchema,
     success: WorkflowHealthResultSchema,
     validPayload: {},
+    invalidPayload: { unexpected: true },
     validSuccess: { status: "ok", store_root: "C:/store" },
   },
   {
@@ -401,6 +406,7 @@ const parityCases: ReadonlyArray<ParityCase> = [
     payload: WorkflowDeploymentsListPayloadSchema,
     success: WorkflowDeploymentsListResultSchema,
     validPayload: {},
+    invalidPayload: { unexpected: true },
     validSuccess: { deployments: [] },
   },
   {
@@ -456,7 +462,7 @@ const parityCases: ReadonlyArray<ParityCase> = [
   {
     method: "workflow.runs.start",
     payload: WorkflowRunsStartPayloadSchema,
-    success: WorkflowRunsInspectResultSchema,
+    success: WorkflowRunsStartResultSchema,
     validPayload: {
       deployment_id: "report.default",
       workflow_input: { documents: ["brief.md"] },
@@ -468,7 +474,7 @@ const parityCases: ReadonlyArray<ParityCase> = [
   {
     method: "workflow.runs.resume",
     payload: WorkflowRunsResumePayloadSchema,
-    success: WorkflowRunsInspectResultSchema,
+    success: WorkflowRunsResumeResultSchema,
     validPayload: {
       run_id: "run_1",
       resume_payload: { approved: true },

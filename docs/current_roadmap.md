@@ -750,7 +750,7 @@ stable.
   Artifact: [`workflow-api.manifest.json`](../contracts/workflow-api.manifest.json).
 - Completed: `@lda/workflow-rpc` generates all 70 wire operation names plus raw
   parameter/result types from the checked manifest. The generated artifact has
-  its own deterministic drift check and proves the 12 authored Effect RPCs are
+  its own deterministic drift check and proves the 16 authored Effect RPCs are
   a subset without broadening browser authorization.
 - Completed: a fail-closed representative JSON Schema-to-Effect translator
   handles constrained primitives, objects, arrays, `anyOf`, local references,
@@ -758,13 +758,13 @@ stable.
   checked-manifest coverage. Unsupported union and conditional semantics remain
   typed translation failures. No runtime RPC or browser authorization behavior
   changed; runtime TypeScript parity is not complete.
-- Completed: a test-only parity harness translates all 24 payload/result sides
-  of the 12 authored Effect RPCs. Health, sources, artifacts, deployments, and
+- Completed: a test-only parity harness translates all 32 payload/result sides
+  of the 16 authored Effect RPCs. Health, sources, artifacts, deployments, and
   run-list fixtures agree; eight bidirectional result mismatches are pinned for
   the current representative run inspect/start/resume interrupt fixtures and
   the compact run-trace envelope/frame shape.
   No runtime decoder or browser authorization behavior changed.
-- Completed: all 12 current Effect RPCs now use generated runtime decoders from
+- Completed: all 16 current Effect RPCs now use generated runtime decoders from
   the checked manifest. Run inspect/start/resume use the complete persisted
   interrupt contract; run trace uses the full run envelope and canonical frame
   identifiers. The checked generator embeds only those operation schemas and
@@ -774,7 +774,7 @@ stable.
 - Completed: duplicated Effect-client operation-name unions and guards now come
   from the authored operation metadata registry, with every name checked
   against the generated 70-operation inventory. The Hono browser proxy retains
-  an independently authored, typed 12-operation allowlist so future client
+  an independently authored, typed 16-operation allowlist so future client
   expansion does not broaden browser authorization implicitly.
 - `WorkflowApiSurface` is the protocol-neutral workflow operation contract.
 - `wf_transport_rpc_http` exposes local/static and MCP-backed `WorkflowServer`

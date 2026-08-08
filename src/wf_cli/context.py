@@ -4,30 +4,23 @@ import json
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import typer
 from pydantic import ValidationError
 
-from wf_api import (
-    WorkflowAdminApi,
-    WorkflowAdminSurface,
-    WorkflowApi,
-    WorkflowApiSurface,
-    WorkflowSourceAdminApi,
-    WorkflowSourceAdminSurface,
-    WorkflowSourceRegistrySurface,
-)
-from wf_config import (
-    FilesystemStoreConfig,
-    LocalTargetConfig,
-    RpcHttpTargetConfig,
-    load_workflow_config,
-)
-from wf_mcp.broker import build_service_from_config, load_broker_config
-from wf_mcp.broker.service import WfMcpService
-from wf_mcp.broker.service.workflow_operation_context import context_from_service
-from wf_server.config import build_workflow_server_from_workflow_config
-from wf_transport_rpc_http import RpcWorkflowApiClient
+if TYPE_CHECKING:
+    from wf_api import (
+        WorkflowAdminSurface,
+        WorkflowApi,
+        WorkflowApiSurface,
+        WorkflowSourceAdminSurface,
+        WorkflowSourceRegistrySurface,
+    )
+    from wf_config import WorkflowConfigFile
+    from wf_mcp.broker.service import WfMcpService
+    from wf_server.context import WorkflowServer
+    from wf_transport_rpc_http import RpcWorkflowApiClient
 
 
 @dataclass(frozen=True)
@@ -98,6 +91,15 @@ def config_path_from_context(ctx: typer.Context) -> str:
     return CliTyperState.from_context(ctx).config_path
 
 
+def build_workflow_server_from_workflow_config(
+    config: WorkflowConfigFile,
+) -> WorkflowServer:
+    """Build the local server without importing the server runtime at CLI startup."""
+    from wf_server.config import build_workflow_server_from_workflow_config as build
+
+    return build(config)
+
+
 def load_cli_context(
     config_path: str | Path,
     *,
@@ -112,6 +114,8 @@ def load_cli_context(
         raise ValueError("--local and --url are mutually exclusive")
 
     if rpc_url is not None:
+        # Keep transport construction out of `wf --help`; only commands that
+        # contact a remote target need the RPC client and its runtime stack.
         _validate_rpc_url(rpc_url)
         client = rpc_client_from_target(
             url=rpc_url,
@@ -131,6 +135,16 @@ def load_cli_context(
         )
 
     if _is_legacy_mcp_config(resolved_config_path):
+        from wf_api import (
+            WorkflowAdminApi,
+            WorkflowApi,
+            WorkflowSourceAdminApi,
+        )
+        from wf_mcp.broker import build_service_from_config, load_broker_config
+        from wf_mcp.broker.service.workflow_operation_context import (
+            context_from_service,
+        )
+
         config = load_broker_config(resolved_config_path)
         service = build_service_from_config(config)
         return CliContext(
@@ -144,6 +158,14 @@ def load_cli_context(
             ),
             verbose=verbose,
         )
+
+    from wf_api import WorkflowApi
+    from wf_config import (
+        FilesystemStoreConfig,
+        LocalTargetConfig,
+        RpcHttpTargetConfig,
+        load_workflow_config,
+    )
 
     config = load_workflow_config(resolved_config_path)
     target = config.client.target
@@ -195,6 +217,10 @@ def rpc_client_from_target(
     transport package.
     """
 
+    # Importing the client here keeps HTTP/RPC server dependencies out of the
+    # CLI's command registration and help path.
+    from wf_transport_rpc_http import RpcWorkflowApiClient
+
     return RpcWorkflowApiClient(url=url, timeout_seconds=timeout_seconds)
 
 
@@ -212,6 +238,8 @@ def load_local_cli_context(
         rpc_url=rpc_url,
         rpc_timeout_seconds=rpc_timeout_seconds,
     )
+    from wf_api import WorkflowApi
+
     if not isinstance(context.handlers, WorkflowApi):
         raise ValueError(
             "this CLI command is not available for rpc_http targets yet; "
@@ -280,6 +308,8 @@ def _rpc_timeout_from_optional_config(
     *,
     override: float | None,
 ) -> float:
+    from wf_config import RpcHttpTargetConfig, load_workflow_config
+
     if override is not None:
         return override
     try:

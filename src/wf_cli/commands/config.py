@@ -1,16 +1,16 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated
 
 import typer
 
 from wf_cli.context import config_path_from_context
 from wf_cli.io import emit_json
-from wf_config import McpSourceConfig, PythonSourceConfig, StdlibSourceConfig
-from wf_config.loader import load_workflow_config
-from wf_mcp.broker.config import migrate_broker_config_file
-from wf_sources_python import load_python_source
+
+if TYPE_CHECKING:
+    from wf_config import McpSourceConfig, PythonSourceConfig, StdlibSourceConfig
+
 
 app = typer.Typer(
     name="config",
@@ -31,6 +31,10 @@ def migrate_mcp_config(
     ] = None,
 ) -> None:
     """Convert legacy MCP broker config into neutral workflow config."""
+    # Config migration is intentionally command-local; `wf --help` does not
+    # need to load the legacy MCP broker or source loader.
+    from wf_mcp.broker.config import migrate_broker_config_file
+
     config = migrate_broker_config_file(input_path)
     payload = config.model_dump(mode="json")
     if output_path is None:
@@ -54,6 +58,8 @@ def validate_config(
     ] = None,
 ) -> None:
     """Validate config shape and trusted static source imports."""
+    from wf_config.loader import load_workflow_config
+
     resolved_config_path = config_path or Path(config_path_from_context(ctx))
     try:
         config = load_workflow_config(resolved_config_path)
@@ -73,7 +79,11 @@ def _validate_source(
     source: StdlibSourceConfig | PythonSourceConfig | McpSourceConfig,
 ) -> dict[str, object]:
     """Return a compact source validation summary without live network probes."""
+    from wf_config import PythonSourceConfig
+
     if isinstance(source, PythonSourceConfig):
+        from wf_sources_python import load_python_source
+
         try:
             loaded = load_python_source(
                 source_id=source.id,

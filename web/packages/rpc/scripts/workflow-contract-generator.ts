@@ -83,7 +83,7 @@ const booleanAt = (value: unknown, path: string): boolean => {
 const compareText = (left: string, right: string): number =>
   left < right ? -1 : left > right ? 1 : 0;
 
-const runtimeOperationNames = new Set([
+const runtimeOperationNameList = [
   "workflow.health",
   "workflow.sources.list",
   "workflow.capabilities.list",
@@ -100,7 +100,8 @@ const runtimeOperationNames = new Set([
   "workflow.runs.start",
   "workflow.runs.resume",
   "workflow.runs.trace",
-]);
+] as const;
+const runtimeOperationNames = new Set<string>(runtimeOperationNameList);
 
 export const parseWorkflowContractManifest = (
   manifestText: string,
@@ -225,6 +226,14 @@ const runtimeContractSource = (manifest: WorkflowContractManifest): string => {
   const operations = manifest.operations.filter(({ method }) =>
     runtimeOperationNames.has(method),
   );
+  const selectedNames = new Set(operations.map(({ method }) => method));
+  const missingNames = runtimeOperationNameList.filter(
+    (name) => !selectedNames.has(name),
+  );
+  if (missingNames.length > 0) {
+    throw new Error(`missing runtime operation(s): ${missingNames.join(", ")}`);
+  }
+
   const referencedSchemas = new Set<string>();
   const visit = (value: JsonValue): void => {
     if (Array.isArray(value)) {
@@ -233,22 +242,21 @@ const runtimeContractSource = (manifest: WorkflowContractManifest): string => {
     }
     if (value === null || typeof value !== "object") return;
     for (const [key, item] of Object.entries(value)) {
-      if (
-        key === "$ref" &&
-        typeof item === "string" &&
-        item.startsWith("#/components/schemas/")
-      ) {
-        const name = item.slice("#/components/schemas/".length);
-        if (referencedSchemas.has(name)) continue;
-        const schema = manifest.schemas[name];
-        if (schema === undefined) {
-          throw new Error(`missing runtime component schema ${name}`);
-        }
-        referencedSchemas.add(name);
-        visit(schema);
-      } else {
+      if (key !== "$ref" || typeof item !== "string") {
         visit(item);
+        continue;
       }
+      if (!item.startsWith("#/components/schemas/")) {
+        throw new Error(`external runtime schema reference ${item}`);
+      }
+      const name = item.slice("#/components/schemas/".length);
+      if (referencedSchemas.has(name)) continue;
+      const schema = manifest.schemas[name];
+      if (schema === undefined) {
+        throw new Error(`missing runtime component schema ${name}`);
+      }
+      referencedSchemas.add(name);
+      visit(schema);
     }
   };
 
@@ -341,6 +349,7 @@ export const generateWorkflowContractSource = async (
   manifestText: string,
 ): Promise<string> => {
   const manifest = parseWorkflowContractManifest(manifestText);
+  const runtimeSource = runtimeContractSource(manifest);
   const compiled = await compileSchema(compilerSchemaFor(manifest));
   const helpers = [
     "",
@@ -351,7 +360,7 @@ export const generateWorkflowContractSource = async (
     '  WorkflowContractMap[Name]["result"];',
     "",
   ].join("\n");
-  return `${inventorySource(manifest.operations.map(({ method }) => method))}${compiled.trim()}\n${helpers}${runtimeContractSource(manifest)}`;
+  return `${inventorySource(manifest.operations.map(({ method }) => method))}${compiled.trim()}\n${helpers}${runtimeSource}`;
 };
 
 export const writeWorkflowContract = async (

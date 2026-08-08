@@ -75,7 +75,9 @@ describe("ConsoleShell", () => {
     );
 
     const skipLink = screen.getByRole("link", { name: "Skip to main content" });
+    const main = screen.getByRole("main", { name: "Console workspace" });
     expect(skipLink).toHaveAttribute("href", "#console-workspace-main");
+    expect(main).toHaveAttribute("tabindex", "-1");
 
     await userEvent.tab();
 

@@ -10,25 +10,33 @@ import { translateJsonSchema } from "./translator.js";
 type RuntimeOperationName = keyof typeof workflowRuntimeContract.operations;
 const MAX_RUNTIME_VALUE_DEPTH = 64;
 
+type RuntimeValueFrame =
+  | { readonly kind: "enter"; readonly depth: number; readonly value: unknown }
+  | { readonly kind: "leave"; readonly value: object };
+
 export interface RuntimeOperationSchemas<Name extends RuntimeOperationName> {
   readonly payload: Schema.Schema<WorkflowOperationParams<Name>, unknown, never>;
   readonly success: Schema.Schema<WorkflowOperationResult<Name>, unknown, never>;
 }
 
 const hasBoundedRuntimeValueDepth = (input: unknown): boolean => {
-  const pending: Array<{ readonly depth: number; readonly value: unknown }> = [
-    { depth: 0, value: input },
-  ];
-  const visited = new WeakSet<object>();
+  const pending: RuntimeValueFrame[] = [{ kind: "enter", depth: 0, value: input }];
+  // Track only the current ancestor chain so shared acyclic values remain valid.
+  const active = new WeakSet<object>();
   while (pending.length > 0) {
     const current = pending.pop();
     if (current === undefined) break;
+    if (current.kind === "leave") {
+      active.delete(current.value);
+      continue;
+    }
     if (typeof current.value !== "object" || current.value === null) continue;
     if (current.depth >= MAX_RUNTIME_VALUE_DEPTH) return false;
-    if (visited.has(current.value)) return false;
-    visited.add(current.value);
+    if (active.has(current.value)) return false;
+    active.add(current.value);
+    pending.push({ kind: "leave", value: current.value });
     for (const value of Object.values(current.value)) {
-      pending.push({ depth: current.depth + 1, value });
+      pending.push({ kind: "enter", depth: current.depth + 1, value });
     }
   }
   return true;

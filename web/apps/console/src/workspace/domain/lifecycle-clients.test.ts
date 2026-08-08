@@ -33,10 +33,10 @@ describe("lifecycle clients", () => {
     const readExecutor = executor();
     const { artifacts, deployments, runs } = createLifecycleClients(readExecutor);
 
-    await artifacts.inspect("report", 2);
-    await deployments.inspect("report.default");
-    await deployments.validate("report.default");
-    await runs.inspect("run_123");
+    await artifacts.inspect("  report  ", 2);
+    await deployments.inspect("  report.default  ");
+    await deployments.validate("  report.default  ");
+    await runs.inspect("  run_123  ");
 
     expect(readExecutor.run).toHaveBeenNthCalledWith(
       1,
@@ -68,7 +68,7 @@ describe("lifecycle clients", () => {
     const readExecutor = executor();
     const { runs } = createLifecycleClients(readExecutor);
 
-    await runs.trace("run_123", 50, 50);
+    await runs.trace("  run_123  ", 50, 50);
 
     expect(readExecutor.run).toHaveBeenCalledWith(
       "workflow.runs.trace",

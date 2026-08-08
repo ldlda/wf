@@ -15,8 +15,9 @@ export class ConsoleClientError extends Error {
     readonly kind: ConsoleClientErrorKind,
     readonly operation: OperationName,
     message: string,
+    options?: ErrorOptions,
   ) {
-    super(message);
+    super(message, options);
     Object.setPrototypeOf(this, new.target.prototype);
   }
 }

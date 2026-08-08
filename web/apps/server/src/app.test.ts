@@ -116,7 +116,9 @@ describe("POST /api/rpc", () => {
       operation: "workflow.draft_workspaces.get",
       params: { workspace_id: "draft-1" },
     },
-  ] as const)("authorizes the read operation $operation", async ({
+    { operation: "workflow.runs.start", params: {} },
+    { operation: "workflow.runs.resume", params: {} },
+  ] as const)("authorizes the allowlisted operation $operation", async ({
     operation,
     params,
   }) => {
@@ -158,7 +160,9 @@ describe("POST /api/rpc", () => {
   });
 
   it("returns 400 for unknown operation", async () => {
-    const res = await app.request("/api/rpc", {
+    const runOperation = vi.fn<RunOperation>();
+    const rejectedApp = makeApp({ runOperation });
+    const res = await rejectedApp.request("/api/rpc", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -170,6 +174,7 @@ describe("POST /api/rpc", () => {
     const body = await res.json();
     expect(body.ok).toBe(false);
     expect(body.error.code).toBe("unknown_operation");
+    expect(runOperation).not.toHaveBeenCalled();
   });
 
   it("does not authorize generated operations outside the console boundary", async () => {

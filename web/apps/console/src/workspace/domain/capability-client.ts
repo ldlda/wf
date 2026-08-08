@@ -27,7 +27,7 @@ export const createCapabilityClient = (
   list: (input) => {
     const params: Record<string, string | number> = {};
     if (input.query !== undefined) params.query = input.query;
-    if (input.sourceId !== undefined) params.source_id = input.sourceId;
+    if (input.sourceId !== undefined) params.source_id = input.sourceId.trim();
     if (input.cursor !== undefined) params.cursor = input.cursor;
     if (input.limit !== undefined) params.limit = input.limit;
     return executor.run(
@@ -38,7 +38,8 @@ export const createCapabilityClient = (
   },
 
   inspect: (qualifiedName) => {
-    if (!qualifiedName.trim()) {
+    const normalizedQualifiedName = qualifiedName.trim();
+    if (!normalizedQualifiedName) {
       return Promise.reject(
         invalidInput(
           "workflow.capabilities.inspect",
@@ -48,7 +49,7 @@ export const createCapabilityClient = (
     }
     return executor.run(
       "workflow.capabilities.inspect",
-      { qualified_name: qualifiedName },
+      { qualified_name: normalizedQualifiedName },
       decodeCapabilityDetail,
     );
   },

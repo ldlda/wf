@@ -93,6 +93,15 @@ describe("translateJsonSchema", () => {
     expect(accepts(emptyObject, { extra: true })).toBe(false);
   });
 
+  it.each([
+    ["properties", { properties: null, type: "object" }],
+    ["required", { required: null, type: "object" }],
+  ])("rejects explicit null object keyword: %s", (keyword, schema) => {
+    const error = rejected(schema);
+
+    expect(error.keyword).toBe(keyword);
+  });
+
   it("fails closed on prototype-like JSON property names", () => {
     const error = rejected({
       additionalProperties: false,

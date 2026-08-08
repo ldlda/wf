@@ -53,8 +53,10 @@ const requireIdentifier = (
   operation: OperationName,
   value: string,
   label: string,
-): void => {
-  if (!value.trim()) throw invalidInput(operation, `${label} must not be blank`);
+): string => {
+  const normalizedValue = value.trim();
+  if (!normalizedValue) throw invalidInput(operation, `${label} must not be blank`);
+  return normalizedValue;
 };
 
 const requirePositiveInteger = (
@@ -93,7 +95,7 @@ export const createLifecycleClients = (executor: ConsoleReadExecutor): Lifecycle
       return executor.run("workflow.artifacts.list", params, decodeArtifactList);
     },
     inspect: async (artifactId, version) => {
-      requireIdentifier(
+      const normalizedArtifactId = requireIdentifier(
         "workflow.artifacts.inspect",
         artifactId,
         "artifact id",
@@ -101,7 +103,7 @@ export const createLifecycleClients = (executor: ConsoleReadExecutor): Lifecycle
       requirePositiveInteger("workflow.artifacts.inspect", version, "version");
       return executor.run(
         "workflow.artifacts.inspect",
-        { artifact_id: artifactId, version },
+        { artifact_id: normalizedArtifactId, version },
         decodeArtifactDetail,
       );
     },
@@ -111,26 +113,26 @@ export const createLifecycleClients = (executor: ConsoleReadExecutor): Lifecycle
     list: () =>
       executor.run("workflow.deployments.list", {}, decodeDeploymentList),
     inspect: async (deploymentId) => {
-      requireIdentifier(
+      const normalizedDeploymentId = requireIdentifier(
         "workflow.deployments.inspect",
         deploymentId,
         "deployment id",
       );
       return executor.run(
         "workflow.deployments.inspect",
-        { deployment_id: deploymentId },
+        { deployment_id: normalizedDeploymentId },
         decodeDeploymentDetail,
       );
     },
     validate: async (deploymentId) => {
-      requireIdentifier(
+      const normalizedDeploymentId = requireIdentifier(
         "workflow.deployments.validate",
         deploymentId,
         "deployment id",
       );
       return executor.run(
         "workflow.deployments.validate",
-        { deployment_id: deploymentId },
+        { deployment_id: normalizedDeploymentId },
         decodeDeploymentValidation,
       );
     },
@@ -144,19 +146,27 @@ export const createLifecycleClients = (executor: ConsoleReadExecutor): Lifecycle
       return executor.run("workflow.runs.list", params, decodeRunList);
     },
     inspect: async (runId) => {
-      requireIdentifier("workflow.runs.inspect", runId, "run id");
+      const normalizedRunId = requireIdentifier(
+        "workflow.runs.inspect",
+        runId,
+        "run id",
+      );
       return executor.run(
         "workflow.runs.inspect",
-        { run_id: runId },
+        { run_id: normalizedRunId },
         decodeRunDetail,
       );
     },
     trace: async (runId, start, limit) => {
-      requireIdentifier("workflow.runs.trace", runId, "run id");
+      const normalizedRunId = requireIdentifier(
+        "workflow.runs.trace",
+        runId,
+        "run id",
+      );
       requireTraceRange("workflow.runs.trace", start, limit);
       return executor.run(
         "workflow.runs.trace",
-        { run_id: runId, trace_range: { start, limit } },
+        { run_id: normalizedRunId, trace_range: { start, limit } },
         decodeTracePage,
       );
     },

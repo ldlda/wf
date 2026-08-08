@@ -75,6 +75,21 @@ describe("ConsoleReadExecutor", () => {
     });
   });
 
+  it("maps unknown browser operations to operation errors", async () => {
+    const executor = createConsoleReadExecutor({
+      target: "http://console.test/rpc",
+      recordEvidence: vi.fn(),
+      invoke: vi.fn(async () => failure("unknown_operation")),
+    });
+
+    await expect(
+      executor.run("workflow.capabilities.list", {}, (value) => value),
+    ).rejects.toMatchObject({
+      kind: "operation",
+      operation: "workflow.capabilities.list",
+    });
+  });
+
   it("rejects a successful response for a different requested operation", async () => {
     const recordEvidence = vi.fn();
     const decode = vi.fn((value: unknown) => value);
@@ -104,6 +119,7 @@ describe("ConsoleReadExecutor", () => {
 
   it("turns decoder failures into decode errors", async () => {
     const recordEvidence = vi.fn();
+    const cause = new Error("invalid capability page");
     const executor = createConsoleReadExecutor({
       target: "http://console.test/rpc",
       recordEvidence,
@@ -112,13 +128,54 @@ describe("ConsoleReadExecutor", () => {
 
     await expect(
       executor.run("workflow.capabilities.list", {}, () => {
-        throw new Error("invalid capability page");
+        throw cause;
       }),
-    ).rejects.toMatchObject({ kind: "decode" });
+    ).rejects.toMatchObject({ kind: "decode", cause });
     expect(recordEvidence).toHaveBeenCalledTimes(1);
   });
 
   it("maps rejected invocations to transport errors", async () => {
+    const recordEvidence = vi.fn();
+    const cause = new Error("fetch failed");
+    const executor = createConsoleReadExecutor({
+      target: "http://console.test/rpc",
+      recordEvidence,
+      invoke: vi.fn(async () => {
+        throw cause;
+      }),
+    });
+
+    await expect(
+      executor.run("workflow.capabilities.list", {}, (value) => value),
+    ).rejects.toMatchObject({ kind: "transport", cause });
+    expect(recordEvidence).toHaveBeenCalledTimes(1);
+  });
+
+  it("measures duration for failures before operation metadata exists", async () => {
+    const now = vi
+      .spyOn(performance, "now")
+      .mockReturnValueOnce(100)
+      .mockReturnValueOnce(137);
+    const recordEvidence = vi.fn();
+    const executor = createConsoleReadExecutor({
+      target: "http://console.test/rpc",
+      recordEvidence,
+      invoke: vi.fn(async () => failure("upstream_unreachable")),
+    });
+
+    await expect(
+      executor.run("workflow.capabilities.list", {}, (value) => value),
+    ).rejects.toMatchObject({ kind: "connection" });
+
+    expect(recordEvidence.mock.calls[0]?.[0]?.durationMs).toBe(37);
+    now.mockRestore();
+  });
+
+  it("measures duration for rejected invocations before operation metadata exists", async () => {
+    const now = vi
+      .spyOn(performance, "now")
+      .mockReturnValueOnce(200)
+      .mockReturnValueOnce(249);
     const recordEvidence = vi.fn();
     const executor = createConsoleReadExecutor({
       target: "http://console.test/rpc",
@@ -131,7 +188,9 @@ describe("ConsoleReadExecutor", () => {
     await expect(
       executor.run("workflow.capabilities.list", {}, (value) => value),
     ).rejects.toMatchObject({ kind: "transport" });
-    expect(recordEvidence).toHaveBeenCalledTimes(1);
+
+    expect(recordEvidence.mock.calls[0]?.[0]?.durationMs).toBe(49);
+    now.mockRestore();
   });
 
   it.each([

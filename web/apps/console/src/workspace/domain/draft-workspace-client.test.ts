@@ -27,7 +27,7 @@ describe("DraftWorkspaceClient", () => {
     const readExecutor = executor();
     const client = createDraftWorkspaceClient(readExecutor);
 
-    await client.load("draft-report");
+    await client.load("  draft-report  ");
 
     expect(readExecutor.run).toHaveBeenCalledWith(
       "workflow.draft_workspaces.get",

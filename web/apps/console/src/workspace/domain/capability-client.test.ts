@@ -50,7 +50,7 @@ describe("CapabilityClient", () => {
 
     await client.list({
       query: "document",
-      sourceId: "local.lda_docs",
+      sourceId: "  local.lda_docs  ",
       limit: 50,
     });
 
@@ -65,7 +65,7 @@ describe("CapabilityClient", () => {
     const readExecutor = executor();
     const client = createCapabilityClient(readExecutor);
 
-    await client.inspect("local.lda_docs.read_documents");
+    await client.inspect("  local.lda_docs.read_documents  ");
 
     expect(readExecutor.run).toHaveBeenCalledWith(
       "workflow.capabilities.inspect",

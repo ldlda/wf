@@ -29,7 +29,9 @@ import {
   WorkflowRunsInspectPayloadSchema,
   WorkflowRunsInspectResultSchema,
   WorkflowRunsStartPayloadSchema,
+  WorkflowRunsStartResultSchema,
   WorkflowRunsResumePayloadSchema,
+  WorkflowRunsResumeResultSchema,
   WorkflowRunsTracePayloadSchema,
   WorkflowRunsTraceResultSchema,
 } from "./rpcs.js";
@@ -591,7 +593,7 @@ const operationEntries = defineOperationEntries([
       return `uv run wf run start ${shellArg(p.deployment_id)} --input '<json>'`;
     },
     interpret: (result) => {
-      const decoded = Schema.decodeUnknownSync(WorkflowRunsInspectResultSchema)(
+      const decoded = Schema.decodeUnknownSync(WorkflowRunsStartResultSchema)(
         result,
         { onExcessProperty: "ignore" },
       );
@@ -611,7 +613,7 @@ const operationEntries = defineOperationEntries([
       return `uv run wf run resume ${shellArg(p.run_id)} --payload '<json>'`;
     },
     interpret: (result) => {
-      const decoded = Schema.decodeUnknownSync(WorkflowRunsInspectResultSchema)(
+      const decoded = Schema.decodeUnknownSync(WorkflowRunsResumeResultSchema)(
         result,
         { onExcessProperty: "ignore" },
       );

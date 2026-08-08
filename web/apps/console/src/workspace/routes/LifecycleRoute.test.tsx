@@ -117,6 +117,27 @@ describe("LifecycleRoute", () => {
     expect(currentController.selectArtifact).not.toHaveBeenCalled();
   });
 
+  it("does not decode a literal percent sequence twice", async () => {
+    const currentController = controller();
+    mockUseLifecycleExplorer.mockReturnValue(currentController);
+
+    renderRoute("/console/runs/run%2525complete");
+
+    await waitFor(() => {
+      expect(currentController.selectRun).toHaveBeenCalledWith("run%25complete");
+    });
+  });
+
+  it("does not select an artifact with a nonnumeric version route", async () => {
+    const currentController = controller();
+    mockUseLifecycleExplorer.mockReturnValue(currentController);
+
+    renderRoute("/console/artifacts/report/not-a-version");
+
+    await screen.findByRole("heading", { name: "Artifacts", level: 1 });
+    expect(currentController.selectArtifact).not.toHaveBeenCalled();
+  });
+
   it("suppresses stale detail synchronously until it matches the URL identity", () => {
     const currentController = controller({
       ...emptyState(),

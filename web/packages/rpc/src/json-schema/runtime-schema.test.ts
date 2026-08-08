@@ -82,6 +82,73 @@ describe("runtimeSchemasFor", () => {
     ).toBe(false);
   });
 
+  it("accepts shared acyclic runtime values", () => {
+    const schemas = runtimeSchemasFor("workflow.artifacts.inspect");
+    const sharedSchema = {};
+    const result = {
+      id: "report",
+      version: 1,
+      title: "Report",
+      kind: "workflow",
+      description: null,
+      outcomes: [],
+      input_schema: sharedSchema,
+      output_schema: sharedSchema,
+      plan: {},
+      required_capabilities: [],
+      workflow_dependencies: {},
+      created_from_catalog_version: null,
+    };
+
+    expect(accepts(schemas.success, result)).toBe(true);
+  });
+
+  it("rejects cyclic runtime values", () => {
+    const schemas = runtimeSchemasFor("workflow.artifacts.inspect");
+    const cyclic: Record<string, unknown> = {};
+    cyclic.self = cyclic;
+
+    const result = {
+      id: "report",
+      version: 1,
+      title: "Report",
+      kind: "workflow",
+      description: null,
+      outcomes: [],
+      input_schema: {},
+      output_schema: {},
+      plan: cyclic,
+      required_capabilities: [],
+      workflow_dependencies: {},
+      created_from_catalog_version: null,
+    };
+
+    expect(accepts(schemas.success, result)).toBe(false);
+  });
+
+  it("accepts the maximum permitted container depth", () => {
+    const schemas = runtimeSchemasFor("workflow.artifacts.inspect");
+    let plan: unknown = "leaf";
+    for (let depth = 0; depth < 63; depth += 1) plan = { nested: plan };
+
+    expect(
+      accepts(schemas.success, {
+        id: "report",
+        version: 1,
+        title: "Report",
+        kind: "workflow",
+        description: null,
+        outcomes: [],
+        input_schema: {},
+        output_schema: {},
+        plan,
+        required_capabilities: [],
+        workflow_dependencies: {},
+        created_from_catalog_version: null,
+      }),
+    ).toBe(true);
+  });
+
   it("requires the canonical persisted interrupt contract", () => {
     const schemas = runtimeSchemasFor("workflow.runs.inspect");
     const baseRun = {

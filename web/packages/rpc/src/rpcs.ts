@@ -181,9 +181,11 @@ export const WorkflowRunsInspect = Rpc.make("workflow.runs.inspect", {
 
 const runStartSchemas = runtimeSchemasFor("workflow.runs.start");
 export const WorkflowRunsStartPayloadSchema = runStartSchemas.payload;
+export const WorkflowRunsStartResultSchema = runStartSchemas.success;
 
 const runResumeSchemas = runtimeSchemasFor("workflow.runs.resume");
 export const WorkflowRunsResumePayloadSchema = runResumeSchemas.payload;
+export const WorkflowRunsResumeResultSchema = runResumeSchemas.success;
 
 export const WorkflowRunsStart = Rpc.make("workflow.runs.start", {
   payload: WorkflowRunsStartPayloadSchema,

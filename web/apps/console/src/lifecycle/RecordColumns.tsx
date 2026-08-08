@@ -64,7 +64,7 @@ export const RecordColumns = ({
         ) : (
           <ul role="listbox" aria-label="Artifacts">
             {artifacts.map((artifact) => (
-              <li key={artifact.key}>
+              <li key={artifact.key} role="presentation">
                 <button
                   role="option"
                   aria-selected={selectedArtifactId === artifact.key}
@@ -92,7 +92,7 @@ export const RecordColumns = ({
         ) : (
           <ul role="listbox" aria-label="Deployments">
             {deployments.map((deployment) => (
-              <li key={deployment.id}>
+              <li key={deployment.id} role="presentation">
                 <button
                   role="option"
                   aria-selected={selectedDeploymentId === deployment.id}
@@ -115,7 +115,7 @@ export const RecordColumns = ({
         ) : (
           <ul role="listbox" aria-label="Runs">
             {runs.map((run) => (
-              <li key={run.runId}>
+              <li key={run.runId} role="presentation">
                 <button
                   role="option"
                   aria-selected={selectedRunId === run.runId}

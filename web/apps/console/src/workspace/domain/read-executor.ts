@@ -28,7 +28,7 @@ const errorKindForCode = (code: string): ConsoleClientErrorKind => {
     case "upstream_unreachable":
       return "connection";
     case "unknown_operation":
-      return "permission";
+      return "operation";
     case "rpc_decode_error":
       return "decode";
     default:
@@ -85,6 +85,9 @@ export const createConsoleReadExecutor = (options: {
       params: unknown,
       decode: (value: unknown) => T,
     ): Promise<T> {
+      const startedAt = performance.now();
+      const durationSinceStart = (): number =>
+        Math.max(0, Math.round(performance.now() - startedAt));
       let response: RpcResponse;
       try {
         response = await invoke(operation, options.target, params);
@@ -95,12 +98,13 @@ export const createConsoleReadExecutor = (options: {
           "unavailable: operation failed before CLI metadata",
           null,
           null,
-          0,
+          durationSinceStart(),
         );
         throw new ConsoleClientError(
           clientErrorKindForInvocation(error),
           operation,
           errorMessage(error),
+          { cause: error },
         );
       }
 
@@ -111,7 +115,7 @@ export const createConsoleReadExecutor = (options: {
           "unavailable: operation failed before CLI metadata",
           response.exchange.request,
           response.exchange.response,
-          0,
+          durationSinceStart(),
         );
         throw new ConsoleClientError(
           errorKindForCode(response.error.code),
@@ -152,6 +156,7 @@ export const createConsoleReadExecutor = (options: {
           "decode",
           operation,
           errorMessage(error),
+          { cause: error },
         );
       }
     },

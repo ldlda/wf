@@ -24,14 +24,6 @@ const artifactPathFor = (artifactKey: string): string => {
   return `/console/artifacts/${encodeURIComponent(artifactKey.slice(0, separator))}/${encodeURIComponent(artifactKey.slice(separator + 1))}`;
 };
 
-const decodeRouteParam = (value: string): string => {
-  try {
-    return decodeURIComponent(value);
-  } catch {
-    return value;
-  }
-};
-
 const visibleStateForRoute = (
   state: LifecycleState,
   kind: LifecycleRouteKind,
@@ -93,16 +85,21 @@ export const LifecycleRoute = ({ kind }: LifecycleRouteProps) => {
     selectRun,
   } = controller;
 
+  const artifactVersion = params.version === undefined ? null : Number(params.version);
   const artifactIdentity =
-    kind === "artifact" && params.artifactId && params.version
-      ? `${decodeRouteParam(params.artifactId)}@${decodeRouteParam(params.version)}`
+    kind === "artifact" &&
+    params.artifactId &&
+    artifactVersion !== null &&
+    Number.isSafeInteger(artifactVersion) &&
+    artifactVersion >= 0
+      ? `${params.artifactId}@${artifactVersion}`
       : null;
   const deploymentIdentity =
     kind === "deployment" && params.deploymentId
-      ? decodeRouteParam(params.deploymentId)
+      ? params.deploymentId
       : null;
   const runIdentity =
-    kind === "run" && params.runId ? decodeRouteParam(params.runId) : null;
+    kind === "run" && params.runId ? params.runId : null;
   const visibleState = useMemo(
     () => visibleStateForRoute(
       state,

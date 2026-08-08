@@ -88,9 +88,42 @@ const fixture = {
 };
 const fixtureManifest = JSON.stringify(fixture);
 
+const runtimeOperationNames = [
+  "workflow.health",
+  "workflow.sources.list",
+  "workflow.capabilities.list",
+  "workflow.capabilities.inspect",
+  "workflow.draft_workspaces.list",
+  "workflow.draft_workspaces.get",
+  "workflow.artifacts.list",
+  "workflow.artifacts.inspect",
+  "workflow.deployments.list",
+  "workflow.deployments.inspect",
+  "workflow.deployments.validate",
+  "workflow.runs.list",
+  "workflow.runs.inspect",
+  "workflow.runs.start",
+  "workflow.runs.resume",
+  "workflow.runs.trace",
+] as const;
+
+const completeRuntimeFixture = {
+  ...fixture,
+  operations: [
+    ...runtimeOperationNames.map((method) => ({
+      method,
+      params: [],
+      result: { schema: { $ref: "#/components/schemas/HealthResult" } },
+    })),
+    ...fixture.operations.filter(({ method }) => method !== "workflow.health"),
+  ],
+};
+
 describe("workflow contract generator", () => {
   it("generates lexical operation inventory and raw params/result maps", async () => {
-    const source = await generateWorkflowContractSource(fixtureManifest);
+    const source = await generateWorkflowContractSource(
+      JSON.stringify(completeRuntimeFixture),
+    );
 
     expect(source.indexOf('"workflow.health"')).toBeLessThan(
       source.indexOf('"workflow.widgets.inspect"'),
@@ -112,7 +145,9 @@ describe("workflow contract generator", () => {
   });
 
   it("embeds only reachable runtime schemas for the selected RPC cohort", async () => {
-    const source = await generateWorkflowContractSource(fixtureManifest);
+    const source = await generateWorkflowContractSource(
+      JSON.stringify(completeRuntimeFixture),
+    );
     const runtimeSource = source.slice(
       source.indexOf("export const workflowRuntimeContract"),
     );
@@ -123,6 +158,34 @@ describe("workflow contract generator", () => {
     expect(runtimeSource).toContain('"properties": {}');
     expect(runtimeSource).not.toContain('"workflow.widgets.inspect"');
     expect(runtimeSource).not.toContain('"FailureResult"');
+  });
+
+  it("rejects a manifest missing a configured runtime operation", async () => {
+    const reduced = {
+      ...completeRuntimeFixture,
+      operations: completeRuntimeFixture.operations.filter(
+        ({ method }) => method !== "workflow.runs.resume",
+      ),
+    };
+
+    await expect(
+      generateWorkflowContractSource(JSON.stringify(reduced)),
+    ).rejects.toThrow(/missing runtime operation.*workflow\.runs\.resume/i);
+  });
+
+  it("rejects non-local references reachable from the runtime cohort", async () => {
+    const externalReference = {
+      ...completeRuntimeFixture,
+      operations: completeRuntimeFixture.operations.map((operation) =>
+        operation.method === "workflow.health"
+          ? { ...operation, result: { schema: { $ref: "https://example.com/schema" } } }
+          : operation,
+      ),
+    };
+
+    await expect(
+      generateWorkflowContractSource(JSON.stringify(externalReference)),
+    ).rejects.toThrow(/external runtime schema reference/i);
   });
 
   it("rejects duplicate operation methods", () => {

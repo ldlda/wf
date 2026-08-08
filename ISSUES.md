@@ -60,7 +60,7 @@
 ## TypeScript JSON-RPC coverage
 
 - [ ] TypeScript JSON-RPC parity remains incomplete: `@lda/workflow-rpc` models
-  only the 12 operations needed by the current console explorer. It omits typed
+  only the 16 operations needed by the current console explorer. It omits typed
   access to capabilities, source inspect/diagnose, artifact save/delete/create,
   deployment save/delete, every draft operation, and source-registry/admin
   operations already exposed by the Python JSON-RPC server.
@@ -73,7 +73,7 @@
     and result types, and a 70-operation lookup map from that manifest.
     `pnpm contract:check` detects TypeScript artifact drift.
   - The manifest does not authorize callers: browser authorization, operation
-    metadata, and membership in the 12-operation Effect `RpcGroup` remain
+    metadata, and membership in the 16-operation Effect `RpcGroup` remain
     authored boundaries even though their payload/result decoders are
     generated.
   - A fail-closed representative JSON Schema-to-Effect translator now proves
@@ -83,12 +83,12 @@
     `oneOf`, conditional, composition, and unknown-keyword semantics instead of
     weakening them.
   - A test-only parity harness translates the payload and success schemas for
-    all 12 authored RPCs: all 24 sides are inside the supported translator
+    all 16 authored RPCs: all 32 sides are inside the supported translator
     subset. Frozen pre-migration schemas pin eight former result mismatches.
     Run inspect/start/resume used a reduced interrupt instead of the complete
     manifest interrupt in both acceptance directions; run trace used a compact
     trace-page envelope and omitted canonical frame identifiers.
-  - Runtime decoder migration is complete for the 12 current Effect RPCs. Run
+  - Runtime decoder migration is complete for the 16 current Effect RPCs. Run
     inspect/start/resume now require the canonical full interrupt contract, and
     run trace requires the full run envelope plus canonical `frame_id` and
     `next_node_id` values. Frozen pre-migration schemas keep the eight old

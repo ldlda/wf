@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Coroutine
-from typing import Any, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar
 
-import httpx
 import typer
 
 from wf_cli.context import CliContext
+
+if TYPE_CHECKING:
+    import httpx
 
 T = TypeVar("T")
 
@@ -19,6 +21,10 @@ def run_cli_operation(context: CliContext, operation: Coroutine[Any, Any, T]) ->
     `--verbose` preserves the raw exception path so developers can still debug
     internal failures with a traceback.
     """
+
+    # HTTP exceptions only matter after a CLI operation starts. Keep the HTTP
+    # client stack out of command registration and the `wf --help` path.
+    import httpx
 
     try:
         return asyncio.run(operation)

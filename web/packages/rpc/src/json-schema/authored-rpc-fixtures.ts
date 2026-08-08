@@ -225,7 +225,7 @@ const TraceFrameSchema = Schema.Struct({
 /** Frozen pre-migration schemas used only to detect generated-decoder drift. */
 export const authoredRpcSchemas = {
   "workflow.health": {
-    payload: Schema.Struct({}),
+    payload: EmptyPayloadSchema,
     success: Schema.Struct({
       status: Schema.Literal("ok"),
       store_root: Schema.String,
@@ -317,7 +317,7 @@ export const authoredRpcSchemas = {
     }),
   },
   "workflow.deployments.list": {
-    payload: Schema.Struct({}),
+    payload: EmptyPayloadSchema,
     success: Schema.Struct({ deployments: Schema.Array(DeploymentNodeSchema) }),
   },
   "workflow.deployments.inspect": {

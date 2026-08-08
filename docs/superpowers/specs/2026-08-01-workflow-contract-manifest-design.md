@@ -8,7 +8,7 @@ JSON-RPC methods gained named success-result schemas.
 ## Problem
 
 The Python JSON-RPC server exposes 70 methods through a complete OpenRPC
-document. The Effect RPC package currently models 12 of those methods by hand.
+document. The Effect RPC package currently models 16 of those methods by hand.
 Operation names are also repeated across `rpcs.ts`, `service.ts`, the method
 registry, and console contracts. A Python method can therefore be added or
 changed without any deterministic signal that TypeScript is stale.
@@ -271,9 +271,9 @@ After the manifest slice:
 1. Completed: generate TypeScript operation names and raw request/result types;
 2. Completed: build a fail-closed JSON Schema-to-Effect translator against
    representative schemas before applying it broadly;
-3. Completed: migrate the existing 12 RPC definitions by domain while
+3. Completed: migrate the existing 16 RPC definitions by domain while
    comparing old and generated decoders. The test-only parity harness covers
-   all 24 payload/result sides and retains frozen pre-migration schemas that pin
+   all 32 payload/result sides and retains frozen pre-migration schemas that pin
    eight old run-result mismatches. Runtime run schemas now follow the canonical
    manifest: complete interrupts for inspect/start/resume and a full run
    envelope with canonical frame identifiers for trace;
@@ -305,7 +305,7 @@ prototype. Those constructs must not be approximated with a broader Effect
 schema. Recursive translation is covered synthetically; checked manifest
 coverage currently exercises representative non-recursive components and a
 real rejected `oneOf` boundary. The translator is not exported from the package
-root. Generated runtime use covers all 12 authored RPCs; it does not change
+root. Generated runtime use covers all 16 authored RPCs; it does not change
 service dispatch, operation metadata, or browser authorization.
 
 Generated runtime schemas apply an iterative 64-container value-depth check to
@@ -316,7 +316,7 @@ structural recursion guard prevents non-productive schema cycles, while the
 runtime guard bounds values presented to recursive decoders.
 
 The authored-RPC parity harness found no additional translator blockers for
-the current 12 operations. Health, sources, artifacts, deployments, and run
+the current 16 operations. Health, sources, artifacts, deployments, and run
 list agree on representative accepted and rejected values. Frozen
 pre-migration schemas preserve the former differences: reduced interrupts for
 run inspect/start/resume and a compact trace page without canonical frame

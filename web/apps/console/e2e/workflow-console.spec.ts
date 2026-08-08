@@ -22,6 +22,7 @@ type ManagedChild = {
   readonly name: string;
   readonly child: ChildProcessWithoutNullStreams;
   readonly output: () => string;
+  readonly spawnError: () => Error | null;
 };
 
 let tempRoot: string | undefined;
@@ -60,13 +61,18 @@ const startChild = (
     detached: process.platform !== "win32",
   });
   let output = "";
+  let spawnError: Error | null = null;
   child.stdout.on("data", (chunk: Buffer) => {
     output += chunk.toString();
   });
   child.stderr.on("data", (chunk: Buffer) => {
     output += chunk.toString();
   });
-  const managed = { name, child, output: () => output };
+  child.on("error", (error) => {
+    spawnError = error;
+    output += `${error.name}: ${error.message}\n`;
+  });
+  const managed = { name, child, output: () => output, spawnError: () => spawnError };
   managedChildren.push(managed);
   return managed;
 };
@@ -122,9 +128,9 @@ const stopChild = async (managed: ManagedChild): Promise<void> => {
 
   if (child.pid === undefined) return;
   // The negative PID targets only the process group created by startChild.
-  killPosixProcessGroup(child.pid, "SIGTERM");
+  if (child.exitCode === null) killPosixProcessGroup(child.pid, "SIGTERM");
   await waitForChildExit(child);
-  killPosixProcessGroup(child.pid, "SIGKILL");
+  if (child.exitCode === null) killPosixProcessGroup(child.pid, "SIGKILL");
   await waitForChildExit(child, 2_000);
 };
 
@@ -152,6 +158,7 @@ const postJsonRpc = async (
 const waitForRpcServer = async (managed: ManagedChild): Promise<void> => {
   let lastError = "no response";
   for (let attempt = 0; attempt < 120; attempt += 1) {
+    if (managed.spawnError()) throw new Error(describeExit(managed));
     if (managed.child.exitCode !== null) throw new Error(describeExit(managed));
     try {
       const response = await postJsonRpc(rpcTarget, {

@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import json
+import subprocess
+import sys
+from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
@@ -290,6 +293,53 @@ def test_wf_help_lists_lifecycle_groups() -> None:
     assert "docs" in result.output
     assert "schema" in result.output
     assert "explain" in result.output
+
+
+def test_wf_help_does_not_import_runtime_stacks() -> None:
+    script = """
+import json
+import sys
+
+from wf_cli.app import main
+
+try:
+    main()
+except SystemExit as exc:
+    exit_code = exc.code
+else:
+    exit_code = 0
+
+forbidden_roots = (
+    "wf_mcp",
+    "fastmcp",
+    "wf_server",
+    "wf_transport_rpc_http",
+    "wf_sources_mcp",
+    "httpx",
+)
+loaded = sorted(
+    name
+    for name in sys.modules
+    if name == forbidden_roots[0]
+    or any(name.startswith(f"{root}.") for root in forbidden_roots)
+    or name in forbidden_roots[1:]
+)
+print("IMPORTS=" + json.dumps(loaded))
+sys.exit(exit_code or 0)
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", script, "--help"],
+        cwd=Path(__file__).parents[2],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    imports_line = next(
+        line for line in result.stdout.splitlines() if line.startswith("IMPORTS=")
+    )
+    assert json.loads(imports_line.removeprefix("IMPORTS=")) == []
 
 
 def test_wf_main_loads_dotenv_before_invoking_app(monkeypatch) -> None:

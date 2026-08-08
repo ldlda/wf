@@ -27,7 +27,8 @@ export const createDraftWorkspaceClient = (
     ),
 
   load: (workspaceId) => {
-    if (!workspaceId.trim()) {
+    const normalizedWorkspaceId = workspaceId.trim();
+    if (!normalizedWorkspaceId) {
       return Promise.reject(
         invalidInput(
           "workflow.draft_workspaces.get",
@@ -37,7 +38,7 @@ export const createDraftWorkspaceClient = (
     }
     return executor.run(
       "workflow.draft_workspaces.get",
-      { workspace_id: workspaceId, include_draft: true },
+      { workspace_id: normalizedWorkspaceId, include_draft: true },
       decodeDraftWorkspace,
     );
   },

@@ -56,7 +56,7 @@ export const ConsoleShell = ({
         </li>
       </ul>
     </nav>
-    <main id="console-workspace-main" aria-label="Console workspace">
+    <main id="console-workspace-main" aria-label="Console workspace" tabIndex={-1}>
       {children}
     </main>
     <aside aria-label="Operation evidence" className="console-workspace__evidence">

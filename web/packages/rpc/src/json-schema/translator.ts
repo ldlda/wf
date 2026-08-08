@@ -580,7 +580,7 @@ class Translator {
       path,
     );
     if (unsupported !== null) return Either.left(unsupported);
-    const properties = value.properties ?? {};
+    const properties = "properties" in value ? value.properties : {};
     if (!isRecord(properties)) {
       return failure(path, "properties must be an object", "properties");
     }
@@ -593,7 +593,7 @@ class Translator {
         );
       }
     }
-    const requiredValue = value.required ?? [];
+    const requiredValue = "required" in value ? value.required : [];
     if (!Array.isArray(requiredValue)) {
       return failure(path, "required must be an array of property names", "required");
     }

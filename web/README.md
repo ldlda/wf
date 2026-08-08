@@ -144,20 +144,21 @@ sections (`Overview`, `Colors`, `Typography`, `Elevation`, `Components`, and
 `Do's and Don'ts`). Future UI work should read these files before changing
 visual direction.
 
-## Lifecycle Explorer
+## Workflow Console
 
-After connecting, the console displays the lifecycle explorer with three
-columns: artifacts, deployments, and runs. Selecting a record loads its detail
-view.
+After connecting, the console opens a route-based workspace rather than one
+combined explorer screen.
 
-- **Artifacts**: list and inspect workflow artifacts with plan graph visualization
-- **Deployments**: list and inspect deployments with validation status
-- **Runs**: list and inspect runs with interrupt details, trace frames, and
-  execution timeline
-- **Graph**: `@xyflow/react` DAG visualization of the artifact plan, powered by
-  `@dagrejs/dagre` layout
-- **Evidence**: raw JSON-RPC request/response evidence with equivalent CLI text
-- **Pagination**: Load more for artifact and run lists when cursors are available
+- **Discover** searches the capability catalog and inspects typed capability
+  contracts.
+- **Drafts** lists persisted draft workspaces and inspects their current graph,
+  diagnostics, revision, and validation status.
+- **Artifacts**, **Deployments**, and **Runs** provide focused lifecycle lists
+  and detail routes, including artifact graphs, deployment validation, run
+  interrupts, and trace evidence.
+- **Evidence** records JSON-RPC request and response receipts with equivalent
+  CLI text across the workspace.
+- **Pagination** is available for cursor-backed artifact and run collections.
 
 ## Security
 
@@ -173,16 +174,19 @@ With the Python server running, verify in the browser:
 
 1. The initial page makes no upstream request
 2. Connect succeeds against `http://127.0.0.1:8765/rpc`
-3. Source rows appear after connection
-4. Raw health and source-list exchanges are selectable in the evidence inspector
+3. Capability discovery returns catalog entries and supports qualified-name
+   inspection
+4. Raw health and capability exchanges are selectable in the evidence inspector
 5. Equivalent CLI text is visible
 6. `http://example.com:8765/rpc` is rejected without upstream fetch
 7. Stopping the Python server produces the unreachable state while preserving
    the entered URL
-8. Artifact, deployment, and run lists populate in the lifecycle explorer
-9. Selecting an artifact shows its plan graph and detail panel
-10. Selecting a run shows trace frames and interrupt details
-11. Clicking a trace frame shows resolved input and output
+8. Persisted draft workspaces populate and a selected draft shows its graph,
+   diagnostics, and revision
+9. Artifact, deployment, and run routes populate independently
+10. Selecting an artifact shows its plan graph and detail panel
+11. Selecting a run shows trace frames and interrupt details
+12. Clicking a trace frame shows resolved input and output
 
 ### LDA Report Workflow Smoke
 
@@ -194,9 +198,9 @@ uv run wf-rpc-server --config examples/lda_report_workflow/wf.config.json --host
 pnpm --dir web dev
 ```
 
-Connect to `http://127.0.0.1:8765/rpc`. The smoke passes when artifact list,
-deployment list, run list, graph visualization, trace frames, and raw evidence
-are all visible.
+Connect to `http://127.0.0.1:8765/rpc`. The smoke passes when capability
+discovery, draft inspection, lifecycle routes, graph visualization, trace
+frames, and raw evidence are visible.
 
 ## lda Report Workflow Demo
 

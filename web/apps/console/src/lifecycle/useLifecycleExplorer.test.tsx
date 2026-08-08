@@ -289,6 +289,56 @@ describe("useLifecycleExplorer", () => {
     expect(result.current.state.artifactDetail?.version).toBe(2);
   });
 
+  it.each(["report", "report@abc", "@2", "report@-1", "report@2.5"])(
+    "does not inspect a malformed artifact key %s",
+    (artifactKey) => {
+      const clients = makeClients();
+      const { result } = renderHook(() => useLifecycleExplorer(clients));
+
+      act(() => result.current.selectArtifact(artifactKey));
+
+      expect(clients.artifacts.inspect).not.toHaveBeenCalled();
+    },
+  );
+
+  it("keeps a pending run inspection when a trace page is requested", async () => {
+    const detail = deferred<RunDetail>();
+    const clients = makeClients({
+      runs: {
+        inspect: vi.fn().mockReturnValue(detail.promise),
+        trace: vi.fn().mockResolvedValue({
+          frames: [],
+          traceStart: 50,
+          traceLimit: 50,
+          traceTruncated: false,
+        }),
+      },
+    });
+    const { result } = renderHook(() => useLifecycleExplorer(clients));
+
+    act(() => result.current.selectRun("run_123"));
+    act(() => result.current.loadTrace(50, 50));
+    detail.resolve({ ...runDetail, traceCount: 1 });
+    await act(async () => await detail.promise);
+
+    expect(result.current.state.runDetail).toEqual({ ...runDetail, traceCount: 1 });
+    expect(clients.runs.trace).toHaveBeenCalledTimes(1);
+    expect(result.current.state.trace?.traceStart).toBe(50);
+  });
+
+  it("refreshes the currently selected run detail", async () => {
+    const inspect = vi.fn().mockResolvedValue(runDetail);
+    const clients = makeClients({ runs: { inspect } });
+    const { result } = renderHook(() => useLifecycleExplorer(clients));
+
+    act(() => result.current.selectRun("run_123"));
+    await waitFor(() => expect(result.current.state.runDetail).toEqual(runDetail));
+    act(() => result.current.refresh());
+
+    await waitFor(() => expect(inspect).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(result.current.state.runDetail).toEqual(runDetail));
+  });
+
   it("rejects a late artifact detail after a null selection", async () => {
     const detail = deferred<ArtifactDetail>();
     const clients = makeClients({
