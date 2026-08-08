@@ -91,6 +91,7 @@ beforeEach(() => {
     connectedTarget: connectedState.connectedTarget,
     recordEvidence: vi.fn(),
     readExecutor,
+    writeExecutor: null,
   });
 });
 
@@ -158,6 +159,7 @@ describe("useCapabilityDiscovery", () => {
       connectedTarget: "http://new-workflow.example/rpc",
       recordEvidence: vi.fn(),
       readExecutor: {} as ConsoleReadExecutor,
+      writeExecutor: null,
     });
     const renderCountBeforeTargetChange = renders.length;
     rerender();
@@ -184,6 +186,7 @@ describe("useCapabilityDiscovery", () => {
       connectedTarget: "http://reconnected-workflow.example/rpc",
       recordEvidence: vi.fn(),
       readExecutor: {} as ConsoleReadExecutor,
+      writeExecutor: null,
     });
     rerender();
 
@@ -272,6 +275,7 @@ describe("useCapabilityDiscovery", () => {
       connectedTarget: null,
       recordEvidence: vi.fn(),
       readExecutor: null,
+      writeExecutor: null,
     });
 
     const { result } = renderHook(() => useCapabilityDiscovery());

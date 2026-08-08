@@ -39,6 +39,16 @@ const successfulRead = (): RpcResponse => ({
   durationMs: 4,
 });
 
+const successfulWrite = (): RpcResponse => ({
+  ok: true,
+  operation: "workflow.draft_workspaces.validate",
+  label: "Validate draft workspace",
+  interpreted: {},
+  exchange: { request: {}, response: { status: 200 } },
+  equivalentCli: "uv run wf draft validate draft-report",
+  durationMs: 4,
+});
+
 const deferred = <T,>() => {
   let resolve!: (value: T) => void;
   const promise = new Promise<T>((resolvePromise) => {
@@ -58,6 +68,9 @@ const OutletProbe = () => {
     <>
       <output data-testid="connected-target">{workspace.connectedTarget ?? "none"}</output>
       <output data-testid="executor-state">{workspace.readExecutor ? "available" : "unavailable"}</output>
+      <output data-testid="write-executor-state">
+        {workspace.writeExecutor ? "available" : "unavailable"}
+      </output>
       <output data-testid="executor-stable">
         {workspace.readExecutor === executorIdentity.current ? "yes" : "no"}
       </output>
@@ -73,6 +86,19 @@ const OutletProbe = () => {
         }}
       >
         Read capabilities
+      </button>
+      <button
+        type="button"
+        disabled={workspace.writeExecutor === null}
+        onClick={() => {
+          void workspace.writeExecutor?.run(
+            "workflow.draft_workspaces.validate",
+            { workspace_id: "draft-report" },
+            (value) => value,
+          );
+        }}
+      >
+        Validate draft
       </button>
       <Outlet />
     </>
@@ -106,6 +132,7 @@ describe("ConsoleWorkspace", () => {
     renderWorkspace();
 
     expect(screen.getByTestId("executor-state")).toHaveTextContent("unavailable");
+    expect(screen.getByTestId("write-executor-state")).toHaveTextContent("unavailable");
     expect(mockedConnectToServer).not.toHaveBeenCalled();
     expect(mockedCallOperation).not.toHaveBeenCalled();
   });
@@ -120,6 +147,7 @@ describe("ConsoleWorkspace", () => {
       "http://one.example/rpc",
     );
     expect(screen.getByTestId("executor-state")).toHaveTextContent("available");
+    expect(screen.getByTestId("write-executor-state")).toHaveTextContent("available");
     expect(screen.getByTestId("executor-stable")).toHaveTextContent("yes");
     expect(screen.getAllByText("Health check")).toHaveLength(1);
     expect(mockedCallOperation).not.toHaveBeenCalled();
@@ -181,6 +209,37 @@ describe("ConsoleWorkspace", () => {
     });
 
     oldRead.resolve(successfulRead());
+    await waitFor(() => {
+      expect(screen.getByTestId("evidence-ids")).toHaveTextContent(
+        "workflow.health-0|workflow.health-1",
+      );
+    });
+  });
+
+  it("drops a late write receipt from the old connection after reconnect", async () => {
+    const oldWrite = deferred<RpcResponse>();
+    mockedConnectToServer
+      .mockResolvedValueOnce(successfulConnection("http://one.example/rpc"))
+      .mockResolvedValueOnce(successfulConnection("http://two.example/rpc"));
+    mockedCallOperation.mockReturnValueOnce(oldWrite.promise);
+    renderWorkspace();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Connect" }));
+    await user.click(await screen.findByRole("button", { name: "Validate draft" }));
+    expect(mockedCallOperation).toHaveBeenCalledTimes(1);
+
+    await user.click(screen.getByRole("button", { name: "Reconnect" }));
+    await waitFor(() => {
+      expect(screen.getByTestId("connected-target")).toHaveTextContent(
+        "http://two.example/rpc",
+      );
+      expect(screen.getByTestId("evidence-ids")).toHaveTextContent(
+        "workflow.health-0|workflow.health-1",
+      );
+    });
+
+    oldWrite.resolve(successfulWrite());
     await waitFor(() => {
       expect(screen.getByTestId("evidence-ids")).toHaveTextContent(
         "workflow.health-0|workflow.health-1",

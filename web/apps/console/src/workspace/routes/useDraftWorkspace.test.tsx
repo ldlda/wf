@@ -84,6 +84,7 @@ beforeEach(() => {
     connectedTarget: connectedState.connectedTarget,
     recordEvidence: vi.fn(),
     readExecutor,
+    writeExecutor: null,
   });
 });
 
@@ -152,6 +153,7 @@ describe("useDraftWorkspace", () => {
       connectedTarget: "http://new-workflow.example/rpc",
       recordEvidence: vi.fn(),
       readExecutor: {} as ConsoleReadExecutor,
+      writeExecutor: null,
     });
     const renderCountBeforeTargetChange = renders.length;
     rerender({ workspaceId: "draft-first" });
@@ -202,6 +204,7 @@ describe("useDraftWorkspace", () => {
       connectedTarget: "http://new-workflow.example/rpc",
       recordEvidence: vi.fn(),
       readExecutor: {} as ConsoleReadExecutor,
+      writeExecutor: null,
     });
     rerender({ workspaceId: "draft-new" });
 
@@ -228,6 +231,7 @@ describe("useDraftWorkspace", () => {
       connectedTarget: "http://new-workflow.example/rpc",
       recordEvidence: vi.fn(),
       readExecutor: {} as ConsoleReadExecutor,
+      writeExecutor: null,
     });
     rerender();
 
@@ -259,6 +263,7 @@ describe("useDraftWorkspace", () => {
       connectedTarget: null,
       recordEvidence: vi.fn(),
       readExecutor: null,
+      writeExecutor: null,
     });
 
     const { result } = renderHook(() => useDraftWorkspace("draft-report"));

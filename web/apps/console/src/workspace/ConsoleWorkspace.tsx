@@ -7,6 +7,7 @@ import {
   type EvidenceRecord,
 } from "../app/state.js";
 import { createConsoleReadExecutor } from "./domain/read-executor.js";
+import { createConsoleWriteExecutor } from "./domain/write-executor.js";
 import { ConsoleShell } from "./ConsoleShell.js";
 import type { ConsoleWorkspaceContextValue } from "./context.js";
 
@@ -31,6 +32,21 @@ export const ConsoleWorkspace = () => {
       if (!connectedTarget) return null;
       const executorGeneration = connectGeneration.current;
       return createConsoleReadExecutor({
+        target: connectedTarget,
+        recordEvidence,
+        allocateEvidenceId,
+        shouldRecordEvidence: () =>
+          connectGeneration.current === executorGeneration,
+      });
+    },
+    [allocateEvidenceId, connectedTarget, recordEvidence],
+  );
+
+  const writeExecutor = useMemo(
+    () => {
+      if (!connectedTarget) return null;
+      const executorGeneration = connectGeneration.current;
+      return createConsoleWriteExecutor({
         target: connectedTarget,
         recordEvidence,
         allocateEvidenceId,
@@ -92,8 +108,9 @@ export const ConsoleWorkspace = () => {
       connectedTarget,
       recordEvidence,
       readExecutor,
+      writeExecutor,
     }),
-    [connectedTarget, readExecutor, recordEvidence, state],
+    [connectedTarget, readExecutor, recordEvidence, state, writeExecutor],
   );
 
   return (

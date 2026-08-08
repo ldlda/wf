@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   decodeDraftWorkspace,
   decodeDraftWorkspacePage,
+  type AddCapabilityStepInput,
+  type CreateEmptyDraftInput,
 } from "./draft-workspace-models.js";
 
 const summary = {
@@ -13,6 +15,22 @@ const summary = {
 };
 
 describe("draft workspace models", () => {
+  it("exposes camelCase inputs for draft authoring", () => {
+    const emptyInput = {
+      workspaceId: "draft-report",
+      name: "report",
+    } satisfies CreateEmptyDraftInput;
+    const stepInput = {
+      workspaceId: "draft-report",
+      revision: 1,
+      stepId: "read",
+      capabilityName: "demo.read",
+    } satisfies AddCapabilityStepInput;
+
+    expect(emptyInput.workspaceId).toBe("draft-report");
+    expect(stepInput.capabilityName).toBe("demo.read");
+  });
+
   it("preserves opaque summary values and defaults an omitted draft", () => {
     const workspace = decodeDraftWorkspace({
       workspaceId: "draft-report",

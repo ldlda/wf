@@ -1,5 +1,68 @@
 import * as v from "valibot";
 
+export type JsonObject = Record<string, unknown>;
+
+export type CreateEmptyDraftInput = {
+  readonly workspaceId: string;
+  readonly name: string;
+  readonly title?: string | null;
+  readonly inputSchema?: JsonObject | null;
+  readonly stateSchema?: JsonObject | null;
+  readonly outputSchema?: JsonObject | null;
+  readonly outcomes?: ReadonlyArray<string>;
+};
+
+export type CreateFromCapabilityInput = {
+  readonly workspaceId: string;
+  readonly capabilityName: string;
+  readonly name?: string | null;
+  readonly title?: string | null;
+  readonly inputSchema?: JsonObject | null;
+  readonly stateSchema?: JsonObject | null;
+  readonly outputSchema?: JsonObject | null;
+  readonly input?: ReadonlyArray<unknown> | null;
+  readonly output?: ReadonlyArray<unknown> | null;
+  readonly inputMap?: Record<string, string> | null;
+  readonly outputMap?: Record<string, string> | null;
+  readonly errorMessageSource?: unknown;
+};
+
+export type AddCapabilityStepInput = {
+  readonly workspaceId: string;
+  readonly revision: number;
+  readonly stepId: string;
+  readonly capabilityName: string;
+  readonly routeFromStep?: string | null;
+  readonly routeFromOutcome?: string;
+  readonly routes?: Record<string, string> | null;
+  readonly inputMap?: Record<string, string> | null;
+  readonly inputBindings?: ReadonlyArray<unknown> | null;
+  readonly bindOutputs?: Record<string, string>;
+  readonly description?: string | null;
+  readonly retry?: number | null;
+  readonly timeoutSeconds?: number | null;
+};
+
+export type UpdateCapabilityStepInput = {
+  readonly workspaceId: string;
+  readonly revision: number;
+  readonly stepId: string;
+  readonly update: {
+    readonly description?: string | null;
+    readonly input?: ReadonlyArray<unknown> | null;
+    readonly retry?: number | null;
+    readonly timeoutSeconds?: number | null;
+  };
+};
+
+export type SetDraftRouteInput = {
+  readonly workspaceId: string;
+  readonly revision: number;
+  readonly stepId: string;
+  readonly outcome: string;
+  readonly target: string;
+};
+
 const decode = <T>(
   label: string,
   schema: v.GenericSchema<unknown, T>,
