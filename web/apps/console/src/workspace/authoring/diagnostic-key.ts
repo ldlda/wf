@@ -18,15 +18,17 @@ const diagnosticIdentity = (diagnostic: DraftDiagnostic): string =>
 export const withDiagnosticKeys = (
   diagnostics: ReadonlyArray<DraftDiagnostic>,
 ): ReadonlyArray<DiagnosticEntry> => {
-  const occurrenceByIdentity = new Map<string, number>();
+  const seenIdentities = new Set<string>();
   const entries: DiagnosticEntry[] = [];
   for (const diagnostic of diagnostics) {
     const identity = diagnosticIdentity(diagnostic);
-    const occurrence = occurrenceByIdentity.get(identity) ?? 0;
-    occurrenceByIdentity.set(identity, occurrence + 1);
+    if (seenIdentities.has(identity)) {
+      continue;
+    }
+    seenIdentities.add(identity);
     entries.push({
       diagnostic,
-      key: `diagnostic-${identity}-${occurrence}`,
+      key: `diagnostic-${identity}`,
     });
   }
   return entries;

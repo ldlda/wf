@@ -13,22 +13,61 @@ const diagnostic = (overrides: Partial<DraftDiagnostic> = {}): DraftDiagnostic =
 });
 
 describe("withDiagnosticKeys", () => {
-  it("keeps unchanged diagnostic keys stable when another diagnostic is inserted", () => {
-    const first = withDiagnosticKeys([diagnostic(), diagnostic({ code: "invalid_step" })]);
-    const second = withDiagnosticKeys([
-      diagnostic({ code: "missing_start" }),
-      diagnostic(),
-      diagnostic({ code: "invalid_step" }),
-    ]);
+  it("collapses exact duplicates while preserving distinct diagnostics and order", () => {
+    const first = diagnostic();
+    const second = diagnostic({ code: "invalid_step" });
 
-    expect(second[1]?.key).toBe(first[0]?.key);
-    expect(second[2]?.key).toBe(first[1]?.key);
+    const entries = withDiagnosticKeys([first, first, second, first]);
+
+    expect(entries).toHaveLength(2);
+    expect(entries.map(({ diagnostic: entryDiagnostic }) => entryDiagnostic)).toEqual([
+      first,
+      second,
+    ]);
+    expect(entries[0]?.key).toBe(withDiagnosticKeys([first])[0]?.key);
   });
 
-  it("gives duplicate diagnostics distinct stable occurrence keys", () => {
-    const entries = withDiagnosticKeys([diagnostic(), diagnostic()]);
+  it("keeps distinct diagnostic keys stable across insertion and reorder", () => {
+    const review = diagnostic();
+    const invalid = diagnostic({ code: "invalid_step" });
+    const start = diagnostic({ code: "missing_start" });
+    const initial = withDiagnosticKeys([review, invalid]);
+    const reordered = withDiagnosticKeys([start, invalid, review]);
 
-    expect(entries[0]?.key).not.toBe(entries[1]?.key);
-    expect(entries[0]?.key).toBe(withDiagnosticKeys([diagnostic()])[0]?.key);
+    const keyFor = (
+      entries: ReturnType<typeof withDiagnosticKeys>,
+      code: string,
+    ): string | undefined => entries.find(({ diagnostic: entryDiagnostic }) => entryDiagnostic.code === code)?.key;
+
+    expect(keyFor(reordered, review.code)).toBe(keyFor(initial, review.code));
+    expect(keyFor(reordered, invalid.code)).toBe(keyFor(initial, invalid.code));
+    expect(reordered.map(({ diagnostic: entryDiagnostic }) => entryDiagnostic.code)).toEqual([
+      start.code,
+      invalid.code,
+      review.code,
+    ]);
+  });
+
+  it("keeps diagnostics distinct when details, step, or hint differ", () => {
+    const withDifferentDetails = diagnostic({ details: { field: "title" } });
+    const withOtherDetails = diagnostic({ details: { field: "name" } });
+    const withDifferentStep = diagnostic({ stepId: "collect" });
+    const withDifferentHint = diagnostic({ repairHint: "Choose another route." });
+
+    const entries = withDiagnosticKeys([
+      withDifferentDetails,
+      withOtherDetails,
+      withDifferentStep,
+      withDifferentHint,
+    ]);
+
+    expect(entries).toHaveLength(4);
+    expect(new Set(entries.map(({ key }) => key)).size).toBe(4);
+    expect(entries.map(({ diagnostic: entryDiagnostic }) => entryDiagnostic)).toEqual([
+      withDifferentDetails,
+      withOtherDetails,
+      withDifferentStep,
+      withDifferentHint,
+    ]);
   });
 });
