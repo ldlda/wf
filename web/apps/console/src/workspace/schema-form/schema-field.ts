@@ -17,6 +17,21 @@ export type FieldSource =
   | { readonly mode: "literal"; readonly value: unknown }
   | { readonly mode: "bind"; readonly sourcePath: string };
 
+export const rebaseSchemaField = (
+  field: SchemaField,
+  path: ReadonlyArray<string | number>,
+): SchemaField => {
+  const relativePath = (childPath: ReadonlyArray<string | number>): ReadonlyArray<string | number> =>
+    childPath.slice(field.path.length);
+  const children = field.children.map((child) =>
+    rebaseSchemaField(child, [...path, ...relativePath(child.path)]),
+  );
+  const item = field.item
+    ? rebaseSchemaField(field.item, [...path, ...relativePath(field.item.path)])
+    : null;
+  return { ...field, path, children, item };
+};
+
 type SchemaRecord = Record<string, unknown>;
 type EnumValue = string | number | boolean | null;
 

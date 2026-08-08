@@ -100,4 +100,191 @@ describe("SchemaForm", () => {
     await user.click(screen.getByRole("button", { name: "Add tag" }));
     expect(screen.getByRole("textbox", { name: "Tag 1" })).toBeInTheDocument();
   });
+
+  it("reindexes bindings when removing the first array item", async () => {
+    const user = userEvent.setup();
+    const submissions: SchemaSerializationResult[] = [];
+    render(
+      <SchemaForm
+        initialSources={{
+          "items.0.name": { mode: "bind", sourcePath: "input.first" },
+          "items.1.name": { mode: "bind", sourcePath: "input.second" },
+        }}
+        initialValue={{ items: [{ name: "first" }, { name: "second" }] }}
+        onSubmit={(result) => submissions.push(result)}
+        schema={{
+          type: "object",
+          properties: {
+            items: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: { name: { type: "string" } },
+              },
+            },
+          },
+        }}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Remove item 1" }));
+    await user.click(screen.getByRole("button", { name: "Save form" }));
+
+    expect(submissions[0]?.bindings).toEqual([
+      { target: "items.0.name", path: "input.second" },
+    ]);
+  });
+
+  it("omits an untouched optional boolean but preserves explicit false", async () => {
+    const user = userEvent.setup();
+    const untouched: SchemaSerializationResult[] = [];
+    const { unmount } = render(
+      <SchemaForm
+        onSubmit={(result) => untouched.push(result)}
+        schema={{ type: "object", properties: { enabled: { type: "boolean" } } }}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Save form" }));
+    expect(untouched[0]?.value).toEqual({});
+    unmount();
+
+    const explicit: SchemaSerializationResult[] = [];
+    render(
+      <SchemaForm
+        initialValue={{ enabled: false }}
+        onSubmit={(result) => explicit.push(result)}
+        schema={{ type: "object", properties: { enabled: { type: "boolean" } } }}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Save form" }));
+    expect(explicit[0]?.value).toEqual({ enabled: false });
+  });
+
+  it("routes nested diagnostics only to their owning field", () => {
+    render(
+      <SchemaForm
+        diagnostics={[{ path: ["profile", "name2"], message: "Second name is invalid." }]}
+        schema={{
+          type: "object",
+          properties: {
+            profile: {
+              type: "object",
+              properties: { name: { type: "string" }, name2: { type: "string" } },
+            },
+          },
+        }}
+      />,
+    );
+
+    const name = screen.getByRole("textbox", { name: "Name" });
+    const name2 = screen.getByRole("textbox", { name: "Name2" });
+    expect(name).not.toHaveAttribute("aria-describedby", expect.stringContaining("diagnostics"));
+    expect(name2).toHaveAttribute("aria-describedby", expect.stringContaining("diagnostics"));
+    expect(screen.getAllByRole("alert")).toHaveLength(1);
+  });
+
+  it("routes diagnostics into nested array object items", () => {
+    render(
+      <SchemaForm
+        diagnostics={[{ path: ["items", 1, "name"], message: "Second item is invalid." }]}
+        initialValue={{ items: [{ name: "first" }, { name: "second" }] }}
+        schema={{
+          type: "object",
+          properties: {
+            items: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: { name: { type: "string" } },
+              },
+            },
+          },
+        }}
+      />,
+    );
+
+    const names = screen.getAllByRole("textbox", { name: "Name" });
+    expect(names[0]).not.toHaveAttribute("aria-describedby", expect.stringContaining("diagnostics"));
+    expect(names[1]).toHaveAttribute("aria-describedby", expect.stringContaining("diagnostics"));
+  });
+
+  it("preserves the literal value when toggling from Bind back to Literal", async () => {
+    const user = userEvent.setup();
+    const submissions: SchemaSerializationResult[] = [];
+    render(
+      <SchemaForm
+        initialSources={{ summary: { mode: "bind", sourcePath: "input.summary" } }}
+        initialValue={{ summary: "keep this literal" }}
+        onSubmit={(result) => submissions.push(result)}
+        schema={{ type: "object", properties: { summary: { type: "string" } } }}
+      />,
+    );
+
+    await user.click(screen.getByRole("radio", { name: "Literal" }));
+    await user.click(screen.getByRole("button", { name: "Save form" }));
+
+    expect(submissions[0]?.value).toEqual({ summary: "keep this literal" });
+    expect(submissions[0]?.bindings).toEqual([]);
+  });
+
+  it("round-trips colliding enum display values through distinct option identities", async () => {
+    const user = userEvent.setup();
+    const submissions: SchemaSerializationResult[] = [];
+    render(
+      <SchemaForm
+        onSubmit={(result) => submissions.push(result)}
+        schema={{
+          type: "object",
+          properties: { choice: { enum: ["1", 1, "true", true] } },
+        }}
+      />,
+    );
+    const select = screen.getByRole("combobox", { name: "Choice" });
+    const options = screen.getAllByRole("option");
+    const numberOption = options[2];
+    expect(numberOption).toBeDefined();
+    if (!numberOption) return;
+    await user.selectOptions(select, numberOption);
+    await user.click(screen.getByRole("button", { name: "Save form" }));
+
+    expect(submissions[0]?.value).toEqual({ choice: 1 });
+  });
+
+  it("associates required group help and fallback reasons with controls", () => {
+    render(
+      <SchemaForm
+        schema={{
+          type: "object",
+          properties: {
+            settings: { type: "object", properties: {} },
+            choice: { oneOf: [{ type: "string" }, { type: "number" }] },
+          },
+          required: ["settings", "choice"],
+        }}
+      />,
+    );
+
+    expect(screen.getByRole("group", { name: /Settings.*required/ })).toBeInTheDocument();
+    const choice = screen.getByRole("textbox", { name: "Choice" });
+    expect(choice).toHaveAttribute("aria-describedby", expect.stringContaining("fallback"));
+    expect(screen.getByText("The schema uses oneOf, which the native form cannot represent.")).toHaveAttribute(
+      "id",
+      expect.stringContaining("fallback"),
+    );
+  });
+
+  it("generates distinct ids for dotted and hyphenated property names", () => {
+    render(
+      <SchemaForm
+        schema={{
+          type: "object",
+          properties: { "a.b": { type: "string" }, "a-b": { type: "string" } },
+        }}
+      />,
+    );
+
+    const dotted = screen.getByRole("textbox", { name: "A.b" });
+    const hyphenated = screen.getByRole("textbox", { name: "A-b" });
+    expect(dotted.id).not.toBe(hyphenated.id);
+  });
 });

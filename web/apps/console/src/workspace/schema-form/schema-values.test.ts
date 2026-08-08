@@ -100,4 +100,116 @@ describe("serializeSchemaValues", () => {
       { path: ["title"], message: "Binding path must start with input, state, or context." },
     ]);
   });
+
+  it("formats and validates quoted TOML-key paths, including the root marker", () => {
+    const nestedField = normalizeSchema({
+      type: "object",
+      properties: {
+        profile: {
+          type: "object",
+          properties: { "display.name": { type: "string" } },
+        },
+      },
+    });
+    const nestedResult = serializeSchemaValues(
+      nestedField,
+      { profile: {} },
+      {
+        'profile."display.name"': {
+          mode: "bind",
+          sourcePath: 'input."user.name"',
+        },
+      },
+    );
+    const rootResult = serializeSchemaValues(
+      normalizeSchema({ type: "string" }),
+      "literal",
+      { ".": { mode: "bind", sourcePath: "input.payload" } },
+    );
+
+    expect(nestedResult.bindings).toEqual([
+      { target: 'profile."display.name"', path: 'input."user.name"' },
+    ]);
+    expect(nestedResult.issues).toEqual([]);
+    expect(rootResult.bindings).toEqual([{ target: ".", path: "input.payload" }]);
+  });
+
+  it("rebases bindings for the second nested object array item", () => {
+    const field = normalizeSchema({
+      type: "object",
+      properties: {
+        items: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              profile: {
+                type: "object",
+                properties: { name: { type: "string" } },
+              },
+            },
+          },
+        },
+      },
+    });
+    const result = serializeSchemaValues(
+      field,
+      { items: [{ profile: {} }, { profile: {} }] },
+      {
+        "items.1.profile.name": { mode: "bind", sourcePath: "input.second" },
+      },
+    );
+
+    expect(result.bindings).toEqual([
+      { target: "items.1.profile.name", path: "input.second" },
+    ]);
+    expect(result.issues).toEqual([]);
+  });
+
+  it("preserves absence versus explicit false for optional booleans", () => {
+    const field = normalizeSchema({
+      type: "object",
+      properties: { enabled: { type: "boolean" } },
+    });
+
+    expect(serializeSchemaValues(field, {}).value).toEqual({});
+    expect(serializeSchemaValues(field, { enabled: false }).value).toEqual({ enabled: false });
+  });
+
+  it("reports and preserves missing required string and JSON values", () => {
+    const field = normalizeSchema({
+      type: "object",
+      properties: {
+        name: { type: "string" },
+        payload: {},
+      },
+      required: ["name", "payload"],
+    });
+    const result = serializeSchemaValues(field, {});
+
+    expect(result.value).toEqual({ name: "", payload: "" });
+    expect(result.issues).toEqual([
+      { path: ["name"], message: "Required field is incomplete." },
+      { path: ["payload"], message: "Required field is incomplete." },
+    ]);
+  });
+
+  it("preserves an explicit empty object default", () => {
+    const field = normalizeSchema({
+      type: "object",
+      properties: { options: { type: "object", default: {}, properties: {} } },
+    });
+
+    expect(serializeSchemaValues(field, {}).value).toEqual({ options: {} });
+  });
+
+  it("keeps enum values distinct when their display text collides", () => {
+    const field = normalizeSchema({
+      type: "object",
+      properties: { choice: { enum: ["true", true, "1", 1] } },
+    });
+
+    expect(serializeSchemaValues(field, { choice: true }).value).toEqual({ choice: true });
+    expect(serializeSchemaValues(field, { choice: 1 }).value).toEqual({ choice: 1 });
+  });
 });

@@ -1,14 +1,18 @@
 import type { FieldSource, SchemaField } from "./schema-field.js";
+import { encodeSchemaPath } from "./schema-paths.js";
+
+const EMPTY_SUGGESTIONS: ReadonlyArray<string> = [];
 
 export type BindingSourceControlProps = {
   readonly field: SchemaField;
   readonly source: FieldSource;
+  readonly literalValue: unknown;
   readonly onChange: (source: FieldSource) => void;
   readonly suggestions?: ReadonlyArray<string>;
 };
 
 const fieldKey = (field: SchemaField): string =>
-  field.path.length === 0 ? "root" : field.path.map(String).join("-");
+  encodeSchemaPath(field.path);
 
 const displayTitle = (title: string): string =>
   title.length === 0 ? "Value" : `${title.slice(0, 1).toUpperCase()}${title.slice(1)}`;
@@ -16,8 +20,9 @@ const displayTitle = (title: string): string =>
 export const BindingSourceControl = ({
   field,
   source,
+  literalValue,
   onChange,
-  suggestions = [],
+  suggestions = EMPTY_SUGGESTIONS,
 }: BindingSourceControlProps) => {
   const key = fieldKey(field);
   const literalId = `${key}-literal`;
@@ -34,7 +39,7 @@ export const BindingSourceControl = ({
             checked={source.mode === "literal"}
             id={literalId}
             name={`${key}-source-mode`}
-            onChange={() => onChange({ mode: "literal", value: source.mode === "literal" ? source.value : "" })}
+            onChange={() => onChange({ mode: "literal", value: literalValue })}
             type="radio"
           />
           Literal

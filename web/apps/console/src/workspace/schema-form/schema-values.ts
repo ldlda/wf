@@ -1,4 +1,10 @@
 import type { FieldSource, SchemaField } from "./schema-field.js";
+import { rebaseSchemaField } from "./schema-field.js";
+import {
+  formatTOMLPath,
+  parseGraphSourcePath,
+  parseTOMLPath,
+} from "./schema-paths.js";
 
 export type FieldSources = Readonly<Record<string, FieldSource>>;
 
@@ -30,14 +36,78 @@ type SerializedField = {
 const isRecord = (value: unknown): value is ValueRecord =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
-const pathKey = (path: ReadonlyArray<string | number>): string =>
+const pathKey = (path: ReadonlyArray<string | number>): string => formatTOMLPath(path);
+
+const legacyPathKey = (path: ReadonlyArray<string | number>): string =>
   path.length === 0 ? "root" : path.map(String).join(".");
 
-const targetPath = (path: ReadonlyArray<string | number>): string => path.map(String).join(".");
+const sourceForPath = (
+  sources: FieldSources,
+  path: ReadonlyArray<string | number>,
+): FieldSource | undefined => sources[pathKey(path)] ?? sources[legacyPathKey(path)];
+
+const targetPath = (path: ReadonlyArray<string | number>): string => formatTOMLPath(path);
 
 const hasDescendantSource = (field: SchemaField, sources: FieldSources): boolean => {
-  const prefix = targetPath(field.path);
-  return Object.keys(sources).some((key) => key.startsWith(`${prefix}.`));
+  const fieldParts = field.path.map(String);
+  return Object.keys(sources).some((key) => {
+    const sourceParts = parseTOMLPath(key);
+    return (
+      sourceParts !== null &&
+      sourceParts.length > fieldParts.length &&
+      fieldParts.every((part, index) => sourceParts[index] === part)
+    );
+  });
+};
+
+export const rebaseFieldSourcesAfterArrayRemoval = (
+  sources: FieldSources,
+  arrayPath: ReadonlyArray<string | number>,
+  removedIndex: number,
+): FieldSources => {
+  const arrayParts = arrayPath.map(String);
+  const next: Record<string, FieldSource> = {};
+  for (const [rawPath, source] of Object.entries(sources)) {
+    const parsedPath = parseTOMLPath(rawPath);
+    const matchesArray =
+      parsedPath !== null &&
+      parsedPath.length > arrayParts.length &&
+      arrayParts.every((part, index) => parsedPath[index] === part);
+    if (!matchesArray || parsedPath === null) {
+      next[rawPath] = source;
+      continue;
+    }
+    const itemIndex = Number(parsedPath[arrayParts.length]);
+    if (!Number.isInteger(itemIndex) || String(itemIndex) !== parsedPath[arrayParts.length]) {
+      next[rawPath] = source;
+      continue;
+    }
+    if (itemIndex === removedIndex) continue;
+    const rebased = [...parsedPath];
+    if (itemIndex > removedIndex) rebased[arrayParts.length] = String(itemIndex - 1);
+    next[formatTOMLPath(rebased)] = source;
+  }
+  return next;
+};
+
+export const rebaseSchemaIssuesAfterArrayRemoval = (
+  issues: ReadonlyArray<SchemaValueIssue>,
+  arrayPath: ReadonlyArray<string | number>,
+  removedIndex: number,
+): ReadonlyArray<SchemaValueIssue> => {
+  const matchesPrefix = (path: ReadonlyArray<string | number>): boolean =>
+    arrayPath.length < path.length &&
+    arrayPath.every((part, index) => String(path[index]) === String(part));
+  return issues.flatMap((currentIssue) => {
+    if (!matchesPrefix(currentIssue.path)) return [currentIssue];
+    const itemIndex = currentIssue.path[arrayPath.length];
+    if (typeof itemIndex !== "number") return [currentIssue];
+    if (itemIndex === removedIndex) return [];
+    if (itemIndex < removedIndex) return [currentIssue];
+    const rebasedPath = [...currentIssue.path];
+    rebasedPath[arrayPath.length] = itemIndex - 1;
+    return [{ ...currentIssue, path: rebasedPath }];
+  });
 };
 
 const isEmptyValue = (value: unknown): boolean =>
@@ -47,12 +117,7 @@ const isEmptyValue = (value: unknown): boolean =>
   (isRecord(value) && Object.keys(value).length === 0);
 
 const validBindingPath = (value: string): boolean => {
-  const parts = value.split(".");
-  return (
-    parts.length > 0 &&
-    (parts[0] === "input" || parts[0] === "state" || parts[0] === "context") &&
-    parts.every((part) => /^[A-Za-z0-9_-]+$/.test(part))
-  );
+  return parseGraphSourcePath(value) !== null;
 };
 
 const issue = (
@@ -91,15 +156,27 @@ const parseEnum = (
   raw: unknown,
   values: ReadonlyArray<string | number | boolean | null>,
 ): { readonly value: unknown; readonly message: string | null } => {
-  const match = values.find((candidate) =>
-    candidate === raw ||
-    (typeof raw === "string" &&
-      (raw === String(candidate) || raw === JSON.stringify(candidate))),
-  );
-  return match !== undefined || values.some((candidate) => candidate === null && raw === "null")
-    ? { value: match === undefined ? null : match, message: null }
-    : { value: raw, message: "Choose one of the listed values." };
+  const directIndex = values.findIndex((candidate) => candidate === raw);
+  if (directIndex >= 0) return { value: values[directIndex], message: null };
+  if (typeof raw === "string") {
+    const encodedIndex = /^([0-9]+):/.exec(raw)?.[1];
+    if (encodedIndex !== undefined) {
+      const index = Number(encodedIndex);
+      if (Number.isInteger(index) && index >= 0 && index < values.length) {
+        return { value: values[index], message: null };
+      }
+    }
+    if (raw === "null" && values.some((candidate) => candidate === null)) {
+      return { value: null, message: null };
+    }
+  }
+  return { value: raw, message: "Choose one of the listed values." };
 };
+
+export const enumOptionId = (
+  value: string | number | boolean | null,
+  index: number,
+): string => `${index}:${JSON.stringify(value)}`;
 
 const parseJson = (
   raw: unknown,
@@ -118,7 +195,7 @@ const serializeField = (
   rawValue: unknown,
   sources: FieldSources,
 ): SerializedField => {
-  const source = sources[pathKey(field.path)];
+  const source = sourceForPath(sources, field.path);
   if (source?.mode === "bind") {
     if (!validBindingPath(source.sourcePath)) {
       return {
@@ -179,7 +256,7 @@ const serializeField = (
       bindings.push(...childValue.bindings);
       issues.push(...childValue.issues);
     }
-    if (Object.keys(value).length === 0 && !field.required && bindings.length === 0) {
+    if (Object.keys(value).length === 0 && !field.required && bindings.length === 0 && !usingDefault) {
       return { present: false, value: undefined, bindings, issues };
     }
     return { present: true, value, bindings, issues };
@@ -200,7 +277,7 @@ const serializeField = (
     const item = field.item;
     if (item) {
       raw.forEach((itemValue, index) => {
-        const itemField: SchemaField = { ...item, path: [...field.path, index] };
+        const itemField = rebaseSchemaField(item, [...field.path, index]);
         const serialized = serializeField(itemField, itemValue, sources);
         if (serialized.present) value.push(serialized.value);
         bindings.push(...serialized.bindings);
@@ -214,11 +291,28 @@ const serializeField = (
   }
 
   if (field.kind === "string") {
+    if (raw === undefined) {
+      return {
+        present: true,
+        value: "",
+        bindings: [],
+        issues: [issue(field.path, "Required field is incomplete.")],
+      };
+    }
     return {
       present: true,
       value: raw,
       bindings: [],
       issues: field.required && raw === "" ? [issue(field.path, "Required field is incomplete.")] : [],
+    };
+  }
+
+  if (field.kind === "json" && raw === undefined) {
+    return {
+      present: true,
+      value: "",
+      bindings: [],
+      issues: [issue(field.path, "Required field is incomplete.")],
     };
   }
 

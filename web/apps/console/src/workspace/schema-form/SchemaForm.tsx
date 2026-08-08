@@ -2,11 +2,14 @@ import { useState, type FormEvent } from "react";
 import { normalizeSchema, type FieldSource, type SchemaField } from "./schema-field.js";
 import { SchemaFieldControl } from "./SchemaFieldControl.js";
 import {
+  rebaseFieldSourcesAfterArrayRemoval,
+  rebaseSchemaIssuesAfterArrayRemoval,
   serializeSchemaValues,
   type FieldSources,
   type SchemaSerializationResult,
   type SchemaValueIssue,
 } from "./schema-values.js";
+import { formatTOMLPath } from "./schema-paths.js";
 
 export type SchemaFormProps = {
   readonly schema: unknown;
@@ -29,8 +32,28 @@ const emptyValueFor = (field: SchemaField): unknown => {
   if (field.hasDefault) return field.defaultValue;
   if (field.kind === "object") return {};
   if (field.kind === "array") return [];
-  if (field.kind === "boolean") return false;
+  if (field.kind === "boolean") return undefined;
+  if (field.kind === "json") return undefined;
   return "";
+};
+
+const readAtPath = (
+  current: unknown,
+  path: ReadonlyArray<string | number>,
+): unknown => {
+  let value = current;
+  for (const part of path) {
+    if (Array.isArray(value)) {
+      const index = typeof part === "number" ? part : Number(part);
+      if (!Number.isInteger(index)) return undefined;
+      value = value[index];
+    } else if (isRecord(value) && typeof part === "string") {
+      value = value[part];
+    } else {
+      return undefined;
+    }
+  }
+  return value;
 };
 
 const setAtPath = (
@@ -55,7 +78,7 @@ const setAtPath = (
 };
 
 const sourceKey = (sourceField: SchemaField): string =>
-  sourceField.path.length === 0 ? "root" : sourceField.path.map(String).join(".");
+  formatTOMLPath(sourceField.path);
 
 const rawSchemaText = (schema: unknown): string => {
   try {
@@ -95,7 +118,28 @@ export const SchemaForm = ({
   };
 
   const handleSourceChange = (changedField: SchemaField, source: FieldSource): void => {
+    if (source.mode === "literal") {
+      setValues((current: unknown) => setAtPath(current, changedField.path, source.value));
+    }
     setSources((current) => ({ ...current, [sourceKey(changedField)]: source }));
+  };
+
+  const handleArrayItemRemove = (arrayField: SchemaField, index: number): void => {
+    setValues((current: unknown) => {
+      const arrayValue = readAtPath(current, arrayField.path);
+      if (!Array.isArray(arrayValue)) return current;
+      return setAtPath(
+        current,
+        arrayField.path,
+        arrayValue.filter((_, itemIndex) => itemIndex !== index),
+      );
+    });
+    setSources((current) =>
+      rebaseFieldSourcesAfterArrayRemoval(current, arrayField.path, index),
+    );
+    setSubmitIssues((current) =>
+      rebaseSchemaIssuesAfterArrayRemoval(current, arrayField.path, index),
+    );
   };
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>): void => {
@@ -110,6 +154,7 @@ export const SchemaForm = ({
       <SchemaFieldControl
         diagnostics={allDiagnostics}
         field={field}
+        onArrayItemRemove={handleArrayItemRemove}
         onSourceChange={handleSourceChange}
         onValueChange={handleValueChange}
         sourceSuggestions={sourceSuggestions}

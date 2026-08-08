@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeSchema } from "./schema-field.js";
+import { normalizeSchema, rebaseSchemaField } from "./schema-field.js";
 
 describe("normalizeSchema", () => {
   it("normalizes primitive, multiline, boolean, and enum fields", () => {
@@ -100,5 +100,38 @@ describe("normalizeSchema", () => {
       kind: "json",
       fallbackReason: "The schema contains an unresolved $ref, which the native form cannot represent.",
     });
+  });
+
+  it("recursively rebases nested object and array item paths", () => {
+    const field = normalizeSchema({
+      type: "object",
+      properties: {
+        items: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              profile: {
+                type: "object",
+                properties: { name: { type: "string" } },
+              },
+            },
+          },
+        },
+      },
+    });
+    const item = field.children[0]?.item;
+    expect(item).not.toBeNull();
+    if (!item) return;
+
+    const rebased = rebaseSchemaField(item, ["items", 1]);
+    expect(rebased.path).toEqual(["items", 1]);
+    expect(rebased.children[0]?.path).toEqual(["items", 1, "profile"]);
+    expect(rebased.children[0]?.children[0]?.path).toEqual([
+      "items",
+      1,
+      "profile",
+      "name",
+    ]);
   });
 });
