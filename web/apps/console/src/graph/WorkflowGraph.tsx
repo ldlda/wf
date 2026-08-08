@@ -15,7 +15,10 @@ import type { WorkflowGraphModel, WorkflowGraphNodeData } from "./graph-model.js
 type WorkflowGraphProps = {
   readonly model: WorkflowGraphModel;
   readonly activeNodeId?: string | null;
+  readonly activeEdgeId?: string | null;
   readonly onNodeSelect?: (nodeId: string) => void;
+  readonly onEdgeSelect?: (edgeId: string) => void;
+  readonly onCanvasSelect?: () => void;
 };
 
 const nodeColor = (data: WorkflowGraphNodeData): string => {
@@ -38,7 +41,7 @@ const nodeColor = (data: WorkflowGraphNodeData): string => {
 };
 
 const CustomNode = ({ data, selected }: { data: WorkflowGraphNodeData; selected: boolean }) => {
-  const isActive = (data as WorkflowGraphNodeData & { isActive?: boolean }).isActive;
+  const isActive = data.isActive;
   const handleKeyDown = (event: KeyboardEvent) => {
     if (event.key !== "Enter" && event.key !== " ") return;
     event.preventDefault();
@@ -68,7 +71,14 @@ const nodeTypes: NodeTypes = {
   custom: CustomNode,
 };
 
-export const WorkflowGraph = ({ model, activeNodeId = null, onNodeSelect }: WorkflowGraphProps) => {
+export const WorkflowGraph = ({
+  model,
+  activeNodeId = null,
+  activeEdgeId = null,
+  onNodeSelect,
+  onEdgeSelect,
+  onCanvasSelect,
+}: WorkflowGraphProps) => {
   const nodes: Node[] = useMemo(
     () =>
       model.nodes.map((n) => ({
@@ -88,8 +98,10 @@ export const WorkflowGraph = ({ model, activeNodeId = null, onNodeSelect }: Work
         target: e.target,
         label: e.label,
         type: "default",
+        selected: activeEdgeId === e.id,
+        selectable: Boolean(onEdgeSelect),
       })),
-    [model.edges],
+    [activeEdgeId, model.edges, onEdgeSelect],
   );
 
   const handleNodeClick = useCallback(
@@ -97,6 +109,13 @@ export const WorkflowGraph = ({ model, activeNodeId = null, onNodeSelect }: Work
       onNodeSelect?.(node.id);
     },
     [onNodeSelect],
+  );
+
+  const handleEdgeClick = useCallback(
+    (_event: React.MouseEvent, edge: Edge) => {
+      onEdgeSelect?.(edge.id);
+    },
+    [onEdgeSelect],
   );
 
   if (model.nodes.length === 0) {
@@ -114,11 +133,15 @@ export const WorkflowGraph = ({ model, activeNodeId = null, onNodeSelect }: Work
         edges={edges}
         nodeTypes={nodeTypes}
         onNodeClick={handleNodeClick}
+        onEdgeClick={handleEdgeClick}
+        {...(onCanvasSelect
+          ? { onPaneClick: () => onCanvasSelect() }
+          : {})}
         fitView
         proOptions={{ hideAttribution: true }}
         nodesDraggable={false}
         nodesConnectable={false}
-        elementsSelectable={false}
+        elementsSelectable={Boolean(onNodeSelect || onEdgeSelect)}
       >
         <Background />
         <Controls />

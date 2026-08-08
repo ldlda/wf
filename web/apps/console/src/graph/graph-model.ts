@@ -7,7 +7,8 @@ export type WorkflowGraphNodeKind =
   | "interrupt"
   | "foreach"
   | "join"
-  | "end";
+  | "end"
+  | "unsupported";
 
 export type WorkflowGraphNodeData = {
   readonly nodeId: string;
@@ -17,6 +18,7 @@ export type WorkflowGraphNodeData = {
   readonly nodeRef: string | null;
   readonly raw: Readonly<Record<string, unknown>>;
   readonly onSelect?: (nodeId: string) => void;
+  readonly isActive?: boolean;
 };
 
 export type WorkflowGraphNode = {
@@ -54,7 +56,7 @@ const DEFAULT_LAYOUT: Required<Omit<WorkflowGraphLayoutOptions, "label">> = {
   ranksep: 80,
 };
 
-const mapNodeKind = (type: string): WorkflowGraphNodeKind => {
+const mapNodeKind = (type: unknown): WorkflowGraphNodeKind => {
   switch (type) {
     case "node":
       return "use";
@@ -71,7 +73,7 @@ const mapNodeKind = (type: string): WorkflowGraphNodeKind => {
     case "end":
       return "end";
     default:
-      return "use";
+      return "unsupported";
   }
 };
 
@@ -81,26 +83,30 @@ const buildLabel = (
 ): string => {
   const overriddenLabel = labelOverride?.(node);
   if (overriddenLabel) return overriddenLabel;
-  const type = node.type as string;
-  if (type === "end") return (node.outcome as string) ?? "End";
+  const type = typeof node.type === "string" ? node.type : "";
+  if (type === "end") {
+    return typeof node.outcome === "string" ? node.outcome : "End";
+  }
   if (type === "condition") return "Condition";
-  if (type === "interrupt") return (node.kind as string) ?? "Interrupt";
+  if (type === "interrupt") {
+    return typeof node.kind === "string" ? node.kind : "Interrupt";
+  }
   if (type === "foreach") return "For Each";
   if (type === "join") return "Join";
   if (type === "subgraph") {
-    const workflowRef = node.workflow as string | undefined;
+    const workflowRef = typeof node.workflow === "string" ? node.workflow : undefined;
     if (workflowRef) {
       const parts = workflowRef.split(".");
       return parts[parts.length - 1] ?? workflowRef;
     }
     return "Subgraph";
   }
-  const nodeRef = node.node as string | undefined;
+  const nodeRef = typeof node.node === "string" ? node.node : undefined;
   if (nodeRef) {
     const parts = nodeRef.split(".");
     return parts[parts.length - 1] ?? nodeRef;
   }
-  return (node.id as string) ?? "Unknown";
+  return typeof node.id === "string" ? node.id : "Unknown";
 };
 
 export const buildWorkflowGraph = (
@@ -111,7 +117,7 @@ export const buildWorkflowGraph = (
   options: WorkflowGraphLayoutOptions = {},
 ): WorkflowGraphModel => {
   const layout = { ...DEFAULT_LAYOUT, ...options };
-  const sortedNodes = [...plan.nodes].sort((a, b) =>
+  const sortedNodes = plan.nodes.toSorted((a, b) =>
     String(a.id).localeCompare(String(b.id)),
   );
 
@@ -143,11 +149,11 @@ export const buildWorkflowGraph = (
       id,
       data: {
         nodeId: id,
-        kind: mapNodeKind(node.type as string),
+        kind: mapNodeKind(node.type),
         label: buildLabel(node, layout.label),
         detail: typeof node.detail === "string" ? node.detail : null,
-        nodeRef: (node.node as string | null) ?? null,
-        raw: node as Record<string, unknown>,
+        nodeRef: typeof node.node === "string" ? node.node : null,
+        raw: node,
       },
       position: {
         x: pos.x - layout.nodeWidth / 2,

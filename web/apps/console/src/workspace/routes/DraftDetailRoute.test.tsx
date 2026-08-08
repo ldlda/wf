@@ -97,13 +97,14 @@ describe("DraftDetailRoute", () => {
     expect(screen.getByText("Route summarize.ok to __end__.")).toBeInTheDocument();
   });
 
-  it("keeps the raw draft closed by default and exposes no mutation controls", () => {
+  it("keeps the raw draft closed and marks deferred mutation controls unavailable", () => {
     const { container } = renderRoute();
 
     const details = container.querySelector("details");
     expect(details).not.toBeNull();
     expect(details).not.toHaveAttribute("open");
-    expect(screen.queryByRole("button")).toBeNull();
+    expect(screen.getByRole("button", { name: "Undo — Later" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Delete node — Later" })).toBeDisabled();
     expect(screen.queryByRole("link", { name: /compile|artifact|save|edit|mutate/i })).toBeNull();
   });
 
