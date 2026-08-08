@@ -93,8 +93,14 @@ const runtimeOperationNames = [
   "workflow.sources.list",
   "workflow.capabilities.list",
   "workflow.capabilities.inspect",
+  "workflow.draft_workspaces.add_step_from_capability",
+  "workflow.draft_workspaces.create_empty",
+  "workflow.draft_workspaces.create_from_capability",
   "workflow.draft_workspaces.list",
   "workflow.draft_workspaces.get",
+  "workflow.draft_workspaces.set_route",
+  "workflow.draft_workspaces.update_capability_step",
+  "workflow.draft_workspaces.validate",
   "workflow.artifacts.list",
   "workflow.artifacts.inspect",
   "workflow.deployments.list",
@@ -171,6 +177,19 @@ describe("workflow contract generator", () => {
     await expect(
       generateWorkflowContractSource(JSON.stringify(reduced)),
     ).rejects.toThrow(/missing runtime operation.*workflow\.runs\.resume/i);
+  });
+
+  it("requires draft authoring operations in the runtime cohort", async () => {
+    const reduced = {
+      ...completeRuntimeFixture,
+      operations: completeRuntimeFixture.operations.filter(
+        ({ method }) => method !== "workflow.draft_workspaces.validate",
+      ),
+    };
+
+    await expect(
+      generateWorkflowContractSource(JSON.stringify(reduced)),
+    ).rejects.toThrow(/missing runtime operation.*workflow\.draft_workspaces\.validate/i);
   });
 
   it("rejects non-local references reachable from the runtime cohort", async () => {

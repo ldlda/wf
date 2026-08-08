@@ -108,24 +108,6 @@ const runtimeOperationNameList = [
   "workflow.runs.trace",
 ] as const;
 const runtimeOperationNames = new Set<string>(runtimeOperationNameList);
-const legacyRuntimeOperationNames = new Set<string>([
-  "workflow.health",
-  "workflow.sources.list",
-  "workflow.capabilities.list",
-  "workflow.capabilities.inspect",
-  "workflow.draft_workspaces.list",
-  "workflow.draft_workspaces.get",
-  "workflow.artifacts.list",
-  "workflow.artifacts.inspect",
-  "workflow.deployments.list",
-  "workflow.deployments.inspect",
-  "workflow.deployments.validate",
-  "workflow.runs.list",
-  "workflow.runs.inspect",
-  "workflow.runs.start",
-  "workflow.runs.resume",
-  "workflow.runs.trace",
-]);
 
 export const parseWorkflowContractManifest = (
   manifestText: string,
@@ -274,7 +256,7 @@ const runtimeContractSource = (manifest: WorkflowContractManifest): string => {
     runtimeOperationNames.has(method),
   );
   const selectedNames = new Set(operations.map(({ method }) => method));
-  const missingNames = Array.from(legacyRuntimeOperationNames).filter(
+  const missingNames = runtimeOperationNameList.filter(
     (name) => !selectedNames.has(name),
   );
   if (missingNames.length > 0) {

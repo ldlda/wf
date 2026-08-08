@@ -135,7 +135,44 @@ const interpretNextActions = (nextActions: {
 
 const shellArg = (value: string | number): string => {
   const text = String(value);
-  return /^[A-Za-z0-9._/@:-]+$/.test(text) ? text : `'${text.replace(/'/g, "''")}'`;
+  return /^[A-Za-z0-9._/@=:-]+$/.test(text) ? text : `'${text.replace(/'/g, "''")}'`;
+};
+
+const nonEquivalentCli = (
+  command: string,
+  fields: readonly string[],
+): string =>
+  fields.length === 0
+    ? command
+    : `${command} [non-equivalent: unavailable CLI representation for ${fields.join(", ")}]`;
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const inputBindingCliArgs = (
+  bindings: readonly unknown[],
+): { readonly args: readonly string[]; readonly unavailable: readonly string[] } => {
+  const args: string[] = [];
+  const unavailable: string[] = [];
+  for (const binding of bindings) {
+    if (!isRecord(binding) || typeof binding.target !== "string") {
+      unavailable.push("input_bindings (use --bindings-file)");
+      continue;
+    }
+    if (typeof binding.path === "string") {
+      args.push("--input", shellArg(`${binding.path}=${binding.target}`));
+      continue;
+    }
+    if ("value" in binding) {
+      const serialized = JSON.stringify(binding.value);
+      if (serialized !== undefined) {
+        args.push("--value", shellArg(`${binding.target}=${serialized}`));
+        continue;
+      }
+    }
+    unavailable.push("input_bindings (use --bindings-file)");
+  }
+  return { args, unavailable };
 };
 
 const interpretCapabilitySummary = (
@@ -409,7 +446,12 @@ const operationEntries = defineOperationEntries([
       for (const outcome of p.outcomes ?? []) {
         parts.push("--outcome", shellArg(outcome));
       }
-      return parts.join(" ");
+      const unavailable = [
+        ...(p.input_schema != null ? ["input_schema (use --input-schema-file)"] : []),
+        ...(p.state_schema != null ? ["state_schema (use --state-schema-file)"] : []),
+        ...(p.output_schema != null ? ["output_schema (use --output-schema-file)"] : []),
+      ];
+      return nonEquivalentCli(parts.join(" "), unavailable);
     },
     interpret: (result) => {
       const decoded = Schema.decodeUnknownSync(
@@ -435,7 +477,17 @@ const operationEntries = defineOperationEntries([
       ];
       if (p.name != null) parts.push("--name", shellArg(p.name));
       if (p.title != null) parts.push("--title", shellArg(p.title));
-      return parts.join(" ");
+      const unavailable = [
+        ...(p.input_schema != null ? ["input_schema"] : []),
+        ...(p.state_schema != null ? ["state_schema"] : []),
+        ...(p.output_schema != null ? ["output_schema"] : []),
+        ...(p.input != null ? ["input"] : []),
+        ...(p.output != null ? ["output"] : []),
+        ...(p.input_map != null ? ["input_map"] : []),
+        ...(p.output_map != null ? ["output_map"] : []),
+        ...(p.error_message_source !== undefined ? ["error_message_source"] : []),
+      ];
+      return nonEquivalentCli(parts.join(" "), unavailable);
     },
     interpret: (result) => {
       const decoded = Schema.decodeUnknownSync(
@@ -470,20 +522,29 @@ const operationEntries = defineOperationEntries([
         }
       }
       for (const [outcome, target] of Object.entries(p.routes ?? {})) {
-        parts.push("--route", `${outcome}=${target}`);
+        parts.push("--route", shellArg(`${outcome}=${target}`));
       }
       for (const [source, target] of Object.entries(p.input_map ?? {})) {
-        parts.push("--input", `${source}=${target}`);
+        parts.push("--input", shellArg(`${source}=${target}`));
       }
       for (const [source, target] of Object.entries(p.bind_outputs ?? {})) {
-        parts.push("--bind-output", `${source}=${target}`);
+        parts.push("--bind-output", shellArg(`${source}=${target}`));
       }
       if (p.desc != null) parts.push("--description", shellArg(p.desc));
       if (p.retry != null) parts.push("--retry", String(p.retry));
       if (p.timeout_seconds != null) {
         parts.push("--timeout-seconds", String(p.timeout_seconds));
       }
-      return parts.join(" ");
+      const unavailable: string[] = [];
+      if (p.input_bindings != null) {
+        if (p.input_map != null) {
+          unavailable.push("input_map and input_bindings (mutually exclusive)");
+        }
+        const rendered = inputBindingCliArgs(p.input_bindings);
+        parts.push(...rendered.args);
+        unavailable.push(...rendered.unavailable);
+      }
+      return nonEquivalentCli(parts.join(" "), unavailable);
     },
     interpret: (result) => {
       const decoded = Schema.decodeUnknownSync(
@@ -514,11 +575,26 @@ const operationEntries = defineOperationEntries([
       if (p.update.retry != null) {
         if (p.update.retry === 0) parts.push("--retry", "0");
         else parts.push("--retry", String(p.update.retry));
-      }
+      } else if (p.update.retry === null) parts.push("--clear-retry");
       if (p.update.timeout_seconds != null) {
         parts.push("--timeout-seconds", String(p.update.timeout_seconds));
+      } else if (p.update.timeout_seconds === null) {
+        parts.push("--clear-timeout");
       }
-      return parts.join(" ");
+      const unavailable: string[] = [];
+      const updateInput = p.update.input;
+      if (Array.isArray(updateInput)) {
+        if (updateInput.length === 0) {
+          parts.push("--clear-input");
+        } else {
+          const rendered = inputBindingCliArgs(updateInput);
+          parts.push(...rendered.args);
+          unavailable.push(...rendered.unavailable);
+        }
+      } else if (updateInput === null) {
+        unavailable.push("input: null (the service rejects null input updates)");
+      }
+      return nonEquivalentCli(parts.join(" "), unavailable);
     },
     interpret: (result) => {
       const decoded = Schema.decodeUnknownSync(

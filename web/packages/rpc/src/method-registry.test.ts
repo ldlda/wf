@@ -290,4 +290,152 @@ describe("run operation registry", () => {
       draft: "draft" in testCase.result ? testCase.result.draft : null,
     });
   });
+
+  it("renders clear metadata and representable canonical input bindings", async () => {
+    const { getOperationMeta } = await import("./method-registry.js");
+    const operation = getOperationMeta(
+      "workflow.draft_workspaces.update_capability_step",
+    );
+    if (operation === undefined) throw new Error("missing update operation");
+
+    expect(
+      operation.equivalentCli({
+        workspace_id: "console.demo",
+        revision: 2,
+        step_id: "echo",
+        update: {
+          input: [
+            { path: "input.text", target: "text" },
+            { target: "mode", value: { kind: "fast" } },
+          ],
+          retry: null,
+          timeout_seconds: null,
+        },
+      }),
+    ).toBe(
+      "uv run wf draft update capability console.demo --revision 2 --step echo --clear-retry --clear-timeout --input input.text=text --value 'mode={\"kind\":\"fast\"}'",
+    );
+  });
+
+  it("shell-quotes complete route and binding map assignments", async () => {
+    const { getOperationMeta } = await import("./method-registry.js");
+    const operation = getOperationMeta(
+      "workflow.draft_workspaces.add_step_from_capability",
+    );
+    if (operation === undefined) throw new Error("missing add operation");
+
+    expect(
+      operation.equivalentCli({
+        workspace_id: "console.demo",
+        revision: 1,
+        step_id: "echo",
+        capability_name: "local.example.echo",
+        routes: { "when done": "state path" },
+        input_map: { "input value": "local target's" },
+        bind_outputs: { "output value": "state target" },
+      }),
+    ).toBe(
+      "uv run wf draft add capability console.demo --revision 1 --step echo --capability local.example.echo --route 'when done=state path' --input 'input value=local target''s' --bind-output 'output value=state target'",
+    );
+  });
+
+  it("renders path and value input bindings for add", async () => {
+    const { getOperationMeta } = await import("./method-registry.js");
+    const operation = getOperationMeta(
+      "workflow.draft_workspaces.add_step_from_capability",
+    );
+    if (operation === undefined) throw new Error("missing add operation");
+
+    expect(
+      operation.equivalentCli({
+        workspace_id: "console.demo",
+        revision: 1,
+        step_id: "echo",
+        capability_name: "local.example.echo",
+        input_bindings: [
+          { path: "state.text", target: "text" },
+          { target: "mode", value: { kind: "fast" } },
+        ],
+      }),
+    ).toBe(
+      "uv run wf draft add capability console.demo --revision 1 --step echo --capability local.example.echo --input state.text=text --value 'mode={\"kind\":\"fast\"}'",
+    );
+  });
+
+  it("explains unavailable inline schema and capability fields", async () => {
+    const { getOperationMeta } = await import("./method-registry.js");
+    const createEmpty = getOperationMeta(
+      "workflow.draft_workspaces.create_empty",
+    );
+    const createFromCapability = getOperationMeta(
+      "workflow.draft_workspaces.create_from_capability",
+    );
+    if (createEmpty === undefined || createFromCapability === undefined) {
+      throw new Error("missing create operation");
+    }
+
+    const emptyCli = createEmpty.equivalentCli({
+      workspace_id: "console.demo",
+      name: "console.demo",
+      input_schema: { type: "object" },
+      state_schema: { type: "object" },
+      output_schema: { type: "object" },
+    });
+    expect(emptyCli).toContain("uv run wf draft create console.demo --name console.demo");
+    expect(emptyCli).toContain("non-equivalent");
+    expect(emptyCli).toContain("input_schema");
+    expect(emptyCli).toContain("state_schema");
+    expect(emptyCli).toContain("output_schema");
+
+    const fromCapabilityCli = createFromCapability.equivalentCli({
+      workspace_id: "console.demo",
+      capability_name: "local.example.echo",
+      input_schema: { type: "object" },
+      state_schema: { type: "object" },
+      output_schema: { type: "object" },
+      input: [{ path: "input.text", target: "text" }],
+      output: [{ source: "text", target: "state.text" }],
+      input_map: { "input.text": "text" },
+      output_map: { text: "state.text" },
+      error_message_source: "state.error",
+    });
+    expect(fromCapabilityCli).toContain("non-equivalent");
+    for (const field of [
+      "input_schema",
+      "state_schema",
+      "output_schema",
+      "input",
+      "output",
+      "input_map",
+      "output_map",
+      "error_message_source",
+    ]) {
+      expect(fromCapabilityCli).toContain(field);
+    }
+  });
+
+  it("explains structural bindings that require a bindings file", async () => {
+    const { getOperationMeta } = await import("./method-registry.js");
+    const operation = getOperationMeta(
+      "workflow.draft_workspaces.add_step_from_capability",
+    );
+    if (operation === undefined) throw new Error("missing add operation");
+
+    const cli = operation.equivalentCli({
+      workspace_id: "console.demo",
+      revision: 1,
+      step_id: "echo",
+      capability_name: "local.example.echo",
+      input_bindings: [
+        {
+          path: { root: "state", parts: ["text"] },
+          target: { root: "local", parts: ["text"] },
+        },
+      ],
+    });
+
+    expect(cli).toContain("non-equivalent");
+    expect(cli).toContain("input_bindings");
+    expect(cli).toContain("--bindings-file");
+  });
 });
