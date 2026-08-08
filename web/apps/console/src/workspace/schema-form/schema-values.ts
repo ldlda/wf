@@ -38,13 +38,10 @@ const isRecord = (value: unknown): value is ValueRecord =>
 
 const pathKey = (path: ReadonlyArray<string | number>): string => formatTOMLPath(path);
 
-const legacyPathKey = (path: ReadonlyArray<string | number>): string =>
-  path.length === 0 ? "root" : path.map(String).join(".");
-
 const sourceForPath = (
   sources: FieldSources,
   path: ReadonlyArray<string | number>,
-): FieldSource | undefined => sources[pathKey(path)] ?? sources[legacyPathKey(path)];
+): FieldSource | undefined => sources[pathKey(path)];
 
 const targetPath = (path: ReadonlyArray<string | number>): string => formatTOMLPath(path);
 

@@ -287,4 +287,52 @@ describe("SchemaForm", () => {
     const hyphenated = screen.getByRole("textbox", { name: "A-b" });
     expect(dotted.id).not.toBe(hyphenated.id);
   });
+
+  it("edits a canonical literal source without aliasing a nested path", async () => {
+    const user = userEvent.setup();
+    const submissions: SchemaSerializationResult[] = [];
+    render(
+      <SchemaForm
+        initialSources={{
+          "a.b": { mode: "literal", value: "canonical nested" },
+        }}
+        initialValue={{ "a.b": "initial dotted", a: { b: "initial nested" } }}
+        onSubmit={(result) => submissions.push(result)}
+        schema={{
+          type: "object",
+          properties: {
+            "a.b": { type: "string" },
+            a: { type: "object", properties: { b: { type: "string" } } },
+          },
+        }}
+      />,
+    );
+
+    const dotted = screen.getByRole("textbox", { name: "A.b" });
+    await user.clear(dotted);
+    await user.type(dotted, "edited dotted");
+    await user.click(screen.getByRole("button", { name: "Save form" }));
+
+    expect(submissions[0]?.value).toEqual({ "a.b": "edited dotted", a: { b: "canonical nested" } });
+  });
+
+  it("updates the canonical literal source when its field is edited", async () => {
+    const user = userEvent.setup();
+    const submissions: SchemaSerializationResult[] = [];
+    render(
+      <SchemaForm
+        initialSources={{ '"a.b"': { mode: "literal", value: "canonical dotted" } }}
+        initialValue={{ "a.b": "initial dotted" }}
+        onSubmit={(result) => submissions.push(result)}
+        schema={{ type: "object", properties: { "a.b": { type: "string" } } }}
+      />,
+    );
+
+    const dotted = screen.getByRole("textbox", { name: "A.b" });
+    await user.clear(dotted);
+    await user.type(dotted, "edited canonical");
+    await user.click(screen.getByRole("button", { name: "Save form" }));
+
+    expect(submissions[0]?.value).toEqual({ "a.b": "edited canonical" });
+  });
 });

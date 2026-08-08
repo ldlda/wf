@@ -6,7 +6,7 @@ const CONTROL_CHARACTER = /[\u0000-\u001f\u007f]/;
 const isBareSegment = (value: string): boolean => BARE_TOML_KEY.test(value);
 
 const isValidSegment = (value: string): boolean =>
-  value.length > 0 && !CONTROL_CHARACTER.test(value);
+  value.trim().length > 0 && !CONTROL_CHARACTER.test(value);
 
 const parseDoubleQuoted = (raw: string, start: number): { readonly value: string; readonly next: number } | null => {
   let escaped = false;

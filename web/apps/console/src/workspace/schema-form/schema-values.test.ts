@@ -134,6 +134,36 @@ describe("serializeSchemaValues", () => {
     expect(rootResult.bindings).toEqual([{ target: ".", path: "input.payload" }]);
   });
 
+  it("rejects whitespace-only quoted binding path segments", () => {
+    const field = normalizeSchema({ type: "string" });
+    const result = serializeSchemaValues(field, "literal", {
+      ".": { mode: "bind", sourcePath: 'input."   "' },
+    });
+
+    expect(result.bindings).toEqual([]);
+    expect(result.issues).toEqual([
+      { path: [], message: "Binding path must start with input, state, or context." },
+    ]);
+  });
+
+  it("does not alias a nested path with a literal dotted property", () => {
+    const field = normalizeSchema({
+      type: "object",
+      properties: {
+        "a.b": { type: "string" },
+        a: { type: "object", properties: { b: { type: "string" } } },
+      },
+    });
+
+    const result = serializeSchemaValues(
+      field,
+      { "a.b": "initial dotted", a: { b: "initial nested" } },
+      { "a.b": { mode: "literal", value: "canonical nested" } },
+    );
+
+    expect(result.value).toEqual({ "a.b": "initial dotted", a: { b: "canonical nested" } });
+  });
+
   it("rebases bindings for the second nested object array item", () => {
     const field = normalizeSchema({
       type: "object",

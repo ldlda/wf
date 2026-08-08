@@ -285,8 +285,7 @@ export const SchemaFieldControl = ({
     );
   }
 
-  const legacySourceKey = field.path.length === 0 ? "root" : field.path.map(String).join(".");
-  const source = sources[pathKey(field)] ?? sources[legacySourceKey] ?? { mode: "literal", value };
+  const source = sources[pathKey(field)] ?? { mode: "literal", value };
   return (
     <div className="schema-form__field">
       <FieldLabel field={field} id={id} />
