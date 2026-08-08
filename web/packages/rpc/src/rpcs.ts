@@ -106,6 +106,108 @@ export const WorkflowArtifactsList = Rpc.make("workflow.artifacts.list", {
   error: Schema.Never,
 });
 
+const draftWorkspacesCreateEmptySchemas = runtimeSchemasFor(
+  "workflow.draft_workspaces.create_empty",
+);
+export const WorkflowDraftWorkspacesCreateEmptyPayloadSchema =
+  draftWorkspacesCreateEmptySchemas.payload;
+export const WorkflowDraftWorkspacesCreateEmptyResultSchema =
+  draftWorkspacesCreateEmptySchemas.success;
+
+export const WorkflowDraftWorkspacesCreateEmpty = Rpc.make(
+  "workflow.draft_workspaces.create_empty",
+  {
+    payload: WorkflowDraftWorkspacesCreateEmptyPayloadSchema,
+    success: WorkflowDraftWorkspacesCreateEmptyResultSchema,
+    error: Schema.Never,
+  },
+);
+
+const draftWorkspacesCreateFromCapabilitySchemas = runtimeSchemasFor(
+  "workflow.draft_workspaces.create_from_capability",
+);
+export const WorkflowDraftWorkspacesCreateFromCapabilityPayloadSchema =
+  draftWorkspacesCreateFromCapabilitySchemas.payload;
+export const WorkflowDraftWorkspacesCreateFromCapabilityResultSchema =
+  draftWorkspacesCreateFromCapabilitySchemas.success;
+
+export const WorkflowDraftWorkspacesCreateFromCapability = Rpc.make(
+  "workflow.draft_workspaces.create_from_capability",
+  {
+    payload: WorkflowDraftWorkspacesCreateFromCapabilityPayloadSchema,
+    success: WorkflowDraftWorkspacesCreateFromCapabilityResultSchema,
+    error: Schema.Never,
+  },
+);
+
+const draftWorkspacesAddStepFromCapabilitySchemas = runtimeSchemasFor(
+  "workflow.draft_workspaces.add_step_from_capability",
+);
+export const WorkflowDraftWorkspacesAddStepFromCapabilityPayloadSchema =
+  draftWorkspacesAddStepFromCapabilitySchemas.payload;
+export const WorkflowDraftWorkspacesAddStepFromCapabilityResultSchema =
+  draftWorkspacesAddStepFromCapabilitySchemas.success;
+
+export const WorkflowDraftWorkspacesAddStepFromCapability = Rpc.make(
+  "workflow.draft_workspaces.add_step_from_capability",
+  {
+    payload: WorkflowDraftWorkspacesAddStepFromCapabilityPayloadSchema,
+    success: WorkflowDraftWorkspacesAddStepFromCapabilityResultSchema,
+    error: Schema.Never,
+  },
+);
+
+const draftWorkspacesUpdateCapabilityStepSchemas = runtimeSchemasFor(
+  "workflow.draft_workspaces.update_capability_step",
+);
+export const WorkflowDraftWorkspacesUpdateCapabilityStepPayloadSchema =
+  draftWorkspacesUpdateCapabilityStepSchemas.payload;
+export const WorkflowDraftWorkspacesUpdateCapabilityStepResultSchema =
+  draftWorkspacesUpdateCapabilityStepSchemas.success;
+
+export const WorkflowDraftWorkspacesUpdateCapabilityStep = Rpc.make(
+  "workflow.draft_workspaces.update_capability_step",
+  {
+    payload: WorkflowDraftWorkspacesUpdateCapabilityStepPayloadSchema,
+    success: WorkflowDraftWorkspacesUpdateCapabilityStepResultSchema,
+    error: Schema.Never,
+  },
+);
+
+const draftWorkspacesSetRouteSchemas = runtimeSchemasFor(
+  "workflow.draft_workspaces.set_route",
+);
+export const WorkflowDraftWorkspacesSetRoutePayloadSchema =
+  draftWorkspacesSetRouteSchemas.payload;
+export const WorkflowDraftWorkspacesSetRouteResultSchema =
+  draftWorkspacesSetRouteSchemas.success;
+
+export const WorkflowDraftWorkspacesSetRoute = Rpc.make(
+  "workflow.draft_workspaces.set_route",
+  {
+    payload: WorkflowDraftWorkspacesSetRoutePayloadSchema,
+    success: WorkflowDraftWorkspacesSetRouteResultSchema,
+    error: Schema.Never,
+  },
+);
+
+const draftWorkspacesValidateSchemas = runtimeSchemasFor(
+  "workflow.draft_workspaces.validate",
+);
+export const WorkflowDraftWorkspacesValidatePayloadSchema =
+  draftWorkspacesValidateSchemas.payload;
+export const WorkflowDraftWorkspacesValidateResultSchema =
+  draftWorkspacesValidateSchemas.success;
+
+export const WorkflowDraftWorkspacesValidate = Rpc.make(
+  "workflow.draft_workspaces.validate",
+  {
+    payload: WorkflowDraftWorkspacesValidatePayloadSchema,
+    success: WorkflowDraftWorkspacesValidateResultSchema,
+    error: Schema.Never,
+  },
+);
+
 const artifactInspectSchemas = runtimeSchemasFor("workflow.artifacts.inspect");
 export const WorkflowArtifactsInspectPayloadSchema =
   artifactInspectSchemas.payload;
@@ -216,6 +318,12 @@ export const WorkflowRpcs = RpcGroup.make(
   WorkflowCapabilitiesInspect,
   WorkflowDraftWorkspacesList,
   WorkflowDraftWorkspacesGet,
+  WorkflowDraftWorkspacesCreateEmpty,
+  WorkflowDraftWorkspacesCreateFromCapability,
+  WorkflowDraftWorkspacesAddStepFromCapability,
+  WorkflowDraftWorkspacesUpdateCapabilityStep,
+  WorkflowDraftWorkspacesSetRoute,
+  WorkflowDraftWorkspacesValidate,
   WorkflowArtifactsList,
   WorkflowArtifactsInspect,
   WorkflowDeploymentsList,

@@ -74,6 +74,54 @@ const runEither = (
       .pipe(Effect.either);
   }).pipe(Effect.provide(makeWorkflowRpcLayer(options)), Effect.runPromise);
 
+const draftWorkspaceResult = {
+  workspace_id: "console.demo",
+  revision: 2,
+  title: "Console demo",
+  status: "valid" as const,
+  diagnostics: [],
+  summary: {
+    name: "console.demo",
+    start: "echo",
+    step_count: 1,
+    route_count: 1,
+    steps: ["echo"],
+  },
+  draft: {
+    name: "console.demo",
+    start: "echo",
+    steps: { echo: { use: "local.example.echo" } },
+    routes: { echo: { ok: "__end__" } },
+  },
+};
+
+const createFromCapabilityResult = {
+  ...draftWorkspaceResult,
+  next_actions: {
+    can_continue: false,
+    can_save_now: true,
+    recommended_next_tool: "workflow.draft_workspaces.validate",
+    reason: "draft is ready for validation",
+    patch_examples: [],
+    warnings: [],
+  },
+  wrapper_hints: {
+    capability_name: "local.example.echo",
+    confidence: "high" as const,
+    declared_outcomes: ["ok"],
+    input_map: {},
+    input_schema: { type: "object" },
+    missing_decisions: [],
+    notes: [],
+    outcome_candidates: [],
+    outcome_policy: "preserve_declared" as const,
+    output_map: {},
+    output_schema: { type: "object" },
+    state_schema: { type: "object" },
+    suggested_wrapper_outcomes: ["ok"],
+  },
+};
+
 const lifecycleCases = [
   {
     operation: "workflow.capabilities.list" as const,
@@ -170,6 +218,70 @@ const lifecycleCases = [
         routes: { read: { ok: "__end__" } },
       },
     },
+  },
+  {
+    operation: "workflow.draft_workspaces.create_empty" as const,
+    params: {
+      workspace_id: "console.demo",
+      name: "console.demo",
+      title: "Console demo",
+      outcomes: ["ok"],
+    },
+    result: draftWorkspaceResult,
+  },
+  {
+    operation: "workflow.draft_workspaces.create_from_capability" as const,
+    params: {
+      workspace_id: "console.demo",
+      capability_name: "local.example.echo",
+      name: "console.demo",
+      input_map: { text: "input.text" },
+      output_map: { text: "state.text" },
+    },
+    result: createFromCapabilityResult,
+  },
+  {
+    operation: "workflow.draft_workspaces.add_step_from_capability" as const,
+    params: {
+      workspace_id: "console.demo",
+      revision: 1,
+      step_id: "echo",
+      capability_name: "local.example.echo",
+      route_from_step: null,
+      route_from_outcome: "ok",
+      routes: { ok: "__end__" },
+      input_map: { text: "input.text" },
+      bind_outputs: { text: "state.text" },
+      retry: 1,
+      timeout_seconds: 30,
+    },
+    result: draftWorkspaceResult,
+  },
+  {
+    operation: "workflow.draft_workspaces.update_capability_step" as const,
+    params: {
+      workspace_id: "console.demo",
+      revision: 2,
+      step_id: "echo",
+      update: { desc: "Echo text", retry: 2, timeout_seconds: 45 },
+    },
+    result: draftWorkspaceResult,
+  },
+  {
+    operation: "workflow.draft_workspaces.set_route" as const,
+    params: {
+      workspace_id: "console.demo",
+      revision: 2,
+      step_id: "echo",
+      outcome: "ok",
+      target: "__end__",
+    },
+    result: draftWorkspaceResult,
+  },
+  {
+    operation: "workflow.draft_workspaces.validate" as const,
+    params: { workspace_id: "console.demo" },
+    result: draftWorkspaceResult,
   },
   {
     operation: "workflow.artifacts.list" as const,
@@ -737,6 +849,7 @@ describe("lifecycle operations", () => {
       const fetch: typeof globalThis.fetch = async (input, init) => {
         const request = await requestBody(input, init);
         expect(request.method).toBe(testCase.operation);
+        expect(request.params).toEqual(testCase.params);
         return jsonResponse({
           jsonrpc: "2.0",
           id: request.id,

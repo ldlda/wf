@@ -88,8 +88,14 @@ const runtimeOperationNameList = [
   "workflow.sources.list",
   "workflow.capabilities.list",
   "workflow.capabilities.inspect",
+  "workflow.draft_workspaces.add_step_from_capability",
+  "workflow.draft_workspaces.create_empty",
+  "workflow.draft_workspaces.create_from_capability",
   "workflow.draft_workspaces.list",
   "workflow.draft_workspaces.get",
+  "workflow.draft_workspaces.set_route",
+  "workflow.draft_workspaces.update_capability_step",
+  "workflow.draft_workspaces.validate",
   "workflow.artifacts.list",
   "workflow.artifacts.inspect",
   "workflow.deployments.list",
@@ -102,6 +108,24 @@ const runtimeOperationNameList = [
   "workflow.runs.trace",
 ] as const;
 const runtimeOperationNames = new Set<string>(runtimeOperationNameList);
+const legacyRuntimeOperationNames = new Set<string>([
+  "workflow.health",
+  "workflow.sources.list",
+  "workflow.capabilities.list",
+  "workflow.capabilities.inspect",
+  "workflow.draft_workspaces.list",
+  "workflow.draft_workspaces.get",
+  "workflow.artifacts.list",
+  "workflow.artifacts.inspect",
+  "workflow.deployments.list",
+  "workflow.deployments.inspect",
+  "workflow.deployments.validate",
+  "workflow.runs.list",
+  "workflow.runs.inspect",
+  "workflow.runs.start",
+  "workflow.runs.resume",
+  "workflow.runs.trace",
+]);
 
 export const parseWorkflowContractManifest = (
   manifestText: string,
@@ -214,7 +238,10 @@ const runtimeParamsSchemaFor = (
 ): JsonObject => ({
   additionalProperties: false,
   properties: Object.fromEntries(
-    operation.params.map((param) => [param.name, param.schema]),
+    operation.params.map((param) => [
+      param.name,
+      normalizeRuntimeSchema(param.schema),
+    ]),
   ),
   required: operation.params
     .filter((param) => param.required)
@@ -222,12 +249,32 @@ const runtimeParamsSchemaFor = (
   type: "object",
 });
 
+const normalizeRuntimeSchema = (value: JsonValue): JsonValue => {
+  if (Array.isArray(value)) return value.map(normalizeRuntimeSchema);
+  if (value === null || typeof value !== "object") return value;
+
+  const normalized = Object.fromEntries(
+    Object.entries(value).map(([key, child]) => [
+      key,
+      normalizeRuntimeSchema(child),
+    ]),
+  );
+  const oneOf = normalized.oneOf;
+  if (Array.isArray(oneOf) && normalized.anyOf === undefined) {
+    const { oneOf: _, ...withoutOneOf } = normalized;
+    // These generated path unions are mutually exclusive; anyOf is the
+    // equivalent keyword supported by the checked runtime translator.
+    return { ...withoutOneOf, anyOf: oneOf };
+  }
+  return normalized;
+};
+
 const runtimeContractSource = (manifest: WorkflowContractManifest): string => {
   const operations = manifest.operations.filter(({ method }) =>
     runtimeOperationNames.has(method),
   );
   const selectedNames = new Set(operations.map(({ method }) => method));
-  const missingNames = runtimeOperationNameList.filter(
+  const missingNames = Array.from(legacyRuntimeOperationNames).filter(
     (name) => !selectedNames.has(name),
   );
   if (missingNames.length > 0) {
@@ -269,14 +316,20 @@ const runtimeContractSource = (manifest: WorkflowContractManifest): string => {
     components: Object.fromEntries(
       Array.from(referencedSchemas)
         .sort(compareText)
-        .map((name) => [name, manifest.schemas[name]]),
+        .map((name) => {
+          const schema = manifest.schemas[name];
+          if (schema === undefined) {
+            throw new Error(`missing runtime component schema ${name}`);
+          }
+          return [name, normalizeRuntimeSchema(schema)];
+        }),
     ),
     operations: Object.fromEntries(
       operations.map((operation) => [
         operation.method,
         {
           payload: runtimeParamsSchemaFor(operation),
-          success: operation.resultSchema,
+          success: normalizeRuntimeSchema(operation.resultSchema),
         },
       ]),
     ),

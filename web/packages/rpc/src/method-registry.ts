@@ -15,6 +15,18 @@ import {
   WorkflowDraftWorkspacesListResultSchema,
   WorkflowDraftWorkspacesGetPayloadSchema,
   WorkflowDraftWorkspacesGetResultSchema,
+  WorkflowDraftWorkspacesCreateEmptyPayloadSchema,
+  WorkflowDraftWorkspacesCreateEmptyResultSchema,
+  WorkflowDraftWorkspacesCreateFromCapabilityPayloadSchema,
+  WorkflowDraftWorkspacesCreateFromCapabilityResultSchema,
+  WorkflowDraftWorkspacesAddStepFromCapabilityPayloadSchema,
+  WorkflowDraftWorkspacesAddStepFromCapabilityResultSchema,
+  WorkflowDraftWorkspacesUpdateCapabilityStepPayloadSchema,
+  WorkflowDraftWorkspacesUpdateCapabilityStepResultSchema,
+  WorkflowDraftWorkspacesSetRoutePayloadSchema,
+  WorkflowDraftWorkspacesSetRouteResultSchema,
+  WorkflowDraftWorkspacesValidatePayloadSchema,
+  WorkflowDraftWorkspacesValidateResultSchema,
   WorkflowArtifactsListPayloadSchema,
   WorkflowArtifactsListResultSchema,
   WorkflowArtifactsInspectPayloadSchema,
@@ -379,6 +391,174 @@ const operationEntries = defineOperationEntries([
     interpret: (result) => {
       const decoded = Schema.decodeUnknownSync(
         WorkflowDraftWorkspacesGetResultSchema,
+      )(result);
+      return interpretDraftWorkspace(decoded);
+    },
+  },
+  {
+    method: "workflow.draft_workspaces.create_empty",
+    label: "Create empty draft workspace",
+    explanation: "Create an empty persisted workflow draft workspace",
+    idempotency: "write",
+    equivalentCli: (params) => {
+      const p = Schema.decodeUnknownSync(
+        WorkflowDraftWorkspacesCreateEmptyPayloadSchema,
+      )(params, { onExcessProperty: "error" });
+      const parts = ["uv run wf draft create", shellArg(p.workspace_id), "--name", shellArg(p.name)];
+      if (p.title != null) parts.push("--title", shellArg(p.title));
+      for (const outcome of p.outcomes ?? []) {
+        parts.push("--outcome", shellArg(outcome));
+      }
+      return parts.join(" ");
+    },
+    interpret: (result) => {
+      const decoded = Schema.decodeUnknownSync(
+        WorkflowDraftWorkspacesCreateEmptyResultSchema,
+      )(result);
+      return interpretDraftWorkspace(decoded);
+    },
+  },
+  {
+    method: "workflow.draft_workspaces.create_from_capability",
+    label: "Create draft from capability",
+    explanation: "Create a capability-backed persisted workflow draft workspace",
+    idempotency: "write",
+    equivalentCli: (params) => {
+      const p = Schema.decodeUnknownSync(
+        WorkflowDraftWorkspacesCreateFromCapabilityPayloadSchema,
+      )(params, { onExcessProperty: "error" });
+      const parts = [
+        "uv run wf draft create",
+        shellArg(p.workspace_id),
+        "--capability",
+        shellArg(p.capability_name),
+      ];
+      if (p.name != null) parts.push("--name", shellArg(p.name));
+      if (p.title != null) parts.push("--title", shellArg(p.title));
+      return parts.join(" ");
+    },
+    interpret: (result) => {
+      const decoded = Schema.decodeUnknownSync(
+        WorkflowDraftWorkspacesCreateFromCapabilityResultSchema,
+      )(result);
+      return interpretDraftWorkspace(decoded);
+    },
+  },
+  {
+    method: "workflow.draft_workspaces.add_step_from_capability",
+    label: "Add capability draft step",
+    explanation: "Add a capability-backed step to a persisted workflow draft",
+    idempotency: "write",
+    equivalentCli: (params) => {
+      const p = Schema.decodeUnknownSync(
+        WorkflowDraftWorkspacesAddStepFromCapabilityPayloadSchema,
+      )(params, { onExcessProperty: "error" });
+      const parts = [
+        "uv run wf draft add capability",
+        shellArg(p.workspace_id),
+        "--revision",
+        String(p.revision),
+        "--step",
+        shellArg(p.step_id),
+        "--capability",
+        shellArg(p.capability_name),
+      ];
+      if (p.route_from_step != null) {
+        parts.push("--from-step", shellArg(p.route_from_step));
+        if (p.route_from_outcome != null) {
+          parts.push("--from-outcome", shellArg(p.route_from_outcome));
+        }
+      }
+      for (const [outcome, target] of Object.entries(p.routes ?? {})) {
+        parts.push("--route", `${outcome}=${target}`);
+      }
+      for (const [source, target] of Object.entries(p.input_map ?? {})) {
+        parts.push("--input", `${source}=${target}`);
+      }
+      for (const [source, target] of Object.entries(p.bind_outputs ?? {})) {
+        parts.push("--bind-output", `${source}=${target}`);
+      }
+      if (p.desc != null) parts.push("--description", shellArg(p.desc));
+      if (p.retry != null) parts.push("--retry", String(p.retry));
+      if (p.timeout_seconds != null) {
+        parts.push("--timeout-seconds", String(p.timeout_seconds));
+      }
+      return parts.join(" ");
+    },
+    interpret: (result) => {
+      const decoded = Schema.decodeUnknownSync(
+        WorkflowDraftWorkspacesAddStepFromCapabilityResultSchema,
+      )(result);
+      return interpretDraftWorkspace(decoded);
+    },
+  },
+  {
+    method: "workflow.draft_workspaces.update_capability_step",
+    label: "Update capability draft step",
+    explanation: "Update metadata or input bindings on a capability-backed draft step",
+    idempotency: "write",
+    equivalentCli: (params) => {
+      const p = Schema.decodeUnknownSync(
+        WorkflowDraftWorkspacesUpdateCapabilityStepPayloadSchema,
+      )(params, { onExcessProperty: "error" });
+      const parts = [
+        "uv run wf draft update capability",
+        shellArg(p.workspace_id),
+        "--revision",
+        String(p.revision),
+        "--step",
+        shellArg(p.step_id),
+      ];
+      if (p.update.desc != null) parts.push("--description", shellArg(p.update.desc));
+      else if (p.update.desc === null) parts.push("--clear-description");
+      if (p.update.retry != null) {
+        if (p.update.retry === 0) parts.push("--retry", "0");
+        else parts.push("--retry", String(p.update.retry));
+      }
+      if (p.update.timeout_seconds != null) {
+        parts.push("--timeout-seconds", String(p.update.timeout_seconds));
+      }
+      return parts.join(" ");
+    },
+    interpret: (result) => {
+      const decoded = Schema.decodeUnknownSync(
+        WorkflowDraftWorkspacesUpdateCapabilityStepResultSchema,
+      )(result);
+      return interpretDraftWorkspace(decoded);
+    },
+  },
+  {
+    method: "workflow.draft_workspaces.set_route",
+    label: "Set draft route",
+    explanation: "Set one outcome route on a persisted workflow draft",
+    idempotency: "write",
+    equivalentCli: (params) => {
+      const p = Schema.decodeUnknownSync(
+        WorkflowDraftWorkspacesSetRoutePayloadSchema,
+      )(params, { onExcessProperty: "error" });
+      return `uv run wf draft set-route ${shellArg(p.workspace_id)} --revision ${p.revision} --step ${shellArg(p.step_id)} --outcome ${shellArg(p.outcome)} --to ${shellArg(p.target)}`;
+    },
+    interpret: (result) => {
+      const decoded = Schema.decodeUnknownSync(
+        WorkflowDraftWorkspacesSetRouteResultSchema,
+      )(result);
+      return interpretDraftWorkspace(decoded);
+    },
+  },
+  {
+    method: "workflow.draft_workspaces.validate",
+    label: "Validate draft workspace",
+    explanation: "Validate a persisted workflow draft workspace",
+    idempotency: "read",
+    equivalentCli: (params) => {
+      const p = Schema.decodeUnknownSync(
+        WorkflowDraftWorkspacesValidatePayloadSchema,
+      )(params, { onExcessProperty: "error" });
+      return `uv run wf draft validate ${shellArg(p.workspace_id)}`;
+    },
+    interpret: (result) => {
+      const decoded = Schema.decodeUnknownSync(
+        WorkflowDraftWorkspacesValidateResultSchema,
       )(result);
       return interpretDraftWorkspace(decoded);
     },

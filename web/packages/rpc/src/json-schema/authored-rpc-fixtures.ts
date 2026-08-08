@@ -222,6 +222,64 @@ const TraceFrameSchema = Schema.Struct({
   state_changes: JsonObjectSchema,
 });
 
+const InputPathBindingSchema = Schema.Struct({
+  path: Schema.Union(
+    Schema.String,
+    Schema.Struct({
+      parts: Schema.Array(Schema.String),
+      root: Schema.Literal("input", "state", "context"),
+    }),
+  ),
+  target: Schema.Union(
+    Schema.String,
+    Schema.Struct({
+      parts: Schema.Array(Schema.String),
+      root: Schema.Literal("local"),
+    }),
+  ),
+});
+
+const InputValueBindingSchema = Schema.Struct({
+  target: Schema.Union(
+    Schema.String,
+    Schema.Struct({
+      parts: Schema.Array(Schema.String),
+      root: Schema.Literal("local"),
+    }),
+  ),
+  value: JsonObjectSchema,
+});
+
+const InputBindingSchema = Schema.Union(
+  InputPathBindingSchema,
+  InputValueBindingSchema,
+);
+
+const CapabilityStepUpdateSchema = Schema.Struct({
+  desc: Schema.optional(Schema.NullOr(Schema.String.pipe(Schema.minLength(1)))),
+  input: Schema.optional(Schema.NullOr(Schema.Array(InputBindingSchema))),
+  retry: Schema.optional(Schema.NullOr(NonNegativeIntegerSchema)),
+  timeout_seconds: Schema.optional(Schema.NullOr(PositiveIntegerSchema)),
+});
+
+const CreateDraftWorkspaceFromCapabilityResultSchema = Schema.Struct({
+  diagnostics: Schema.Array(DraftDiagnosticSchema),
+  draft: Schema.optional(JsonObjectSchema),
+  next_actions: RunNextActionsSchema,
+  revision: PositiveIntegerSchema,
+  status: Schema.Literal("valid", "invalid", "conflict"),
+  summary: Schema.Struct({
+    name: Schema.Unknown,
+    route_count: NonNegativeIntegerSchema,
+    start: Schema.Unknown,
+    step_count: NonNegativeIntegerSchema,
+    steps: Schema.Array(Schema.String),
+  }),
+  title: Schema.NullOr(Schema.String),
+  workspace_id: Schema.String,
+  wrapper_hints: WrapperHintsSchema,
+});
+
 /** Frozen pre-migration schemas used only to detect generated-decoder drift. */
 export const authoredRpcSchemas = {
   "workflow.health": {
@@ -275,6 +333,90 @@ export const authoredRpcSchemas = {
     payload: Schema.Struct({
       workspace_id: Schema.String.pipe(Schema.minLength(1)),
       include_draft: Schema.optional(Schema.Boolean),
+    }),
+    success: DraftWorkspaceSchema,
+  },
+  "workflow.draft_workspaces.create_empty": {
+    payload: Schema.Struct({
+      workspace_id: Schema.String.pipe(Schema.minLength(1)),
+      name: Schema.String.pipe(Schema.minLength(1)),
+      title: Schema.optional(Schema.NullOr(Schema.String)),
+      input_schema: Schema.optional(Schema.NullOr(JsonObjectSchema)),
+      state_schema: Schema.optional(Schema.NullOr(JsonObjectSchema)),
+      output_schema: Schema.optional(Schema.NullOr(JsonObjectSchema)),
+      outcomes: Schema.optional(Schema.Array(Schema.String)),
+    }),
+    success: DraftWorkspaceSchema,
+  },
+  "workflow.draft_workspaces.create_from_capability": {
+    payload: Schema.Struct({
+      workspace_id: Schema.String.pipe(Schema.minLength(1)),
+      capability_name: Schema.String.pipe(Schema.minLength(1)),
+      name: Schema.optional(Schema.NullOr(Schema.String)),
+      title: Schema.optional(Schema.NullOr(Schema.String)),
+      input_schema: Schema.optional(Schema.NullOr(JsonObjectSchema)),
+      state_schema: Schema.optional(Schema.NullOr(JsonObjectSchema)),
+      output_schema: Schema.optional(Schema.NullOr(JsonObjectSchema)),
+      input: Schema.optional(Schema.NullOr(Schema.Array(Schema.Unknown))),
+      output: Schema.optional(Schema.NullOr(Schema.Array(Schema.Unknown))),
+      input_map: Schema.optional(
+        Schema.NullOr(Schema.Record({ key: Schema.String, value: Schema.String })),
+      ),
+      output_map: Schema.optional(
+        Schema.NullOr(Schema.Record({ key: Schema.String, value: Schema.String })),
+      ),
+      error_message_source: Schema.optional(Schema.Unknown),
+    }),
+    success: CreateDraftWorkspaceFromCapabilityResultSchema,
+  },
+  "workflow.draft_workspaces.add_step_from_capability": {
+    payload: Schema.Struct({
+      workspace_id: Schema.String.pipe(Schema.minLength(1)),
+      revision: PositiveIntegerSchema,
+      step_id: Schema.String.pipe(Schema.minLength(1)),
+      capability_name: Schema.String.pipe(Schema.minLength(1)),
+      route_from_step: Schema.optional(Schema.NullOr(Schema.String)),
+      route_from_outcome: Schema.optional(Schema.String),
+      routes: Schema.optional(
+        Schema.NullOr(Schema.Record({ key: Schema.String, value: Schema.String })),
+      ),
+      input_map: Schema.optional(
+        Schema.NullOr(Schema.Record({ key: Schema.String, value: Schema.String })),
+      ),
+      input_bindings: Schema.optional(
+        Schema.NullOr(Schema.Array(InputBindingSchema)),
+      ),
+      bind_outputs: Schema.optional(
+        Schema.Record({ key: Schema.String, value: Schema.String }),
+      ),
+      desc: Schema.optional(Schema.NullOr(Schema.String.pipe(Schema.minLength(1)))),
+      retry: Schema.optional(Schema.NullOr(NonNegativeIntegerSchema)),
+      timeout_seconds: Schema.optional(Schema.NullOr(PositiveIntegerSchema)),
+    }),
+    success: DraftWorkspaceSchema,
+  },
+  "workflow.draft_workspaces.update_capability_step": {
+    payload: Schema.Struct({
+      workspace_id: Schema.String.pipe(Schema.minLength(1)),
+      revision: PositiveIntegerSchema,
+      step_id: Schema.String.pipe(Schema.minLength(1)),
+      update: CapabilityStepUpdateSchema,
+    }),
+    success: DraftWorkspaceSchema,
+  },
+  "workflow.draft_workspaces.set_route": {
+    payload: Schema.Struct({
+      workspace_id: Schema.String.pipe(Schema.minLength(1)),
+      revision: PositiveIntegerSchema,
+      step_id: Schema.String.pipe(Schema.minLength(1)),
+      outcome: Schema.String.pipe(Schema.minLength(1)),
+      target: Schema.String.pipe(Schema.minLength(1)),
+    }),
+    success: DraftWorkspaceSchema,
+  },
+  "workflow.draft_workspaces.validate": {
+    payload: Schema.Struct({
+      workspace_id: Schema.String.pipe(Schema.minLength(1)),
     }),
     success: DraftWorkspaceSchema,
   },

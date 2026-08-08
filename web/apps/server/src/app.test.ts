@@ -116,6 +116,49 @@ describe("POST /api/rpc", () => {
       operation: "workflow.draft_workspaces.get",
       params: { workspace_id: "draft-1" },
     },
+    {
+      operation: "workflow.draft_workspaces.create_empty",
+      params: { workspace_id: "draft-1", name: "draft.workflow" },
+    },
+    {
+      operation: "workflow.draft_workspaces.create_from_capability",
+      params: {
+        workspace_id: "draft-1",
+        capability_name: "local.example.echo",
+      },
+    },
+    {
+      operation: "workflow.draft_workspaces.add_step_from_capability",
+      params: {
+        workspace_id: "draft-1",
+        revision: 1,
+        step_id: "echo",
+        capability_name: "local.example.echo",
+      },
+    },
+    {
+      operation: "workflow.draft_workspaces.update_capability_step",
+      params: {
+        workspace_id: "draft-1",
+        revision: 1,
+        step_id: "echo",
+        update: { retry: 2 },
+      },
+    },
+    {
+      operation: "workflow.draft_workspaces.set_route",
+      params: {
+        workspace_id: "draft-1",
+        revision: 1,
+        step_id: "echo",
+        outcome: "ok",
+        target: "__end__",
+      },
+    },
+    {
+      operation: "workflow.draft_workspaces.validate",
+      params: { workspace_id: "draft-1" },
+    },
     { operation: "workflow.runs.start", params: {} },
     { operation: "workflow.runs.resume", params: {} },
   ] as const)("authorizes the allowlisted operation $operation", async ({
@@ -192,12 +235,12 @@ describe("POST /api/rpc", () => {
     expect(body.error.code).toBe("unknown_operation");
   });
 
-  it("does not authorize draft workspace mutations", async () => {
+  it("does not authorize generic draft workspace mutations", async () => {
     const res = await app.request("/api/rpc", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        operation: "workflow.draft_workspaces.create_empty",
+        operation: "workflow.draft_workspaces.replace_document",
         target: "http://127.0.0.1:8000/rpc",
       }),
     });

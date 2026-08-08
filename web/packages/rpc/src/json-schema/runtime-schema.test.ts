@@ -22,8 +22,14 @@ describe("runtimeSchemasFor", () => {
       "workflow.deployments.inspect",
       "workflow.deployments.list",
       "workflow.deployments.validate",
+      "workflow.draft_workspaces.add_step_from_capability",
+      "workflow.draft_workspaces.create_empty",
+      "workflow.draft_workspaces.create_from_capability",
       "workflow.draft_workspaces.get",
       "workflow.draft_workspaces.list",
+      "workflow.draft_workspaces.set_route",
+      "workflow.draft_workspaces.update_capability_step",
+      "workflow.draft_workspaces.validate",
       "workflow.health",
       "workflow.runs.inspect",
       "workflow.runs.list",
@@ -32,6 +38,26 @@ describe("runtimeSchemasFor", () => {
       "workflow.runs.trace",
       "workflow.sources.list",
     ]);
+  });
+
+  it("exposes the six draft authoring runtime schemas without generic replacement", () => {
+    expect(
+      runtimeSchemasFor("workflow.draft_workspaces.create_empty"),
+    ).toBeDefined();
+    expect(
+      runtimeSchemasFor("workflow.draft_workspaces.create_from_capability"),
+    ).toBeDefined();
+    expect(
+      runtimeSchemasFor("workflow.draft_workspaces.add_step_from_capability"),
+    ).toBeDefined();
+    expect(
+      runtimeSchemasFor("workflow.draft_workspaces.update_capability_step"),
+    ).toBeDefined();
+    expect(runtimeSchemasFor("workflow.draft_workspaces.set_route")).toBeDefined();
+    expect(runtimeSchemasFor("workflow.draft_workspaces.validate")).toBeDefined();
+    expect(
+      Object.hasOwn(workflowRuntimeContract.operations, "workflow.draft_workspaces.replace_document"),
+    ).toBe(false);
   });
 
   it("returns typed payload and result schemas for a generated operation", () => {

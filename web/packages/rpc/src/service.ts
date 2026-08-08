@@ -35,6 +35,12 @@ import {
   WorkflowCapabilitiesInspectPayloadSchema,
   WorkflowDraftWorkspacesListPayloadSchema,
   WorkflowDraftWorkspacesGetPayloadSchema,
+  WorkflowDraftWorkspacesCreateEmptyPayloadSchema,
+  WorkflowDraftWorkspacesCreateFromCapabilityPayloadSchema,
+  WorkflowDraftWorkspacesAddStepFromCapabilityPayloadSchema,
+  WorkflowDraftWorkspacesUpdateCapabilityStepPayloadSchema,
+  WorkflowDraftWorkspacesSetRoutePayloadSchema,
+  WorkflowDraftWorkspacesValidatePayloadSchema,
   WorkflowArtifactsListPayloadSchema,
   WorkflowArtifactsInspectPayloadSchema,
   WorkflowDeploymentsListPayloadSchema,
@@ -307,6 +313,54 @@ const executeImpl =
               params,
             );
             return yield* client.workflow["draft_workspaces.get"](payload);
+          }
+          case "workflow.draft_workspaces.create_empty": {
+            const payload = yield* decodeParams(
+              WorkflowDraftWorkspacesCreateEmptyPayloadSchema,
+              params,
+            );
+            return yield* client.workflow["draft_workspaces.create_empty"](payload);
+          }
+          case "workflow.draft_workspaces.create_from_capability": {
+            const payload = yield* decodeParams(
+              WorkflowDraftWorkspacesCreateFromCapabilityPayloadSchema,
+              params,
+            );
+            return yield* client.workflow[
+              "draft_workspaces.create_from_capability"
+            ](payload);
+          }
+          case "workflow.draft_workspaces.add_step_from_capability": {
+            const payload = yield* decodeParams(
+              WorkflowDraftWorkspacesAddStepFromCapabilityPayloadSchema,
+              params,
+            );
+            return yield* client.workflow[
+              "draft_workspaces.add_step_from_capability"
+            ](payload);
+          }
+          case "workflow.draft_workspaces.update_capability_step": {
+            const payload = yield* decodeParams(
+              WorkflowDraftWorkspacesUpdateCapabilityStepPayloadSchema,
+              params,
+            );
+            return yield* client.workflow[
+              "draft_workspaces.update_capability_step"
+            ](payload);
+          }
+          case "workflow.draft_workspaces.set_route": {
+            const payload = yield* decodeParams(
+              WorkflowDraftWorkspacesSetRoutePayloadSchema,
+              params,
+            );
+            return yield* client.workflow["draft_workspaces.set_route"](payload);
+          }
+          case "workflow.draft_workspaces.validate": {
+            const payload = yield* decodeParams(
+              WorkflowDraftWorkspacesValidatePayloadSchema,
+              params,
+            );
+            return yield* client.workflow["draft_workspaces.validate"](payload);
           }
           case "workflow.artifacts.list": {
             const payload = yield* decodeParams(

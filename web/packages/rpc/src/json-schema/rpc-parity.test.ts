@@ -30,6 +30,30 @@ const WorkflowDraftWorkspacesGetPayloadSchema =
   authoredRpcSchemas["workflow.draft_workspaces.get"].payload;
 const WorkflowDraftWorkspacesGetResultSchema =
   authoredRpcSchemas["workflow.draft_workspaces.get"].success;
+const WorkflowDraftWorkspacesCreateEmptyPayloadSchema =
+  authoredRpcSchemas["workflow.draft_workspaces.create_empty"].payload;
+const WorkflowDraftWorkspacesCreateEmptyResultSchema =
+  authoredRpcSchemas["workflow.draft_workspaces.create_empty"].success;
+const WorkflowDraftWorkspacesCreateFromCapabilityPayloadSchema =
+  authoredRpcSchemas["workflow.draft_workspaces.create_from_capability"].payload;
+const WorkflowDraftWorkspacesCreateFromCapabilityResultSchema =
+  authoredRpcSchemas["workflow.draft_workspaces.create_from_capability"].success;
+const WorkflowDraftWorkspacesAddStepFromCapabilityPayloadSchema =
+  authoredRpcSchemas["workflow.draft_workspaces.add_step_from_capability"].payload;
+const WorkflowDraftWorkspacesAddStepFromCapabilityResultSchema =
+  authoredRpcSchemas["workflow.draft_workspaces.add_step_from_capability"].success;
+const WorkflowDraftWorkspacesUpdateCapabilityStepPayloadSchema =
+  authoredRpcSchemas["workflow.draft_workspaces.update_capability_step"].payload;
+const WorkflowDraftWorkspacesUpdateCapabilityStepResultSchema =
+  authoredRpcSchemas["workflow.draft_workspaces.update_capability_step"].success;
+const WorkflowDraftWorkspacesSetRoutePayloadSchema =
+  authoredRpcSchemas["workflow.draft_workspaces.set_route"].payload;
+const WorkflowDraftWorkspacesSetRouteResultSchema =
+  authoredRpcSchemas["workflow.draft_workspaces.set_route"].success;
+const WorkflowDraftWorkspacesValidatePayloadSchema =
+  authoredRpcSchemas["workflow.draft_workspaces.validate"].payload;
+const WorkflowDraftWorkspacesValidateResultSchema =
+  authoredRpcSchemas["workflow.draft_workspaces.validate"].success;
 const WorkflowArtifactsListPayloadSchema =
   authoredRpcSchemas["workflow.artifacts.list"].payload;
 const WorkflowArtifactsListResultSchema =
@@ -164,6 +188,54 @@ const manifestTraceFrame = {
   ...authoredTraceFrame,
   frame_id: "frame_1",
   next_node_id: "create_issues",
+};
+
+const draftWorkspace = {
+  workspace_id: "console.demo",
+  revision: 2,
+  title: "Console demo",
+  status: "valid",
+  diagnostics: [],
+  summary: {
+    name: "console.demo",
+    start: "echo",
+    step_count: 1,
+    route_count: 1,
+    steps: ["echo"],
+  },
+  draft: {
+    name: "console.demo",
+    start: "echo",
+    steps: { echo: { use: "local.example.echo" } },
+    routes: { echo: { ok: "__end__" } },
+  },
+};
+
+const createFromCapabilityResult = {
+  ...draftWorkspace,
+  next_actions: {
+    can_continue: false,
+    can_save_now: true,
+    recommended_next_tool: "workflow.draft_workspaces.validate",
+    reason: "draft is ready for validation",
+    patch_examples: [],
+    warnings: [],
+  },
+  wrapper_hints: {
+    capability_name: "local.example.echo",
+    confidence: "high",
+    declared_outcomes: ["ok"],
+    input_map: {},
+    input_schema: { type: "object" },
+    missing_decisions: [],
+    notes: [],
+    outcome_candidates: [],
+    outcome_policy: "preserve_declared",
+    output_map: {},
+    output_schema: { type: "object" },
+    state_schema: { type: "object" },
+    suggested_wrapper_outcomes: ["ok"],
+  },
 };
 
 const parityCases: ReadonlyArray<ParityCase> = [
@@ -365,6 +437,148 @@ const parityCases: ReadonlyArray<ParityCase> = [
         steps: ["read"],
       },
       draft: null,
+    },
+  },
+  {
+    method: "workflow.draft_workspaces.create_empty",
+    payload: WorkflowDraftWorkspacesCreateEmptyPayloadSchema,
+    success: WorkflowDraftWorkspacesCreateEmptyResultSchema,
+    validPayload: {
+      workspace_id: "console.demo",
+      name: "console.demo",
+      title: "Console demo",
+      input_schema: { type: "object" },
+      state_schema: { type: "object" },
+      output_schema: { type: "object" },
+      outcomes: ["ok"],
+    },
+    invalidPayload: { workspace_id: "console.demo" },
+    validSuccess: draftWorkspace,
+    invalidSuccess: {
+      ...draftWorkspace,
+      summary: { ...draftWorkspace.summary, steps: [1] },
+    },
+  },
+  {
+    method: "workflow.draft_workspaces.create_from_capability",
+    payload: WorkflowDraftWorkspacesCreateFromCapabilityPayloadSchema,
+    success: WorkflowDraftWorkspacesCreateFromCapabilityResultSchema,
+    validPayload: {
+      workspace_id: "console.demo",
+      capability_name: "local.example.echo",
+      name: "console.demo",
+      title: "Console demo",
+      input_schema: { type: "object" },
+      state_schema: { type: "object" },
+      output_schema: { type: "object" },
+      input: [{ text: "hello" }],
+      output: [{ text: "state.text" }],
+      input_map: { "input.text": "text" },
+      output_map: { text: "state.text" },
+      error_message_source: "state.error_message",
+    },
+    invalidPayload: { workspace_id: "console.demo" },
+    validSuccess: createFromCapabilityResult,
+    invalidSuccess: {
+      ...createFromCapabilityResult,
+      summary: { ...createFromCapabilityResult.summary, steps: [1] },
+    },
+  },
+  {
+    method: "workflow.draft_workspaces.add_step_from_capability",
+    payload: WorkflowDraftWorkspacesAddStepFromCapabilityPayloadSchema,
+    success: WorkflowDraftWorkspacesAddStepFromCapabilityResultSchema,
+    validPayload: {
+      workspace_id: "console.demo",
+      revision: 1,
+      step_id: "echo",
+      capability_name: "local.example.echo",
+      route_from_step: null,
+      route_from_outcome: "ok",
+      routes: { ok: "__end__" },
+      input_map: { "input.text": "text" },
+      input_bindings: [
+        { path: "input.text", target: "text" },
+        { target: "format", value: { value: "plain" } },
+      ],
+      bind_outputs: { text: "state.text" },
+      desc: "Echo text",
+      retry: 1,
+      timeout_seconds: 30,
+    },
+    invalidPayload: {
+      workspace_id: "console.demo",
+      revision: 0,
+      step_id: "echo",
+      capability_name: "local.example.echo",
+    },
+    validSuccess: draftWorkspace,
+    invalidSuccess: {
+      ...draftWorkspace,
+      summary: { ...draftWorkspace.summary, steps: [1] },
+    },
+  },
+  {
+    method: "workflow.draft_workspaces.update_capability_step",
+    payload: WorkflowDraftWorkspacesUpdateCapabilityStepPayloadSchema,
+    success: WorkflowDraftWorkspacesUpdateCapabilityStepResultSchema,
+    validPayload: {
+      workspace_id: "console.demo",
+      revision: 2,
+      step_id: "echo",
+      update: {
+        desc: "Echo text",
+        input: [{ path: "input.text", target: "text" }],
+        retry: 2,
+        timeout_seconds: 45,
+      },
+    },
+    invalidPayload: {
+      workspace_id: "console.demo",
+      revision: 2,
+      step_id: "echo",
+      update: { retry: -1 },
+    },
+    validSuccess: draftWorkspace,
+    invalidSuccess: {
+      ...draftWorkspace,
+      summary: { ...draftWorkspace.summary, steps: [1] },
+    },
+  },
+  {
+    method: "workflow.draft_workspaces.set_route",
+    payload: WorkflowDraftWorkspacesSetRoutePayloadSchema,
+    success: WorkflowDraftWorkspacesSetRouteResultSchema,
+    validPayload: {
+      workspace_id: "console.demo",
+      revision: 2,
+      step_id: "echo",
+      outcome: "ok",
+      target: "__end__",
+    },
+    invalidPayload: {
+      workspace_id: "console.demo",
+      revision: 2,
+      step_id: "echo",
+      outcome: "ok",
+      target: "",
+    },
+    validSuccess: draftWorkspace,
+    invalidSuccess: {
+      ...draftWorkspace,
+      summary: { ...draftWorkspace.summary, steps: [1] },
+    },
+  },
+  {
+    method: "workflow.draft_workspaces.validate",
+    payload: WorkflowDraftWorkspacesValidatePayloadSchema,
+    success: WorkflowDraftWorkspacesValidateResultSchema,
+    validPayload: { workspace_id: "console.demo" },
+    invalidPayload: {},
+    validSuccess: draftWorkspace,
+    invalidSuccess: {
+      ...draftWorkspace,
+      summary: { ...draftWorkspace.summary, steps: [1] },
     },
   },
   {
@@ -694,6 +908,12 @@ describe("authored RPC and manifest schema parity", () => {
       "workflow.capabilities.inspect",
       "workflow.draft_workspaces.list",
       "workflow.draft_workspaces.get",
+      "workflow.draft_workspaces.create_empty",
+      "workflow.draft_workspaces.create_from_capability",
+      "workflow.draft_workspaces.add_step_from_capability",
+      "workflow.draft_workspaces.update_capability_step",
+      "workflow.draft_workspaces.set_route",
+      "workflow.draft_workspaces.validate",
       "workflow.artifacts.list",
       "workflow.artifacts.inspect",
       "workflow.deployments.list",
@@ -723,6 +943,9 @@ describe("authored RPC and manifest schema parity", () => {
   });
 
   it("reports the exact remaining translator blockers", () => {
-    expect(parityReport().blockers).toEqual([]);
+    expect(parityReport().blockers).toEqual([
+      "workflow.draft_workspaces.add_step_from_capability:payload:oneOf@#/components/schemas/InputPathBinding.properties.path",
+      "workflow.draft_workspaces.update_capability_step:payload:oneOf@#/components/schemas/InputPathBinding.properties.path",
+    ]);
   });
 });

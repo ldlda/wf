@@ -2674,6 +2674,129 @@ export const workflowRuntimeContract = {
       ],
       "type": "object"
     },
+    "CapabilityStepUpdate": {
+      "additionalProperties": false,
+      "description": "Presence-aware patch for one existing capability-backed draft step.",
+      "properties": {
+        "desc": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "input": {
+          "anyOf": [
+            {
+              "items": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/InputPathBinding"
+                  },
+                  {
+                    "$ref": "#/components/schemas/InputValueBinding"
+                  }
+                ],
+                "description": "Canonical node input binding. Use either a path binding with `path`, or a literal binding with `value`; do not provide both."
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "retry": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "timeout_seconds": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "type": "object"
+    },
+    "CreateDraftWorkspaceFromCapabilityResult": {
+      "description": "Bootstrapped workspace plus the hints and next actions that shaped it.",
+      "properties": {
+        "diagnostics": {
+          "items": {
+            "$ref": "#/components/schemas/DraftDiagnosticPayload"
+          },
+          "type": "array"
+        },
+        "draft": {
+          "$ref": "#/components/schemas/JsonObject"
+        },
+        "next_actions": {
+          "$ref": "#/components/schemas/NextActionsPayload"
+        },
+        "revision": {
+          "type": "integer"
+        },
+        "status": {
+          "enum": [
+            "valid",
+            "invalid",
+            "conflict"
+          ],
+          "type": "string"
+        },
+        "summary": {
+          "$ref": "#/components/schemas/DraftWorkspaceSummary"
+        },
+        "title": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "workspace_id": {
+          "type": "string"
+        },
+        "wrapper_hints": {
+          "$ref": "#/components/schemas/WrapperAuthoringHintsPayload"
+        }
+      },
+      "required": [
+        "workspace_id",
+        "revision",
+        "title",
+        "status",
+        "diagnostics",
+        "summary",
+        "wrapper_hints",
+        "next_actions"
+      ],
+      "type": "object"
+    },
     "DependencyDiagnosticPayload": {
       "additionalProperties": true,
       "description": "JSON projection of one deployment dependency diagnostic.",
@@ -2883,6 +3006,131 @@ export const workflowRuntimeContract = {
       "required": [
         "status",
         "store_root"
+      ],
+      "type": "object"
+    },
+    "InputPathBinding": {
+      "additionalProperties": false,
+      "description": "Map one workflow graph source path into one node-local input path.",
+      "properties": {
+        "path": {
+          "description": "Workflow source path to read from input, state, or context. Prefer canonical strings such as `input.text` or `state.report`. Structural objects such as {'root': 'input', 'parts': ['text']} are also accepted as input.",
+          "anyOf": [
+            {
+              "description": "Canonical TOML-key path string.",
+              "type": "string"
+            },
+            {
+              "additionalProperties": false,
+              "description": "Structural path object accepted as input.",
+              "properties": {
+                "parts": {
+                  "items": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "minItems": 0,
+                  "type": "array"
+                },
+                "root": {
+                  "enum": [
+                    "input",
+                    "state",
+                    "context"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "root",
+                "parts"
+              ],
+              "type": "object"
+            }
+          ]
+        },
+        "target": {
+          "description": "Node-local input path to populate. Prefer canonical strings such as `field` or `.` for the whole node input payload. Structural objects such as {'root': 'local', 'parts': ['field']} are also accepted as input.",
+          "anyOf": [
+            {
+              "description": "Canonical TOML-key path string.",
+              "type": "string"
+            },
+            {
+              "additionalProperties": false,
+              "description": "Structural path object accepted as input.",
+              "properties": {
+                "parts": {
+                  "items": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "minItems": 0,
+                  "type": "array"
+                },
+                "root": {
+                  "const": "local",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "root",
+                "parts"
+              ],
+              "type": "object"
+            }
+          ]
+        }
+      },
+      "required": [
+        "target",
+        "path"
+      ],
+      "type": "object"
+    },
+    "InputValueBinding": {
+      "additionalProperties": false,
+      "description": "Map one static value into one node-local input path.",
+      "properties": {
+        "target": {
+          "description": "Node-local input path that receives this literal JSON value.",
+          "anyOf": [
+            {
+              "description": "Canonical TOML-key path string.",
+              "type": "string"
+            },
+            {
+              "additionalProperties": false,
+              "description": "Structural path object accepted as input.",
+              "properties": {
+                "parts": {
+                  "items": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "minItems": 0,
+                  "type": "array"
+                },
+                "root": {
+                  "const": "local",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "root",
+                "parts"
+              ],
+              "type": "object"
+            }
+          ]
+        },
+        "value": {
+          "description": "Literal JSON-compatible value to pass to the node. Use this for constants, not for values read from workflow input or state."
+        }
+      },
+      "required": [
+        "target",
+        "value"
       ],
       "type": "object"
     },
@@ -4668,6 +4916,365 @@ export const workflowRuntimeContract = {
         "$ref": "#/components/schemas/ValidateDeploymentResult"
       }
     },
+    "workflow.draft_workspaces.add_step_from_capability": {
+      "payload": {
+        "additionalProperties": false,
+        "properties": {
+          "workspace_id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "revision": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "step_id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "capability_name": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "route_from_step": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "route_from_outcome": {
+            "default": "ok",
+            "minLength": 1,
+            "type": "string"
+          },
+          "routes": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "input_map": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "input_bindings": {
+            "anyOf": [
+              {
+                "items": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/InputPathBinding"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InputValueBinding"
+                    }
+                  ],
+                  "description": "Canonical node input binding. Use either a path binding with `path`, or a literal binding with `value`; do not provide both."
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "bind_outputs": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "desc": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "retry": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "timeout_seconds": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "workspace_id",
+          "revision",
+          "step_id",
+          "capability_name"
+        ],
+        "type": "object"
+      },
+      "success": {
+        "$ref": "#/components/schemas/DraftWorkspaceResult"
+      }
+    },
+    "workflow.draft_workspaces.create_empty": {
+      "payload": {
+        "additionalProperties": false,
+        "properties": {
+          "workspace_id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "name": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "input_schema": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "state_schema": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "output_schema": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "outcomes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "workspace_id",
+          "name"
+        ],
+        "type": "object"
+      },
+      "success": {
+        "$ref": "#/components/schemas/DraftWorkspaceResult"
+      }
+    },
+    "workflow.draft_workspaces.create_from_capability": {
+      "payload": {
+        "additionalProperties": false,
+        "properties": {
+          "workspace_id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "capability_name": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "input_schema": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "state_schema": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "output_schema": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "input": {
+            "anyOf": [
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "output": {
+            "anyOf": [
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "input_map": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "output_map": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "error_message_source": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "workspace_id",
+          "capability_name"
+        ],
+        "type": "object"
+      },
+      "success": {
+        "$ref": "#/components/schemas/CreateDraftWorkspaceFromCapabilityResult"
+      }
+    },
     "workflow.draft_workspaces.get": {
       "payload": {
         "additionalProperties": false,
@@ -4699,6 +5306,94 @@ export const workflowRuntimeContract = {
       },
       "success": {
         "$ref": "#/components/schemas/ListDraftWorkspacesResult"
+      }
+    },
+    "workflow.draft_workspaces.set_route": {
+      "payload": {
+        "additionalProperties": false,
+        "properties": {
+          "workspace_id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "revision": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "step_id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "outcome": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "target": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "workspace_id",
+          "revision",
+          "step_id",
+          "outcome",
+          "target"
+        ],
+        "type": "object"
+      },
+      "success": {
+        "$ref": "#/components/schemas/DraftWorkspaceResult"
+      }
+    },
+    "workflow.draft_workspaces.update_capability_step": {
+      "payload": {
+        "additionalProperties": false,
+        "properties": {
+          "workspace_id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "revision": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "step_id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "update": {
+            "$ref": "#/components/schemas/CapabilityStepUpdate"
+          }
+        },
+        "required": [
+          "workspace_id",
+          "revision",
+          "step_id",
+          "update"
+        ],
+        "type": "object"
+      },
+      "success": {
+        "$ref": "#/components/schemas/DraftWorkspaceResult"
+      }
+    },
+    "workflow.draft_workspaces.validate": {
+      "payload": {
+        "additionalProperties": false,
+        "properties": {
+          "workspace_id": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "workspace_id"
+        ],
+        "type": "object"
+      },
+      "success": {
+        "$ref": "#/components/schemas/DraftWorkspaceResult"
       }
     },
     "workflow.health": {

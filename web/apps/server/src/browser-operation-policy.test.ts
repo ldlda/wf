@@ -13,6 +13,12 @@ describe("browser operation policy", () => {
       "workflow.capabilities.inspect",
       "workflow.draft_workspaces.list",
       "workflow.draft_workspaces.get",
+      "workflow.draft_workspaces.create_empty",
+      "workflow.draft_workspaces.create_from_capability",
+      "workflow.draft_workspaces.add_step_from_capability",
+      "workflow.draft_workspaces.update_capability_step",
+      "workflow.draft_workspaces.set_route",
+      "workflow.draft_workspaces.validate",
       "workflow.artifacts.list",
       "workflow.artifacts.inspect",
       "workflow.deployments.list",
@@ -25,6 +31,12 @@ describe("browser operation policy", () => {
       "workflow.runs.trace",
     ]);
     expect(isBrowserAllowedOperationName("workflow.health")).toBe(true);
+    expect(browserAllowedOperationNames).toContain(
+      "workflow.draft_workspaces.add_step_from_capability",
+    );
+    expect(browserAllowedOperationNames).not.toContain(
+      "workflow.draft_workspaces.replace_document",
+    );
     expect(isBrowserAllowedOperationName("workflow.admin.auth.list")).toBe(false);
   });
 });
