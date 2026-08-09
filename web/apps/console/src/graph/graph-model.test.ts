@@ -64,6 +64,26 @@ describe("buildWorkflowGraph", () => {
     expect(openNode?.data.nodeRef).toBe("local.browser_click.open_click_page");
   });
 
+  it("leaves room for rendered node reference, detail, and summary before a connected node", () => {
+    const model = buildWorkflowGraph({
+      nodes: [
+        {
+          id: "source",
+          type: "node",
+          node: "demo.collect",
+          detail: "Collect source material.",
+          summary: "2 inputs · 1 state write",
+        },
+        { id: "target", type: "end", outcome: "ok" },
+      ],
+      edges: [{ from: "source", outcome: "ok", to: "target" }],
+    });
+
+    const source = model.nodes.find((node) => node.id === "source");
+    const target = model.nodes.find((node) => node.id === "target");
+    expect(target?.position.y ?? 0).toBeGreaterThan((source?.position.y ?? 0) + 180);
+  });
+
   it("labels subgraph nodes from the workflow name", () => {
     const model = buildWorkflowGraph({
       nodes: [

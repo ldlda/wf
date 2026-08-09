@@ -92,6 +92,28 @@ describe("projectAuthoringGraph", () => {
     const empty = projectAuthoringGraph({ ...draft, steps: { collect: { use: "demo.collect" } } });
     expect(empty.nodes.find((node) => node.id === "collect")?.data.summary).toBeUndefined();
   });
+
+  it("summarizes canonical bindings for compiled array-shaped nodes", () => {
+    const model = projectAuthoringGraph({
+      nodes: [
+        {
+          id: "collect",
+          type: "node",
+          node: "demo.collect",
+          input: [
+            { target: "title", value: "Report" },
+            { target: "count", path: "input.count" },
+          ],
+          output: [{ source: "text", target: "state.report" }],
+        },
+      ],
+      edges: [],
+    });
+
+    expect(model.nodes.find((node) => node.id === "collect")?.data.summary).toBe(
+      "2 inputs · 1 state write",
+    );
+  });
 });
 
 describe("WorkbenchSelection", () => {

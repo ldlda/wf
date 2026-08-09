@@ -77,7 +77,10 @@ describe("SelectedCapabilityInspector", () => {
         { target: "title", value: "Existing title" },
         { target: "broken", value: () => "not JSON" },
       ],
-      [{ source: "text", target: "state.existing" }],
+      [
+        { source: "text", target: "state.existing" },
+        { source: "text", target: "not-state" },
+      ],
     );
     const controller = controllerFor(workspace);
 
@@ -111,6 +114,17 @@ describe("SelectedCapabilityInspector", () => {
     expect(controller.setStepInputs).toHaveBeenCalledWith([{ target: "title", value: "Existing title" }]);
 
     await user.click(screen.getByRole("tab", { name: "Outputs" }));
+    expect(screen.getByRole("region", { name: "Raw unsupported output row 2" })).toHaveTextContent(
+      "not-state",
+    );
+    await user.click(screen.getByRole("button", { name: "Save outputs" }));
+    expect(controller.setStepOutputs).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: "Clear outputs" }));
+    expect(controller.setStepOutputs).not.toHaveBeenCalled();
+    expect(screen.getAllByRole("alert").some((alert) =>
+      alert.textContent?.includes("Remove or repair this unsupported output row before clearing outputs.") ?? false,
+    )).toBe(true);
+    await user.click(screen.getByRole("button", { name: "Remove unsupported output row 2" }));
     await user.click(screen.getByRole("button", { name: "Save outputs" }));
     expect(controller.setStepOutputs).toHaveBeenCalledWith([
       { source: "text", target: "state.existing" },

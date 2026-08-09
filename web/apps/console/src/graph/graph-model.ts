@@ -66,6 +66,16 @@ const DEFAULT_LAYOUT: Required<Omit<WorkflowGraphLayoutOptions, "label">> = {
   ranksep: 80,
 };
 
+const CONTENT_ROW_HEIGHT = 24;
+
+// Keep Dagre's rank spacing aligned with the optional text blocks rendered by CustomNode.
+const renderedNodeHeight = (
+  node: Readonly<Record<string, unknown>>,
+  minimumHeight: number,
+): number => minimumHeight + [node.node, node.detail, node.summary]
+  .filter((value): value is string => typeof value === "string" && value.length > 0)
+  .length * CONTENT_ROW_HEIGHT;
+
 const mapNodeKind = (type: unknown): WorkflowGraphNodeKind => {
   switch (type) {
     case "node":
@@ -139,10 +149,13 @@ export const buildWorkflowGraph = (
     ranksep: layout.ranksep,
   });
 
+  const nodeHeights = new Map<string, number>();
   for (const node of sortedNodes) {
+    const height = renderedNodeHeight(node, layout.nodeHeight);
+    nodeHeights.set(String(node.id), height);
     g.setNode(String(node.id), {
       width: layout.nodeWidth,
-      height: layout.nodeHeight,
+      height,
     });
   }
 
@@ -155,6 +168,7 @@ export const buildWorkflowGraph = (
   const nodes: WorkflowGraphNode[] = sortedNodes.map((node) => {
     const id = String(node.id);
     const pos = g.node(id);
+    const height = nodeHeights.get(id) ?? layout.nodeHeight;
     return {
       id,
       data: {
@@ -168,7 +182,7 @@ export const buildWorkflowGraph = (
       },
       position: {
         x: pos.x - layout.nodeWidth / 2,
-        y: pos.y - layout.nodeHeight / 2,
+        y: pos.y - height / 2,
       },
     };
   });

@@ -1,4 +1,4 @@
-import { act, cleanup, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { CapabilityDetail } from "../domain/capability-models.js";
@@ -256,6 +256,86 @@ describe("DraftWorkbench", () => {
     expect(
       within(inspector).getByRole("textbox", { name: "Target for row 1", hidden: true }),
     ).toHaveValue("title");
+  });
+
+  it("rehydrates all selected-step tabs through the graph selection boundary", async () => {
+    setViewport(1024);
+    mockedUseAuthoringCapabilityDetail.mockReturnValue({
+      phase: "ready",
+      detail: dataflowCapabilityDetail,
+      message: null,
+    });
+    const twoNodeWorkspace: DraftWorkspace = {
+      ...workspace,
+      summary: { ...workspace.summary, start: "first", steps: ["first", "second"] },
+      draft: {
+        name: "review-workflow",
+        start: "first",
+        steps: {
+          first: {
+            use: "demo.collect",
+            desc: "First setup",
+            retry: 1,
+            timeout_seconds: 11,
+            input: [{ target: "title", value: "first input" }],
+            output: [{ source: "text", target: "state.first" }],
+          },
+          second: {
+            use: "demo.collect",
+            desc: "Second setup",
+            retry: 2,
+            timeout_seconds: 22,
+            input: [{ target: "title", value: "second input" }],
+            output: [{ source: "text", target: "state.second" }],
+          },
+        },
+        routes: { first: { ok: "second" } },
+      },
+    };
+    const user = userEvent.setup();
+    const { container } = render(
+      <DraftWorkbench
+        draft={twoNodeWorkspace}
+        initialSelection={{ kind: "node", nodeId: "first" }}
+      />,
+    );
+
+    const inspector = screen.getByRole("region", { name: "Context inspector" });
+    expect(within(inspector).getByRole("heading", { name: "first" })).toBeInTheDocument();
+    expect(within(inspector).getByRole("tab", { name: "Setup" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(within(inspector).getByRole("textbox", { name: "Description" })).toHaveValue(
+      "First setup",
+    );
+    await user.click(within(inspector).getByRole("tab", { name: "Inputs" }));
+    expect(within(inspector).getByRole("textbox", { name: "Title" })).toHaveValue(
+      "first input",
+    );
+    await user.click(within(inspector).getByRole("tab", { name: "Outputs" }));
+    const firstOutputPanel = within(inspector).getByRole("tabpanel", { name: "Outputs" });
+    expect(within(firstOutputPanel).getByDisplayValue("state.first")).toBeInTheDocument();
+
+    const secondNode = container.querySelector('[data-node-id="second"]');
+    expect(secondNode).not.toBeNull();
+    fireEvent.click(secondNode as HTMLElement);
+
+    expect(within(inspector).getByRole("heading", { name: "second" })).toBeInTheDocument();
+    expect(within(inspector).getByRole("tab", { name: "Setup" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(within(inspector).getByRole("textbox", { name: "Description" })).toHaveValue(
+      "Second setup",
+    );
+    await user.click(within(inspector).getByRole("tab", { name: "Inputs" }));
+    expect(within(inspector).getByRole("textbox", { name: "Title" })).toHaveValue(
+      "second input",
+    );
+    await user.click(within(inspector).getByRole("tab", { name: "Outputs" }));
+    const secondOutputPanel = within(inspector).getByRole("tabpanel", { name: "Outputs" });
+    expect(within(secondOutputPanel).getByDisplayValue("state.second")).toBeInTheDocument();
   });
 
   it("reopens an open desktop sheet as a modal after resizing to mobile", async () => {

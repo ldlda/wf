@@ -53,6 +53,19 @@ const stepKind = (step: JsonRecord): string => {
   return "unsupported";
 };
 
+const bindingSummary = (input: unknown, output: unknown): Readonly<Record<string, string>> => {
+  const inputCount = inputBindingRows(input).filter((row) => row.kind === "canonical").length;
+  const outputCount = outputBindingRows(output).filter((row) => row.kind === "canonical").length;
+  if (inputCount === 0 && outputCount === 0) return {};
+  const inputLabel = `${inputCount} input${inputCount === 1 ? "" : "s"}`;
+  const outputLabel = `${outputCount} state write${outputCount === 1 ? "" : "s"}`;
+  return {
+    summary: [inputCount > 0 ? inputLabel : null, outputCount > 0 ? outputLabel : null]
+      .filter((value): value is string => value !== null)
+      .join(" · "),
+  };
+};
+
 const nodeForStep = (id: string, step: JsonRecord): JsonRecord => {
   const kind = stepKind(step);
   const payload = recordValue(step[kind]);
@@ -68,17 +81,7 @@ const nodeForStep = (id: string, step: JsonRecord): JsonRecord => {
     detail: stringValue(step.desc),
   };
 
-  if (kind === "use") {
-    const inputCount = inputBindingRows(step.input).filter((row) => row.kind === "canonical").length;
-    const outputCount = outputBindingRows(step.output).filter((row) => row.kind === "canonical").length;
-    if (inputCount > 0 || outputCount > 0) {
-      const inputLabel = `${inputCount} input${inputCount === 1 ? "" : "s"}`;
-      const outputLabel = `${outputCount} state write${outputCount === 1 ? "" : "s"}`;
-      node.summary = [inputCount > 0 ? inputLabel : null, outputCount > 0 ? outputLabel : null]
-        .filter((value): value is string => value !== null)
-        .join(" · ");
-    }
-  }
+  if (kind === "use") Object.assign(node, bindingSummary(step.input, step.output));
 
   if (kind === "use") node.node = stringValue(step.use) ?? id;
   if (kind === "interrupt") {
@@ -154,7 +157,10 @@ const compiledPlan = (draft: JsonRecord): {
   const rawEdges = Array.isArray(draft.edges)
     ? copiedRecordArray(draft.edges)
     : routesForSteps(recordValue(draft.routes));
-  const nodes = rawNodes;
+  const nodes = rawNodes.map((node) => ({
+    ...node,
+    ...bindingSummary(node.input, node.output),
+  }));
   const nodeIds = nodeIdsFor(nodes);
 
   for (const edge of rawEdges) {
