@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import type {
   DraftWorkspace,
@@ -33,13 +33,35 @@ export const DraftDetailRoute = ({
   const draft =
     drafts.selected?.workspaceId === workspaceId ? drafts.selected : null;
   const [authoringDraft, setAuthoringDraft] = useState<DraftWorkspace | null>(null);
+  const loaderSourceRef = useRef<{
+    readonly draft: DraftWorkspace | null;
+    readonly detailPhase: typeof drafts.detailPhase;
+    readonly workspaceId: string | null;
+  } | null>(null);
+  const loaderGenerationRef = useRef(0);
+  const loaderSource = {
+    draft,
+    detailPhase: drafts.detailPhase,
+    workspaceId,
+  };
+  const previousLoaderSource = loaderSourceRef.current;
+  if (
+    previousLoaderSource === null ||
+    previousLoaderSource.draft !== loaderSource.draft ||
+    previousLoaderSource.detailPhase !== loaderSource.detailPhase ||
+    previousLoaderSource.workspaceId !== loaderSource.workspaceId
+  ) {
+    loaderSourceRef.current = loaderSource;
+    loaderGenerationRef.current += 1;
+  }
+  const callbackGeneration = loaderGenerationRef.current;
 
   useEffect(() => {
     setAuthoringDraft(draft);
   }, [draft, drafts.detailPhase, workspaceId]);
 
   // A successful mutation is displayed immediately; a later loader snapshot
-  // replaces it, and workspace ids prevent an old callback crossing routes.
+  // replaces it, and the generation prevents an old callback crossing freshness boundaries.
   const displayedDraft =
     draft === null
       ? null
@@ -48,9 +70,12 @@ export const DraftDetailRoute = ({
         : draft;
   const handleDraftChange = useCallback(
     (nextDraft: DraftWorkspace): void => {
-      if (nextDraft.workspaceId === workspaceId) setAuthoringDraft(nextDraft);
+      if (
+        callbackGeneration === loaderGenerationRef.current &&
+        nextDraft.workspaceId === workspaceId
+      ) setAuthoringDraft(nextDraft);
     },
-    [workspaceId],
+    [callbackGeneration, workspaceId],
   );
 
   return (
