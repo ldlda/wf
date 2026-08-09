@@ -12,11 +12,36 @@ import { normalizeSchema, type SchemaField } from "../schema-form/schema-field.j
 
 type JsonRecord = Record<string, unknown>;
 
+export type JsonValue =
+  | null
+  | boolean
+  | number
+  | string
+  | ReadonlyArray<JsonValue>
+  | { readonly [key: string]: JsonValue };
+
 const isRecord = (value: unknown): value is JsonRecord =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
 const hasOwn = (value: JsonRecord, key: string): boolean =>
   Object.prototype.hasOwnProperty.call(value, key);
+
+/** Guard the recursive JSON subset used by literal input bindings. */
+export const isJsonValue = (value: unknown): value is JsonValue => {
+  if (value === null || typeof value === "boolean" || typeof value === "string") return true;
+  if (typeof value === "number") return Number.isFinite(value);
+  if (Array.isArray(value)) {
+    if (Object.getOwnPropertySymbols(value).length > 0) return false;
+    for (const item of value) {
+      if (!isJsonValue(item)) return false;
+    }
+    return Object.keys(value).every((key) => /^(0|[1-9]\d*)$/.test(key));
+  }
+  if (!isRecord(value)) return false;
+  if (Object.getPrototypeOf(value) !== Object.prototype && Object.getPrototypeOf(value) !== null) return false;
+  if (Object.getOwnPropertySymbols(value).length > 0) return false;
+  return Object.values(value).every(isJsonValue);
+};
 
 const stringParts = (value: unknown): string[] | null => {
   if (!Array.isArray(value)) return null;
@@ -119,7 +144,7 @@ const parsedInputBinding = (value: unknown): InputBinding | null => {
     const path = inputPath(value.path);
     return path === null ? null : { path, target };
   }
-  return value.value === undefined ? null : { target, value: value.value };
+  return !isJsonValue(value.value) ? null : { target, value: value.value };
 };
 
 const parsedOutputBinding = (value: unknown): OutputBinding | null => {
@@ -156,22 +181,28 @@ const parseRows = <T>(
   return { values, unsupported };
 };
 
-const stepFromDraft = (draft: DraftWorkspace, stepId: string): JsonRecord | null => {
+type SelectedStepRecord = {
+  readonly step: JsonRecord;
+  readonly compiledNodeIndex: number | null;
+};
+
+const stepFromDraft = (draft: DraftWorkspace, stepId: string): SelectedStepRecord | null => {
   if (!isRecord(draft.draft)) return null;
   if (Array.isArray(draft.draft.nodes)) {
-    for (const node of draft.draft.nodes) {
-      if (isRecord(node) && node.id === stepId) return node;
+    for (const [index, node] of draft.draft.nodes.entries()) {
+      if (isRecord(node) && node.id === stepId) return { step: node, compiledNodeIndex: index };
     }
     return null;
   }
   const steps = draft.draft.steps;
   if (!isRecord(steps) || !isRecord(steps[stepId])) return null;
-  return steps[stepId];
+  return { step: steps[stepId], compiledNodeIndex: null };
 };
 
 /** Compound canonical projection used by the selected-step setup, input, and output forms. */
 export type SelectedStepDataflow = {
   readonly stepId: string;
+  readonly compiledNodeIndex: number | null;
   readonly capabilityName: string;
   readonly description: string | null | undefined;
   readonly retry: number | null | undefined;
@@ -205,8 +236,9 @@ export const projectSelectedStepDataflow = (
   draft: DraftWorkspace,
   stepId: string,
 ): SelectedStepDataflow | null => {
-  const step = stepFromDraft(draft, stepId);
-  if (step === null) return null;
+  const selected = stepFromDraft(draft, stepId);
+  if (selected === null) return null;
+  const { step, compiledNodeIndex } = selected;
   const capabilityName = typeof step.use === "string" ? step.use : step.node;
   if (typeof capabilityName !== "string" || capabilityName.length === 0) return null;
   const inputs = parseRows("input", step.input, parsedInputBinding);
@@ -219,6 +251,7 @@ export const projectSelectedStepDataflow = (
       : undefined;
   return {
     stepId,
+    compiledNodeIndex,
     capabilityName,
     description,
     retry,
@@ -261,7 +294,7 @@ export const serializeInputBindingRow = (value: unknown): InputBinding | null =>
     const path = canonicalInputPath(value.path);
     return path === null ? null : { path, target };
   }
-  if (!hasOwn(value, "path") && hasOwn(value, "value") && value.value !== undefined) {
+  if (!hasOwn(value, "path") && hasOwn(value, "value") && isJsonValue(value.value)) {
     return { target, value: value.value };
   }
   return null;
@@ -344,7 +377,12 @@ const schemaAtPath = (schema: unknown, parts: ReadonlyArray<string>): unknown | 
       current = current.properties[part];
       continue;
     }
-    if (current.type === "array" && current.items !== undefined && part === "0") {
+    if (
+      current.type === "array" &&
+      current.items !== undefined &&
+      /^(0|[1-9]\d*)$/.test(part) &&
+      Number.isSafeInteger(Number(part))
+    ) {
       current = current.items;
       continue;
     }
@@ -370,6 +408,7 @@ export type BindingDiagnostics = {
 };
 
 type RowLocation = { readonly field: "input" | "output"; readonly index: number };
+type PointerLocation = RowLocation & { readonly stepId: string };
 
 const nodeLocation = (path: string): { readonly index: number; readonly field: "input" | "output"; readonly bindingIndex: number } | null => {
   const match = /^nodes\[(\d+)\]\.(input|output)\[(\d+)\](?:\.|$)/.exec(path);
@@ -381,13 +420,35 @@ const nodeLocation = (path: string): { readonly index: number; readonly field: "
     : null;
 };
 
-const pointerLocation = (path: string): RowLocation | null => {
+const decodePointerSegment = (segment: string): string | null => {
+  let decoded = "";
+  for (let index = 0; index < segment.length; index++) {
+    const character = segment[index];
+    if (character !== "~") {
+      decoded += character;
+      continue;
+    }
+    const escape = segment[index + 1];
+    if (escape !== "0" && escape !== "1") return null;
+    decoded += escape === "0" ? "~" : "/";
+    index++;
+  }
+  return decoded;
+};
+
+const pointerLocation = (path: string): PointerLocation | null => {
   if (!path.startsWith("/")) return null;
-  const parts = path.split("/").slice(1).map((part) => part.replaceAll("~1", "/").replaceAll("~0", "~"));
+  const parts: string[] = [];
+  for (const rawPart of path.split("/").slice(1)) {
+    const part = decodePointerSegment(rawPart);
+    if (part === null) return null;
+    parts.push(part);
+  }
   const field = parts[2];
   const index = parts[3];
   if (parts[0] !== "steps" || (field !== "input" && field !== "output") || index === undefined || !/^\d+$/.test(index)) return null;
-  return { field, index: Number(index) };
+  const stepId = parts[1];
+  return stepId === undefined ? null : { field, index: Number(index), stepId };
 };
 
 const focusedLocation = (
@@ -405,10 +466,8 @@ export const bindingDiagnosticsForStep = (
   diagnostics: ReadonlyArray<DraftDiagnostic>,
   stepId: string,
   field: "input" | "output",
+  compiledNodeIndex: number | null,
 ): BindingDiagnostics => {
-  const selectedNodeIndex = diagnostics
-    .map((diagnostic) => diagnostic.stepId === stepId ? nodeLocation(diagnostic.path) : null)
-    .find((location) => location !== null)?.index;
   const rowIssues: Record<number, DraftDiagnostic[]> = {};
   const unmatchedIssues: DraftDiagnostic[] = [];
   for (const diagnostic of diagnostics) {
@@ -419,9 +478,9 @@ export const bindingDiagnosticsForStep = (
     const node = nodeLocation(diagnostic.path);
     const pointer = pointerLocation(diagnostic.path);
     const focused = focusedLocation(diagnostic.path, diagnostic, stepId, field);
-    const location = node !== null && node.index === selectedNodeIndex && node.field === field
+    const location = node !== null && compiledNodeIndex !== null && node.index === compiledNodeIndex && node.field === field
       ? { field: node.field, index: node.bindingIndex }
-      : pointer !== null && pointer.field === field && diagnostic.path.split("/").slice(1)[1]?.replaceAll("~1", "/").replaceAll("~0", "~") === stepId
+      : pointer !== null && pointer.field === field && pointer.stepId === stepId
         ? pointer
         : focused !== null
           ? focused

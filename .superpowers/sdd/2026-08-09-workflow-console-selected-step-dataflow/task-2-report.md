@@ -76,3 +76,58 @@ Tests       10 passed (10)
 - Literal input values remain typed as the existing domain `unknown`; the
   generated RPC/runtime contract remains authoritative for recursive JSON-value
   validation at transport time.
+
+## Round 1/5 Review Fix
+
+### Changed Files
+
+- `web/apps/console/src/workspace/authoring/selected-step-dataflow.ts`: Added strict JSON Pointer segment decoding, non-negative decimal array-index traversal, explicit `compiledNodeIndex` projection context, and recursive finite JSON literal validation.
+- `web/apps/console/src/workspace/authoring/selected-step-dataflow.test.ts`: Added regression coverage for invalid `~2` escapes, array `items.1` traversal and non-index rejection, compiled diagnostics with only the row diagnostic present, wrong node indexes, and invalid recursive literal values.
+- `.superpowers/sdd/2026-08-09-workflow-console-selected-step-dataflow/task-2-report.md`: Appended this review round.
+
+### RED
+
+Before the production fixes, the focused pure-module run reported `5` failed
+tests out of `10`: the projection lacked `compiledNodeIndex`, `isJsonValue` was
+not exported, `items.1` preview returned `null`, invalid pointer escapes were
+accepted as row locations, and a wrong compiled node index was not kept
+unmatched. The failures were assertion failures against the intended behavior,
+not test collection or type errors.
+
+### GREEN
+
+After the fixes:
+
+```text
+Test Files  1 passed (1)
+Tests       10 passed (10)
+```
+
+`SelectedStepDataflow.compiledNodeIndex` is now `null` for keyed drafts and the
+selected `nodes[]` index for compiled drafts. `bindingDiagnosticsForStep` takes
+that explicit index and never derives ownership from another diagnostic.
+
+### Verification
+
+- `pnpm --dir web --filter @lda/console test -- src/workspace/authoring/selected-step-dataflow.test.ts`: passed, `10/10`.
+- `pnpm --dir web --filter @lda/console typecheck`: passed.
+- `git diff --check`: passed; only normal Git LF/CRLF conversion warnings were reported.
+- No Serena configuration was modified.
+
+### Deferred Cross-Task Acceptance
+
+The existing `ContextInspector` branch still uses the older canonical
+capability-binding projection and can drop malformed input rows. This is not
+resolved in Task 2. Task 7 must replace that selected-capability branch with
+`SelectedCapabilityInspector` and test that it consumes
+`inputBindingRows(...)` and `outputBindingRows(...)`, preserving unsupported
+rows and the explicit save gate.
+
+### Concerns
+
+- The pure diagnostic helper now conservatively leaves compiled node paths
+  unmatched when the caller supplies `null` or a wrong node index. This is
+  intentional: ownership is explicit rather than inferred from unrelated
+  diagnostics.
+- Literal validation is client-side recursive finite JSON validation; the
+  generated transport contract remains authoritative at the RPC boundary.

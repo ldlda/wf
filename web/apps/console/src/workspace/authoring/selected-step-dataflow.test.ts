@@ -4,6 +4,7 @@ import {
   bindingDiagnosticsForStep,
   capabilityLocalPathSuggestions,
   inferredStateSchemaPreview,
+  isJsonValue,
   inputBindingRows,
   outputBindingRows,
   projectSelectedStepDataflow,
@@ -88,6 +89,7 @@ describe("selected-step dataflow projection", () => {
 
     expect(keyed).toEqual({
       stepId: "render",
+      compiledNodeIndex: null,
       capabilityName: "wf.std.concat",
       description: undefined,
       retry: 0,
@@ -96,7 +98,10 @@ describe("selected-step dataflow projection", () => {
       outputs: bindings.output,
       unsupported: [],
     });
-    expect(compiled).toEqual(keyed);
+    expect(compiled).toEqual({
+      ...keyed,
+      compiledNodeIndex: 0,
+    });
   });
 
   it("accepts structural paths, whole-payload paths, empty lists, and reports malformed rows", () => {
@@ -145,6 +150,7 @@ describe("selected-step dataflow projection", () => {
 
     expect(projectSelectedStepDataflow({ ...keyedDraft, draft: { steps: { render: { use: "x", input: [], output: [] } } } }, "render")).toEqual({
       stepId: "render",
+      compiledNodeIndex: null,
       capabilityName: "x",
       description: undefined,
       retry: undefined,
@@ -214,6 +220,31 @@ describe("selected-step dataflow projection", () => {
       expect(serializeOutputBindingRow({ source: "text", target })).toBeNull();
     }
   });
+
+  it("accepts finite recursive JSON literals and rejects non-JSON values", () => {
+    const valid = {
+      target: "payload",
+      value: { count: 0, enabled: false, nested: [null, "ok", { ratio: -2.5 }] },
+    };
+    expect(isJsonValue(valid.value)).toBe(true);
+    expect(serializeInputBindingRow(valid)).toEqual(valid);
+
+    const invalidValues: unknown[] = [
+      undefined,
+      Number.NaN,
+      Number.POSITIVE_INFINITY,
+      Number.NEGATIVE_INFINITY,
+      () => "not JSON",
+      Symbol("not JSON"),
+      ["ok", undefined],
+      { nested: Number.NaN },
+      new Date("2026-08-09T00:00:00.000Z"),
+    ];
+    for (const value of invalidValues) {
+      expect(isJsonValue(value)).toBe(false);
+      expect(serializeInputBindingRow({ target: "payload", value })).toBeNull();
+    }
+  });
 });
 
 describe("selected-step schema helpers", () => {
@@ -243,12 +274,15 @@ describe("selected-step schema helpers", () => {
       type: "object",
       properties: {
         text: { type: "string" },
+        items: { type: "array", items: { type: "string" } },
         audit: { type: "object", properties: { latest: { type: "integer" } } },
       },
     };
 
     expect(inferredStateSchemaPreview(outputSchema, "text", "state.report")).toEqual({ type: "string" });
     expect(inferredStateSchemaPreview(outputSchema, "audit.latest", "state.audit.latest")).toEqual({ type: "integer" });
+    expect(inferredStateSchemaPreview(outputSchema, "items.1", "state.item")).toEqual({ type: "string" });
+    expect(inferredStateSchemaPreview(outputSchema, "items.not-an-index", "state.item")).toBeNull();
     expect(inferredStateSchemaPreview(outputSchema, ".", "state.report")).toEqual(outputSchema);
     expect(inferredStateSchemaPreview(outputSchema, "missing", "state.report")).toBeNull();
     expect(inferredStateSchemaPreview(outputSchema, "text", "state")).toBeNull();
@@ -269,9 +303,10 @@ describe("selected-step binding diagnostics", () => {
       diagnostic("bindings[8].target", null),
       diagnostic("not a row location", stepId),
       diagnostic("/steps/other/input/9/path", stepId),
+      diagnostic("/steps/render~1one~0x/input/10/~2path", null),
     ];
 
-    const inputs = bindingDiagnosticsForStep(diagnostics, stepId, "input");
+    const inputs = bindingDiagnosticsForStep(diagnostics, stepId, "input", 2);
     expect(inputs.rowIssues[1]?.[0]?.path).toBe("nodes[2].input[1].target");
     expect(inputs.rowIssues[4]?.[0]?.path).toBe("/steps/render~1one~0x/input/4/path");
     expect(inputs.rowIssues[7]).toBeUndefined();
@@ -283,11 +318,28 @@ describe("selected-step binding diagnostics", () => {
       "bindings[8].target",
       "not a row location",
       "/steps/other/input/9/path",
+      "/steps/render~1one~0x/input/10/~2path",
     ]);
 
-    const outputs = bindingDiagnosticsForStep(diagnostics, stepId, "output");
+    const outputs = bindingDiagnosticsForStep(diagnostics, stepId, "output", 2);
     expect(outputs.rowIssues[3]?.[0]?.path).toBe("nodes[2].output[3].target");
     expect(outputs.rowIssues[5]?.[0]?.path).toBe("/steps/render~1one~0x/output/5/target");
     expect(outputs.rowIssues[6]?.[0]?.path).toBe("bindings[6].target");
+  });
+
+  it("maps a compiled row diagnostic using only the explicit node index", () => {
+    const stepId = "render";
+    const inputOnly = [diagnostic("nodes[3].input[4].target", stepId)];
+    const outputOnly = [diagnostic("nodes[3].output[2].target", stepId)];
+
+    expect(bindingDiagnosticsForStep(inputOnly, stepId, "input", 3).rowIssues[4]?.[0]?.path).toBe(
+      "nodes[3].input[4].target",
+    );
+    expect(bindingDiagnosticsForStep(outputOnly, stepId, "output", 3).rowIssues[2]?.[0]?.path).toBe(
+      "nodes[3].output[2].target",
+    );
+    expect(bindingDiagnosticsForStep(inputOnly, stepId, "input", 2).unmatchedIssues).toEqual(inputOnly);
+    expect(bindingDiagnosticsForStep(outputOnly, stepId, "output", 2).unmatchedIssues).toEqual(outputOnly);
+    expect(bindingDiagnosticsForStep(inputOnly, stepId, "input", null).unmatchedIssues).toEqual(inputOnly);
   });
 });
