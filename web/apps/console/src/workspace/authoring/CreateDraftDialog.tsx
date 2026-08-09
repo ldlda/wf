@@ -44,15 +44,6 @@ const showModal = (dialog: HTMLDialogElement): void => {
   dialog.setAttribute("open", "");
 };
 
-const closeModal = (dialog: HTMLDialogElement): void => {
-  if (!dialog.open) return;
-  if (typeof dialog.close === "function") {
-    dialog.close();
-    return;
-  }
-  dialog.removeAttribute("open");
-};
-
 export const CreateDraftDialog = ({
   capability,
   onClose,
@@ -95,7 +86,10 @@ export const CreateDraftDialog = ({
         lifecycleTokenRef.current = null;
       }
       requestGenerationRef.current += 1;
-      closeModal(dialog);
+      // Do not call dialog.close() here. React Strict Mode replays this cleanup
+      // while the same dialog remains mounted; Chrome dispatches that native
+      // close event asynchronously and the remounted instance can mistake it
+      // for an operator close. Removing the DOM node closes a real unmount.
       if (previouslyFocused !== null && document.contains(previouslyFocused)) {
         previouslyFocused.focus();
       }

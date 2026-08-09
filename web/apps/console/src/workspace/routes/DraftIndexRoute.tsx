@@ -38,7 +38,7 @@ export const DraftIndexRoute = () => {
       <header className="draft-workspaces__header">
         <p className="workspace-route-pending__eyebrow">Authoring inventory</p>
         <h1>Draft workspaces</h1>
-        <p>Inspect saved workflow drafts without changing their definitions.</p>
+        <p>Create a workspace or open an existing draft to build and validate its graph.</p>
         <div className="draft-workspaces__actions">
           <button onClick={() => setCreateDialogOpen(true)} type="button">
             New draft
@@ -52,7 +52,7 @@ export const DraftIndexRoute = () => {
       <section aria-labelledby="draft-workspaces-list-heading" className="draft-workspaces__panel">
         <div className="draft-workspaces__section-heading">
           <div>
-            <p className="workspace-route-pending__eyebrow">Read-only index</p>
+            <p className="workspace-route-pending__eyebrow">Authoring workspaces</p>
             <h2 id="draft-workspaces-list-heading">Available drafts</h2>
           </div>
           {drafts.items.length > 0 && (

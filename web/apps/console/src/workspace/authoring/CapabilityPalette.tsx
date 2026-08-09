@@ -18,7 +18,7 @@ export const CapabilityPalette = ({
     <header className="capability-palette__header">
       <p className="workspace-route-pending__eyebrow">Available interfaces</p>
       <h2>Capabilities</h2>
-      <p>Choose a capability to inspect its contract before adding it in the next authoring slice.</p>
+      <p>Choose a capability to inspect its contract, configure a step, and add it to this graph.</p>
     </header>
     {capabilities.length > 0 ? (
       <ul className="capability-palette__list">

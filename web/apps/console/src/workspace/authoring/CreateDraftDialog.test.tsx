@@ -128,6 +128,50 @@ beforeEach(() => {
 afterEach(() => cleanup());
 
 describe("CreateDraftDialog", () => {
+  it("stays open when StrictMode replays effects with native dialog events", async () => {
+    const originalShowModal = HTMLDialogElement.prototype.showModal;
+    const originalClose = HTMLDialogElement.prototype.close;
+    Object.defineProperty(HTMLDialogElement.prototype, "showModal", {
+      configurable: true,
+      value(this: HTMLDialogElement) {
+        this.setAttribute("open", "");
+      },
+    });
+    Object.defineProperty(HTMLDialogElement.prototype, "close", {
+      configurable: true,
+      value(this: HTMLDialogElement) {
+        this.removeAttribute("open");
+        queueMicrotask(() => this.dispatchEvent(new Event("close")));
+      },
+    });
+
+    try {
+      renderStrictDialog(null);
+      await Promise.resolve();
+
+      expect(screen.getByRole("dialog", { name: "Create a draft workspace" })).toHaveAttribute(
+        "open",
+      );
+    } finally {
+      if (originalShowModal === undefined) {
+        Reflect.deleteProperty(HTMLDialogElement.prototype, "showModal");
+      } else {
+        Object.defineProperty(HTMLDialogElement.prototype, "showModal", {
+          configurable: true,
+          value: originalShowModal,
+        });
+      }
+      if (originalClose === undefined) {
+        Reflect.deleteProperty(HTMLDialogElement.prototype, "close");
+      } else {
+        Object.defineProperty(HTMLDialogElement.prototype, "close", {
+          configurable: true,
+          value: originalClose,
+        });
+      }
+    }
+  });
+
   it("keeps successful creation navigable after StrictMode effect replay", async () => {
     const user = userEvent.setup();
     vi.mocked(authoringClient.createEmpty).mockResolvedValueOnce(workspace("strict-created"));
