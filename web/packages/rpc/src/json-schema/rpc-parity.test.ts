@@ -958,6 +958,115 @@ const parityReport = (): ParityReport => {
 };
 
 describe("authored RPC and manifest schema parity", () => {
+  it("rejects empty segments in authored structural binding paths", () => {
+    const cases: ReadonlyArray<{
+      readonly method: keyof typeof authoredRpcSchemas;
+      readonly payload: unknown;
+    }> = [
+      {
+        method: "workflow.draft_workspaces.add_step_from_capability",
+        payload: {
+          workspace_id: "console.demo",
+          revision: 1,
+          step_id: "echo",
+          capability_name: "local.example.echo",
+          input_bindings: [
+            { path: { root: "input", parts: [""] }, target: "text" },
+          ],
+        },
+      },
+      {
+        method: "workflow.draft_workspaces.update_capability_step",
+        payload: {
+          workspace_id: "console.demo",
+          revision: 2,
+          step_id: "echo",
+          update: {
+            input: [
+              { path: { root: "input", parts: [""] }, target: "text" },
+            ],
+          },
+        },
+      },
+      {
+        method: "workflow.draft_workspaces.set_step_input_bindings",
+        payload: {
+          workspace_id: "console.demo",
+          revision: 3,
+          step_id: "render",
+          bindings: [
+            { path: { root: "input", parts: [""] }, target: "report.title" },
+            {
+              target: { root: "local", parts: [""] },
+              value: "markdown",
+            },
+          ],
+        },
+      },
+      {
+        method: "workflow.draft_workspaces.set_step_output_bindings",
+        payload: {
+          workspace_id: "console.demo",
+          revision: 4,
+          step_id: "render",
+          bindings: [
+            { source: { root: "local", parts: [""] }, target: "state.report" },
+          ],
+        },
+      },
+      {
+        method: "workflow.draft_workspaces.set_step_output_bindings",
+        payload: {
+          workspace_id: "console.demo",
+          revision: 4,
+          step_id: "render",
+          bindings: [
+            { source: "report", target: { root: "state", parts: [""] } },
+          ],
+        },
+      },
+    ];
+
+    for (const testCase of cases) {
+      const authored = authoredRpcSchemas[testCase.method];
+      expect(accepts(authored.payload, testCase.payload), `${testCase.method} authored`).toBe(
+        false,
+      );
+    }
+  });
+
+  it("keeps checked binding path components strict about segment length", () => {
+    const expectations = [
+      ["InputPathBinding", "path"],
+      ["InputPathBinding", "target"],
+      ["InputValueBinding", "target"],
+      ["OutputBinding", "source"],
+      ["OutputBinding", "target"],
+    ] as const;
+
+    for (const [componentName, propertyName] of expectations) {
+      const component = components[componentName];
+      if (!isRecord(component) || !isRecord(component.properties)) {
+        throw new Error(`invalid ${componentName} component`);
+      }
+      const property = component.properties[propertyName];
+      if (!isRecord(property) || !Array.isArray(property.oneOf)) {
+        throw new Error(`invalid ${componentName}.${propertyName} schema`);
+      }
+      const structural = property.oneOf.find(
+        (candidate) =>
+          isRecord(candidate) &&
+          isRecord(candidate.properties) &&
+          "parts" in candidate.properties,
+      );
+      if (!isRecord(structural) || !isRecord(structural.properties)) {
+        throw new Error(`missing structural ${componentName}.${propertyName} schema`);
+      }
+      const parts = structural.properties.parts;
+      expect(parts).toMatchObject({ items: { minLength: 1 } });
+    }
+  });
+
   it("catalogs every authored RPC exactly once", () => {
     const expectedMethods = [
       "workflow.health",

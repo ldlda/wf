@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 import pytest
 from pydantic import ValidationError
 
@@ -146,6 +148,20 @@ def test_input_value_binding_json_schema_is_recursive_json_value():
 def test_input_value_binding_rejects_non_json_python_objects():
     with pytest.raises(ValidationError):
         InputValueBinding.model_validate({"target": "literal", "value": object()})
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        ("tuple", 1),
+        {"set", "value"},
+        Decimal("1.25"),
+        {1: "non-string key"},
+    ],
+)
+def test_input_value_binding_rejects_non_json_values_without_coercion(value: object):
+    with pytest.raises(ValidationError):
+        InputValueBinding.model_validate({"target": "literal", "value": value})
 
 
 @pytest.mark.parametrize("value", [float("nan"), float("inf"), float("-inf")])

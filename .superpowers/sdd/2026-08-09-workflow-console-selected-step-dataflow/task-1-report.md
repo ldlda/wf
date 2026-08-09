@@ -71,3 +71,38 @@ null, array, and object literals.
 
 - Parity continues to report the translator's existing `oneOf` blockers for structural path unions. The new focused payloads add the corresponding `InputPathBinding.path` and `OutputBinding.source` blocker entries; authored and manifest acceptance remains aligned for tested values.
 - No Serena configuration was modified, and no generated output was hand-edited.
+
+## Round 1/5 Review Fix
+
+### Changed Files
+
+- `src/wf_core/models/steps.py`: Made `InputValueBinding` strict and added a recursive pre-validator that rejects tuples, sets, `Decimal`, non-string object keys, and non-finite numbers without coercion while retaining finite recursive JSON values and the existing generated schema.
+- `tests/core/test_canonical_node_bindings.py`: Added rejection coverage for tuple, set, `Decimal`, and non-string-key values.
+- `web/packages/rpc/src/json-schema/authored-rpc-fixtures.ts`: Added a shared `Schema.String.pipe(Schema.minLength(1))` path segment schema to every checked structural input/output binding path.
+- `web/packages/rpc/src/json-schema/rpc-parity.test.ts`: Added authored decode tests for empty segments in input path, input value target, output source, and output target, plus checked-manifest component assertions for all five structural path fields.
+
+### RED
+
+- Before the production edits, the new Python test failed 3 cases: tuple, set, and `Decimal` were coerced; the non-string-key case already failed under the existing recursive validator.
+- Before the Effect fixture edit, the new parity test accepted an empty `InputPathBinding.path` segment.
+
+### GREEN
+
+- `uv run pytest tests/core/test_canonical_node_bindings.py -q`: `36 passed`.
+- `pnpm exec vitest run src/json-schema/rpc-parity.test.ts`: `5 passed`.
+
+### Verification
+
+- Focused RPC runtime/parity/generator tests: `28 passed`.
+- RPC package typecheck: passed.
+- Checked contract verification: passed with `All checks passed!`.
+- Touched-file Ruff and basedpyright checks: passed; basedpyright reported `0 errors, 0 warnings, 0 notes`.
+- `git diff --check`: passed; only Git line-ending warnings were reported.
+
+### Deviations
+
+- No generated output changed: strict Pydantic validation and authored fixture constraints preserve the existing checked contract, so the contract check was run without rewriting generated files.
+
+### Concerns
+
+- The pre-existing translator blockers for structural `oneOf` path unions remain unchanged; this round only tightens authored decode parity and confirms the checked component `minLength` constraints.

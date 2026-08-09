@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from math import isfinite
 from typing import Annotated, Literal, Self
 
 from jsonschema import Draft202012Validator, SchemaError, validators
@@ -23,6 +24,26 @@ from wf_core.paths import GraphSourcePath, LocalPath, StatePath
 type JsonValue = (
     None | bool | int | FiniteFloat | str | list[JsonValue] | dict[str, JsonValue]
 )
+
+
+def _validate_strict_json_value(value: object) -> JsonValue:
+    """Reject Python containers and scalar types that JSON would coerce."""
+
+    if value is None or isinstance(value, bool) or isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        if not isfinite(value):
+            raise ValueError("JSON numbers must be finite")
+        return value
+    if isinstance(value, str):
+        return value
+    if isinstance(value, list):
+        return [_validate_strict_json_value(item) for item in value]
+    if isinstance(value, dict):
+        if not all(isinstance(key, str) for key in value):
+            raise ValueError("JSON object keys must be strings")
+        return {key: _validate_strict_json_value(item) for key, item in value.items()}
+    raise ValueError("value must be a finite JSON value")
 
 
 class InputPathBinding(BaseModel):
@@ -51,7 +72,9 @@ class InputPathBinding(BaseModel):
 class InputValueBinding(BaseModel):
     """Map one static value into one node-local input path."""
 
-    model_config = ConfigDict(extra="forbid")
+    # Strict mode prevents Pydantic from silently turning Python-only values
+    # such as tuples, sets, and Decimal instances into JSON-shaped values.
+    model_config = ConfigDict(extra="forbid", strict=True)
 
     target: LocalPath = Field(
         description="Node-local input path that receives this literal JSON value."
@@ -62,6 +85,11 @@ class InputValueBinding(BaseModel):
             "constants, not for values read from workflow input or state."
         )
     )
+
+    @field_validator("value", mode="before")
+    @classmethod
+    def validate_value(cls, value: object) -> JsonValue:
+        return _validate_strict_json_value(value)
 
 
 InputBinding = Annotated[

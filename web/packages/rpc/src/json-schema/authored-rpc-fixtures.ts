@@ -14,6 +14,7 @@ const JsonObjectSchema = Schema.Record({
   key: Schema.String,
   value: Schema.Unknown,
 });
+const PathSegmentSchema = Schema.String.pipe(Schema.minLength(1));
 // This fixture intentionally mirrors the canonical recursive JSON literal contract.
 const JsonValueStructureSchema: Schema.Schema<JsonValue, JsonValue, never> =
   Schema.suspend(
@@ -265,14 +266,14 @@ const InputPathBindingSchema = Schema.Struct({
   path: Schema.Union(
     Schema.String,
     Schema.Struct({
-      parts: Schema.Array(Schema.String),
+      parts: Schema.Array(PathSegmentSchema),
       root: Schema.Literal("input", "state", "context"),
     }),
   ),
   target: Schema.Union(
     Schema.String,
     Schema.Struct({
-      parts: Schema.Array(Schema.String),
+      parts: Schema.Array(PathSegmentSchema),
       root: Schema.Literal("local"),
     }),
   ),
@@ -282,7 +283,7 @@ const InputValueBindingSchema = Schema.Struct({
   target: Schema.Union(
     Schema.String,
     Schema.Struct({
-      parts: Schema.Array(Schema.String),
+      parts: Schema.Array(PathSegmentSchema),
       root: Schema.Literal("local"),
     }),
   ),
@@ -294,7 +295,7 @@ const InputBindingSchema = Schema.Union(
   InputValueBindingSchema,
 );
 
-const StatePathPartsSchema = Schema.Array(Schema.String).pipe(
+const StatePathPartsSchema = Schema.Array(PathSegmentSchema).pipe(
   Schema.filter((parts) => parts.length > 0),
 );
 
@@ -302,7 +303,7 @@ const OutputBindingSchema = Schema.Struct({
   source: Schema.Union(
     Schema.String,
     Schema.Struct({
-      parts: Schema.Array(Schema.String),
+      parts: Schema.Array(PathSegmentSchema),
       root: Schema.Literal("local"),
     }),
   ),
