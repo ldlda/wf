@@ -156,6 +156,63 @@ const mutationKey = (kind: string, input: unknown, revision: number): string => 
   return `${kind}:${revision}:${encoded ?? "undefined"}`;
 };
 
+const copyJsonValue = (value: unknown): unknown => {
+  if (Array.isArray(value)) return value.map(copyJsonValue);
+  if (value !== null && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, nestedValue]) => [key, copyJsonValue(nestedValue)]),
+    );
+  }
+  return value;
+};
+
+const copyInputBinding = (binding: InputBinding): InputBinding => {
+  if ("path" in binding) {
+    return {
+      path:
+        typeof binding.path === "string"
+          ? binding.path
+          : { root: binding.path.root, parts: [...binding.path.parts] },
+      target:
+        typeof binding.target === "string"
+          ? binding.target
+          : { root: binding.target.root, parts: [...binding.target.parts] },
+    };
+  }
+  return {
+    target:
+      typeof binding.target === "string"
+        ? binding.target
+        : { root: binding.target.root, parts: [...binding.target.parts] },
+    value: copyJsonValue(binding.value),
+  };
+};
+
+const copyOutputBinding = (binding: OutputBinding): OutputBinding => ({
+  source:
+    typeof binding.source === "string"
+      ? binding.source
+      : { root: binding.source.root, parts: [...binding.source.parts] },
+  target:
+    typeof binding.target === "string"
+      ? binding.target
+      : { root: binding.target.root, parts: [...binding.target.parts] },
+});
+
+const copyInputBindings = (
+  bindings: ReadonlyArray<InputBinding>,
+): ReadonlyArray<InputBinding> => bindings.map(copyInputBinding);
+
+const copyOutputBindings = (
+  bindings: ReadonlyArray<OutputBinding>,
+): ReadonlyArray<OutputBinding> => bindings.map(copyOutputBinding);
+
+const copySetupPatch = (patch: CapabilitySetupPatch): CapabilitySetupPatch => ({
+  ...(patch.description !== undefined ? { description: patch.description } : {}),
+  ...(patch.retry !== undefined ? { retry: patch.retry } : {}),
+  ...(patch.timeoutSeconds !== undefined ? { timeoutSeconds: patch.timeoutSeconds } : {}),
+});
+
 export const useDraftAuthoring = ({
   draft: initialDraft,
   initialSelection = canvasSelection,
@@ -442,14 +499,19 @@ export const useDraftAuthoring = ({
       patch: CapabilitySetupPatch,
       allowTargetSelectionChange = false,
     ): Promise<void> => {
+      const submittedPatch = copySetupPatch(patch);
       const update = {
-        ...(patch.description !== undefined ? { description: patch.description } : {}),
-        ...(patch.retry !== undefined ? { retry: patch.retry } : {}),
-        ...(patch.timeoutSeconds !== undefined ? { timeoutSeconds: patch.timeoutSeconds } : {}),
+        ...(submittedPatch.description !== undefined
+          ? { description: submittedPatch.description }
+          : {}),
+        ...(submittedPatch.retry !== undefined ? { retry: submittedPatch.retry } : {}),
+        ...(submittedPatch.timeoutSeconds !== undefined
+          ? { timeoutSeconds: submittedPatch.timeoutSeconds }
+          : {}),
       };
       return runMutation(
         "setup",
-        { targetStepId, patch },
+        { targetStepId, patch: submittedPatch },
         (client, requestDraft) =>
           client.updateCapabilityStep({
             workspaceId: requestDraft.workspaceId,
@@ -460,7 +522,7 @@ export const useDraftAuthoring = ({
         {
           targetStepId,
           allowTargetSelectionChange,
-          submission: { kind: "setup", targetStepId, patch },
+          submission: { kind: "setup", targetStepId, patch: submittedPatch },
         },
       );
     },
@@ -472,23 +534,25 @@ export const useDraftAuthoring = ({
       targetStepId: string,
       bindings: ReadonlyArray<InputBinding>,
       allowTargetSelectionChange = false,
-    ): Promise<void> =>
-      runMutation(
+    ): Promise<void> => {
+      const submittedBindings = copyInputBindings(bindings);
+      return runMutation(
         "inputs",
-        { targetStepId, bindings },
+        { targetStepId, bindings: submittedBindings },
         (client, requestDraft) =>
           client.setStepInputBindings({
             workspaceId: requestDraft.workspaceId,
             revision: requestDraft.revision,
             stepId: targetStepId,
-            bindings,
+            bindings: submittedBindings,
           }),
         {
           targetStepId,
           allowTargetSelectionChange,
-          submission: { kind: "inputs", targetStepId, bindings },
+          submission: { kind: "inputs", targetStepId, bindings: submittedBindings },
         },
-      ),
+      );
+    },
     [runMutation],
   );
 
@@ -497,23 +561,25 @@ export const useDraftAuthoring = ({
       targetStepId: string,
       bindings: ReadonlyArray<OutputBinding>,
       allowTargetSelectionChange = false,
-    ): Promise<void> =>
-      runMutation(
+    ): Promise<void> => {
+      const submittedBindings = copyOutputBindings(bindings);
+      return runMutation(
         "outputs",
-        { targetStepId, bindings },
+        { targetStepId, bindings: submittedBindings },
         (client, requestDraft) =>
           client.setStepOutputBindings({
             workspaceId: requestDraft.workspaceId,
             revision: requestDraft.revision,
             stepId: targetStepId,
-            bindings,
+            bindings: submittedBindings,
           }),
         {
           targetStepId,
           allowTargetSelectionChange,
-          submission: { kind: "outputs", targetStepId, bindings },
+          submission: { kind: "outputs", targetStepId, bindings: submittedBindings },
         },
-      ),
+      );
+    },
     [runMutation],
   );
 

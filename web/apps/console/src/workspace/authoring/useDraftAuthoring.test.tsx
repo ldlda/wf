@@ -681,4 +681,126 @@ describe("useDraftAuthoring", () => {
     });
     expect(result.current.draft).toBe(canonical);
   });
+
+  it("reapplies an immutable input snapshot after caller-owned values mutate", async () => {
+    const initial = workspace({ revision: 7 });
+    const conflict = workspace({ revision: 7, status: "conflict" });
+    const reloaded = workspace({ revision: 8, status: "invalid" });
+    const canonical = workspace({ revision: 9 });
+    const pathBinding = {
+      path: { root: "state" as const, parts: ["fallback", "value"] },
+      target: { root: "local" as const, parts: ["fallback"] },
+    } satisfies InputBinding;
+    const literalBinding = {
+      target: { root: "local" as const, parts: ["options"] },
+      value: { nested: { items: [{ enabled: true }] } },
+    } satisfies InputBinding;
+    const bindings: InputBinding[] = [pathBinding, literalBinding];
+    const expectedBindings: ReadonlyArray<InputBinding> = [
+      {
+        path: { root: "state", parts: ["fallback", "value"] },
+        target: { root: "local", parts: ["fallback"] },
+      },
+      {
+        target: { root: "local", parts: ["options"] },
+        value: { nested: { items: [{ enabled: true }] } },
+      },
+    ];
+    setStepInputBindings.mockResolvedValueOnce(conflict).mockResolvedValueOnce(canonical);
+    load.mockResolvedValue(reloaded);
+    const { result } = renderHook(() => useDraftAuthoring({
+      draft: initial,
+      initialSelection: { kind: "node", nodeId: "render" },
+    }));
+
+    await act(async () => result.current.setStepInputs(bindings));
+    pathBinding.path.parts[0] = "context";
+    pathBinding.target.parts[0] = "mutated-target";
+    Object.assign(literalBinding, { target: "mutated-target" });
+    const firstItem = literalBinding.value.nested.items[0];
+    if (firstItem !== undefined) firstItem.enabled = false;
+    bindings.push({ target: "added", value: true });
+    act(() => result.current.select({ kind: "node", nodeId: "publish" }));
+    await act(async () => result.current.reload());
+    await act(async () => result.current.reapply());
+
+    expect(setStepInputBindings).toHaveBeenLastCalledWith({
+      workspaceId: "draft-report",
+      revision: 8,
+      stepId: "render",
+      bindings: expectedBindings,
+    });
+  });
+
+  it("reapplies an immutable output snapshot after caller-owned values mutate", async () => {
+    const initial = workspace({ revision: 7 });
+    const conflict = workspace({ revision: 7, status: "conflict" });
+    const reloaded = workspace({ revision: 8, status: "invalid" });
+    const canonical = workspace({ revision: 9 });
+    const firstBinding = {
+      source: { root: "local" as const, parts: ["text"] },
+      target: { root: "state" as const, parts: ["report"] },
+    } satisfies OutputBinding;
+    const secondBinding = {
+      source: { root: "local" as const, parts: ["text"] },
+      target: "state.audit.latest",
+    } satisfies OutputBinding;
+    const bindings: OutputBinding[] = [firstBinding, secondBinding];
+    const expectedBindings: ReadonlyArray<OutputBinding> = [
+      {
+        source: { root: "local", parts: ["text"] },
+        target: { root: "state", parts: ["report"] },
+      },
+      { source: { root: "local", parts: ["text"] }, target: "state.audit.latest" },
+    ];
+    setStepOutputBindings.mockResolvedValueOnce(conflict).mockResolvedValueOnce(canonical);
+    load.mockResolvedValue(reloaded);
+    const { result } = renderHook(() => useDraftAuthoring({
+      draft: initial,
+      initialSelection: { kind: "node", nodeId: "render" },
+    }));
+
+    await act(async () => result.current.setStepOutputs(bindings));
+    firstBinding.source.parts[0] = "mutated-source";
+    firstBinding.target.parts[0] = "mutated-target";
+    Object.assign(secondBinding, { source: "mutated-source", target: "mutated-target" });
+    bindings.push({ source: "added", target: "state.added" });
+    act(() => result.current.select({ kind: "node", nodeId: "publish" }));
+    await act(async () => result.current.reload());
+    await act(async () => result.current.reapply());
+
+    expect(setStepOutputBindings).toHaveBeenLastCalledWith({
+      workspaceId: "draft-report",
+      revision: 8,
+      stepId: "render",
+      bindings: expectedBindings,
+    });
+  });
+
+  it("reapplies an immutable setup patch after the caller mutates it", async () => {
+    const initial = workspace({ revision: 7 });
+    const conflict = workspace({ revision: 7, status: "conflict" });
+    const reloaded = workspace({ revision: 8, status: "invalid" });
+    const canonical = workspace({ revision: 9 });
+    const patch = { description: "Original", retry: 0, timeoutSeconds: null } satisfies CapabilitySetupPatch;
+    updateCapabilityStep.mockResolvedValueOnce(conflict).mockResolvedValueOnce(canonical);
+    load.mockResolvedValue(reloaded);
+    const { result } = renderHook(() => useDraftAuthoring({
+      draft: initial,
+      initialSelection: { kind: "node", nodeId: "render" },
+    }));
+
+    await act(async () => result.current.updateSetup(patch));
+    Object.assign(patch, { description: "Mutated", retry: 4, timeoutSeconds: 30 });
+    act(() => result.current.select({ kind: "node", nodeId: "publish" }));
+    await act(async () => result.current.reload());
+    await act(async () => result.current.reapply());
+
+    expect(updateCapabilityStep).toHaveBeenLastCalledWith({
+      workspaceId: "draft-report",
+      revision: 8,
+      stepId: "render",
+      update: { description: "Original", retry: 0, timeoutSeconds: null },
+    });
+  });
 });
