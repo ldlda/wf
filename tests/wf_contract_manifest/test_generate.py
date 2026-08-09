@@ -91,13 +91,45 @@ def test_generates_the_complete_real_workflow_contract() -> None:
 
     assert len(manifest["operations"]) == 70
     assert len({operation["method"] for operation in manifest["operations"]}) == 70
-    assert len(schemas) == 126
+    assert len(schemas) == 127
     assert len(manifest["components"]["errors"]) == 1
     assert all(
         set(operation["result"]["schema"]) == {"$ref"}
         for operation in manifest["operations"]
     )
     assert {name for name in UNION_RESULTS if "anyOf" in schemas[name]} == UNION_RESULTS
+
+
+def test_manifest_preserves_recursive_json_value_binding_contract() -> None:
+    schemas: dict[str, Any] = generate_manifest()["components"]["schemas"]
+    value_schema = schemas["InputValueBinding"]["properties"]["value"]
+
+    assert value_schema["$ref"] == "#/components/schemas/JsonValue"
+    json_value_schema = schemas["JsonValue"]
+    assert {branch["type"] for branch in json_value_schema["anyOf"]} == {
+        "boolean",
+        "integer",
+        "number",
+        "string",
+        "array",
+        "object",
+        "null",
+    }
+    assert json_value_schema["anyOf"][4]["items"] == {
+        "$ref": "#/components/schemas/JsonValue"
+    }
+    assert json_value_schema["anyOf"][5]["additionalProperties"] == {
+        "$ref": "#/components/schemas/JsonValue"
+    }
+
+
+def test_manifest_contains_the_two_focused_step_binding_operations() -> None:
+    methods = {operation["method"] for operation in generate_manifest()["operations"]}
+
+    assert {
+        "workflow.draft_workspaces.set_step_input_bindings",
+        "workflow.draft_workspaces.set_step_output_bindings",
+    } <= methods
 
 
 def test_generated_contract_preserves_security_and_extension_boundaries() -> None:

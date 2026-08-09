@@ -4,12 +4,25 @@ from collections.abc import Mapping
 from typing import Annotated, Literal, Self
 
 from jsonschema import Draft202012Validator, SchemaError, validators
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    FiniteFloat,
+    field_validator,
+    model_validator,
+)
 
 from wf_core.models.conditions import Condition
 from wf_core.models.schemas import SchemaRef
 from wf_core.models.workflow_refs import WorkflowRef
 from wf_core.paths import GraphSourcePath, LocalPath, StatePath
+
+# Keep literals recursive at the canonical model seam so every downstream
+# contract generator sees the same JSON scalar/container union.
+type JsonValue = (
+    None | bool | int | FiniteFloat | str | list[JsonValue] | dict[str, JsonValue]
+)
 
 
 class InputPathBinding(BaseModel):
@@ -43,7 +56,7 @@ class InputValueBinding(BaseModel):
     target: LocalPath = Field(
         description="Node-local input path that receives this literal JSON value."
     )
-    value: object = Field(
+    value: JsonValue = Field(
         description=(
             "Literal JSON-compatible value to pass to the node. Use this for "
             "constants, not for values read from workflow input or state."

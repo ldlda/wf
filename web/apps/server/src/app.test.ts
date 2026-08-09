@@ -156,6 +156,24 @@ describe("POST /api/rpc", () => {
       },
     },
     {
+      operation: "workflow.draft_workspaces.set_step_input_bindings",
+      params: {
+        workspace_id: "draft-1",
+        revision: 1,
+        step_id: "echo",
+        bindings: [{ target: "format", value: "markdown" }],
+      },
+    },
+    {
+      operation: "workflow.draft_workspaces.set_step_output_bindings",
+      params: {
+        workspace_id: "draft-1",
+        revision: 1,
+        step_id: "echo",
+        bindings: [{ source: "result", target: "state.result" }],
+      },
+    },
+    {
       operation: "workflow.draft_workspaces.validate",
       params: { workspace_id: "draft-1" },
     },

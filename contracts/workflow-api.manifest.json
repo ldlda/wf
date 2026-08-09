@@ -1698,6 +1698,7 @@
             ]
           },
           "value": {
+            "$ref": "#/components/schemas/JsonValue",
             "description": "Literal JSON-compatible value to pass to the node. Use this for constants, not for values read from workflow input or state."
           }
         },
@@ -1958,6 +1959,37 @@
       "JsonSchema": {
         "additionalProperties": true,
         "type": "object"
+      },
+      "JsonValue": {
+        "anyOf": [
+          {
+            "type": "boolean"
+          },
+          {
+            "type": "integer"
+          },
+          {
+            "type": "number"
+          },
+          {
+            "type": "string"
+          },
+          {
+            "items": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "type": "array"
+          },
+          {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "type": "object"
+          },
+          {
+            "type": "null"
+          }
+        ]
       },
       "ListAdminEventsResult": {
         "description": "Chronological platform event history.",

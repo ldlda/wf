@@ -279,6 +279,29 @@ const lifecycleCases = [
     result: draftWorkspaceResult,
   },
   {
+    operation: "workflow.draft_workspaces.set_step_input_bindings" as const,
+    params: {
+      workspace_id: "console.demo",
+      revision: 3,
+      step_id: "render",
+      bindings: [
+        { path: "input.title", target: "report.title" },
+        { target: "format", value: "markdown" },
+      ],
+    },
+    result: draftWorkspaceResult,
+  },
+  {
+    operation: "workflow.draft_workspaces.set_step_output_bindings" as const,
+    params: {
+      workspace_id: "console.demo",
+      revision: 4,
+      step_id: "render",
+      bindings: [{ source: "report", target: "state.report" }],
+    },
+    result: draftWorkspaceResult,
+  },
+  {
     operation: "workflow.draft_workspaces.validate" as const,
     params: { workspace_id: "console.demo" },
     result: draftWorkspaceResult,

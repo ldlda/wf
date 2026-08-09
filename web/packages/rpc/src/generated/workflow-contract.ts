@@ -162,6 +162,19 @@ export type CapabilityKindPayload = "tool" | "resource" | "prompt" | "node_spec"
 export type InspectCapabilityResult = NodeSpecCapabilityDetail | WrapperArtifactCapabilityDetail;
 /**
  * This interface was referenced by `WorkflowContractMap`'s JSON-Schema
+ * via the `definition` "JsonValue".
+ */
+export type JsonValue =
+  | boolean
+  | number
+  | string
+  | JsonValue[]
+  | {
+      [k: string]: JsonValue;
+    }
+  | null;
+/**
+ * This interface was referenced by `WorkflowContractMap`'s JSON-Schema
  * via the `definition` "CompileDraftWorkspaceResult".
  */
 export type CompileDraftWorkspaceResult = CompileDraftWorkspaceSuccess | InvalidDraftResult;
@@ -1543,9 +1556,15 @@ export interface InputValueBinding {
   /**
    * Literal JSON-compatible value to pass to the node. Use this for constants, not for values read from workflow input or state.
    */
-  value: {
-    [k: string]: unknown;
-  };
+  value:
+    | boolean
+    | number
+    | string
+    | JsonValue[]
+    | {
+        [k: string]: JsonValue;
+      }
+    | null;
 }
 /**
  * Map one node-local output path into one workflow state path.
@@ -3125,6 +3144,7 @@ export const workflowRuntimeContract = {
           ]
         },
         "value": {
+          "$ref": "#/components/schemas/JsonValue",
           "description": "Literal JSON-compatible value to pass to the node. Use this for constants, not for values read from workflow input or state."
         }
       },
@@ -3244,6 +3264,37 @@ export const workflowRuntimeContract = {
     "JsonSchema": {
       "additionalProperties": true,
       "type": "object"
+    },
+    "JsonValue": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "integer"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "items": {
+            "$ref": "#/components/schemas/JsonValue"
+          },
+          "type": "array"
+        },
+        {
+          "additionalProperties": {
+            "$ref": "#/components/schemas/JsonValue"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ]
     },
     "ListArtifactsResult": {
       "properties": {
@@ -3599,6 +3650,81 @@ export const workflowRuntimeContract = {
         "input_fields",
         "output_fields",
         "kind"
+      ],
+      "type": "object"
+    },
+    "OutputBinding": {
+      "additionalProperties": false,
+      "description": "Map one node-local output path into one workflow state path.",
+      "properties": {
+        "source": {
+          "description": "Node-local output path to read. Prefer canonical strings such as `result` or `.` for the whole node output payload. Structural objects such as {'root': 'local', 'parts': []} are also accepted as input.",
+          "anyOf": [
+            {
+              "description": "Canonical TOML-key path string.",
+              "type": "string"
+            },
+            {
+              "additionalProperties": false,
+              "description": "Structural path object accepted as input.",
+              "properties": {
+                "parts": {
+                  "items": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "minItems": 0,
+                  "type": "array"
+                },
+                "root": {
+                  "const": "local",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "root",
+                "parts"
+              ],
+              "type": "object"
+            }
+          ]
+        },
+        "target": {
+          "description": "Writable workflow state path. Bare state is invalid; use a field path such as `state.echoed`. Structural objects such as {'root': 'state', 'parts': ['echoed']} are also accepted as input.",
+          "anyOf": [
+            {
+              "description": "Canonical TOML-key path string.",
+              "type": "string"
+            },
+            {
+              "additionalProperties": false,
+              "description": "Structural path object accepted as input.",
+              "properties": {
+                "parts": {
+                  "items": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "minItems": 1,
+                  "type": "array"
+                },
+                "root": {
+                  "const": "state",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "root",
+                "parts"
+              ],
+              "type": "object"
+            }
+          ]
+        }
+      },
+      "required": [
+        "source",
+        "target"
       ],
       "type": "object"
     },
@@ -5339,6 +5465,84 @@ export const workflowRuntimeContract = {
           "step_id",
           "outcome",
           "target"
+        ],
+        "type": "object"
+      },
+      "success": {
+        "$ref": "#/components/schemas/DraftWorkspaceResult"
+      }
+    },
+    "workflow.draft_workspaces.set_step_input_bindings": {
+      "payload": {
+        "additionalProperties": false,
+        "properties": {
+          "workspace_id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "revision": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "step_id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "bindings": {
+            "items": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/InputPathBinding"
+                },
+                {
+                  "$ref": "#/components/schemas/InputValueBinding"
+                }
+              ],
+              "description": "Canonical node input binding. Use either a path binding with `path`, or a literal binding with `value`; do not provide both."
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "workspace_id",
+          "revision",
+          "step_id",
+          "bindings"
+        ],
+        "type": "object"
+      },
+      "success": {
+        "$ref": "#/components/schemas/DraftWorkspaceResult"
+      }
+    },
+    "workflow.draft_workspaces.set_step_output_bindings": {
+      "payload": {
+        "additionalProperties": false,
+        "properties": {
+          "workspace_id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "revision": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "step_id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "bindings": {
+            "items": {
+              "$ref": "#/components/schemas/OutputBinding"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "workspace_id",
+          "revision",
+          "step_id",
+          "bindings"
         ],
         "type": "object"
       },

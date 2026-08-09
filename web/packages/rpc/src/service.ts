@@ -40,6 +40,8 @@ import {
   WorkflowDraftWorkspacesAddStepFromCapabilityPayloadSchema,
   WorkflowDraftWorkspacesUpdateCapabilityStepPayloadSchema,
   WorkflowDraftWorkspacesSetRoutePayloadSchema,
+  WorkflowDraftWorkspacesSetStepInputBindingsPayloadSchema,
+  WorkflowDraftWorkspacesSetStepOutputBindingsPayloadSchema,
   WorkflowDraftWorkspacesValidatePayloadSchema,
   WorkflowArtifactsListPayloadSchema,
   WorkflowArtifactsInspectPayloadSchema,
@@ -354,6 +356,24 @@ const executeImpl =
               params,
             );
             return yield* client.workflow["draft_workspaces.set_route"](payload);
+          }
+          case "workflow.draft_workspaces.set_step_input_bindings": {
+            const payload = yield* decodeParams(
+              WorkflowDraftWorkspacesSetStepInputBindingsPayloadSchema,
+              params,
+            );
+            return yield* client.workflow[
+              "draft_workspaces.set_step_input_bindings"
+            ](payload);
+          }
+          case "workflow.draft_workspaces.set_step_output_bindings": {
+            const payload = yield* decodeParams(
+              WorkflowDraftWorkspacesSetStepOutputBindingsPayloadSchema,
+              params,
+            );
+            return yield* client.workflow[
+              "draft_workspaces.set_step_output_bindings"
+            ](payload);
           }
           case "workflow.draft_workspaces.validate": {
             const payload = yield* decodeParams(

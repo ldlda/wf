@@ -25,6 +25,10 @@ import {
   WorkflowDraftWorkspacesUpdateCapabilityStepResultSchema,
   WorkflowDraftWorkspacesSetRoutePayloadSchema,
   WorkflowDraftWorkspacesSetRouteResultSchema,
+  WorkflowDraftWorkspacesSetStepInputBindingsPayloadSchema,
+  WorkflowDraftWorkspacesSetStepInputBindingsResultSchema,
+  WorkflowDraftWorkspacesSetStepOutputBindingsPayloadSchema,
+  WorkflowDraftWorkspacesSetStepOutputBindingsResultSchema,
   WorkflowDraftWorkspacesValidatePayloadSchema,
   WorkflowDraftWorkspacesValidateResultSchema,
   WorkflowArtifactsListPayloadSchema,
@@ -151,6 +155,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 const inputBindingCliArgs = (
   bindings: readonly unknown[],
+  pathFlag: "--input" | "--map" = "--input",
 ): { readonly args: readonly string[]; readonly unavailable: readonly string[] } => {
   const args: string[] = [];
   const unavailable: string[] = [];
@@ -160,7 +165,7 @@ const inputBindingCliArgs = (
       continue;
     }
     if (typeof binding.path === "string") {
-      args.push("--input", shellArg(`${binding.path}=${binding.target}`));
+      args.push(pathFlag, shellArg(`${binding.path}=${binding.target}`));
       continue;
     }
     if ("value" in binding) {
@@ -171,6 +176,25 @@ const inputBindingCliArgs = (
       }
     }
     unavailable.push("input_bindings (use --bindings-file)");
+  }
+  return { args, unavailable };
+};
+
+const outputBindingCliArgs = (
+  bindings: readonly unknown[],
+): { readonly args: readonly string[]; readonly unavailable: readonly string[] } => {
+  const args: string[] = [];
+  const unavailable: string[] = [];
+  for (const binding of bindings) {
+    if (
+      !isRecord(binding) ||
+      typeof binding.source !== "string" ||
+      typeof binding.target !== "string"
+    ) {
+      unavailable.push("output_bindings (use --bindings-file)");
+      continue;
+    }
+    args.push("--map", shellArg(`${binding.source}=${binding.target}`));
   }
   return { args, unavailable };
 };
@@ -617,6 +641,72 @@ const operationEntries = defineOperationEntries([
     interpret: (result) => {
       const decoded = Schema.decodeUnknownSync(
         WorkflowDraftWorkspacesSetRouteResultSchema,
+      )(result);
+      return interpretDraftWorkspace(decoded);
+    },
+  },
+  {
+    method: "workflow.draft_workspaces.set_step_input_bindings",
+    label: "Set step input bindings",
+    explanation: "Replace one capability-backed step's ordered input bindings",
+    idempotency: "write",
+    equivalentCli: (params) => {
+      const p = Schema.decodeUnknownSync(
+        WorkflowDraftWorkspacesSetStepInputBindingsPayloadSchema,
+      )(params, { onExcessProperty: "error" });
+      const parts = [
+        "uv run wf draft set-input",
+        shellArg(p.workspace_id),
+        "--revision",
+        String(p.revision),
+        "--step",
+        shellArg(p.step_id),
+      ];
+      if (p.bindings.length === 0) {
+        parts.push("--clear");
+      } else {
+        const rendered = inputBindingCliArgs(p.bindings, "--map");
+        parts.push(...rendered.args);
+        return nonEquivalentCli(parts.join(" "), rendered.unavailable);
+      }
+      return parts.join(" ");
+    },
+    interpret: (result) => {
+      const decoded = Schema.decodeUnknownSync(
+        WorkflowDraftWorkspacesSetStepInputBindingsResultSchema,
+      )(result);
+      return interpretDraftWorkspace(decoded);
+    },
+  },
+  {
+    method: "workflow.draft_workspaces.set_step_output_bindings",
+    label: "Set step output bindings",
+    explanation: "Replace one capability-backed step's ordered output bindings",
+    idempotency: "write",
+    equivalentCli: (params) => {
+      const p = Schema.decodeUnknownSync(
+        WorkflowDraftWorkspacesSetStepOutputBindingsPayloadSchema,
+      )(params, { onExcessProperty: "error" });
+      const parts = [
+        "uv run wf draft set-output",
+        shellArg(p.workspace_id),
+        "--revision",
+        String(p.revision),
+        "--step",
+        shellArg(p.step_id),
+      ];
+      if (p.bindings.length === 0) {
+        parts.push("--clear");
+      } else {
+        const rendered = outputBindingCliArgs(p.bindings);
+        parts.push(...rendered.args);
+        return nonEquivalentCli(parts.join(" "), rendered.unavailable);
+      }
+      return parts.join(" ");
+    },
+    interpret: (result) => {
+      const decoded = Schema.decodeUnknownSync(
+        WorkflowDraftWorkspacesSetStepOutputBindingsResultSchema,
       )(result);
       return interpretDraftWorkspace(decoded);
     },

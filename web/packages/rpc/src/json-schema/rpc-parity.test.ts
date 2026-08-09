@@ -50,6 +50,14 @@ const WorkflowDraftWorkspacesSetRoutePayloadSchema =
   authoredRpcSchemas["workflow.draft_workspaces.set_route"].payload;
 const WorkflowDraftWorkspacesSetRouteResultSchema =
   authoredRpcSchemas["workflow.draft_workspaces.set_route"].success;
+const WorkflowDraftWorkspacesSetStepInputBindingsPayloadSchema =
+  authoredRpcSchemas["workflow.draft_workspaces.set_step_input_bindings"].payload;
+const WorkflowDraftWorkspacesSetStepInputBindingsResultSchema =
+  authoredRpcSchemas["workflow.draft_workspaces.set_step_input_bindings"].success;
+const WorkflowDraftWorkspacesSetStepOutputBindingsPayloadSchema =
+  authoredRpcSchemas["workflow.draft_workspaces.set_step_output_bindings"].payload;
+const WorkflowDraftWorkspacesSetStepOutputBindingsResultSchema =
+  authoredRpcSchemas["workflow.draft_workspaces.set_step_output_bindings"].success;
 const WorkflowDraftWorkspacesValidatePayloadSchema =
   authoredRpcSchemas["workflow.draft_workspaces.validate"].payload;
 const WorkflowDraftWorkspacesValidateResultSchema =
@@ -570,6 +578,56 @@ const parityCases: ReadonlyArray<ParityCase> = [
     },
   },
   {
+    method: "workflow.draft_workspaces.set_step_input_bindings",
+    payload: WorkflowDraftWorkspacesSetStepInputBindingsPayloadSchema,
+    success: WorkflowDraftWorkspacesSetStepInputBindingsResultSchema,
+    validPayload: {
+      workspace_id: "console.demo",
+      revision: 3,
+      step_id: "render",
+      bindings: [
+        { path: "input.title", target: "report.title" },
+        { target: "format", value: "markdown" },
+        { target: "nullable", value: null },
+        { target: "tags", value: ["draft", 2, false] },
+        { target: "options", value: { strict: true } },
+      ],
+    },
+    invalidPayload: {
+      workspace_id: "console.demo",
+      revision: 3,
+      step_id: "render",
+      bindings: [{ path: "input.title", target: "report.title", value: "bad" }],
+    },
+    validSuccess: draftWorkspace,
+    invalidSuccess: {
+      ...draftWorkspace,
+      summary: { ...draftWorkspace.summary, steps: [1] },
+    },
+  },
+  {
+    method: "workflow.draft_workspaces.set_step_output_bindings",
+    payload: WorkflowDraftWorkspacesSetStepOutputBindingsPayloadSchema,
+    success: WorkflowDraftWorkspacesSetStepOutputBindingsResultSchema,
+    validPayload: {
+      workspace_id: "console.demo",
+      revision: 4,
+      step_id: "render",
+      bindings: [{ source: "report", target: "state.report" }],
+    },
+    invalidPayload: {
+      workspace_id: "console.demo",
+      revision: 4,
+      step_id: "render",
+      bindings: [{ source: "report", target: { root: "state", parts: [] } }],
+    },
+    validSuccess: draftWorkspace,
+    invalidSuccess: {
+      ...draftWorkspace,
+      summary: { ...draftWorkspace.summary, steps: [1] },
+    },
+  },
+  {
     method: "workflow.draft_workspaces.validate",
     payload: WorkflowDraftWorkspacesValidatePayloadSchema,
     success: WorkflowDraftWorkspacesValidateResultSchema,
@@ -913,6 +971,8 @@ describe("authored RPC and manifest schema parity", () => {
       "workflow.draft_workspaces.add_step_from_capability",
       "workflow.draft_workspaces.update_capability_step",
       "workflow.draft_workspaces.set_route",
+      "workflow.draft_workspaces.set_step_input_bindings",
+      "workflow.draft_workspaces.set_step_output_bindings",
       "workflow.draft_workspaces.validate",
       "workflow.artifacts.list",
       "workflow.artifacts.inspect",
@@ -946,6 +1006,8 @@ describe("authored RPC and manifest schema parity", () => {
     expect(parityReport().blockers).toEqual([
       "workflow.draft_workspaces.add_step_from_capability:payload:oneOf@#/components/schemas/InputPathBinding.properties.path",
       "workflow.draft_workspaces.update_capability_step:payload:oneOf@#/components/schemas/InputPathBinding.properties.path",
+      "workflow.draft_workspaces.set_step_input_bindings:payload:oneOf@#/components/schemas/InputPathBinding.properties.path",
+      "workflow.draft_workspaces.set_step_output_bindings:payload:oneOf@#/components/schemas/OutputBinding.properties.source",
     ]);
   });
 });

@@ -21,6 +21,56 @@ const fixture = {
         required: ["status"],
         type: "object",
       },
+      JsonValue: {
+        anyOf: [
+          { type: "boolean" },
+          { type: "integer" },
+          { type: "number" },
+          { type: "string" },
+          {
+            items: { $ref: "#/components/schemas/JsonValue" },
+            type: "array",
+          },
+          {
+            additionalProperties: { $ref: "#/components/schemas/JsonValue" },
+            type: "object",
+          },
+          { type: "null" },
+        ],
+      },
+      InputPathBinding: {
+        additionalProperties: false,
+        properties: {
+          path: { type: "string" },
+          target: { type: "string" },
+        },
+        required: ["path", "target"],
+        type: "object",
+      },
+      InputValueBinding: {
+        additionalProperties: false,
+        properties: {
+          target: { type: "string" },
+          value: { $ref: "#/components/schemas/JsonValue" },
+        },
+        required: ["target", "value"],
+        type: "object",
+      },
+      OutputBinding: {
+        additionalProperties: false,
+        properties: {
+          source: { type: "string" },
+          target: { type: "string" },
+        },
+        required: ["source", "target"],
+        type: "object",
+      },
+      DraftWorkspaceResult: {
+        additionalProperties: false,
+        properties: { workspace_id: { type: "string" } },
+        required: ["workspace_id"],
+        type: "object",
+      },
       FailureResult: {
         additionalProperties: false,
         properties: { message: { type: "string" } },
@@ -99,6 +149,8 @@ const runtimeOperationNames = [
   "workflow.draft_workspaces.list",
   "workflow.draft_workspaces.get",
   "workflow.draft_workspaces.set_route",
+  "workflow.draft_workspaces.set_step_input_bindings",
+  "workflow.draft_workspaces.set_step_output_bindings",
   "workflow.draft_workspaces.update_capability_step",
   "workflow.draft_workspaces.validate",
   "workflow.artifacts.list",
@@ -116,11 +168,52 @@ const runtimeOperationNames = [
 const completeRuntimeFixture = {
   ...fixture,
   operations: [
-    ...runtimeOperationNames.map((method) => ({
-      method,
-      params: [],
-      result: { schema: { $ref: "#/components/schemas/HealthResult" } },
-    })),
+    ...runtimeOperationNames.map((method) =>
+      method === "workflow.draft_workspaces.set_step_input_bindings"
+        ? {
+            method,
+            params: [
+              {
+                name: "bindings",
+                required: true,
+                schema: {
+                  items: {
+                    anyOf: [
+                      { $ref: "#/components/schemas/InputPathBinding" },
+                      { $ref: "#/components/schemas/InputValueBinding" },
+                    ],
+                  },
+                  type: "array",
+                },
+              },
+            ],
+            result: {
+              schema: { $ref: "#/components/schemas/DraftWorkspaceResult" },
+            },
+          }
+        : method === "workflow.draft_workspaces.set_step_output_bindings"
+          ? {
+              method,
+              params: [
+                {
+                  name: "bindings",
+                  required: true,
+                  schema: {
+                    items: { $ref: "#/components/schemas/OutputBinding" },
+                    type: "array",
+                  },
+                },
+              ],
+              result: {
+                schema: { $ref: "#/components/schemas/DraftWorkspaceResult" },
+              },
+            }
+          : {
+              method,
+              params: [],
+              result: { schema: { $ref: "#/components/schemas/HealthResult" } },
+            },
+    ),
     ...fixture.operations.filter(({ method }) => method !== "workflow.health"),
   ],
 };
@@ -141,6 +234,7 @@ describe("workflow contract generator", () => {
     expect(source).toMatch(/metadata\?: \{\s+\[k: string\]: unknown;/);
     expect(source).toContain("params: Record<string, never>");
     expect(source).toContain("result: HealthResult | FailureResult");
+    expect(source).toContain("value: JsonValue;");
     expect(source).toContain(
       "export type WorkflowOperationParams<Name extends WorkflowOperationName>",
     );
@@ -160,6 +254,7 @@ describe("workflow contract generator", () => {
 
     expect(runtimeSource).toContain('"workflow.health"');
     expect(runtimeSource).toContain('"HealthResult"');
+    expect(runtimeSource).toContain('"JsonValue"');
     expect(runtimeSource).toContain('"additionalProperties": false');
     expect(runtimeSource).toContain('"properties": {}');
     expect(runtimeSource).not.toContain('"workflow.widgets.inspect"');
@@ -190,6 +285,44 @@ describe("workflow contract generator", () => {
     await expect(
       generateWorkflowContractSource(JSON.stringify(reduced)),
     ).rejects.toThrow(/missing runtime operation.*workflow\.draft_workspaces\.validate/i);
+  });
+
+  it.each([
+    "workflow.draft_workspaces.set_step_input_bindings",
+    "workflow.draft_workspaces.set_step_output_bindings",
+  ])("rejects a manifest missing focused operation %s", async (method) => {
+    const reduced = {
+      ...completeRuntimeFixture,
+      operations: completeRuntimeFixture.operations.filter(
+        (operation) => operation.method !== method,
+      ),
+    };
+    const escapedMethod = method.replaceAll(".", "\\.");
+
+    await expect(
+      generateWorkflowContractSource(JSON.stringify(reduced)),
+    ).rejects.toThrow(
+      new RegExp(`missing runtime operation.*${escapedMethod}`, "i"),
+    );
+  });
+
+  it("includes focused binding operations and reachable binding schemas", async () => {
+    const source = await generateWorkflowContractSource(
+      JSON.stringify(completeRuntimeFixture),
+    );
+    const runtimeSource = source.slice(
+      source.indexOf("export const workflowRuntimeContract"),
+    );
+
+    expect(runtimeSource).toContain(
+      '"workflow.draft_workspaces.set_step_input_bindings"',
+    );
+    expect(runtimeSource).toContain(
+      '"workflow.draft_workspaces.set_step_output_bindings"',
+    );
+    expect(runtimeSource).toContain('"InputPathBinding"');
+    expect(runtimeSource).toContain('"InputValueBinding"');
+    expect(runtimeSource).toContain('"OutputBinding"');
   });
 
   it("rejects non-local references reachable from the runtime cohort", async () => {

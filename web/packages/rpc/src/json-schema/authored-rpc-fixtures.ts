@@ -1,5 +1,7 @@
 import { Schema } from "effect";
 
+type JsonValue = string | number | boolean | null | JsonValue[] | { readonly [key: string]: JsonValue };
+
 const NonNegativeIntegerSchema = Schema.Number.pipe(
   Schema.int(),
   Schema.between(0, Number.MAX_SAFE_INTEGER),
@@ -12,6 +14,43 @@ const JsonObjectSchema = Schema.Record({
   key: Schema.String,
   value: Schema.Unknown,
 });
+// This fixture intentionally mirrors the canonical recursive JSON literal contract.
+const JsonValueStructureSchema: Schema.Schema<JsonValue, JsonValue, never> =
+  Schema.suspend(
+    (): Schema.Schema<JsonValue, JsonValue, never> =>
+      Schema.Union(
+        Schema.String,
+        Schema.JsonNumber,
+        Schema.Boolean,
+        Schema.Null,
+        Schema.Array(JsonValueStructureSchema),
+        Schema.Record({ key: Schema.String, value: JsonValueStructureSchema }),
+      ),
+  );
+const JsonValueSchema: Schema.Schema<JsonValue, unknown, never> =
+  Schema.Unknown.pipe(
+    Schema.filter(
+      (value): value is JsonValue => {
+        if (
+          value === null ||
+          typeof value === "boolean" ||
+          typeof value === "string"
+        ) {
+          return true;
+        }
+        if (typeof value === "number") return Number.isFinite(value);
+        if (typeof value !== "object") return false;
+        if (Array.isArray(value)) return value.every((item) => item !== undefined);
+        return Object.values(value).every((item) => item !== undefined);
+      },
+      { message: () => "value must be valid JSON" },
+    ),
+    Schema.transform(JsonValueStructureSchema, {
+      strict: false,
+      decode: (value) => value,
+      encode: (value) => value,
+    }),
+  );
 
 const WrapperHintsSchema = Schema.Struct({
   capability_name: Schema.String,
@@ -247,13 +286,34 @@ const InputValueBindingSchema = Schema.Struct({
       root: Schema.Literal("local"),
     }),
   ),
-  value: JsonObjectSchema,
+  value: JsonValueSchema,
 });
 
 const InputBindingSchema = Schema.Union(
   InputPathBindingSchema,
   InputValueBindingSchema,
 );
+
+const StatePathPartsSchema = Schema.Array(Schema.String).pipe(
+  Schema.filter((parts) => parts.length > 0),
+);
+
+const OutputBindingSchema = Schema.Struct({
+  source: Schema.Union(
+    Schema.String,
+    Schema.Struct({
+      parts: Schema.Array(Schema.String),
+      root: Schema.Literal("local"),
+    }),
+  ),
+  target: Schema.Union(
+    Schema.String,
+    Schema.Struct({
+      parts: StatePathPartsSchema,
+      root: Schema.Literal("state"),
+    }),
+  ),
+});
 
 const CapabilityStepUpdateSchema = Schema.Struct({
   desc: Schema.optional(Schema.NullOr(Schema.String.pipe(Schema.minLength(1)))),
@@ -411,6 +471,24 @@ export const authoredRpcSchemas = {
       step_id: Schema.String.pipe(Schema.minLength(1)),
       outcome: Schema.String.pipe(Schema.minLength(1)),
       target: Schema.String.pipe(Schema.minLength(1)),
+    }),
+    success: DraftWorkspaceSchema,
+  },
+  "workflow.draft_workspaces.set_step_input_bindings": {
+    payload: Schema.Struct({
+      workspace_id: Schema.String.pipe(Schema.minLength(1)),
+      revision: PositiveIntegerSchema,
+      step_id: Schema.String.pipe(Schema.minLength(1)),
+      bindings: Schema.Array(InputBindingSchema),
+    }),
+    success: DraftWorkspaceSchema,
+  },
+  "workflow.draft_workspaces.set_step_output_bindings": {
+    payload: Schema.Struct({
+      workspace_id: Schema.String.pipe(Schema.minLength(1)),
+      revision: PositiveIntegerSchema,
+      step_id: Schema.String.pipe(Schema.minLength(1)),
+      bindings: Schema.Array(OutputBindingSchema),
     }),
     success: DraftWorkspaceSchema,
   },

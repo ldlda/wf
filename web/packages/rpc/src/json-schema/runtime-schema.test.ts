@@ -28,6 +28,8 @@ describe("runtimeSchemasFor", () => {
       "workflow.draft_workspaces.get",
       "workflow.draft_workspaces.list",
       "workflow.draft_workspaces.set_route",
+      "workflow.draft_workspaces.set_step_input_bindings",
+      "workflow.draft_workspaces.set_step_output_bindings",
       "workflow.draft_workspaces.update_capability_step",
       "workflow.draft_workspaces.validate",
       "workflow.health",
@@ -58,6 +60,31 @@ describe("runtimeSchemasFor", () => {
     expect(
       Object.hasOwn(workflowRuntimeContract.operations, "workflow.draft_workspaces.replace_document"),
     ).toBe(false);
+  });
+
+  it("accepts every JSON literal category in focused input bindings", () => {
+    const schemas = runtimeSchemasFor(
+      "workflow.draft_workspaces.set_step_input_bindings",
+    );
+    const values = [
+      "markdown",
+      3.14,
+      true,
+      null,
+      ["markdown", false],
+      { format: "markdown", options: { strict: true } },
+    ];
+
+    for (const value of values) {
+      expect(
+        accepts(schemas.payload, {
+          workspace_id: "console.demo",
+          revision: 3,
+          step_id: "render",
+          bindings: [{ target: "literal", value }],
+        }),
+      ).toBe(true);
+    }
   });
 
   it("returns typed payload and result schemas for a generated operation", () => {

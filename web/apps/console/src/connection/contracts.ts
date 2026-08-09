@@ -51,6 +51,8 @@ const OperationNameSchema = v.union([
   v.literal("workflow.draft_workspaces.add_step_from_capability"),
   v.literal("workflow.draft_workspaces.update_capability_step"),
   v.literal("workflow.draft_workspaces.set_route"),
+  v.literal("workflow.draft_workspaces.set_step_input_bindings"),
+  v.literal("workflow.draft_workspaces.set_step_output_bindings"),
   v.literal("workflow.draft_workspaces.validate"),
   v.literal("workflow.artifacts.list"),
   v.literal("workflow.artifacts.inspect"),

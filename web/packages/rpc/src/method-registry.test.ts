@@ -253,6 +253,67 @@ describe("run operation registry", () => {
       },
     },
     {
+      method: "workflow.draft_workspaces.set_step_input_bindings" as const,
+      params: {
+        workspace_id: "console.demo",
+        revision: 3,
+        step_id: "render",
+        bindings: [
+          { path: "input.title", target: "report.title" },
+          { target: "format", value: "markdown" },
+        ],
+      },
+      cli: "uv run wf draft set-input console.demo --revision 3 --step render --map input.title=report.title --value 'format=\"markdown\"'",
+      result: {
+        workspace_id: "console.demo",
+        revision: 4,
+        title: "Console demo",
+        status: "valid" as const,
+        diagnostics: [],
+        summary: {
+          name: "console.demo",
+          start: "echo",
+          step_count: 1,
+          route_count: 1,
+          steps: ["echo"],
+        },
+        draft: {
+          name: "console.demo",
+          start: "echo",
+          steps: { echo: { use: "local.example.echo" } },
+        },
+      },
+    },
+    {
+      method: "workflow.draft_workspaces.set_step_output_bindings" as const,
+      params: {
+        workspace_id: "console.demo",
+        revision: 4,
+        step_id: "render",
+        bindings: [{ source: "report", target: "state.report" }],
+      },
+      cli: "uv run wf draft set-output console.demo --revision 4 --step render --map report=state.report",
+      result: {
+        workspace_id: "console.demo",
+        revision: 5,
+        title: "Console demo",
+        status: "valid" as const,
+        diagnostics: [],
+        summary: {
+          name: "console.demo",
+          start: "echo",
+          step_count: 1,
+          route_count: 1,
+          steps: ["echo"],
+        },
+        draft: {
+          name: "console.demo",
+          start: "echo",
+          steps: { echo: { use: "local.example.echo" } },
+        },
+      },
+    },
+    {
       method: "workflow.draft_workspaces.validate" as const,
       params: { workspace_id: "console.demo" },
       cli: "uv run wf draft validate console.demo",
@@ -314,6 +375,51 @@ describe("run operation registry", () => {
       }),
     ).toBe(
       "uv run wf draft update capability console.demo --revision 2 --step echo --clear-retry --clear-timeout --input input.text=text --value 'mode={\"kind\":\"fast\"}'",
+    );
+  });
+
+  it("renders replacement binding clear flags and non-equivalent evidence", async () => {
+    const { getOperationMeta } = await import("./method-registry.js");
+    const input = getOperationMeta(
+      "workflow.draft_workspaces.set_step_input_bindings",
+    );
+    const output = getOperationMeta(
+      "workflow.draft_workspaces.set_step_output_bindings",
+    );
+    if (input === undefined || output === undefined) {
+      throw new Error("missing focused binding operation");
+    }
+
+    expect(
+      input.equivalentCli({
+        workspace_id: "console.demo",
+        revision: 3,
+        step_id: "render",
+        bindings: [],
+      }),
+    ).toBe("uv run wf draft set-input console.demo --revision 3 --step render --clear");
+    expect(
+      output.equivalentCli({
+        workspace_id: "console.demo",
+        revision: 4,
+        step_id: "render",
+        bindings: [],
+      }),
+    ).toBe("uv run wf draft set-output console.demo --revision 4 --step render --clear");
+    expect(
+      input.equivalentCli({
+        workspace_id: "console.demo",
+        revision: 3,
+        step_id: "render",
+        bindings: [
+          {
+            path: { root: "input", parts: ["title"] },
+            target: "report.title",
+          },
+        ],
+      }),
+    ).toContain(
+      "[non-equivalent: unavailable CLI representation for input_bindings (use --bindings-file)]",
     );
   });
 

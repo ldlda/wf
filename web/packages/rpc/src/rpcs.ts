@@ -191,6 +191,40 @@ export const WorkflowDraftWorkspacesSetRoute = Rpc.make(
   },
 );
 
+const setStepInputBindingsSchemas = runtimeSchemasFor(
+  "workflow.draft_workspaces.set_step_input_bindings",
+);
+export const WorkflowDraftWorkspacesSetStepInputBindingsPayloadSchema =
+  setStepInputBindingsSchemas.payload;
+export const WorkflowDraftWorkspacesSetStepInputBindingsResultSchema =
+  setStepInputBindingsSchemas.success;
+
+export const WorkflowDraftWorkspacesSetStepInputBindings = Rpc.make(
+  "workflow.draft_workspaces.set_step_input_bindings",
+  {
+    payload: WorkflowDraftWorkspacesSetStepInputBindingsPayloadSchema,
+    success: WorkflowDraftWorkspacesSetStepInputBindingsResultSchema,
+    error: Schema.Never,
+  },
+);
+
+const setStepOutputBindingsSchemas = runtimeSchemasFor(
+  "workflow.draft_workspaces.set_step_output_bindings",
+);
+export const WorkflowDraftWorkspacesSetStepOutputBindingsPayloadSchema =
+  setStepOutputBindingsSchemas.payload;
+export const WorkflowDraftWorkspacesSetStepOutputBindingsResultSchema =
+  setStepOutputBindingsSchemas.success;
+
+export const WorkflowDraftWorkspacesSetStepOutputBindings = Rpc.make(
+  "workflow.draft_workspaces.set_step_output_bindings",
+  {
+    payload: WorkflowDraftWorkspacesSetStepOutputBindingsPayloadSchema,
+    success: WorkflowDraftWorkspacesSetStepOutputBindingsResultSchema,
+    error: Schema.Never,
+  },
+);
+
 const draftWorkspacesValidateSchemas = runtimeSchemasFor(
   "workflow.draft_workspaces.validate",
 );
@@ -323,6 +357,8 @@ export const WorkflowRpcs = RpcGroup.make(
   WorkflowDraftWorkspacesAddStepFromCapability,
   WorkflowDraftWorkspacesUpdateCapabilityStep,
   WorkflowDraftWorkspacesSetRoute,
+  WorkflowDraftWorkspacesSetStepInputBindings,
+  WorkflowDraftWorkspacesSetStepOutputBindings,
   WorkflowDraftWorkspacesValidate,
   WorkflowArtifactsList,
   WorkflowArtifactsInspect,

@@ -94,6 +94,8 @@ const runtimeOperationNameList = [
   "workflow.draft_workspaces.list",
   "workflow.draft_workspaces.get",
   "workflow.draft_workspaces.set_route",
+  "workflow.draft_workspaces.set_step_input_bindings",
+  "workflow.draft_workspaces.set_step_output_bindings",
   "workflow.draft_workspaces.update_capability_step",
   "workflow.draft_workspaces.validate",
   "workflow.artifacts.list",

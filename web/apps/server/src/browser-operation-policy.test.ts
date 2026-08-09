@@ -18,6 +18,8 @@ describe("browser operation policy", () => {
       "workflow.draft_workspaces.add_step_from_capability",
       "workflow.draft_workspaces.update_capability_step",
       "workflow.draft_workspaces.set_route",
+      "workflow.draft_workspaces.set_step_input_bindings",
+      "workflow.draft_workspaces.set_step_output_bindings",
       "workflow.draft_workspaces.validate",
       "workflow.artifacts.list",
       "workflow.artifacts.inspect",
@@ -36,6 +38,9 @@ describe("browser operation policy", () => {
     );
     expect(browserAllowedOperationNames).not.toContain(
       "workflow.draft_workspaces.replace_document",
+    );
+    expect(browserAllowedOperationNames).not.toContain(
+      "workflow.draft_workspaces.remove_step",
     );
     expect(isBrowserAllowedOperationName("workflow.admin.auth.list")).toBe(false);
   });

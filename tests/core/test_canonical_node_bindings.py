@@ -106,6 +106,54 @@ def test_canonical_binding_json_schema_describes_nested_fields():
     assert "Bare state is invalid" in output["properties"]["target"]["description"]
 
 
+@pytest.mark.parametrize(
+    "value",
+    [
+        "markdown",
+        3.14,
+        True,
+        None,
+        ["markdown", 3, False, None],
+        {"format": "markdown", "options": {"strict": True}},
+    ],
+)
+def test_input_value_binding_accepts_every_json_value_category(value: object):
+    binding = InputValueBinding.model_validate({"target": "literal", "value": value})
+
+    assert binding.value == value
+    if value is True:
+        assert type(binding.value) is bool
+
+
+def test_input_value_binding_json_schema_is_recursive_json_value():
+    value_schema = InputValueBinding.model_json_schema()["$defs"]["JsonValue"]
+
+    assert {branch["type"] for branch in value_schema["anyOf"]} == {
+        "boolean",
+        "integer",
+        "number",
+        "string",
+        "array",
+        "object",
+        "null",
+    }
+    assert value_schema["anyOf"][4]["items"] == {"$ref": "#/$defs/JsonValue"}
+    assert value_schema["anyOf"][5]["additionalProperties"] == {
+        "$ref": "#/$defs/JsonValue"
+    }
+
+
+def test_input_value_binding_rejects_non_json_python_objects():
+    with pytest.raises(ValidationError):
+        InputValueBinding.model_validate({"target": "literal", "value": object()})
+
+
+@pytest.mark.parametrize("value", [float("nan"), float("inf"), float("-inf")])
+def test_input_value_binding_rejects_non_finite_json_numbers(value: float):
+    with pytest.raises(ValidationError):
+        InputValueBinding.model_validate({"target": "literal", "value": value})
+
+
 def test_node_use_rejects_mixed_old_and_new_binding_styles():
     with pytest.raises(ValidationError):
         NodeUse.model_validate(
