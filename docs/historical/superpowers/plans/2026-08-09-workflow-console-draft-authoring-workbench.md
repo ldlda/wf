@@ -353,19 +353,19 @@ git commit -am "feat: hand capabilities into draft authoring"
 - Modify: `docs/current_roadmap.md`
 - Move: this plan to `docs/historical/superpowers/plans/2026-08-09-workflow-console-draft-authoring-workbench.md`
 
-- [ ] **Step 1: Add responsive component tests**
+- [x] **Step 1: Add responsive component tests**
 
 Assert mobile palette/inspector sheet controls, persistent selection, dirty-value preservation, accessible names, focus return, and touch-safe graph ownership.
 
-- [ ] **Step 2: Implement mobile sheets**
+- [x] **Step 2: Implement mobile sheets**
 
 At the established console breakpoint, keep graph primary and render palette/inspector as full-height sheets. Give each independent scrolling and preserve mounted form state while closed.
 
-- [ ] **Step 3: Extend self-owned Playwright acceptance**
+- [x] **Step 3: Extend self-owned Playwright acceptance**
 
 Using isolated Python and built web servers, perform: create empty draft; add first capability unconnected; add second after selected node/outcome; edit it; set route; validate; reload direct URL; verify graph, revision, diagnostics, evidence. Repeat the core add/inspect flow at mobile viewport. Assert only owned child processes are terminated.
 
-- [ ] **Step 4: Run final verification**
+- [x] **Step 4: Run final verification**
 
 Run:
 
@@ -380,7 +380,7 @@ git diff --check
 
 Document any pre-existing unrelated failures exactly; do not weaken assertions.
 
-- [ ] **Step 5: Update docs, archive, review, and commit**
+- [x] **Step 5: Update docs, archive, review, and commit**
 
 Update README flow and roadmap completion, archive this plan, run independent code review, fix actionable findings, and commit:
 

@@ -1269,8 +1269,26 @@ tbody tr:hover {
   min-width: 0;
 }
 
+.draft-workbench__mobile-controls {
+  display: none;
+}
+
+.draft-workbench__sheet {
+  display: contents;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+
+.draft-workbench__sheet-close {
+  display: none;
+}
+
 .draft-workbench > aside,
-.draft-workbench > section {
+.draft-workbench > section,
+.draft-workbench > dialog {
   min-width: 0;
   margin: 0;
 }
@@ -1560,6 +1578,89 @@ tbody tr:nth-child(10) { animation-delay: 270ms; }
 
   .draft-workbench {
     grid-template-columns: 1fr;
+    grid-template-areas:
+      "controls"
+      "graph";
+    gap: 0.75rem;
+  }
+
+  .draft-workbench__mobile-controls {
+    display: grid;
+    grid-area: controls;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+  }
+
+  .draft-workbench__mobile-controls button {
+    min-height: 2.75rem;
+  }
+
+  .draft-workbench > dialog {
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    display: block;
+    width: 100%;
+    max-width: none;
+    height: 100dvh;
+    max-height: none;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    border: 0;
+    border-radius: 0;
+    background: var(--color-paper);
+  }
+
+  .draft-workbench > dialog::backdrop {
+    background: rgba(26, 26, 26, 0.45);
+  }
+
+  .draft-workbench > dialog:not([open]) {
+    display: none;
+  }
+
+  .draft-workbench__sheet-close {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    display: block;
+    width: 100%;
+    min-height: 2.75rem;
+    border: 0;
+    border-bottom: 1px solid var(--color-border);
+    border-radius: 0;
+    text-align: left;
+  }
+
+  .draft-workbench > dialog > .capability-palette,
+  .draft-workbench > dialog > .context-inspector {
+    height: calc(100dvh - 2.75rem);
+    min-height: 0;
+    max-height: none;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border: 0;
+    border-radius: 0;
+    padding: max(0.85rem, env(safe-area-inset-top))
+      max(0.85rem, env(safe-area-inset-right))
+      max(1.25rem, env(safe-area-inset-bottom))
+      max(0.85rem, env(safe-area-inset-left));
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .draft-workbench > .authoring-graph {
+    grid-area: graph;
+    order: 0;
+    min-height: calc(100dvh - 12rem);
+    max-height: none;
+  }
+
+  .draft-workbench > dialog .capability-palette__item,
+  .draft-workbench > dialog .authoring-inspector__deferred-actions button,
+  .draft-workbench > dialog .authoring-form button,
+  .draft-workbench > dialog .schema-form button {
+    min-height: 2.75rem;
   }
 
   .capability-palette,
@@ -1567,10 +1668,6 @@ tbody tr:nth-child(10) { animation-delay: 270ms; }
   .authoring-graph {
     min-height: auto;
     max-height: none;
-  }
-
-  .authoring-graph {
-    order: -1;
   }
 }
 

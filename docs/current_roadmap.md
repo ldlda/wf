@@ -68,10 +68,13 @@ Implementation order:
    capability discovery and read-only draft workspace inspection with desktop
    and mobile acceptance coverage. Implementation:
    [`workflow console workspace foundation plan`](historical/superpowers/plans/2026-08-04-workflow-console-workspace-foundation.md).
-   The next console item is Slice 2: draft graph authoring, including explicit
-   mutation boundaries, an MCP-Inspector-style schema form, and mobile-safe
-   graph inspection. Design:
+   Slice 2 is complete: the console now provides draft graph authoring through
+   real mutation RPCs, schema-backed capability forms, route editing,
+   validation diagnostics, operation evidence, and responsive graph-first
+   mobile sheets. Design:
    [`draft authoring workbench`](superpowers/specs/2026-08-05-workflow-console-draft-authoring-workbench-design.md).
+   Implementation:
+   [`draft authoring workbench plan`](historical/superpowers/plans/2026-08-09-workflow-console-draft-authoring-workbench.md).
 5. Completed: the web console can operate the prepared
    `examples/lda_report_workflow/` deployment through run start, typed
    `issue_review` interrupt, resume, trace, and final output inspection.

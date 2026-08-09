@@ -29,6 +29,7 @@ let tempRoot: string | undefined;
 let rpcTarget: string;
 let baseUrl: string;
 const managedChildren: ManagedChild[] = [];
+const stopRequests = new Set<string>();
 
 const reservePort = async (): Promise<number> => {
   const listener = createServer();
@@ -112,6 +113,7 @@ const killPosixProcessGroup = (pid: number, signal: NodeJS.Signals): void => {
 
 const stopChild = async (managed: ManagedChild): Promise<void> => {
   const { child } = managed;
+  stopRequests.add(managed.name);
 
   if (process.platform === "win32" && child.pid !== undefined) {
     if (child.exitCode !== null) return;
@@ -289,6 +291,9 @@ test.afterAll(async () => {
   if (tempRoot !== undefined) {
     await fs.rm(tempRoot, { recursive: true, force: true });
   }
+  expect([...stopRequests].toSorted()).toEqual(
+    managedChildren.map(({ name }) => name).toSorted(),
+  );
 });
 
 test("verifies desktop discovery, draft inspection, and evidence receipts", async ({ browser }) => {
@@ -370,14 +375,159 @@ test("keeps mobile draft inspection read-only and horizontally navigable", async
     const nav = page.locator('nav[aria-label="Workflow lifecycle"]');
     await expect(nav).toHaveCSS("overflow-x", "auto");
     await expect.poll(() => nav.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(true);
+    await page.getByRole("button", { name: "Open context inspector" }).click();
     await expect(page.getByRole("heading", { name: "Draft summary" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Diagnostics" })).toBeVisible();
 
     await page.getByText("Raw draft document", { exact: true }).click();
     await expect(page.getByRole("region", { name: "Raw draft JSON, horizontally scrollable" })).toBeVisible();
 
-    await expect(page.getByRole("button", { name: /graph|add|remove|delete|edit|save|create|mutat/i })).toHaveCount(0);
+    const deferredMutationButtons = page.locator(".authoring-inspector__deferred-actions button");
+    await expect(deferredMutationButtons).toHaveCount(6);
+    await expect(deferredMutationButtons.locator(":not([disabled])")).toHaveCount(0);
     await expect(page.getByRole("link", { name: /graph/i })).toHaveCount(0);
+  } finally {
+    await context.close();
+  }
+});
+
+test("authors a draft through real mutations, reloads its direct URL, and repeats add/inspect on mobile", async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  const page = await context.newPage();
+  const workspaceId = "console-authoring-e2e";
+  try {
+    await page.goto(`${baseUrl}/console/drafts`);
+    await connect(page);
+    await page.getByRole("button", { name: "New draft" }).click();
+    await page.getByLabel("Workspace id").fill(workspaceId);
+    await page.getByLabel("Draft name").fill("console_authoring_e2e");
+    await page.getByLabel("Title").fill("Console Authoring E2E");
+    await page.getByRole("button", { name: "Create draft" }).click();
+    await expect(page).toHaveURL(`${baseUrl}/console/drafts/${workspaceId}`);
+    await expect(page.getByRole("heading", { name: "Console Authoring E2E" })).toBeVisible();
+
+    const capability = "local.lda_docs.list_documents";
+    await page.getByRole("button", { name: capability, exact: true }).click();
+    await expect(page.getByRole("button", { name: "Add node" })).toBeVisible();
+    await page.getByRole("textbox", { name: "Step id" }).fill("list_documents");
+    await page.getByRole("button", { name: "Add node" }).click();
+    await expect(page.getByTestId("rf__node-list_documents")).toBeVisible();
+    await expandEvidence(page, "workflow.draft_workspaces.create_empty", {
+      request: {
+        jsonrpc: "2.0",
+        method: "workflow.draft_workspaces.create_empty",
+        params: { workspace_id: workspaceId, name: "console_authoring_e2e", title: "Console Authoring E2E" },
+      },
+      response: { result: { workspace_id: workspaceId, revision: 1 } },
+    });
+    await expandEvidence(page, "workflow.draft_workspaces.add_step_from_capability", {
+      request: {
+        jsonrpc: "2.0",
+        method: "workflow.draft_workspaces.add_step_from_capability",
+        params: { workspace_id: workspaceId, revision: 1, step_id: "list_documents", capability_name: capability },
+      },
+      response: { result: { workspace_id: workspaceId, revision: 2 } },
+    });
+
+    await page.getByRole("button", { name: /list_documents.*ok.*__end__/ }).click();
+    await expect(page.getByRole("heading", { name: "Route inspector" })).toBeVisible();
+    await page.getByRole("button", { name: capability, exact: true }).click();
+    const inspectorSheet = page.getByRole("dialog", { name: "Context inspector sheet" });
+    await expect(inspectorSheet.getByRole("heading", { name: capability })).toBeVisible();
+    const secondStepId = inspectorSheet.getByRole("textbox", { name: "Step id" });
+    await secondStepId.fill("list_documents_next");
+    await secondStepId.press("Enter");
+    await expect(
+      page.locator(".evidence-op").filter({ hasText: "workflow.draft_workspaces.add_step_from_capability" }),
+    ).toHaveCount(2);
+    await expect(page.getByTestId("rf__node-list_documents_next")).toBeVisible();
+    await page.getByTestId("rf__node-list_documents_next").getByRole("button").click();
+
+    const description = page.getByRole("textbox", { name: "Description" });
+    await description.fill("Second capability edit");
+    await description.press("Enter");
+    await expect(page.getByTestId("rf__node-list_documents_next")).toBeVisible();
+    await expandEvidence(page, "workflow.draft_workspaces.update_capability_step", {
+      request: {
+        jsonrpc: "2.0",
+        method: "workflow.draft_workspaces.update_capability_step",
+        params: { workspace_id: workspaceId, revision: 3, step_id: "list_documents_next" },
+      },
+      response: { result: { workspace_id: workspaceId, revision: 4 } },
+    });
+
+    await page.getByRole("button", { name: /list_documents_next.*ok.*__end__/ }).click();
+    const targetStep = page.getByRole("textbox", { name: "Target step" });
+    await targetStep.fill("__end__");
+    await targetStep.press("Enter");
+    await expect(page.getByRole("button", { name: /list_documents_next.*ok.*__end__/ })).toBeVisible();
+    await expandEvidence(page, "workflow.draft_workspaces.set_route", {
+      request: {
+        jsonrpc: "2.0",
+        method: "workflow.draft_workspaces.set_route",
+        params: { workspace_id: workspaceId, revision: 4, step_id: "list_documents_next", outcome: "ok", target: "__end__" },
+      },
+      response: { result: { workspace_id: workspaceId, revision: 5 } },
+    });
+
+    await page.reload();
+    await connect(page);
+    const summary = page.getByRole("heading", { name: "Draft summary" }).locator("..");
+    await page.getByRole("button", { name: "Validate draft" }).press("Enter");
+    await expect(
+      page.locator(".evidence-op").filter({ hasText: "workflow.draft_workspaces.validate" }),
+    ).toBeVisible();
+    await expect(summary).toContainText("Revision 5");
+    await expect(summary).toContainText("Invalid");
+    await expect(page.getByRole("heading", { name: "Diagnostics" })).toBeVisible();
+    await expect(page.getByRole("region", { name: "Diagnostics" })).toContainText("draft_invalid");
+    await page.getByText("Raw draft document", { exact: true }).click();
+    await expect(page.getByRole("region", { name: "Raw draft JSON, horizontally scrollable" })).toContainText(
+      "list_documents_next",
+    );
+    await expandEvidence(page, "workflow.draft_workspaces.validate", {
+      request: {
+        jsonrpc: "2.0",
+        method: "workflow.draft_workspaces.validate",
+        params: { workspace_id: workspaceId },
+      },
+      response: { result: { workspace_id: workspaceId, revision: 5 } },
+    });
+
+    await page.reload();
+    await connect(page);
+    await expect(page).toHaveURL(`${baseUrl}/console/drafts/${workspaceId}`);
+    await expect(page.getByTestId("rf__node-list_documents")).toBeVisible();
+    await expect(page.getByTestId("rf__node-list_documents_next")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Draft summary" }).locator("..")).toContainText("Revision 5");
+    await expect(page.getByRole("heading", { name: "Diagnostics" })).toBeVisible();
+    await expandEvidence(page, "workflow.draft_workspaces.get", {
+      request: {
+        jsonrpc: "2.0",
+        method: "workflow.draft_workspaces.get",
+        params: { workspace_id: workspaceId, include_draft: true },
+      },
+      response: { result: { workspace_id: workspaceId, revision: 5, draft: expect.any(Object) } },
+    });
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.reload();
+    await connect(page);
+    await page.getByRole("button", { name: "Open capability palette" }).click();
+    await page.getByRole("button", { name: capability, exact: true }).click();
+    await page.getByRole("button", { name: "Close capability palette" }).click();
+    await page.getByRole("button", { name: "Open context inspector" }).click();
+    await expect(page.getByRole("heading", { name: capability })).toBeVisible();
+    const mobileInspector = page.getByRole("dialog", { name: "Context inspector sheet" });
+    await expect(mobileInspector).toHaveCSS("height", "844px");
+    await expect(mobileInspector.locator(".context-inspector")).toHaveCSS("overflow-y", "auto");
+    await page.getByRole("textbox", { name: "Step id" }).fill("mobile_list_documents");
+    await page.getByRole("button", { name: "Close context inspector" }).click();
+    await page.getByRole("button", { name: "Open context inspector" }).click();
+    await expect(page.getByRole("textbox", { name: "Step id" })).toHaveValue("mobile_list_documents");
+    await page.getByRole("button", { name: "Add node" }).click();
+    await expect(page.getByTestId("rf__node-mobile_list_documents")).toBeVisible();
+    await expect(page.getByRole("region", { name: "Workflow graph" })).toBeVisible();
   } finally {
     await context.close();
   }

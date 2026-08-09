@@ -1,7 +1,17 @@
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { cleanup, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { CapabilityDetail } from "../domain/capability-models.js";
 import type { DraftWorkspace } from "../domain/draft-workspace-models.js";
 import { DraftWorkbench } from "./DraftWorkbench.js";
+
+vi.mock("./useAuthoringCapabilityDetail.js", () => ({
+  useAuthoringCapabilityDetail: vi.fn(),
+}));
+
+import { useAuthoringCapabilityDetail } from "./useAuthoringCapabilityDetail.js";
+
+const mockedUseAuthoringCapabilityDetail = vi.mocked(useAuthoringCapabilityDetail);
 
 const workspace: DraftWorkspace = {
   workspaceId: "draft-review",
@@ -33,7 +43,35 @@ const workspace: DraftWorkspace = {
   },
 };
 
+const capabilityDetail: CapabilityDetail = {
+  kind: "node_spec",
+  name: "demo.collect",
+  sourceId: "demo",
+  description: "Collect source material.",
+  isAsync: false,
+  outcomes: ["ok"],
+  inputSchema: { type: "object", properties: {} },
+  outputSchema: { type: "object", properties: {} },
+  wrapperHints: {},
+  acceptsContext: false,
+};
+
+const setViewport = (width: number): void => {
+  Object.defineProperty(window, "innerWidth", {
+    configurable: true,
+    value: width,
+  });
+};
+
 afterEach(() => cleanup());
+beforeEach(() => {
+  setViewport(1024);
+  mockedUseAuthoringCapabilityDetail.mockReturnValue({
+    phase: "disconnected",
+    detail: null,
+    message: null,
+  });
+});
 
 describe("DraftWorkbench", () => {
   it("keeps palette, graph, and inspector visible in the desktop shell", () => {
@@ -77,5 +115,84 @@ describe("DraftWorkbench", () => {
     ]) {
       expect(screen.getByRole("button", { name: label })).toBeDisabled();
     }
+  });
+
+  it("uses named mobile sheets, keeps selection persistent, and returns focus on close", async () => {
+    setViewport(390);
+    const user = userEvent.setup();
+    const { container } = render(
+      <DraftWorkbench
+        capabilities={[
+          {
+            kind: "node_spec",
+            name: "demo.collect",
+            sourceId: "demo",
+            description: "Collect source material.",
+            outcomes: ["ok"],
+            inputFields: [],
+            outputFields: [],
+          },
+        ]}
+        draft={workspace}
+      />,
+    );
+
+    const paletteTrigger = screen.getByRole("button", { name: "Open capability palette" });
+    const palette = container.querySelector("#draft-workbench-palette");
+    expect(palette).not.toBeNull();
+    expect(palette).toHaveAttribute("aria-label", "Capability palette sheet");
+    expect(screen.getByRole("region", { name: "Workflow graph" })).toBeInTheDocument();
+
+    await user.click(paletteTrigger);
+    expect(palette).toHaveAttribute("open", "");
+    await user.click(screen.getByRole("button", { name: "demo.collect" }));
+    expect(container.querySelector(".draft-workbench")).toHaveAttribute(
+      "data-selection-kind",
+      "capability",
+    );
+
+    const inspectorTrigger = screen.getByRole("button", { name: "Open context inspector" });
+    await user.click(screen.getByRole("button", { name: "Close capability palette" }));
+    expect(paletteTrigger).toHaveFocus();
+    await user.click(inspectorTrigger);
+    const inspector = container.querySelector("#draft-workbench-inspector");
+    expect(inspector).toHaveAttribute("aria-label", "Context inspector sheet");
+    expect(inspector).toHaveAttribute("open", "");
+    expect(within(inspector as HTMLElement).getByText("demo.collect")).toBeInTheDocument();
+  });
+
+  it("keeps a dirty inspector form mounted and intact across mobile close and reopen", async () => {
+    setViewport(390);
+    mockedUseAuthoringCapabilityDetail.mockReturnValue({
+      phase: "ready",
+      detail: capabilityDetail,
+      message: null,
+    });
+    const user = userEvent.setup();
+    const { container } = render(
+      <DraftWorkbench
+        draft={workspace}
+        initialSelection={{ kind: "node", nodeId: "collect" }}
+      />,
+    );
+
+    const inspector = container.querySelector("#draft-workbench-inspector") as HTMLElement;
+    const description = within(inspector).getByRole("textbox", {
+      name: "Description",
+      hidden: true,
+    });
+    await user.type(description, " locally edited");
+    expect(container.querySelector(".draft-workbench")).toHaveAttribute("data-dirty", "true");
+
+    const inspectorTrigger = screen.getByRole("button", { name: "Open context inspector" });
+    await user.click(inspectorTrigger);
+    await user.click(screen.getByRole("button", { name: "Close context inspector" }));
+    expect(inspectorTrigger).toHaveFocus();
+    await user.click(inspectorTrigger);
+
+    expect(
+      within(inspector).getByRole("textbox", { name: "Description" }),
+    ).toHaveValue(" locally edited");
+    expect(container.querySelector(".draft-workbench")).toHaveAttribute("data-dirty", "true");
   });
 });

@@ -37,8 +37,9 @@ workspace currently exposes:
 - `/console/discover` for searchable, source-filtered capability discovery and
   input/output contract inspection
 - `/console/drafts` for the persisted draft workspace index
-- `/console/drafts/:workspaceId` for revision, status, step, diagnostics, and
-  bounded raw-draft inspection
+- `/console/drafts/:workspaceId` for the draft authoring workbench: a desktop
+  capability palette, graph canvas, and context inspector with real draft
+  mutations, revision/status diagnostics, and bounded raw-draft evidence
 - `/console/artifacts` and `/console/artifacts/:artifactId/:version` for the
   existing read-only artifact explorer
 - `/console/deployments` and `/console/deployments/:deploymentId` for deployment
@@ -50,7 +51,10 @@ Enter a loopback RPC URL in **Workflow JSON-RPC URL** and click **Connect**.
 The health exchange establishes the target for the routed shell; subsequent
 read-only route calls go through the Hono `/api/rpc` boundary. The target and
 the operation-evidence ledger persist across console route navigation. The
-workspace does not expose draft graph authoring or mutation controls yet.
+draft workbench keeps the graph as the primary touch surface on mobile and
+opens the capability palette and context inspector as independently scrolling,
+accessible full-height sheets. Forms remain mounted while sheets are closed so
+dirty values and selection survive palette/inspector close and reopen cycles.
 
 ## Production Build
 
@@ -151,8 +155,9 @@ combined explorer screen.
 
 - **Discover** searches the capability catalog and inspects typed capability
   contracts.
-- **Drafts** lists persisted draft workspaces and inspects their current graph,
-  diagnostics, revision, and validation status.
+- **Drafts** lists persisted draft workspaces and opens the authoring workbench
+  for capability insertion, step edits, route edits, validation, diagnostics,
+  revision, and raw protocol evidence.
 - **Artifacts**, **Deployments**, and **Runs** provide focused lifecycle lists
   and detail routes, including artifact graphs, deployment validation, run
   interrupts, and trace evidence.
@@ -178,15 +183,17 @@ With the Python server running, verify in the browser:
    inspection
 4. Raw health and capability exchanges are selectable in the evidence inspector
 5. Equivalent CLI text is visible
-6. `http://example.com:8765/rpc` is rejected without upstream fetch
-7. Stopping the Python server produces the unreachable state while preserving
+6. Create a draft, add and edit a capability step, set a route, validate, and
+   reload its direct draft URL while checking graph and evidence state
+7. `http://example.com:8765/rpc` is rejected without upstream fetch
+8. Stopping the Python server produces the unreachable state while preserving
    the entered URL
-8. Persisted draft workspaces populate and a selected draft shows its graph,
+9. Persisted draft workspaces populate and a selected draft shows its graph,
    diagnostics, and revision
-9. Artifact, deployment, and run routes populate independently
-10. Selecting an artifact shows its plan graph and detail panel
-11. Selecting a run shows trace frames and interrupt details
-12. Clicking a trace frame shows resolved input and output
+10. Artifact, deployment, and run routes populate independently
+11. Selecting an artifact shows its plan graph and detail panel
+12. Selecting a run shows trace frames and interrupt details
+13. Clicking a trace frame shows resolved input and output
 
 ### LDA Report Workflow Smoke
 
