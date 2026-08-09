@@ -217,6 +217,25 @@ describe("useCapabilityDiscovery", () => {
     ]);
   });
 
+  it("loads every capability page for authoring palettes", async () => {
+    client.list
+      .mockResolvedValueOnce(page([summary("serena.default.search")], "page-2"))
+      .mockResolvedValueOnce(page([summary("wf.std.constant", "wf.std")]));
+
+    const { result } = renderHook(() =>
+      useCapabilityDiscovery({ loadAllPages: true }),
+    );
+
+    await waitFor(() =>
+      expect(result.current.items.map((item) => item.name)).toEqual([
+        "serena.default.search",
+        "wf.std.constant",
+      ]),
+    );
+    expect(client.list).toHaveBeenLastCalledWith({ cursor: "page-2", limit: 50 });
+    expect(result.current.nextCursor).toBeNull();
+  });
+
   it("uses the applied filters when loading more after draft edits", async () => {
     client.list
       .mockResolvedValueOnce(page([summary("local.documents.read")], "page-2"))

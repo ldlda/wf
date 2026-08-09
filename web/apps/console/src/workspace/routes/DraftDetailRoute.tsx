@@ -28,7 +28,7 @@ export const DraftDetailRoute = ({
       ? { kind: "capability", qualifiedName: capabilityName }
       : { kind: "canvas" };
   const drafts = useDraftWorkspace(workspaceId);
-  const capabilities = useCapabilityDiscovery();
+  const capabilities = useCapabilityDiscovery({ loadAllPages: true });
   const draft =
     drafts.selected?.workspaceId === workspaceId ? drafts.selected : null;
 

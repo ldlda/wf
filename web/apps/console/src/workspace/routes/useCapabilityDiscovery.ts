@@ -27,6 +27,10 @@ export type CapabilityDiscoveryController = {
   readonly inspect: (qualifiedName: string) => void;
 };
 
+export type CapabilityDiscoveryOptions = {
+  readonly loadAllPages?: boolean;
+};
+
 type DiscoveryState = Omit<CapabilityDiscoveryController, "setQuery" | "setSourceId" | "search" | "loadMore" | "inspect">;
 
 type CapabilityFilters = {
@@ -92,7 +96,9 @@ const isSameConnection = (
   return left.readExecutor === right.readExecutor && left.connectedTarget === right.connectedTarget;
 };
 
-export const useCapabilityDiscovery = (): CapabilityDiscoveryController => {
+export const useCapabilityDiscovery = (
+  { loadAllPages = false }: CapabilityDiscoveryOptions = {},
+): CapabilityDiscoveryController => {
   const { connectedTarget, readExecutor } = useConsoleWorkspace();
   const client = useMemo<CapabilityClient | null>(
     () => (readExecutor ? createCapabilityClient(readExecutor) : null),
@@ -217,6 +223,13 @@ export const useCapabilityDiscovery = (): CapabilityDiscoveryController => {
     state.nextCursor,
     state.phase,
   ]);
+
+  useEffect(() => {
+    if (!loadAllPages || state.phase !== "ready" || state.nextCursor === null) return;
+    // Authoring palettes need the complete catalog because they do not expose
+    // discovery pagination; continue one page at a time through the same guarded loader.
+    loadMore();
+  }, [loadAllPages, loadMore, state.nextCursor, state.phase]);
 
   const inspect = useCallback(
     (qualifiedName: string) => {
