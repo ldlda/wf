@@ -109,13 +109,94 @@ describe("StepOutputBindingsForm", () => {
     );
 
     expect(screen.getByRole("combobox", { name: "Source choice for output row 1" }))
-      .toHaveValue("__custom__");
+      .toHaveValue("custom-source");
     expect(screen.getByRole("textbox", { name: "Local source path for output row 1" }))
       .toHaveValue("nested.whole");
 
     await user.click(screen.getByRole("button", { name: "Save outputs" }));
 
     expect(submissions).toEqual([[{ source: "nested.whole", target: "state.report" }]]);
+  });
+
+  it("round-trips structural and whole local sources in ordered submissions", async () => {
+    const user = userEvent.setup();
+    const submissions: ReadonlyArray<OutputBinding>[] = [];
+    render(
+      <StepOutputBindingsForm
+        outputSchema={outputSchema}
+        stateSchema={stateSchema}
+        initialBindings={[
+          {
+            source: { root: "local", parts: ["payload", "item"] },
+            target: { root: "state", parts: ["report", "markdown"] },
+          },
+          {
+            source: { root: "local", parts: [] },
+            target: "state.existing",
+          },
+        ]}
+        onSubmit={(value) => { submissions.push(value); }}
+      />,
+    );
+
+    expect(screen.getByRole("textbox", { name: "Local source path for output row 1" }))
+      .toHaveValue("payload.item");
+    expect(screen.getByRole("textbox", { name: "Local source path for output row 2" }))
+      .toHaveValue(".");
+
+    await user.click(screen.getByRole("button", { name: "Save outputs" }));
+
+    expect(submissions).toEqual([[
+      { source: "payload.item", target: "state.report.markdown" },
+      { source: ".", target: "state.existing" },
+    ]]);
+  });
+
+  it("adds a whole-output row that can be completed and submitted", async () => {
+    const user = userEvent.setup();
+    const submissions: ReadonlyArray<OutputBinding>[] = [];
+    render(
+      <StepOutputBindingsForm
+        outputSchema={outputSchema}
+        stateSchema={stateSchema}
+        onSubmit={(value) => { submissions.push(value); }}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Add output row" }));
+    expect(screen.getByRole("textbox", { name: "Local source path for output row 1" }))
+      .toHaveValue(".");
+    await user.type(
+      screen.getByRole("combobox", { name: "Target for output row 1" }),
+      "state.new",
+    );
+    await user.click(screen.getByRole("button", { name: "Save outputs" }));
+
+    expect(submissions).toEqual([[{ source: ".", target: "state.new" }]]);
+  });
+
+  it("allows a real __custom__ schema source instead of treating it as the custom escape hatch", async () => {
+    const user = userEvent.setup();
+    const submissions: ReadonlyArray<OutputBinding>[] = [];
+    render(
+      <StepOutputBindingsForm
+        outputSchema={{
+          type: "object",
+          properties: { __custom__: { type: "string" }, text: { type: "string" } },
+        }}
+        stateSchema={stateSchema}
+        initialBindings={[{ source: "text", target: "state.existing" }]}
+        onSubmit={(value) => { submissions.push(value); }}
+      />,
+    );
+
+    const source = screen.getByRole("combobox", { name: "Source choice for output row 1" });
+    const customSchemaOption = within(source).getAllByRole("option", { name: "__custom__" })[0];
+    expect(customSchemaOption).toBeDefined();
+    await user.selectOptions(source, customSchemaOption ?? "");
+    await user.click(screen.getByRole("button", { name: "Save outputs" }));
+
+    expect(submissions).toEqual([[{ source: "__custom__", target: "state.existing" }]]);
   });
 
   it("requires explicit confirmation before clearing the ordered binding list", async () => {
@@ -142,6 +223,32 @@ describe("StepOutputBindingsForm", () => {
 
     await user.click(screen.getByRole("button", { name: "Confirm clear outputs" }));
     expect(submissions).toEqual([[]]);
+  });
+
+  it("cancels pending clear confirmation before saving reordered bindings", async () => {
+    const user = userEvent.setup();
+    const submissions: ReadonlyArray<OutputBinding>[] = [];
+    render(
+      <StepOutputBindingsForm
+        outputSchema={outputSchema}
+        stateSchema={stateSchema}
+        initialBindings={[
+          { source: "text", target: "state.first" },
+          { source: "audit.latest", target: "state.second" },
+        ]}
+        onSubmit={(value) => { submissions.push(value); }}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Clear outputs" }));
+    await user.click(screen.getByRole("button", { name: "Move output row 1 down" }));
+    await user.click(screen.getByRole("button", { name: "Save outputs" }));
+
+    expect(submissions).toEqual([[
+      { source: "audit.latest", target: "state.second" },
+      { source: "text", target: "state.first" },
+    ]]);
+    expect(screen.queryByRole("button", { name: "Confirm clear outputs" })).not.toBeInTheDocument();
   });
 
   it("blocks saving while a malformed stored row remains visible for repair", async () => {
@@ -173,6 +280,33 @@ describe("StepOutputBindingsForm", () => {
     )).toBe(true);
     expect(screen.getByRole("region", { name: "Raw unsupported output row 2" }))
       .toHaveTextContent('"source"');
+  });
+
+  it("blocks clear until every unsupported output row is explicitly removed", async () => {
+    const user = userEvent.setup();
+    const submissions: ReadonlyArray<OutputBinding>[] = [];
+    render(
+      <StepOutputBindingsForm
+        outputSchema={outputSchema}
+        stateSchema={stateSchema}
+        initialRows={[{
+          kind: "unsupported",
+          field: "output",
+          index: 0,
+          raw: { source: "broken", target: "state" },
+          reason: "Unsupported output binding.",
+        }]}
+        onSubmit={(value) => { submissions.push(value); }}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Clear outputs" }));
+
+    expect(submissions).toEqual([]);
+    expect(screen.queryByRole("button", { name: "Confirm clear outputs" })).not.toBeInTheDocument();
+    expect(screen.getAllByRole("alert").some((alert) =>
+      alert.textContent?.includes("Remove or repair this unsupported output row before clearing outputs.") ?? false,
+    )).toBe(true);
   });
 
   it("keeps backend diagnostics attached to their output row", () => {

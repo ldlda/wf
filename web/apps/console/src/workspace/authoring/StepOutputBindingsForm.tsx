@@ -20,9 +20,14 @@ type EditableRow = {
   readonly kind: "canonical";
   readonly id: string;
   readonly rawIndex: number;
+  readonly sourceSelection: SourceSelection;
   readonly sourcePath: string;
   readonly target: string;
 };
+
+type SourceSelection =
+  | { readonly kind: "schema"; readonly index: number }
+  | { readonly kind: "custom" };
 
 type UnsupportedRow = Extract<OutputBindingRow, { readonly kind: "unsupported" }> & {
   readonly id: string;
@@ -43,7 +48,8 @@ export type StepOutputBindingsFormProps = {
 
 const EMPTY_ROWS: ReadonlyArray<OutputBindingRow> = [];
 const EMPTY_DIAGNOSTICS: Readonly<Record<number, ReadonlyArray<DraftDiagnostic>>> = {};
-const CUSTOM_SOURCE = "__custom__";
+const CUSTOM_SOURCE_OPTION = "custom-source";
+const SCHEMA_SOURCE_OPTION_PREFIX = "schema-source-";
 const CLEAR_COPY =
   "Saving a new target asks the workflow API to project this output schema into state. Clearing bindings does not delete existing state fields.";
 
@@ -51,17 +57,45 @@ const displayLocalPath = (value: LocalInputPath): string =>
   typeof value === "string" ? value : formatTOMLPath(value.parts);
 
 const displayStatePath = (value: StatePath): string =>
-  typeof value === "string" ? value : formatTOMLPath(value.parts);
+  typeof value === "string" ? value : formatTOMLPath(["state", ...value.parts]);
+
+const sourceSelectionFor = (
+  sourcePath: string,
+  sourceSuggestions: ReadonlyArray<string>,
+): SourceSelection => {
+  const index = sourceSuggestions.indexOf(sourcePath);
+  return index < 0 ? { kind: "custom" } : { kind: "schema", index };
+};
+
+const sourceOptionValue = (selection: SourceSelection): string =>
+  selection.kind === "custom"
+    ? CUSTOM_SOURCE_OPTION
+    : `${SCHEMA_SOURCE_OPTION_PREFIX}${selection.index}`;
+
+const sourceSelectionFromOption = (
+  value: string,
+  sourceSuggestions: ReadonlyArray<string>,
+): { readonly selection: SourceSelection; readonly sourcePath: string } | null => {
+  if (value === CUSTOM_SOURCE_OPTION) return { selection: { kind: "custom" }, sourcePath: "" };
+  if (!value.startsWith(SCHEMA_SOURCE_OPTION_PREFIX)) return null;
+  const index = Number(value.slice(SCHEMA_SOURCE_OPTION_PREFIX.length));
+  const sourcePath = sourceSuggestions[index];
+  return sourcePath === undefined
+    ? null
+    : { selection: { kind: "schema", index }, sourcePath };
+};
 
 const rowsFrom = (
   rows: ReadonlyArray<OutputBindingRow>,
   formId: string,
+  sourceSuggestions: ReadonlyArray<string>,
 ): ReadonlyArray<FormRow> => rows.map((row, index) => {
   if (row.kind === "unsupported") return { ...row, id: `${formId}-output-row-${index}` };
   return {
     kind: "canonical",
     id: `${formId}-output-row-${index}`,
     rawIndex: row.index,
+    sourceSelection: sourceSelectionFor(displayLocalPath(row.value.source), sourceSuggestions),
     sourcePath: displayLocalPath(row.value.source),
     target: displayStatePath(row.value.target),
   };
@@ -161,7 +195,6 @@ type OutputRowEditorProps = {
   readonly rowCount: number;
   readonly outputSchema: unknown;
   readonly sourceSuggestions: ReadonlyArray<string>;
-  readonly sourceSuggestionSet: ReadonlySet<string>;
   readonly targetListId: string;
   readonly rowDiagnostics: Readonly<Record<number, ReadonlyArray<DraftDiagnostic>>>;
   readonly localIssues: Readonly<Record<string, ReadonlyArray<string>>>;
@@ -177,7 +210,6 @@ const OutputRowEditor = ({
   rowCount,
   outputSchema,
   sourceSuggestions,
-  sourceSuggestionSet,
   targetListId,
   rowDiagnostics,
   localIssues,
@@ -187,7 +219,6 @@ const OutputRowEditor = ({
 }: OutputRowEditorProps) => {
   const issues = rowIssueMessages(row, rowDiagnostics, localIssues);
   const errorId = `${row.id}-errors`;
-  const sourceChoice = sourceSuggestionSet.has(row.sourcePath) ? row.sourcePath : CUSTOM_SOURCE;
   const preview = inferredStateSchemaPreview(outputSchema, row.sourcePath, row.target);
   const targetId = `${row.id}-target`;
   const sourceChoiceId = `${row.id}-source-choice`;
@@ -202,20 +233,23 @@ const OutputRowEditor = ({
           <select
             aria-label={`Source choice for output row ${rowNumber}`}
             id={sourceChoiceId}
-            onChange={(event) => onEdit(row.id, (current) => ({
-              ...current,
-              sourcePath: event.target.value === CUSTOM_SOURCE
-                ? current.sourcePath
-                : event.target.value,
-            }))}
-            value={sourceChoice}
+            onChange={(event) => {
+              const next = sourceSelectionFromOption(event.target.value, sourceSuggestions);
+              if (next === null) return;
+              onEdit(row.id, (current) => ({
+                ...current,
+                sourceSelection: next.selection,
+                sourcePath: next.sourcePath === "" ? current.sourcePath : next.sourcePath,
+              }));
+            }}
+            value={sourceOptionValue(row.sourceSelection)}
           >
-            {sourceSuggestions.map((suggestion) => (
-              <option key={suggestion} value={suggestion}>
+            {sourceSuggestions.map((suggestion, index) => (
+              <option key={suggestion} value={`${SCHEMA_SOURCE_OPTION_PREFIX}${index}`}>
                 {suggestion === "." ? "Whole output (.)" : suggestion}
               </option>
             ))}
-            <option value={CUSTOM_SOURCE}>Custom local path</option>
+            <option value={CUSTOM_SOURCE_OPTION}>Custom local path</option>
           </select>
         </div>
         <label htmlFor={sourcePathId}>
@@ -227,6 +261,7 @@ const OutputRowEditor = ({
             id={sourcePathId}
             onChange={(event) => onEdit(row.id, (current) => ({
               ...current,
+              sourceSelection: sourceSelectionFor(event.target.value, sourceSuggestions),
               sourcePath: event.target.value,
             }))}
             type="text"
@@ -307,12 +342,11 @@ export const StepOutputBindingsForm = ({
 }: StepOutputBindingsFormProps) => {
   const formId = useId();
   const sourceSuggestions = capabilityLocalPathSuggestions(outputSchema);
-  const sourceSuggestionSet = new Set(sourceSuggestions);
   const targetSuggestions = stateTargetSuggestions(stateSchema);
   const targetListId = `${formId}-state-targets`;
   const formErrorId = `${formId}-form-error`;
   const [rows, setRows] = useState<ReadonlyArray<FormRow>>(() =>
-    rowsFrom(outputRows(initialRows, initialBindings), formId),
+    rowsFrom(outputRows(initialRows, initialBindings), formId, sourceSuggestions),
   );
   const [localIssues, setLocalIssues] = useState<Readonly<Record<string, ReadonlyArray<string>>>>({});
   const [formIssue, setFormIssue] = useState<string | null>(null);
@@ -321,14 +355,19 @@ export const StepOutputBindingsForm = ({
 
   const markDirty = (): void => onDirtyChange?.(true);
 
-  const editRow = (id: string, update: (row: EditableRow) => EditableRow): void => {
-    setRows((current) => updateRow(current, id, update));
+  const resetPendingClear = (): void => {
     setFormIssue(null);
     setClearConfirmation(false);
+  };
+
+  const editRow = (id: string, update: (row: EditableRow) => EditableRow): void => {
+    setRows((current) => updateRow(current, id, update));
+    resetPendingClear();
     markDirty();
   };
 
   const moveRow = (index: number, direction: -1 | 1): void => {
+    resetPendingClear();
     setRows((current) => {
       const nextIndex = index + direction;
       if (nextIndex < 0 || nextIndex >= current.length) return current;
@@ -350,18 +389,25 @@ export const StepOutputBindingsForm = ({
       delete next[id];
       return next;
     });
-    setFormIssue(null);
-    setClearConfirmation(false);
+    resetPendingClear();
     markDirty();
   };
 
   const addRow = (): void => {
     const id = `${formId}-output-row-${nextId.current++}`;
+    const sourcePath = ".";
     setRows((current) => [
       ...current,
-      { kind: "canonical", id, rawIndex: -1, sourcePath: ".", target: "" },
+      {
+        kind: "canonical",
+        id,
+        rawIndex: -1,
+        sourceSelection: sourceSelectionFor(sourcePath, sourceSuggestions),
+        sourcePath,
+        target: "",
+      },
     ]);
-    setFormIssue(null);
+    resetPendingClear();
     markDirty();
   };
 
@@ -369,6 +415,7 @@ export const StepOutputBindingsForm = ({
 
   const submit = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
+    resetPendingClear();
     const nextIssues: Record<string, ReadonlyArray<string>> = {};
     const bindings: OutputBinding[] = [];
     for (const row of rows) {
@@ -440,7 +487,6 @@ export const StepOutputBindingsForm = ({
             rowCount={rows.length}
             rowDiagnostics={rowDiagnostics}
             rowNumber={index + 1}
-            sourceSuggestionSet={sourceSuggestionSet}
             sourceSuggestions={sourceSuggestions}
             targetListId={targetListId}
           />
