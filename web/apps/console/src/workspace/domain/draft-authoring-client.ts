@@ -56,10 +56,65 @@ const ifDefined = <T>(
   if (value !== undefined) target[key] = value;
 };
 
-const copyBindings = <T>(
-  bindings: ReadonlyArray<T> | null | undefined,
-): T[] | null | undefined =>
-  bindings === undefined || bindings === null ? bindings : [...bindings];
+const copyJsonValue = (value: unknown): unknown => {
+  if (Array.isArray(value)) return value.map(copyJsonValue);
+  if (value !== null && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, nestedValue]) => [
+        key,
+        copyJsonValue(nestedValue),
+      ]),
+    );
+  }
+  return value;
+};
+
+const copyInputBinding = (binding: InputBinding): InputBinding => {
+  if ("path" in binding) {
+    return {
+      path:
+        typeof binding.path === "string"
+          ? binding.path
+          : { root: binding.path.root, parts: [...binding.path.parts] },
+      target:
+        typeof binding.target === "string"
+          ? binding.target
+          : { root: binding.target.root, parts: [...binding.target.parts] },
+    };
+  }
+  return {
+    target:
+      typeof binding.target === "string"
+        ? binding.target
+        : { root: binding.target.root, parts: [...binding.target.parts] },
+    value: copyJsonValue(binding.value),
+  };
+};
+
+const copyOutputBinding = (binding: OutputBinding): OutputBinding => ({
+  source:
+    typeof binding.source === "string"
+      ? binding.source
+      : { root: binding.source.root, parts: [...binding.source.parts] },
+  target:
+    typeof binding.target === "string"
+      ? binding.target
+      : { root: binding.target.root, parts: [...binding.target.parts] },
+});
+
+const copyInputBindings = (
+  bindings: ReadonlyArray<InputBinding> | null | undefined,
+): InputBinding[] | null | undefined =>
+  bindings === undefined || bindings === null
+    ? bindings
+    : bindings.map(copyInputBinding);
+
+const copyOutputBindings = (
+  bindings: ReadonlyArray<OutputBinding> | null | undefined,
+): OutputBinding[] | null | undefined =>
+  bindings === undefined || bindings === null
+    ? bindings
+    : bindings.map(copyOutputBinding);
 
 export const createDraftAuthoringClient = (
   executor: ConsoleWriteExecutor,
@@ -125,7 +180,7 @@ export const createDraftAuthoringClient = (
     );
     ifDefined(params, "routes", input.routes);
     ifDefined(params, "input_map", input.inputMap);
-    ifDefined(params, "input_bindings", copyBindings(input.inputBindings));
+    ifDefined(params, "input_bindings", copyInputBindings(input.inputBindings));
     ifDefined(params, "bind_outputs", input.bindOutputs);
     ifDefined(params, "desc", input.description);
     ifDefined(params, "retry", input.retry);
@@ -137,7 +192,7 @@ export const createDraftAuthoringClient = (
     const operation = "workflow.draft_workspaces.update_capability_step";
     const update: Record<string, unknown> = {};
     ifDefined(update, "desc", input.update.description);
-    ifDefined(update, "input", copyBindings(input.update.input));
+    ifDefined(update, "input", copyInputBindings(input.update.input));
     ifDefined(update, "retry", input.update.retry);
     ifDefined(update, "timeout_seconds", input.update.timeoutSeconds);
     return executor.run(
@@ -160,7 +215,7 @@ export const createDraftAuthoringClient = (
         workspace_id: requireIdentifier(operation, input.workspaceId, "workspace id"),
         revision: input.revision,
         step_id: requireIdentifier(operation, input.stepId, "step id"),
-        bindings: copyBindings<InputBinding>(input.bindings),
+        bindings: copyInputBindings(input.bindings),
       },
       decodeDraftWorkspace,
     );
@@ -174,7 +229,7 @@ export const createDraftAuthoringClient = (
         workspace_id: requireIdentifier(operation, input.workspaceId, "workspace id"),
         revision: input.revision,
         step_id: requireIdentifier(operation, input.stepId, "step id"),
-        bindings: copyBindings<OutputBinding>(input.bindings),
+        bindings: copyOutputBindings(input.bindings),
       },
       decodeDraftWorkspace,
     );

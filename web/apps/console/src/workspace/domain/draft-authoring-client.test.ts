@@ -8,6 +8,7 @@ import {
   type InputBinding,
   type InputPathBinding,
   type InputValueBinding,
+  type OutputBinding,
   type SetDraftRouteInput,
   type SetStepInputBindingsInput,
   type SetStepOutputBindingsInput,
@@ -390,5 +391,89 @@ describe("DraftAuthoringClient", () => {
       operation: "workflow.draft_workspaces.set_step_output_bindings",
     });
     expect(run).not.toHaveBeenCalled();
+  });
+
+  it("deeply copies input binding records, paths, and JSON values", async () => {
+    const { executor: writeExecutor, run } = createExecutor();
+    const client = createDraftAuthoringClient(writeExecutor);
+    const pathBinding = {
+      path: { root: "context", parts: ["request", "text"] },
+      target: { root: "local", parts: ["text"] },
+    } satisfies InputPathBinding;
+    const valueBinding = {
+      target: { root: "local", parts: ["optional"] },
+      value: { nested: ["keep"] },
+    } satisfies InputValueBinding;
+    const bindings = [pathBinding, valueBinding] satisfies SetStepInputBindingsInput["bindings"];
+
+    await client.setStepInputBindings({
+      workspaceId: "report",
+      revision: 7,
+      stepId: "render",
+      bindings,
+    });
+
+    if (typeof pathBinding.path !== "string") pathBinding.path.parts[0] = "changed";
+    if (typeof pathBinding.target !== "string") pathBinding.target.parts[0] = "changed";
+    pathBinding.path = { root: "context", parts: ["changed.path"] };
+    pathBinding.target = { root: "local", parts: ["changed.target"] };
+    valueBinding.target.parts[0] = "changed";
+    valueBinding.value.nested[0] = "changed";
+    expect(run).toHaveBeenCalledWith(
+      "workflow.draft_workspaces.set_step_input_bindings",
+      {
+        workspace_id: "report",
+        revision: 7,
+        step_id: "render",
+        bindings: [
+          {
+            path: { root: "context", parts: ["request", "text"] },
+            target: { root: "local", parts: ["text"] },
+          },
+          {
+            target: { root: "local", parts: ["optional"] },
+            value: { nested: ["keep"] },
+          },
+        ],
+      },
+      decodeDraftWorkspace,
+    );
+  });
+
+  it("deeply copies output binding records and structural paths", async () => {
+    const { executor: writeExecutor, run } = createExecutor();
+    const client = createDraftAuthoringClient(writeExecutor);
+    const outputBinding = {
+      source: { root: "local", parts: ["text"] },
+      target: { root: "state", parts: ["report", "latest"] },
+    } satisfies OutputBinding;
+    const bindings = [outputBinding] satisfies SetStepOutputBindingsInput["bindings"];
+
+    await client.setStepOutputBindings({
+      workspaceId: "report",
+      revision: 7,
+      stepId: "render",
+      bindings,
+    });
+
+    if (typeof outputBinding.source !== "string") outputBinding.source.parts[0] = "changed";
+    if (typeof outputBinding.target !== "string") outputBinding.target.parts[0] = "changed";
+    outputBinding.source = { root: "local", parts: ["changed.source"] };
+    outputBinding.target = { root: "state", parts: ["changed.target"] };
+    expect(run).toHaveBeenCalledWith(
+      "workflow.draft_workspaces.set_step_output_bindings",
+      {
+        workspace_id: "report",
+        revision: 7,
+        step_id: "render",
+        bindings: [
+          {
+            source: { root: "local", parts: ["text"] },
+            target: { root: "state", parts: ["report", "latest"] },
+          },
+        ],
+      },
+      decodeDraftWorkspace,
+    );
   });
 });
