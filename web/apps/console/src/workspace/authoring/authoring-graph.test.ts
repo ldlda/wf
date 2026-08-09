@@ -51,6 +51,47 @@ describe("projectAuthoringGraph", () => {
 
     expect(projectAuthoringGraph(reordered)).toEqual(projectAuthoringGraph(draft));
   });
+
+  it("summarizes canonical selected-step bindings with truthful grammar", () => {
+    const model = projectAuthoringGraph({
+      ...draft,
+      steps: {
+        collect: {
+          use: "demo.collect",
+          input: [
+            { target: "title", value: "Report" },
+            { target: "count", path: "input.count" },
+          ],
+          output: [{ source: "text", target: "state.report" }],
+        },
+        review: draft.steps.review,
+      },
+    });
+
+    expect(model.nodes.find((node) => node.id === "collect")?.data.summary).toBe(
+      "2 inputs · 1 state write",
+    );
+  });
+
+  it("uses singular labels and omits empty binding summaries", () => {
+    const model = projectAuthoringGraph({
+      ...draft,
+      steps: {
+        collect: {
+          use: "demo.collect",
+          input: [{ target: "title", value: "Report" }],
+          output: [{ source: ".", target: "state.report" }, { source: ".", target: "state.raw" }],
+        },
+        review: draft.steps.review,
+      },
+    });
+    expect(model.nodes.find((node) => node.id === "collect")?.data.summary).toBe(
+      "1 input · 2 state writes",
+    );
+
+    const empty = projectAuthoringGraph({ ...draft, steps: { collect: { use: "demo.collect" } } });
+    expect(empty.nodes.find((node) => node.id === "collect")?.data.summary).toBeUndefined();
+  });
 });
 
 describe("WorkbenchSelection", () => {

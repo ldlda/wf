@@ -1,4 +1,5 @@
 import { buildWorkflowGraph, type WorkflowGraphModel } from "../../graph/graph-model.js";
+import { inputBindingRows, outputBindingRows } from "./selected-step-dataflow.js";
 
 type JsonRecord = Readonly<Record<string, unknown>>;
 
@@ -66,6 +67,18 @@ const nodeForStep = (id: string, step: JsonRecord): JsonRecord => {
     type: graphType,
     detail: stringValue(step.desc),
   };
+
+  if (kind === "use") {
+    const inputCount = inputBindingRows(step.input).filter((row) => row.kind === "canonical").length;
+    const outputCount = outputBindingRows(step.output).filter((row) => row.kind === "canonical").length;
+    if (inputCount > 0 || outputCount > 0) {
+      const inputLabel = `${inputCount} input${inputCount === 1 ? "" : "s"}`;
+      const outputLabel = `${outputCount} state write${outputCount === 1 ? "" : "s"}`;
+      node.summary = [inputCount > 0 ? inputLabel : null, outputCount > 0 ? outputLabel : null]
+        .filter((value): value is string => value !== null)
+        .join(" · ");
+    }
+  }
 
   if (kind === "use") node.node = stringValue(step.use) ?? id;
   if (kind === "interrupt") {

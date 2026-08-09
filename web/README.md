@@ -158,6 +158,11 @@ combined explorer screen.
 - **Drafts** lists persisted draft workspaces and opens the authoring workbench
   for capability insertion, step edits, route edits, validation, diagnostics,
   revision, and raw protocol evidence.
+- **Selected-step editing** exposes Setup, Inputs, and Outputs tabs for a
+  selected capability step. Inputs replace the ordered capability input
+  bindings, while Outputs replace output-to-state bindings; the controller
+  sends the complete canonical row list for each save. Persisted malformed
+  rows remain visible as repair rows and block save or clear until repaired.
 - **Artifacts**, **Deployments**, and **Runs** provide focused lifecycle lists
   and detail routes, including artifact graphs, deployment validation, run
   interrupts, and trace evidence.

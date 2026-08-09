@@ -39,6 +39,8 @@ const mockModel: WorkflowGraphModel = {
         nodeId: "start",
         kind: "use",
         label: "Start",
+        detail: "Start description",
+        summary: "2 inputs · 1 state write",
         nodeRef: "workflow.start",
         raw: {},
       },
@@ -124,5 +126,13 @@ describe("WorkflowGraph", () => {
     const emptyModel: WorkflowGraphModel = { nodes: [], edges: [] };
     render(<WorkflowGraph model={emptyModel} />);
     expect(screen.getByText(/no nodes/i)).toBeInTheDocument();
+  });
+
+  it("renders detail and summary without removing handles", () => {
+    const { container } = render(<WorkflowGraph model={mockModel} />);
+
+    expect(screen.getAllByText("Start description").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("2 inputs · 1 state write").length).toBeGreaterThan(0);
+    expect(container.querySelectorAll(".react-flow__handle")).toHaveLength(6);
   });
 });

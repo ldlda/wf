@@ -760,7 +760,7 @@ git commit -m "feat: edit capability output bindings"
 - Produces: complete Setup/Inputs/Outputs selected-step workflow.
 - Preserves: add-capability form, route inspector, canvas inspector, operation evidence, navigation protection, and mobile sheets.
 
-- [ ] **Step 1: Write failing composition tests**
+- [x] **Step 1: Write failing composition tests**
 
 Select a capability node and assert three tabs with Setup active initially.
 Switch to Inputs and Outputs without clearing local rows. Submit each form and
@@ -771,7 +771,7 @@ Close and reopen the mounted mobile sheet and assert the active tab and unsaved
 rows survive. Change the selected step and assert the inspector rehydrates from
 that step's canonical data instead of leaking the previous form.
 
-- [ ] **Step 2: Write failing graph summary tests**
+- [x] **Step 2: Write failing graph summary tests**
 
 Project a node with two inputs and one output. Assert its graph detail is
 `2 inputs · 1 state write`. Use singular forms for one and omit the summary for
@@ -779,7 +779,7 @@ zero/zero. Assert `buildWorkflowGraph` carries a distinct `summary` field and
 the generic WorkflowGraph renders it without replacing the existing
 description/detail, route-edge selection, or node handles.
 
-- [ ] **Step 3: Run integration tests and verify RED**
+- [x] **Step 3: Run integration tests and verify RED**
 
 Run:
 
@@ -787,7 +787,7 @@ Run:
 pnpm --dir web --filter @lda/console test -- src/workspace/authoring/SelectedCapabilityInspector.test.tsx src/workspace/authoring/ContextInspector.test.tsx src/workspace/authoring/authoring-graph.test.ts src/graph/graph-model.test.ts src/graph/WorkflowGraph.test.tsx src/workspace/authoring/DraftWorkbench.test.tsx src/workspace/routes/DraftDetailRoute.test.tsx
 ```
 
-- [ ] **Step 4: Extract selected capability composition**
+- [x] **Step 4: Extract selected capability composition**
 
 Move the selected-node capability branch out of `ContextInspector` into
 `SelectedCapabilityInspector`. Keep selection routing and generic diagnostics
@@ -795,7 +795,7 @@ in `ContextInspector`. Use stable tab ids and `role="tablist"`, `role="tab"`,
 and `role="tabpanel"`. Restore the active tab and preserved form after mobile
 sheet close/reopen and conflict reapply.
 
-- [ ] **Step 5: Add truthful node summaries**
+- [x] **Step 5: Add truthful node summaries**
 
 Set an authoring-only raw-node `summary` from canonical binding counts and carry
 it into a new optional `WorkflowGraphNodeData.summary`. Render `data.summary`
@@ -839,14 +839,14 @@ With the console, Hono server, and `wf-rpc-server` running:
 Capture a screenshot and operation evidence for the input and output success
 states under the gitignored `.visual-smoke/` directory.
 
-- [ ] **Step 8: Update live documentation and archive the plan**
+- [x] **Step 8: Update live documentation and archive the plan**
 
 Document selected-step Setup/Inputs/Outputs and canonical replacement behavior
 in `web/README.md`. Mark Roadmap Slice 3 completed and retain Slices 4–7 as
 planned. Move this completed plan to the historical path and update its roadmap
 link.
 
-- [ ] **Step 9: Review and commit**
+- [x] **Step 9: Review and commit**
 
 Run the requesting-code-review skill on the complete slice. Fix all valid
 Critical and Important findings, rerun affected verification, then commit:

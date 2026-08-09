@@ -56,6 +56,18 @@ const capabilityDetail: CapabilityDetail = {
   acceptsContext: false,
 };
 
+const dataflowCapabilityDetail: CapabilityDetail = {
+  ...capabilityDetail,
+  inputSchema: {
+    type: "object",
+    properties: { title: { type: "string" } },
+  },
+  outputSchema: {
+    type: "object",
+    properties: { text: { type: "string" } },
+  },
+};
+
 const setViewport = (width: number): void => {
   Object.defineProperty(window, "innerWidth", {
     configurable: true,
@@ -200,6 +212,50 @@ describe("DraftWorkbench", () => {
       within(inspector).getByRole("textbox", { name: "Description" }),
     ).toHaveValue(" locally edited");
     expect(container.querySelector(".draft-workbench")).toHaveAttribute("data-dirty", "true");
+  });
+
+  it("keeps the selected dataflow tab and unsaved rows across mobile close and reopen", async () => {
+    setViewport(390);
+    mockedUseAuthoringCapabilityDetail.mockReturnValue({
+      phase: "ready",
+      detail: dataflowCapabilityDetail,
+      message: null,
+    });
+    const user = userEvent.setup();
+    const { container } = render(
+      <DraftWorkbench
+        draft={workspace}
+        initialSelection={{ kind: "node", nodeId: "collect" }}
+      />,
+    );
+
+    const inspector = container.querySelector("#draft-workbench-inspector") as HTMLElement;
+    await user.click(
+      within(inspector).getByRole("tab", { name: "Inputs", hidden: true }),
+    );
+    await user.click(
+      within(inspector).getByRole("button", { name: "Add input row", hidden: true }),
+    );
+    await user.type(
+      within(inspector).getByRole("textbox", { name: "Target for row 1", hidden: true }),
+      "title",
+    );
+    await user.click(
+      within(inspector).getByRole("tab", { name: "Outputs", hidden: true }),
+    );
+
+    const inspectorTrigger = screen.getByRole("button", { name: "Open context inspector" });
+    await user.click(inspectorTrigger);
+    await user.click(screen.getByRole("button", { name: "Close context inspector" }));
+    expect(inspectorTrigger).toHaveFocus();
+    await user.click(inspectorTrigger);
+
+    expect(
+      within(inspector).getByRole("tab", { name: "Outputs" }),
+    ).toHaveAttribute("aria-selected", "true");
+    expect(
+      within(inspector).getByRole("textbox", { name: "Target for row 1", hidden: true }),
+    ).toHaveValue("title");
   });
 
   it("reopens an open desktop sheet as a modal after resizing to mobile", async () => {

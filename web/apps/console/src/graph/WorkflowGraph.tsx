@@ -63,6 +63,8 @@ const CustomNode = ({ data, selected }: { data: WorkflowGraphNodeData; selected:
       {data.nodeRef && (
         <div className="graph-node__ref">{data.nodeRef}</div>
       )}
+      {data.detail && <div className="graph-node__detail">{data.detail}</div>}
+      {data.summary && <div className="graph-node__summary">{data.summary}</div>}
       <Handle type="source" position={Position.Bottom} />
     </div>
   );

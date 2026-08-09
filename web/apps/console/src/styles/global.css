@@ -1296,6 +1296,27 @@ tbody tr:hover {
   overflow-wrap: anywhere;
 }
 
+.graph-node__detail,
+.graph-node__summary {
+  margin-top: 0.35rem;
+  overflow-wrap: anywhere;
+}
+
+.graph-node__detail {
+  color: var(--color-slate);
+  font-size: 0.8rem;
+  line-height: 1.25;
+}
+
+.graph-node__summary {
+  border-top: 1px solid var(--color-border);
+  color: var(--color-ink);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  line-height: 1.25;
+  padding-top: 0.35rem;
+}
+
 .workflow-graph .react-flow__handle {
   width: 0.55rem;
   height: 0.55rem;
@@ -1525,6 +1546,62 @@ tbody tr:hover {
 
 .context-inspector .draft-detail__raw {
   margin: 0;
+}
+
+.selected-capability-inspector {
+  display: grid;
+  align-content: start;
+  gap: 0.75rem;
+}
+
+.selected-capability-inspector__header {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.selected-capability-inspector__header h2 {
+  margin: 0;
+}
+
+.selected-capability-inspector__step-id {
+  display: grid;
+  gap: 0.25rem;
+  color: var(--color-slate);
+  font-size: 0.78rem;
+}
+
+.selected-capability-inspector__step-id input {
+  width: 100%;
+  color: var(--color-ink);
+  font-family: var(--font-mono);
+}
+
+.selected-capability-inspector__tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.35rem;
+}
+
+.selected-capability-inspector__tab {
+  min-width: 0;
+  padding: 0.5rem 0.35rem;
+  border: 1px solid var(--color-border);
+  border-radius: 3px;
+  background: #fff;
+  color: var(--color-ink);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.selected-capability-inspector__tab[aria-selected="true"] {
+  background: var(--color-ink);
+  color: #fff;
+}
+
+.selected-capability-inspector__panel {
+  min-width: 0;
 }
 
 /* Motion */

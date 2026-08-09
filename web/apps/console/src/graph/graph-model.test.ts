@@ -187,4 +187,14 @@ describe("buildWorkflowGraph", () => {
     const openNode = model.nodes.find((n) => n.id === "open");
     expect(openNode?.data.raw).toBeDefined();
   });
+
+  it("carries a distinct node summary without replacing descriptions", () => {
+    const model = buildWorkflowGraph({
+      nodes: [{ id: "read", type: "node", node: "demo.read", detail: "Read a report", summary: "2 inputs · 1 state write" }],
+      edges: [],
+    });
+
+    expect(model.nodes[0]?.data.detail).toBe("Read a report");
+    expect(model.nodes[0]?.data.summary).toBe("2 inputs · 1 state write");
+  });
 });

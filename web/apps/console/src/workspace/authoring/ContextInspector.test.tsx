@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { CapabilityDetail } from "../domain/capability-models.js";
@@ -102,9 +102,9 @@ describe("ContextInspector", () => {
     expect(screen.getByRole("textbox", { name: "Step id" })).toHaveAttribute("readonly");
     expect(screen.getByRole("spinbutton", { name: "Retry" })).toHaveValue(2);
     expect(screen.getByRole("spinbutton", { name: "Timeout seconds" })).toHaveValue(45);
-    expect(screen.getByRole("textbox", { name: "Title" })).toHaveValue("Existing title");
-    expect(screen.getByRole("textbox", { name: "Source path for Count" })).toHaveValue("input.count");
-    expect(screen.getAllByText("Bind")).not.toHaveLength(0);
+    fireEvent.click(screen.getByRole("tab", { name: "Inputs" }));
+    expect(screen.getByRole("textbox", { name: "Target for row 1" })).toHaveValue("title");
+    expect(screen.getByRole("textbox", { name: "Source path for input row 2" })).toHaveValue("input.count");
   });
 
   it("keeps deferred actions focusable while keyboard activation does not dispatch", async () => {
@@ -162,7 +162,7 @@ describe("ContextInspector", () => {
         },
         {
           code: "invalid_node_input_field",
-          path: "nodes[0].input[0].target",
+          path: "bindings[0].target",
           message: "Destination field is not declared.",
           stepId: "read",
           repairHint: null,
@@ -183,10 +183,11 @@ describe("ContextInspector", () => {
       />,
     );
 
+    fireEvent.click(screen.getByRole("tab", { name: "Inputs" }));
     expect(screen.getAllByText("Title is not accepted.")).not.toHaveLength(0);
     expect(screen.getAllByText("Retry must be non-negative.")).not.toHaveLength(0);
     expect(screen.getAllByText("Destination field is not declared.")).not.toHaveLength(0);
-    expect(screen.getByRole("textbox", { name: "Title" })).toHaveAttribute(
+    expect(screen.getByRole("textbox", { name: "Target for row 1" })).toHaveAttribute(
       "aria-invalid",
       "true",
     );
@@ -231,6 +232,7 @@ describe("ContextInspector", () => {
     expect(screen.getByRole("textbox", { name: "Description" })).toHaveValue(
       "Locally edited description",
     );
+    fireEvent.click(screen.getByRole("tab", { name: "Inputs" }));
     expect(screen.getByRole("textbox", { name: "Title" })).toHaveValue(
       "Locally edited title",
     );

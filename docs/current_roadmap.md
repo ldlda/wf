@@ -75,14 +75,14 @@ Implementation order:
    [`draft authoring workbench`](superpowers/specs/2026-08-05-workflow-console-draft-authoring-workbench-design.md).
    Implementation:
    [`draft authoring workbench plan`](historical/superpowers/plans/2026-08-09-workflow-console-draft-authoring-workbench.md).
+   Slice 3 is complete: selected capability steps now expose Setup, Inputs, and
+   Outputs editing with canonical whole-list replacement, malformed-row repair
+   gating, truthful graph binding summaries, and mobile mounted-inspector state
+   preservation. Design:
+   [`selected-step dataflow`](superpowers/specs/2026-08-09-workflow-console-selected-step-dataflow-design.md).
+   Implementation:
+   [`selected-step dataflow plan`](historical/superpowers/plans/2026-08-09-workflow-console-selected-step-dataflow.md).
    Planned authoring slices, in order:
-   - Slice 3: selected-step dataflow editing. Inspect and atomically replace
-     ordered step input bindings and output-to-state bindings. Missing state
-     fields are projected from capability output schemas and shown for review.
-     Design:
-     [`selected-step dataflow`](superpowers/specs/2026-08-09-workflow-console-selected-step-dataflow-design.md).
-     Active implementation plan:
-     [`selected-step dataflow plan`](superpowers/plans/2026-08-09-workflow-console-selected-step-dataflow.md).
    - Slice 4: workflow contract graph. Add selectable Input, State, and Outcomes
      projections with focused forms for workflow contracts, explicit outcomes,
      entry point, and final workflow output bindings.
