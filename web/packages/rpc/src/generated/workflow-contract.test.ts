@@ -31,6 +31,8 @@ describe("generated workflow contract", () => {
       "workflow.draft_workspaces.add_step_from_capability",
       "workflow.draft_workspaces.update_capability_step",
       "workflow.draft_workspaces.set_route",
+      "workflow.draft_workspaces.set_step_input_bindings",
+      "workflow.draft_workspaces.set_step_output_bindings",
       "workflow.draft_workspaces.validate",
       "workflow.artifacts.list",
       "workflow.artifacts.inspect",
@@ -44,7 +46,7 @@ describe("generated workflow contract", () => {
       "workflow.runs.trace",
     ];
 
-    expect(supportedNames).toHaveLength(22);
+    expect(supportedNames).toHaveLength(expectedMethods.length);
     expect(supportedNames).toEqual(expectedMethods);
     expect(supportedNames.every((method) => generatedNames.has(method))).toBe(true);
     expect(workflowRpcOperationNames).toEqual(supportedNames);
