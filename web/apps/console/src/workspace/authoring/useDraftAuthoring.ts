@@ -8,7 +8,11 @@ import {
   createDraftWorkspaceClient,
   type DraftWorkspaceClient,
 } from "../domain/draft-workspace-client.js";
-import type { DraftWorkspace } from "../domain/draft-workspace-models.js";
+import type {
+  DraftWorkspace,
+  InputBinding,
+  OutputBinding,
+} from "../domain/draft-workspace-models.js";
 import type { CapabilityNodeFormValue } from "./CapabilityNodeForm.js";
 import type { RouteFormValue } from "./RouteForm.js";
 import {
@@ -16,6 +20,7 @@ import {
   type InsertionContext,
   type WorkbenchSelection,
 } from "./authoring-graph.js";
+import type { CapabilitySetupPatch } from "./selected-step-dataflow.js";
 
 export type DraftAuthoringPhase = "idle" | "saving" | "conflict" | "error";
 
@@ -30,6 +35,9 @@ export interface DraftAuthoringController {
   readonly preservedCapabilityForm: PreservedCapabilityForm;
   readonly addCapability: (input: CapabilityNodeFormValue) => Promise<void>;
   readonly updateCapability: (input: CapabilityNodeFormValue) => Promise<void>;
+  readonly setStepInputs: (bindings: ReadonlyArray<InputBinding>) => Promise<void>;
+  readonly setStepOutputs: (bindings: ReadonlyArray<OutputBinding>) => Promise<void>;
+  readonly updateSetup: (patch: CapabilitySetupPatch) => Promise<void>;
   readonly setRoute: (input: RouteFormValue) => Promise<void>;
   readonly validate: () => Promise<void>;
   readonly reload: () => Promise<void>;
@@ -80,7 +88,29 @@ type LastSubmission =
       readonly input: CapabilityNodeFormValue;
     }
   | { readonly kind: "route"; readonly input: RouteFormValue }
+  | {
+      readonly kind: "setup";
+      readonly targetStepId: string;
+      readonly patch: CapabilitySetupPatch;
+    }
+  | {
+      readonly kind: "inputs";
+      readonly targetStepId: string;
+      readonly bindings: ReadonlyArray<InputBinding>;
+    }
+  | {
+      readonly kind: "outputs";
+      readonly targetStepId: string;
+      readonly bindings: ReadonlyArray<OutputBinding>;
+    }
   | null;
+
+type MutationOptions = {
+  readonly nextSelection?: WorkbenchSelection;
+  readonly targetStepId?: string;
+  readonly allowTargetSelectionChange?: boolean;
+  readonly submission?: Exclude<LastSubmission, null>;
+};
 
 export type PreservedCapabilityForm =
   | { readonly kind: "add"; readonly input: CapabilityNodeFormValue }
@@ -151,6 +181,9 @@ export const useDraftAuthoring = ({
     resetGeneration: 0,
   }));
   const pendingRef = useRef<PendingMutation | null>(null);
+  // The draft is confirmed canonical state. Selected-step forms own active
+  // tabs and unsaved rows; this ref stores only the exact mutation payload
+  // needed for an explicit conflict reapply.
   const lastSubmissionRef = useRef<LastSubmission>(null);
 
   const adoptsDraftInput =
@@ -243,7 +276,7 @@ export const useDraftAuthoring = ({
       kind: string,
       input: unknown,
       operation: (client: DraftAuthoringClient, requestDraft: DraftWorkspace) => Promise<DraftWorkspace>,
-      nextSelection?: WorkbenchSelection,
+      options: MutationOptions = {},
     ): Promise<void> => {
       const requestDraft = currentDraftRef.current;
       const key = mutationKey(kind, input, requestDraft.revision);
@@ -270,6 +303,9 @@ export const useDraftAuthoring = ({
         });
       }
 
+      if (options.submission !== undefined) {
+        lastSubmissionRef.current = options.submission;
+      }
       const requestProvenance = currentProvenanceRef.current;
       setState((current) => ({
         ...current,
@@ -279,7 +315,14 @@ export const useDraftAuthoring = ({
       }));
       const promise = operation(authoringClient, requestDraft)
         .then((response) => {
-          const committed = commitResponse(response, requestProvenance, nextSelection);
+          const targetIsCurrent =
+            options.targetStepId === undefined ||
+            options.allowTargetSelectionChange === true ||
+            (currentSelectionRef.current.kind === "node" &&
+              currentSelectionRef.current.nodeId === options.targetStepId);
+          const committed =
+            targetIsCurrent &&
+            commitResponse(response, requestProvenance, options.nextSelection);
           if (!committed && sameProvenance(requestProvenance, currentProvenanceRef.current)) {
             throw new Error("The authoring response did not match the requested workspace.");
           }
@@ -304,7 +347,6 @@ export const useDraftAuthoring = ({
 
   const addCapability = useCallback(
     (input: CapabilityNodeFormValue): Promise<void> => {
-      lastSubmissionRef.current = { kind: "add", input };
       const insertion = currentInsertionContextRef.current;
       return runMutation(
         "add",
@@ -329,7 +371,10 @@ export const useDraftAuthoring = ({
             retry: input.retry,
             timeoutSeconds: input.timeoutSeconds,
           }),
-        { kind: "node", nodeId: input.stepId },
+        {
+          nextSelection: { kind: "node", nodeId: input.stepId },
+          submission: { kind: "add", input },
+        },
       );
     },
     [runMutation],
@@ -339,7 +384,6 @@ export const useDraftAuthoring = ({
     (targetStepId: string, input: CapabilityNodeFormValue): Promise<void> => {
       // Persist the immutable mutation target with the form. A conflict may
       // outlive the current graph selection before the operator reapplies it.
-      lastSubmissionRef.current = { kind: "update", targetStepId, input };
       return runMutation(
         "update",
         { targetStepId, input },
@@ -355,6 +399,9 @@ export const useDraftAuthoring = ({
               timeoutSeconds: input.timeoutSeconds,
             },
           }),
+        {
+          submission: { kind: "update", targetStepId, input },
+        },
       );
     },
     [runMutation],
@@ -373,9 +420,135 @@ export const useDraftAuthoring = ({
     [submitCapabilityUpdate],
   );
 
+  const selectedStepId = useCallback((): string | null => {
+    const selection = currentSelectionRef.current;
+    return selection.kind === "node" ? selection.nodeId : null;
+  }, []);
+
+  const missingSelectedStep = useCallback((): Promise<void> => {
+    const error = new Error("Select a capability node before editing its dataflow.");
+    setState((current) => ({
+      ...current,
+      dirty: true,
+      phase: "error",
+      message: error.message,
+    }));
+    return Promise.reject(error);
+  }, []);
+
+  const submitSetup = useCallback(
+    (
+      targetStepId: string,
+      patch: CapabilitySetupPatch,
+      allowTargetSelectionChange = false,
+    ): Promise<void> => {
+      const update = {
+        ...(patch.description !== undefined ? { description: patch.description } : {}),
+        ...(patch.retry !== undefined ? { retry: patch.retry } : {}),
+        ...(patch.timeoutSeconds !== undefined ? { timeoutSeconds: patch.timeoutSeconds } : {}),
+      };
+      return runMutation(
+        "setup",
+        { targetStepId, patch },
+        (client, requestDraft) =>
+          client.updateCapabilityStep({
+            workspaceId: requestDraft.workspaceId,
+            revision: requestDraft.revision,
+            stepId: targetStepId,
+            update,
+          }),
+        {
+          targetStepId,
+          allowTargetSelectionChange,
+          submission: { kind: "setup", targetStepId, patch },
+        },
+      );
+    },
+    [runMutation],
+  );
+
+  const submitStepInputs = useCallback(
+    (
+      targetStepId: string,
+      bindings: ReadonlyArray<InputBinding>,
+      allowTargetSelectionChange = false,
+    ): Promise<void> =>
+      runMutation(
+        "inputs",
+        { targetStepId, bindings },
+        (client, requestDraft) =>
+          client.setStepInputBindings({
+            workspaceId: requestDraft.workspaceId,
+            revision: requestDraft.revision,
+            stepId: targetStepId,
+            bindings,
+          }),
+        {
+          targetStepId,
+          allowTargetSelectionChange,
+          submission: { kind: "inputs", targetStepId, bindings },
+        },
+      ),
+    [runMutation],
+  );
+
+  const submitStepOutputs = useCallback(
+    (
+      targetStepId: string,
+      bindings: ReadonlyArray<OutputBinding>,
+      allowTargetSelectionChange = false,
+    ): Promise<void> =>
+      runMutation(
+        "outputs",
+        { targetStepId, bindings },
+        (client, requestDraft) =>
+          client.setStepOutputBindings({
+            workspaceId: requestDraft.workspaceId,
+            revision: requestDraft.revision,
+            stepId: targetStepId,
+            bindings,
+          }),
+        {
+          targetStepId,
+          allowTargetSelectionChange,
+          submission: { kind: "outputs", targetStepId, bindings },
+        },
+      ),
+    [runMutation],
+  );
+
+  const updateSetup = useCallback(
+    (patch: CapabilitySetupPatch): Promise<void> => {
+      const targetStepId = selectedStepId();
+      return targetStepId === null
+        ? missingSelectedStep()
+        : submitSetup(targetStepId, patch);
+    },
+    [missingSelectedStep, selectedStepId, submitSetup],
+  );
+
+  const setStepInputs = useCallback(
+    (bindings: ReadonlyArray<InputBinding>): Promise<void> => {
+      const targetStepId = selectedStepId();
+      return targetStepId === null
+        ? missingSelectedStep()
+        : submitStepInputs(targetStepId, bindings);
+    },
+    [missingSelectedStep, selectedStepId, submitStepInputs],
+  );
+
+  const setStepOutputs = useCallback(
+    (bindings: ReadonlyArray<OutputBinding>): Promise<void> => {
+      const targetStepId = selectedStepId();
+      return targetStepId === null
+        ? missingSelectedStep()
+        : submitStepOutputs(targetStepId, bindings);
+    },
+    [missingSelectedStep, selectedStepId, submitStepOutputs],
+  );
+
   const setRoute = useCallback(
     (input: RouteFormValue): Promise<void> => {
-      lastSubmissionRef.current = { kind: "route", input };
       return runMutation(
         "route",
         input,
@@ -387,6 +560,7 @@ export const useDraftAuthoring = ({
             outcome: input.outcome,
             target: input.target,
           }),
+        { submission: { kind: "route", input } },
       );
     },
     [runMutation],
@@ -470,8 +644,18 @@ export const useDraftAuthoring = ({
     if (last === null) return Promise.resolve();
     if (last.kind === "add") return addCapability(last.input);
     if (last.kind === "update") return submitCapabilityUpdate(last.targetStepId, last.input);
-    return setRoute(last.input);
-  }, [addCapability, setRoute, submitCapabilityUpdate]);
+    if (last.kind === "route") return setRoute(last.input);
+    if (last.kind === "setup") return submitSetup(last.targetStepId, last.patch, true);
+    if (last.kind === "inputs") return submitStepInputs(last.targetStepId, last.bindings, true);
+    return submitStepOutputs(last.targetStepId, last.bindings, true);
+  }, [
+    addCapability,
+    setRoute,
+    submitCapabilityUpdate,
+    submitSetup,
+    submitStepInputs,
+    submitStepOutputs,
+  ]);
 
   const rememberCapabilityForm = useCallback(
     (kind: "add" | "update", input: CapabilityNodeFormValue): void => {
@@ -505,6 +689,9 @@ export const useDraftAuthoring = ({
     resetGeneration,
     addCapability,
     updateCapability,
+    setStepInputs,
+    setStepOutputs,
+    updateSetup,
     setRoute,
     validate,
     reload,
