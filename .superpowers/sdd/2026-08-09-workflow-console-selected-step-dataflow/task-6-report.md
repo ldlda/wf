@@ -19,6 +19,22 @@ Implemented the standalone ordered output-to-state binding form with schema sugg
 
 None.
 
+## Fix Round 3/5
+
+### Status
+
+Extended each parameterized add, edit, and remove case to verify stale confirmation removal, fresh confirmation creation, empty-list submission, and cleared mutated-row UI state.
+
+### Tests
+
+- Focused Vitest: 15 tests passed.
+- Console typecheck: passed.
+- `git diff --check`: passed with only the repository CRLF conversion warning.
+
+### Concerns
+
+None.
+
 ## Fix Round 2/5
 
 ### Status

@@ -319,6 +319,12 @@ describe("StepOutputBindingsForm", () => {
       await user.click(screen.getByRole("button", { name: "Save outputs" }));
 
       expect(submissions).toEqual([expected]);
+      await user.click(screen.getByRole("button", { name: "Clear outputs" }));
+      expect(screen.getByRole("button", { name: "Confirm clear outputs" })).toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: "Confirm clear outputs" }));
+
+      expect(submissions).toEqual([expected, []]);
+      expect(screen.getByText("No output bindings configured.")).toBeInTheDocument();
     },
   );
 
