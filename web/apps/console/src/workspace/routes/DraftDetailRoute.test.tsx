@@ -111,8 +111,14 @@ describe("DraftDetailRoute", () => {
     const details = container.querySelector("details");
     expect(details).not.toBeNull();
     expect(details).not.toHaveAttribute("open");
-    expect(screen.getByRole("button", { name: "Undo — Later" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Delete node — Later" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Undo — Later" })).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+    expect(screen.getByRole("button", { name: "Delete node — Later" })).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
     expect(screen.queryByRole("link", { name: /compile|artifact|save|edit|mutate/i })).toBeNull();
   });
 
