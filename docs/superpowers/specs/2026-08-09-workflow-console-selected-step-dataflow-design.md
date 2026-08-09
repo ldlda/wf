@@ -145,6 +145,14 @@ The selected-step form projection is a pure module that:
 It also projects structured binding diagnostics by selected step, field, and
 row index. Diagnostics without a structural row location remain in the shared
 draft diagnostics panel; the browser does not assign rows by parsing prose.
+Recognized row locations are compiled `nodes[N].input[M]` / `output[M]`, keyed
+JSON Pointer `/steps/<id>/input/M` / `output/M`, and focused
+`bindings[M]` diagnostics carrying the exact selected `step_id`.
+
+Malformed persisted binding rows remain visible as bounded raw previews at
+their original positions. Saving is blocked until each malformed row is either
+repaired into a canonical row or explicitly removed; unsupported data never
+silently disappears during replacement.
 
 The draft-authoring controller remains the single mutation module. Setup,
 Inputs, and Outputs are separate form surfaces but share revision checking,

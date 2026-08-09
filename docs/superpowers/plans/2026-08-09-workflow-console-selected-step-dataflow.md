@@ -99,6 +99,11 @@ describes every JSON value category: string, number, boolean, null, array, and
 object. The generated TypeScript `InputValueBinding["value"]` must be a
 recursive JSON value, not `{ [key: string]: unknown }`.
 
+Replace the object-only `InputValueBindingSchema.value` in
+`authored-rpc-fixtures.ts` with the same recursive JSON-value semantics. Add
+fixture decode assertions for scalar, null, array, and object literals so
+parity cannot pass with a narrower authored reference.
+
 Extend `workflow-contract-generator.test.ts` so removing either focused binding
 operation from the complete fixture fails with `missing runtime operation`, and
 so both operation names and their reachable binding schemas appear in
@@ -345,7 +350,14 @@ export type SelectedStepDataflow = {
   readonly timeoutSeconds: number | null | undefined;
   readonly inputs: ReadonlyArray<InputBinding>;
   readonly outputs: ReadonlyArray<OutputBinding>;
-  readonly unsupported: ReadonlyArray<string>;
+  readonly unsupported: ReadonlyArray<UnsupportedBindingRow>;
+};
+
+export type UnsupportedBindingRow = {
+  readonly field: "input" | "output";
+  readonly index: number;
+  readonly raw: unknown;
+  readonly reason: string;
 };
 
 export type CapabilitySetupPatch = {
@@ -359,6 +371,11 @@ Use type guards for records and structural path variants. Preserve valid rows
 in order. Do not coerce malformed bindings into maps or discard them silently;
 append an indexed unsupported reason so the inspector can block destructive
 replacement until the operator acknowledges or repairs the raw shape.
+
+Unsupported rows remain in their original positions as read-only raw previews
+with an explicit `Remove unsupported row` action. A save stays blocked while
+any unsupported row remains. Removing one is an explicit repair decision and
+serializes the remaining canonical rows in their original relative order.
 
 Although `StatePath` remains wire-compatible with generated types, output-row
 serialization must reject bare `state`, `state.`, empty structural `parts`, and
@@ -384,10 +401,19 @@ JSON Schema compatibility in the browser; the preview only shows the selected
 source schema the backend will project.
 
 `BindingDiagnostics` contains row issues keyed by binding index plus unmatched
-issues. Match only diagnostics whose structured path identifies the selected
-step and `input` or `output`; never infer row ownership from message text.
-Forms receive row issues explicitly. Unmatched issues remain in the shared
-ContextInspector diagnostics panel.
+issues. Accept only these structural path forms:
+
+- `nodes[N].input[M]...` / `nodes[N].output[M]...`, where `N` is the selected
+  step's index in the compiled `nodes[]` array;
+- `/steps/<escaped-id>/input/M/...` / `/steps/<escaped-id>/output/M/...`, using
+  JSON Pointer escaping; and
+- `bindings[M]...` only when `diagnostic.step_id` equals the selected step and
+  the caller supplies the field for the focused operation.
+
+Field-level paths without `M`, mismatched `step_id`, unknown formats, and prose
+messages are unmatched. Forms receive row issues explicitly. Unmatched issues
+remain in the shared ContextInspector diagnostics panel. Add positive and
+negative tests for every accepted form.
 
 - [ ] **Step 6: Verify and commit**
 
