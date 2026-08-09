@@ -62,7 +62,8 @@ export const CreateDraftDialog = ({
   const drafts = useDraftWorkspace(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const onCloseRef = useRef(onClose);
-  const unmountingRef = useRef(false);
+  const lifecycleTokenRef = useRef<number | null>(null);
+  const nextLifecycleTokenRef = useRef(0);
   const requestGenerationRef = useRef(0);
   const client = useMemo<DraftAuthoringClient | null>(
     () => (writeExecutor ? createDraftAuthoringClient(writeExecutor) : null),
@@ -82,13 +83,17 @@ export const CreateDraftDialog = ({
   useEffect(() => {
     const dialog = dialogRef.current;
     if (dialog === null) return;
+    const lifecycleToken = ++nextLifecycleTokenRef.current;
+    lifecycleTokenRef.current = lifecycleToken;
     const previouslyFocused =
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
     showModal(dialog);
     dialog.querySelector<HTMLElement>("[data-dialog-autofocus]")?.focus();
 
     return () => {
-      unmountingRef.current = true;
+      if (lifecycleTokenRef.current === lifecycleToken) {
+        lifecycleTokenRef.current = null;
+      }
       requestGenerationRef.current += 1;
       closeModal(dialog);
       if (previouslyFocused !== null && document.contains(previouslyFocused)) {
@@ -101,8 +106,12 @@ export const CreateDraftDialog = ({
     requestGenerationRef.current += 1;
   };
 
-  const isCurrentRequest = (generation: number): boolean =>
-    !unmountingRef.current && requestGenerationRef.current === generation;
+  const isCurrentRequest = (
+    generation: number,
+    lifecycleToken: number,
+  ): boolean =>
+    lifecycleTokenRef.current === lifecycleToken &&
+    requestGenerationRef.current === generation;
 
   const requestClose = (): void => {
     invalidatePendingCreate();
@@ -115,7 +124,7 @@ export const CreateDraftDialog = ({
   };
 
   const handleDialogClose = (): void => {
-    if (unmountingRef.current) return;
+    if (lifecycleTokenRef.current === null) return;
     requestClose();
   };
 
@@ -128,6 +137,8 @@ export const CreateDraftDialog = ({
 
     setPhase("saving");
     setMessage(null);
+    const lifecycleToken = lifecycleTokenRef.current;
+    if (lifecycleToken === null) return;
     const requestGeneration = requestGenerationRef.current + 1;
     requestGenerationRef.current = requestGeneration;
     try {
@@ -140,10 +151,10 @@ export const CreateDraftDialog = ({
               title,
               capabilityName: capability.name,
             });
-      if (!isCurrentRequest(requestGeneration)) return;
+      if (!isCurrentRequest(requestGeneration, lifecycleToken)) return;
       navigate(draftPath(created.workspaceId, capability));
     } catch (error: unknown) {
-      if (!isCurrentRequest(requestGeneration)) return;
+      if (!isCurrentRequest(requestGeneration, lifecycleToken)) return;
       setPhase("error");
       setMessage(errorMessage(error));
     }

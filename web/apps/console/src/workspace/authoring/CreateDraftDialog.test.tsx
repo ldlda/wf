@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { useState } from "react";
+import { StrictMode, useState } from "react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { initialState } from "../../app/state.js";
@@ -91,8 +91,7 @@ const DraftDestination = () => {
   return <p>Destination: {location.pathname}{location.search}</p>;
 };
 
-const renderDialog = (selectedCapability: CapabilityDetail | null = capability) =>
-  render(
+const DialogRoutes = ({ selectedCapability }: { readonly selectedCapability: CapabilityDetail | null }) => (
     <MemoryRouter initialEntries={["/console/discover"]}>
       <Routes>
         <Route
@@ -101,7 +100,17 @@ const renderDialog = (selectedCapability: CapabilityDetail | null = capability) 
         />
         <Route path="/console/drafts/:workspaceId" element={<DraftDestination />} />
       </Routes>
-    </MemoryRouter>,
+    </MemoryRouter>
+  );
+
+const renderDialog = (selectedCapability: CapabilityDetail | null = capability) =>
+  render(<DialogRoutes selectedCapability={selectedCapability} />);
+
+const renderStrictDialog = (selectedCapability: CapabilityDetail | null = capability) =>
+  render(
+    <StrictMode>
+      <DialogRoutes selectedCapability={selectedCapability} />
+    </StrictMode>,
   );
 
 beforeEach(() => {
@@ -119,6 +128,34 @@ beforeEach(() => {
 afterEach(() => cleanup());
 
 describe("CreateDraftDialog", () => {
+  it("keeps successful creation navigable after StrictMode effect replay", async () => {
+    const user = userEvent.setup();
+    vi.mocked(authoringClient.createEmpty).mockResolvedValueOnce(workspace("strict-created"));
+    renderStrictDialog(null);
+
+    await user.type(screen.getByRole("textbox", { name: "Workspace id" }), "requested-id");
+    await user.type(screen.getByRole("textbox", { name: "Draft name" }), "report-workflow");
+    await user.click(screen.getByRole("button", { name: "Create draft" }));
+
+    expect(
+      await screen.findByText("Destination: /console/drafts/strict-created"),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps rejected creation visible after StrictMode effect replay", async () => {
+    const user = userEvent.setup();
+    vi.mocked(authoringClient.createEmpty).mockRejectedValueOnce(
+      new Error("creation failed"),
+    );
+    renderStrictDialog(null);
+
+    await user.type(screen.getByRole("textbox", { name: "Workspace id" }), "requested-id");
+    await user.type(screen.getByRole("textbox", { name: "Draft name" }), "report-workflow");
+    await user.click(screen.getByRole("button", { name: "Create draft" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("creation failed");
+  });
+
   it("does not navigate when a pending create is cancelled and later resolves", async () => {
     const user = userEvent.setup();
     const pendingCreate = deferred<DraftWorkspace>();
