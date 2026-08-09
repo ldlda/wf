@@ -55,6 +55,8 @@ const createEmpty = vi.fn<DraftAuthoringClient["createEmpty"]>();
 const createFromCapability = vi.fn<DraftAuthoringClient["createFromCapability"]>();
 const addCapabilityStep = vi.fn<DraftAuthoringClient["addCapabilityStep"]>();
 const updateCapabilityStep = vi.fn<DraftAuthoringClient["updateCapabilityStep"]>();
+const setStepInputBindings = vi.fn<DraftAuthoringClient["setStepInputBindings"]>();
+const setStepOutputBindings = vi.fn<DraftAuthoringClient["setStepOutputBindings"]>();
 const setRoute = vi.fn<DraftAuthoringClient["setRoute"]>();
 const validate = vi.fn<DraftAuthoringClient["validate"]>();
 const list = vi.fn<DraftWorkspaceClient["list"]>();
@@ -64,6 +66,8 @@ const authoringClient = {
   createFromCapability,
   addCapabilityStep,
   updateCapabilityStep,
+  setStepInputBindings,
+  setStepOutputBindings,
   setRoute,
   validate,
 } satisfies DraftAuthoringClient;

@@ -9,6 +9,8 @@ import {
   type InputPathBinding,
   type InputValueBinding,
   type SetDraftRouteInput,
+  type SetStepInputBindingsInput,
+  type SetStepOutputBindingsInput,
   type UpdateCapabilityStepInput,
 } from "./draft-workspace-models.js";
 import { createDraftAuthoringClient } from "./draft-authoring-client.js";
@@ -257,5 +259,136 @@ describe("DraftAuthoringClient", () => {
     await expect(client.validate("draft-report")).rejects.toThrow(
       /DraftWorkspace is malformed/,
     );
+  });
+
+  it("sets input bindings with canonical structural paths and preserves null values", async () => {
+    const { executor: writeExecutor, run } = createExecutor();
+    const client = createDraftAuthoringClient(writeExecutor);
+    const bindings = [
+      {
+        path: { root: "context", parts: ["request", "text"] },
+        target: { root: "local", parts: ["text"] },
+      },
+      {
+        target: { root: "local", parts: ["optional"] },
+        value: null,
+      },
+    ] satisfies SetStepInputBindingsInput["bindings"];
+    const input = {
+      workspaceId: " report ",
+      revision: 7,
+      stepId: " render ",
+      bindings,
+    } satisfies SetStepInputBindingsInput;
+
+    await expect(client.setStepInputBindings(input)).resolves.toEqual(canonicalWorkspace);
+
+    expect(run).toHaveBeenCalledWith(
+      "workflow.draft_workspaces.set_step_input_bindings",
+      {
+        workspace_id: "report",
+        revision: 7,
+        step_id: "render",
+        bindings,
+      },
+      decodeDraftWorkspace,
+    );
+    bindings.splice(0, bindings.length);
+    expect(run).toHaveBeenCalledWith(
+      "workflow.draft_workspaces.set_step_input_bindings",
+      {
+        workspace_id: "report",
+        revision: 7,
+        step_id: "render",
+        bindings: [
+          {
+            path: { root: "context", parts: ["request", "text"] },
+            target: { root: "local", parts: ["text"] },
+          },
+          {
+            target: { root: "local", parts: ["optional"] },
+            value: null,
+          },
+        ],
+      },
+      decodeDraftWorkspace,
+    );
+  });
+
+  it("sets output bindings with an exact ordered copy, including empty lists", async () => {
+    const { executor: writeExecutor, run } = createExecutor();
+    const client = createDraftAuthoringClient(writeExecutor);
+    const bindings = [
+      { source: "text", target: "state.report" },
+      { source: "text", target: "state.audit.latest" },
+    ] satisfies SetStepOutputBindingsInput["bindings"];
+    const input = {
+      workspaceId: "report",
+      revision: 7,
+      stepId: "render",
+      bindings,
+    } satisfies SetStepOutputBindingsInput;
+
+    await client.setStepOutputBindings(input);
+    expect(run).toHaveBeenCalledWith(
+      "workflow.draft_workspaces.set_step_output_bindings",
+      {
+        workspace_id: "report",
+        revision: 7,
+        step_id: "render",
+        bindings: [
+          { source: "text", target: "state.report" },
+          { source: "text", target: "state.audit.latest" },
+        ],
+      },
+      decodeDraftWorkspace,
+    );
+    bindings.splice(0, bindings.length);
+    expect(run).toHaveBeenCalledWith(
+      "workflow.draft_workspaces.set_step_output_bindings",
+      {
+        workspace_id: "report",
+        revision: 7,
+        step_id: "render",
+        bindings: [
+          { source: "text", target: "state.report" },
+          { source: "text", target: "state.audit.latest" },
+        ],
+      },
+      decodeDraftWorkspace,
+    );
+
+    await client.setStepOutputBindings({ ...input, bindings: [] });
+    expect(run).toHaveBeenLastCalledWith(
+      "workflow.draft_workspaces.set_step_output_bindings",
+      {
+        workspace_id: "report",
+        revision: 7,
+        step_id: "render",
+        bindings: [],
+      },
+      decodeDraftWorkspace,
+    );
+  });
+
+  it("rejects blank identifiers for focused binding methods before transport", async () => {
+    const { executor: writeExecutor, run } = createExecutor();
+    const client = createDraftAuthoringClient(writeExecutor);
+    const input = {
+      workspaceId: "report",
+      revision: 7,
+      stepId: "render",
+      bindings: [],
+    } satisfies SetStepOutputBindingsInput;
+
+    await expect(client.setStepInputBindings({ ...input, workspaceId: " " })).rejects.toMatchObject({
+      kind: "operation",
+      operation: "workflow.draft_workspaces.set_step_input_bindings",
+    });
+    await expect(client.setStepOutputBindings({ ...input, stepId: "\t" })).rejects.toMatchObject({
+      kind: "operation",
+      operation: "workflow.draft_workspaces.set_step_output_bindings",
+    });
+    expect(run).not.toHaveBeenCalled();
   });
 });

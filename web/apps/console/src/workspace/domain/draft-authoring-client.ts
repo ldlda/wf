@@ -6,7 +6,10 @@ import {
   type CreateFromCapabilityInput,
   type DraftWorkspace,
   type InputBinding,
+  type OutputBinding,
   type SetDraftRouteInput,
+  type SetStepInputBindingsInput,
+  type SetStepOutputBindingsInput,
   type UpdateCapabilityStepInput,
 } from "./draft-workspace-models.js";
 import { ConsoleClientError } from "./errors.js";
@@ -17,6 +20,8 @@ export interface DraftAuthoringClient {
   createFromCapability(input: CreateFromCapabilityInput): Promise<DraftWorkspace>;
   addCapabilityStep(input: AddCapabilityStepInput): Promise<DraftWorkspace>;
   updateCapabilityStep(input: UpdateCapabilityStepInput): Promise<DraftWorkspace>;
+  setStepInputBindings(input: SetStepInputBindingsInput): Promise<DraftWorkspace>;
+  setStepOutputBindings(input: SetStepOutputBindingsInput): Promise<DraftWorkspace>;
   setRoute(input: SetDraftRouteInput): Promise<DraftWorkspace>;
   validate(workspaceId: string): Promise<DraftWorkspace>;
 }
@@ -51,9 +56,9 @@ const ifDefined = <T>(
   if (value !== undefined) target[key] = value;
 };
 
-const copyBindings = (
-  bindings: ReadonlyArray<InputBinding> | null | undefined,
-): InputBinding[] | null | undefined =>
+const copyBindings = <T>(
+  bindings: ReadonlyArray<T> | null | undefined,
+): T[] | null | undefined =>
   bindings === undefined || bindings === null ? bindings : [...bindings];
 
 export const createDraftAuthoringClient = (
@@ -142,6 +147,34 @@ export const createDraftAuthoringClient = (
         revision: input.revision,
         step_id: requireIdentifier(operation, input.stepId, "step id"),
         update,
+      },
+      decodeDraftWorkspace,
+    );
+  },
+
+  setStepInputBindings: async (input) => {
+    const operation = "workflow.draft_workspaces.set_step_input_bindings";
+    return executor.run(
+      operation,
+      {
+        workspace_id: requireIdentifier(operation, input.workspaceId, "workspace id"),
+        revision: input.revision,
+        step_id: requireIdentifier(operation, input.stepId, "step id"),
+        bindings: copyBindings<InputBinding>(input.bindings),
+      },
+      decodeDraftWorkspace,
+    );
+  },
+
+  setStepOutputBindings: async (input) => {
+    const operation = "workflow.draft_workspaces.set_step_output_bindings";
+    return executor.run(
+      operation,
+      {
+        workspace_id: requireIdentifier(operation, input.workspaceId, "workspace id"),
+        revision: input.revision,
+        step_id: requireIdentifier(operation, input.stepId, "step id"),
+        bindings: copyBindings<OutputBinding>(input.bindings),
       },
       decodeDraftWorkspace,
     );
