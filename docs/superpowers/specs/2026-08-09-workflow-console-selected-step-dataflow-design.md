@@ -84,7 +84,7 @@ Inputs replace the complete ordered canonical input-binding list. Each row has:
 
 - a capability-local target derived from the capability input schema;
 - a source mode of Path or Value;
-- an `input.*` or `state.*` graph path in Path mode;
+- an `input.*`, `state.*`, or `context.*` graph path in Path mode;
 - a schema-driven literal editor in Value mode; and
 - remove and reorder controls.
 
@@ -142,6 +142,10 @@ The selected-step form projection is a pure module that:
   contracts; and
 - serializes form rows back to canonical transport records.
 
+It also projects structured binding diagnostics by selected step, field, and
+row index. Diagnostics without a structural row location remain in the shared
+draft diagnostics panel; the browser does not assign rows by parsing prose.
+
 The draft-authoring controller remains the single mutation module. Setup,
 Inputs, and Outputs are separate form surfaces but share revision checking,
 pending state, evidence, conflict retention, reload, and reapply behavior.
@@ -186,6 +190,11 @@ confirmed draft and all local edits.
 Revision conflicts retain the exact active tab and ordered local rows. Reload
 discards local edits in favor of the server draft. Reapply reruns the same
 focused mutation against the refreshed revision.
+
+The selected-step inspector owns active-tab and unsaved-row state, keyed by the
+selected step. The authoring controller owns only confirmed canonical state and
+the last submitted payload needed for conflict reapply. Closing the mounted
+mobile sheet therefore does not erase unsaved work.
 
 ## Evidence And Truthfulness
 
@@ -235,4 +244,3 @@ The implementation must include:
 Focused tests, the full console test suite, TypeScript typecheck, production
 build, React Doctor changed-scope scan, and `git diff --check` are completion
 gates.
-
