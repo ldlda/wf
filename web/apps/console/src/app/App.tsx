@@ -1,8 +1,14 @@
-import { BrowserRouter } from "react-router-dom";
-import { AppRoutes } from "./AppRoutes.js";
+import {
+  createBrowserRouter,
+  createRoutesFromElements,
+  RouterProvider,
+} from "react-router-dom";
+import { createAppRouteElements } from "./app-route-elements.js";
+
+const router = createBrowserRouter(
+  createRoutesFromElements(createAppRouteElements({ protectDraftNavigation: true })),
+);
 
 export const App = () => (
-  <BrowserRouter>
-    <AppRoutes />
-  </BrowserRouter>
+  <RouterProvider router={router} />
 );

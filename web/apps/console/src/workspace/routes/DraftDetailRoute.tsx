@@ -11,7 +11,13 @@ const titleFor = (workspace: DraftWorkspace): string =>
 const formatStatus = (status: DraftWorkspace["status"]): string =>
   status.charAt(0).toUpperCase() + status.slice(1);
 
-export const DraftDetailRoute = () => {
+export type DraftDetailRouteProps = {
+  readonly enableNavigationProtection?: boolean;
+};
+
+export const DraftDetailRoute = ({
+  enableNavigationProtection = false,
+}: DraftDetailRouteProps) => {
   const { workspaceId = null } = useParams<{ workspaceId: string }>();
   const drafts = useDraftWorkspace(workspaceId);
   const draft =
@@ -48,7 +54,10 @@ export const DraftDetailRoute = () => {
             </p>
           </header>
 
-          <DraftWorkbench draft={draft} />
+          <DraftWorkbench
+            draft={draft}
+            enableNavigationProtection={enableNavigationProtection}
+          />
         </>
       )}
     </div>
