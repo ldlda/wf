@@ -17,7 +17,6 @@ import type { DraftWorkspaceController } from "./useDraftWorkspace.js";
 import { useDraftWorkspace } from "./useDraftWorkspace.js";
 
 const capture = vi.hoisted(() => ({
-  draftChange: null as ((draft: DraftWorkspace) => void) | null,
   renderCount: 0,
 }));
 
@@ -29,7 +28,6 @@ vi.mock("../authoring/DraftWorkbench.js", async () => {
   return {
     ...actual,
     DraftWorkbench: (props: ComponentProps<typeof RealDraftWorkbench>) => {
-      capture.draftChange = props.onDraftChange ?? null;
       capture.renderCount += 1;
       return <RealDraftWorkbench {...props} />;
     },
@@ -167,7 +165,6 @@ const routeElement = () => (
 
 beforeEach(() => {
   vi.clearAllMocks();
-  capture.draftChange = null;
   capture.renderCount = 0;
   loadedReport = workspace();
   loaderPhase = "ready";
@@ -206,7 +203,7 @@ afterEach(() => {
 });
 
 describe("DraftDetailRoute authoring freshness", () => {
-  it("uses real controller mutations, loader replacement, and stale-callback rejection without looping", async () => {
+  it("uses real controller mutations and loader replacement without synchronization loops", async () => {
     const user = userEvent.setup();
     const committed = workspace({ revision: 2, status: "valid" });
     vi.mocked(authoringClient.updateCapabilityStep).mockResolvedValueOnce(committed);
@@ -217,9 +214,6 @@ describe("DraftDetailRoute authoring freshness", () => {
     expect(node).not.toBeNull();
     fireEvent.click(node as HTMLElement);
     await waitFor(() => expect(screen.getByRole("heading", { name: "collect" })).toBeInTheDocument());
-    const staleCallback = capture.draftChange;
-    expect(staleCallback).not.toBeNull();
-
     const retry = screen.getByRole("spinbutton", { name: "Retry" });
     await user.clear(retry);
     await user.type(retry, "2");
@@ -241,9 +235,6 @@ describe("DraftDetailRoute authoring freshness", () => {
     view.rerender(routeElement());
     await waitFor(() => expect(within(header()).getByText("Revision 3")).toBeInTheDocument());
     expect(within(header()).getByText("Invalid")).toBeInTheDocument();
-    act(() => staleCallback?.({ ...committed, revision: 99, status: "valid" }));
-    expect(within(header()).getByText("Revision 3")).toBeInTheDocument();
-    expect(within(header()).queryByText("Revision 99")).toBeNull();
     const refreshRenderCount = capture.renderCount;
     await act(async () => new Promise((resolve) => setTimeout(resolve, 0)));
     expect(capture.renderCount).toBe(refreshRenderCount);
@@ -254,9 +245,6 @@ describe("DraftDetailRoute authoring freshness", () => {
     loaderPhase = "ready";
     view.rerender(routeElement());
     await waitFor(() => expect(within(header()).getByText("Revision 3")).toBeInTheDocument());
-    act(() => staleCallback?.({ ...committed, revision: 100, status: "valid" }));
-    expect(within(header()).getByText("Revision 3")).toBeInTheDocument();
-    expect(within(header()).queryByText("Revision 100")).toBeNull();
     const reconnectRenderCount = capture.renderCount;
     await act(async () => new Promise((resolve) => setTimeout(resolve, 0)));
     expect(capture.renderCount).toBe(reconnectRenderCount);
@@ -264,9 +252,6 @@ describe("DraftDetailRoute authoring freshness", () => {
     await user.click(screen.getByRole("button", { name: "Navigate to other workspace" }));
     await waitFor(() => expect(screen.getByRole("heading", { name: "Other" })).toBeInTheDocument());
     expect(within(header()).getByText("Revision 9")).toBeInTheDocument();
-    act(() => staleCallback?.({ ...committed, revision: 101, status: "valid" }));
-    expect(within(header()).getByText("Revision 9")).toBeInTheDocument();
-    expect(within(header()).queryByText("Revision 101")).toBeNull();
     const navigationRenderCount = capture.renderCount;
     await act(async () => new Promise((resolve) => setTimeout(resolve, 0)));
     expect(capture.renderCount).toBe(navigationRenderCount);

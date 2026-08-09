@@ -13,7 +13,6 @@ type DraftWorkbenchProps = {
   readonly draft: DraftWorkspace;
   readonly capabilities?: ReadonlyArray<CapabilitySummary>;
   readonly initialSelection?: WorkbenchSelection;
-  readonly onDraftChange?: (draft: DraftWorkspace) => void;
   readonly onSelectionChange?: (selection: WorkbenchSelection) => void;
   readonly enableNavigationProtection?: boolean;
 };
@@ -23,6 +22,12 @@ type MobileSheet = "palette" | "inspector";
 const MOBILE_BREAKPOINT = 850;
 
 const EMPTY_CAPABILITIES: ReadonlyArray<CapabilitySummary> = [];
+
+const titleFor = (workspace: DraftWorkspace): string =>
+  workspace.title?.trim() || workspace.workspaceId;
+
+const formatStatus = (status: DraftWorkspace["status"]): string =>
+  status.charAt(0).toUpperCase() + status.slice(1);
 
 const isMobileViewport = (): boolean =>
   typeof window !== "undefined" && window.innerWidth <= MOBILE_BREAKPOINT;
@@ -131,7 +136,6 @@ export const DraftWorkbench = ({
   draft,
   capabilities = EMPTY_CAPABILITIES,
   initialSelection = { kind: "canvas" },
-  onDraftChange,
   onSelectionChange,
   enableNavigationProtection = false,
 }: DraftWorkbenchProps) => {
@@ -140,9 +144,6 @@ export const DraftWorkbench = ({
   const [openSheet, setOpenSheet] = useState<MobileSheet | null>(null);
   const paletteTriggerRef = useRef<HTMLButtonElement>(null);
   const inspectorTriggerRef = useRef<HTMLButtonElement>(null);
-  useEffect(() => {
-    onDraftChange?.(controller.draft);
-  }, [controller.draft, onDraftChange]);
   // Resolve capability details from the controller draft so a newly committed
   // node can immediately render its edit form before the route-level loader refreshes.
   const graph = projectAuthoringGraph(controller.draft.draft);
@@ -170,6 +171,17 @@ export const DraftWorkbench = ({
   return (
     <>
       {enableNavigationProtection && <DirtyNavigationProtection dirty={controller.dirty} />}
+      <header className="draft-detail__header">
+        <p className="workspace-route-pending__eyebrow">Draft authoring workbench</p>
+        <h1>{titleFor(controller.draft)}</h1>
+        <p className="draft-detail__workspace-id">{controller.draft.workspaceId}</p>
+        <p className="draft-detail__status-line">
+          <span className="draft-workspaces__status" data-status={controller.draft.status}>
+            {formatStatus(controller.draft.status)}
+          </span>
+          <span>Revision {controller.draft.revision}</span>
+        </p>
+      </header>
       <div
         className="draft-workbench"
         data-dirty={controller.dirty}

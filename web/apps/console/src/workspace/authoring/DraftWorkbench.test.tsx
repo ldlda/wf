@@ -115,11 +115,13 @@ describe("DraftWorkbench", () => {
     expect(screen.getByText("Review needs a route.")).toBeInTheDocument();
   });
 
-  it("reports the controller's current canonical draft to its route owner", () => {
-    const onDraftChange = vi.fn();
-    render(<DraftWorkbench draft={workspace} onDraftChange={onDraftChange} />);
+  it("renders route identity from the controller's canonical draft", () => {
+    render(<DraftWorkbench draft={workspace} />);
 
-    expect(onDraftChange).toHaveBeenCalledWith(workspace);
+    const header = screen.getByRole("heading", { name: "Review workflow" }).closest("header");
+    if (header === null) throw new Error("Expected the workbench identity header.");
+    expect(within(header).getByText("Revision 2")).toBeInTheDocument();
+    expect(within(header).getByText("Invalid")).toBeInTheDocument();
   });
 
   it("keeps the raw draft collapsed and exposes all deferred actions without handlers", () => {
