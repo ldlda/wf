@@ -291,6 +291,7 @@ export const ContextInspector = ({
             onDirtyChange={controller.markDirty}
             onSubmit={controller.addCapability}
             onValueChange={(value) => controller.rememberCapabilityForm("add", value)}
+            routeOutcomes={capabilityDetail.outcomes}
           />
         )}
       </>

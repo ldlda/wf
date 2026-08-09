@@ -50,4 +50,27 @@ describe("CapabilityNodeForm", () => {
     expect(dirtyStates.at(-1)).toBe(true);
     expect(stepId).toHaveValue("enrich");
   });
+
+  it("submits an explicit target for every declared capability outcome", async () => {
+    const user = userEvent.setup();
+    const submissions: unknown[] = [];
+    render(
+      <CapabilityNodeForm
+        capabilityName="everything.default.echo"
+        inputSchema={{ type: "object", properties: {} }}
+        onSubmit={(value) => { submissions.push(value); }}
+        routeOutcomes={["ok", "error"]}
+      />,
+    );
+
+    await user.type(screen.getByRole("textbox", { name: "Step id" }), "echo");
+    expect(screen.getByRole("textbox", { name: "Route target for ok" })).toHaveValue("__end__");
+    await user.clear(screen.getByRole("textbox", { name: "Route target for error" }));
+    await user.type(screen.getByRole("textbox", { name: "Route target for error" }), "recover");
+    await user.click(screen.getByRole("button", { name: "Add node" }));
+
+    expect(submissions[0]).toMatchObject({
+      routes: { ok: "__end__", error: "recover" },
+    });
+  });
 });

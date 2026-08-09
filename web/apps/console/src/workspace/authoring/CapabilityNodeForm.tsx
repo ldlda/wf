@@ -34,6 +34,7 @@ export type CapabilityNodeFormProps = {
   readonly onDirtyChange?: (dirty: boolean) => void;
   readonly submitLabel?: string;
   readonly stepIdReadOnly?: boolean;
+  readonly routeOutcomes?: ReadonlyArray<string>;
   readonly hidden?: boolean;
 };
 
@@ -50,12 +51,14 @@ export const CapabilityNodeForm = ({
   onDirtyChange,
   submitLabel = "Add node",
   stepIdReadOnly = false,
+  routeOutcomes = [],
   hidden = false,
 }: CapabilityNodeFormProps) => {
   const stepIdRef = useRef<HTMLInputElement>(null);
   const descriptionRef = useRef<HTMLInputElement>(null);
   const retryRef = useRef<HTMLInputElement>(null);
   const timeoutSecondsRef = useRef<HTMLInputElement>(null);
+  const routeTargetRefs = useRef(new Map<string, HTMLInputElement>());
   const dirtyRef = useRef(false);
   const initialSchemaResult = useMemo(
     () => serializeSchemaValues(
@@ -86,6 +89,16 @@ export const CapabilityNodeForm = ({
       ...result.bindings,
       ...result.literalBindings,
     ],
+    ...(routeOutcomes.length > 0
+      ? {
+          routes: Object.fromEntries(
+            routeOutcomes.map((outcome) => [
+              outcome,
+              routeTargetRefs.current.get(outcome)?.value.trim() || "__end__",
+            ]),
+          ),
+        }
+      : {}),
   });
 
   const notifyValueChange = (result: SchemaSerializationResult): void => {
@@ -183,6 +196,26 @@ export const CapabilityNodeForm = ({
               />
               {metadataMessage("timeout_seconds") && <p role="alert">{metadataMessage("timeout_seconds")}</p>}
             </label>
+            {routeOutcomes.length > 0 && (
+              <fieldset className="authoring-form__routes">
+                <legend>Outcome routes</legend>
+                <p>Choose where each declared outcome continues. New routes default to the workflow end.</p>
+                {routeOutcomes.map((outcome) => (
+                  <label key={outcome}>
+                    {outcome}
+                    <input
+                      aria-label={`Route target for ${outcome}`}
+                      defaultValue={initialValue?.routes?.[outcome] ?? "__end__"}
+                      onChange={notifyMetadataChange}
+                      ref={(element) => {
+                        if (element === null) routeTargetRefs.current.delete(outcome);
+                        else routeTargetRefs.current.set(outcome, element);
+                      }}
+                    />
+                  </label>
+                ))}
+              </fieldset>
+            )}
           </>
         }
         submitLabel={submitLabel}
