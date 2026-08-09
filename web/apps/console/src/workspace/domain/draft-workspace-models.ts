@@ -28,6 +28,29 @@ export type InputValueBinding = {
 
 export type InputBinding = InputPathBinding | InputValueBinding;
 
+export type StatePath =
+  | string
+  | { readonly root: "state"; readonly parts: string[] };
+
+export type OutputBinding = {
+  readonly source: LocalInputPath;
+  readonly target: StatePath;
+};
+
+export type SetStepInputBindingsInput = {
+  readonly workspaceId: string;
+  readonly revision: number;
+  readonly stepId: string;
+  readonly bindings: ReadonlyArray<InputBinding>;
+};
+
+export type SetStepOutputBindingsInput = {
+  readonly workspaceId: string;
+  readonly revision: number;
+  readonly stepId: string;
+  readonly bindings: ReadonlyArray<OutputBinding>;
+};
+
 export type CreateEmptyDraftInput = {
   readonly workspaceId: string;
   readonly name: string;

@@ -91,12 +91,13 @@ const inputBinding = (value: JsonRecord): InputBinding | null => {
   return null;
 };
 
-const formDataFromValue = (
-  input: CapabilityNodeFormValue,
-): CanonicalCapabilityFormData => {
+const bindingFormData = (
+  capabilityName: string,
+  inputBindings: ReadonlyArray<InputBinding>,
+): Omit<CanonicalCapabilityFormData, "initialValue"> => {
   const initialInputSources: Record<string, FieldSources[string]> = {};
   let initialInputValue: unknown = undefined;
-  for (const rawBinding of input.inputBindings ?? []) {
+  for (const rawBinding of inputBindings) {
     const target = localPath(rawBinding.target);
     if (target === null) continue;
     if ("path" in rawBinding) {
@@ -109,11 +110,25 @@ const formDataFromValue = (
     }
   }
   return {
-    capabilityName: input.capabilityName,
-    initialValue: input,
+    capabilityName,
     initialInputValue,
     initialInputSources,
   };
+};
+
+const formDataFromValue = (
+  input: CapabilityNodeFormValue,
+): CanonicalCapabilityFormData => ({
+  ...bindingFormData(input.capabilityName, input.inputBindings ?? []),
+  initialValue: input,
+});
+
+const formDataFromBindings = (
+  capabilityName: string,
+  inputBindings: ReadonlyArray<InputBinding>,
+  initialValue: Partial<CapabilityNodeFormValue>,
+): CanonicalCapabilityFormData => {
+  return { ...bindingFormData(capabilityName, inputBindings), initialValue };
 };
 
 export const capabilityFormDataFromValue = (
@@ -151,13 +166,5 @@ export const canonicalCapabilityFormData = (
     }
   }
 
-  return formDataFromValue({
-    ...initialValue,
-    stepId,
-    capabilityName,
-    description: initialValue.description ?? null,
-    retry: initialValue.retry ?? null,
-    timeoutSeconds: initialValue.timeoutSeconds ?? null,
-    inputBindings,
-  });
+  return formDataFromBindings(capabilityName, inputBindings, { ...initialValue, stepId });
 };
