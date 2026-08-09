@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { Boxes, PackageOpen } from "lucide-react";
 import type {
   CapabilityDetail,
   CapabilitySummary,
 } from "../domain/capability-models.js";
+import { CreateDraftDialog } from "../authoring/CreateDraftDialog.js";
 import { useCapabilityDiscovery } from "./useCapabilityDiscovery.js";
 
 const formatKind = (kind: CapabilitySummary["kind"]): string =>
@@ -62,7 +64,13 @@ const CapabilityRow = ({
   </li>
 );
 
-const DetailView = ({ detail }: { readonly detail: CapabilityDetail }) => (
+const DetailView = ({
+  detail,
+  onAddToDraft,
+}: {
+  readonly detail: CapabilityDetail;
+  readonly onAddToDraft: () => void;
+}) => (
   <section aria-labelledby="capability-detail-heading" className="capability-discovery__detail" id="capability-detail">
     <p className="workspace-route-pending__eyebrow">Selected contract</p>
     <h2 id="capability-detail-heading">{detail.name}</h2>
@@ -77,11 +85,13 @@ const DetailView = ({ detail }: { readonly detail: CapabilityDetail }) => (
       <SchemaBlock heading="Output schema" value={detail.outputSchema} />
       <SchemaBlock heading="Wrapper hints" value={detail.wrapperHints} />
     </div>
+    <button onClick={onAddToDraft} type="button">Add to draft</button>
   </section>
 );
 
 export const DiscoverRoute = () => {
   const discovery = useCapabilityDiscovery();
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const isReady = discovery.phase === "ready";
 
   return (
@@ -164,7 +174,10 @@ export const DiscoverRoute = () => {
         </section>
 
         {discovery.selected ? (
-          <DetailView detail={discovery.selected} />
+          <DetailView
+            detail={discovery.selected}
+            onAddToDraft={() => setCreateDialogOpen(true)}
+          />
         ) : (
           <section aria-labelledby="capability-detail-empty-heading" className="capability-discovery__detail capability-discovery__detail--empty" id="capability-detail">
             <p className="workspace-route-pending__eyebrow">Contract detail</p>
@@ -173,6 +186,12 @@ export const DiscoverRoute = () => {
           </section>
         )}
       </div>
+      {createDialogOpen && discovery.selected !== null && (
+        <CreateDraftDialog
+          capability={discovery.selected}
+          onClose={() => setCreateDialogOpen(false)}
+        />
+      )}
     </div>
   );
 };

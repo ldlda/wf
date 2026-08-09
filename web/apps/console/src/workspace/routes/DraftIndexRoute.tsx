@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import type { DraftWorkspace } from "../domain/draft-workspace-models.js";
+import { CreateDraftDialog } from "../authoring/CreateDraftDialog.js";
 import { useDraftWorkspace } from "./useDraftWorkspace.js";
 
 const titleFor = (workspace: DraftWorkspace): string =>
@@ -29,6 +31,7 @@ const DraftRow = ({ workspace }: { readonly workspace: DraftWorkspace }) => (
 
 export const DraftIndexRoute = () => {
   const drafts = useDraftWorkspace(null);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
   return (
     <div className="draft-workspaces">
@@ -36,9 +39,14 @@ export const DraftIndexRoute = () => {
         <p className="workspace-route-pending__eyebrow">Authoring inventory</p>
         <h1>Draft workspaces</h1>
         <p>Inspect saved workflow drafts without changing their definitions.</p>
-        <button onClick={drafts.refresh} type="button">
-          Refresh drafts
-        </button>
+        <div className="draft-workspaces__actions">
+          <button onClick={() => setCreateDialogOpen(true)} type="button">
+            New draft
+          </button>
+          <button onClick={drafts.refresh} type="button">
+            Refresh drafts
+          </button>
+        </div>
       </header>
 
       <section aria-labelledby="draft-workspaces-list-heading" className="draft-workspaces__panel">
@@ -85,6 +93,9 @@ export const DraftIndexRoute = () => {
           </div>
         )}
       </section>
+      {createDialogOpen && (
+        <CreateDraftDialog capability={null} onClose={() => setCreateDialogOpen(false)} />
+      )}
     </div>
   );
 };

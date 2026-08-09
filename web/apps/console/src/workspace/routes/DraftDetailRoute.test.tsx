@@ -85,6 +85,13 @@ describe("DraftDetailRoute", () => {
     expect(screen.getAllByText("Revision 3")).not.toHaveLength(0);
   });
 
+  it("uses a capability query only as the workbench's initial browser selection", () => {
+    renderRoute("draft-report?capability=local.documents.read%2Fv2");
+
+    expect(screen.getByRole("heading", { name: "local.documents.read/v2" })).toBeInTheDocument();
+    expect(screen.getByText("Draft authoring workbench")).toBeInTheDocument();
+  });
+
   it("lists the start step, step ids, and diagnostics beside the summary", () => {
     renderRoute();
 

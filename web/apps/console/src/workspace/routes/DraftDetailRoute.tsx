@@ -1,8 +1,9 @@
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import type {
   DraftWorkspace,
 } from "../domain/draft-workspace-models.js";
 import { DraftWorkbench } from "../authoring/DraftWorkbench.js";
+import type { WorkbenchSelection } from "../authoring/authoring-graph.js";
 import { useDraftWorkspace } from "./useDraftWorkspace.js";
 import { useCapabilityDiscovery } from "./useCapabilityDiscovery.js";
 
@@ -20,6 +21,12 @@ export const DraftDetailRoute = ({
   enableNavigationProtection = false,
 }: DraftDetailRouteProps) => {
   const { workspaceId = null } = useParams<{ workspaceId: string }>();
+  const [searchParams] = useSearchParams();
+  const capabilityName = searchParams.get("capability");
+  const initialSelection: WorkbenchSelection =
+    capabilityName !== null && capabilityName.trim() !== ""
+      ? { kind: "capability", qualifiedName: capabilityName }
+      : { kind: "canvas" };
   const drafts = useDraftWorkspace(workspaceId);
   const capabilities = useCapabilityDiscovery();
   const draft =
@@ -60,6 +67,7 @@ export const DraftDetailRoute = ({
             capabilities={capabilities.items}
             draft={draft}
             enableNavigationProtection={enableNavigationProtection}
+            initialSelection={initialSelection}
           />
         </>
       )}

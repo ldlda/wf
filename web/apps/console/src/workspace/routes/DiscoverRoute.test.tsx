@@ -1,15 +1,40 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { DraftWorkspaceController } from "./useDraftWorkspace.js";
+import { useDraftWorkspace } from "./useDraftWorkspace.js";
 import type { CapabilityDiscoveryController } from "./useCapabilityDiscovery.js";
 import { useCapabilityDiscovery } from "./useCapabilityDiscovery.js";
 import { DiscoverRoute } from "./DiscoverRoute.js";
+import { useConsoleWorkspace } from "../context.js";
+import {
+  createDraftAuthoringClient,
+  type DraftAuthoringClient,
+} from "../domain/draft-authoring-client.js";
+import type { DraftWorkspace } from "../domain/draft-workspace-models.js";
+import { initialState } from "../../app/state.js";
 
 vi.mock("./useCapabilityDiscovery.js", () => ({
   useCapabilityDiscovery: vi.fn(),
 }));
 
+vi.mock("./useDraftWorkspace.js", () => ({
+  useDraftWorkspace: vi.fn(),
+}));
+
+vi.mock("../context.js", () => ({
+  useConsoleWorkspace: vi.fn(),
+}));
+
+vi.mock("../domain/draft-authoring-client.js", () => ({
+  createDraftAuthoringClient: vi.fn(),
+}));
+
 const mockedUseCapabilityDiscovery = vi.mocked(useCapabilityDiscovery);
+const mockedUseDraftWorkspace = vi.mocked(useDraftWorkspace);
+const mockedUseConsoleWorkspace = vi.mocked(useConsoleWorkspace);
+const mockedCreateDraftAuthoringClient = vi.mocked(createDraftAuthoringClient);
 
 const summary = {
   kind: "node_spec" as const,
@@ -20,6 +45,32 @@ const summary = {
   inputFields: ["names"],
   outputFields: ["documents"],
 };
+
+const draft = (workspaceId: string): DraftWorkspace => ({
+  workspaceId,
+  revision: 1,
+  title: "Existing draft",
+  status: "invalid",
+  diagnostics: [],
+  summary: {
+    name: "existing",
+    start: null,
+    stepCount: 0,
+    routeCount: 0,
+    steps: [],
+  },
+  draft: null,
+});
+
+const draftController = (): DraftWorkspaceController => ({
+  listPhase: "ready",
+  detailPhase: "idle",
+  items: [draft("draft-existing")],
+  selected: null,
+  listMessage: null,
+  detailMessage: null,
+  refresh: vi.fn(),
+});
 
 const controller = (
   overrides: Partial<CapabilityDiscoveryController> = {},
@@ -39,12 +90,47 @@ const controller = (
   ...overrides,
 });
 
-beforeEach(() => mockedUseCapabilityDiscovery.mockReturnValue(controller()));
+const authoringClient: DraftAuthoringClient = {
+  createEmpty: vi.fn(),
+  createFromCapability: vi.fn(),
+  addCapabilityStep: vi.fn(),
+  updateCapabilityStep: vi.fn(),
+  setRoute: vi.fn(),
+  validate: vi.fn(),
+};
+
+beforeEach(() => {
+  mockedUseCapabilityDiscovery.mockReturnValue(controller());
+  mockedUseDraftWorkspace.mockReturnValue(draftController());
+  mockedUseConsoleWorkspace.mockReturnValue({
+    connection: initialState(),
+    connectedTarget: "http://workflow.test/rpc",
+    recordEvidence: vi.fn(),
+    readExecutor: null,
+    writeExecutor: { run: vi.fn() },
+  });
+  mockedCreateDraftAuthoringClient.mockReturnValue(authoringClient);
+});
 afterEach(() => cleanup());
+
+const renderRoute = () =>
+  render(
+    <MemoryRouter initialEntries={["/console/discover"]}>
+      <Routes>
+        <Route path="/console/discover" element={<DiscoverRoute />} />
+        <Route path="/console/drafts/:workspaceId" element={<DraftDestination />} />
+      </Routes>
+    </MemoryRouter>,
+  );
+
+const DraftDestination = () => {
+  const location = useLocation();
+  return <p>Draft destination: {location.pathname}{location.search}</p>;
+};
 
 describe("DiscoverRoute", () => {
   it("shows the discovery heading and searchable source-filtered controls", () => {
-    render(<DiscoverRoute />);
+    renderRoute();
 
     expect(screen.getByRole("heading", { name: "Discover capabilities" })).toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "Search capabilities" })).toBeInTheDocument();
@@ -55,7 +141,7 @@ describe("DiscoverRoute", () => {
   it("renders compact capability rows with contract summary fields", async () => {
     const inspect = vi.fn();
     mockedUseCapabilityDiscovery.mockReturnValue(controller({ inspect }));
-    render(<DiscoverRoute />);
+    renderRoute();
 
     expect(screen.getByText("Node spec")).toBeInTheDocument();
     expect(screen.getByText("Source: local.documents")).toBeInTheDocument();
@@ -75,7 +161,7 @@ describe("DiscoverRoute", () => {
     mockedUseCapabilityDiscovery.mockReturnValue(
       controller({ phase, message: phase === "error" ? message : null, items: [] }),
     );
-    render(<DiscoverRoute />);
+    renderRoute();
 
     expect(screen.getByText(message)).toBeInTheDocument();
   });
@@ -93,13 +179,13 @@ describe("DiscoverRoute", () => {
         },
       }),
     );
-    render(<DiscoverRoute />);
+    renderRoute();
 
     expect(screen.getByRole("heading", { name: "Input schema" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Output schema" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Wrapper hints" })).toBeInTheDocument();
     expect(screen.getAllByText(/"names"/)).toHaveLength(2);
-    expect(screen.queryByRole("button", { name: /add to draft/i })).toBeNull();
+    expect(screen.getByRole("button", { name: "Add to draft" })).toBeInTheDocument();
   });
 
   it("exposes selected row state and associates the result with its detail", () => {
@@ -115,7 +201,7 @@ describe("DiscoverRoute", () => {
         },
       }),
     );
-    render(<DiscoverRoute />);
+    renderRoute();
 
     const row = screen.getByRole("button", { name: /local\.documents\.read/i });
     expect(row).toHaveAttribute("aria-pressed", "true");
@@ -131,14 +217,14 @@ describe("DiscoverRoute", () => {
     mockedUseCapabilityDiscovery.mockReturnValue(
       controller({ nextCursor: "page-2", loadMore }),
     );
-    render(<DiscoverRoute />);
+    renderRoute();
 
     await userEvent.click(screen.getByRole("button", { name: "Load more capabilities" }));
     expect(loadMore).toHaveBeenCalledOnce();
 
     cleanup();
     mockedUseCapabilityDiscovery.mockReturnValue(controller());
-    render(<DiscoverRoute />);
+    renderRoute();
     expect(screen.queryByRole("button", { name: "Load more capabilities" })).toBeNull();
   });
 
@@ -149,5 +235,66 @@ describe("DiscoverRoute", () => {
     render(<DiscoverRoute />);
 
     expect(screen.getByRole("button", { name: "Load more capabilities" })).toBeDisabled();
+  });
+
+  it("hands an inspected capability to an existing draft through the URL", async () => {
+    const user = userEvent.setup();
+    mockedUseCapabilityDiscovery.mockReturnValue(
+      controller({
+        selected: {
+          ...summary,
+          isAsync: false,
+          inputSchema: {},
+          outputSchema: {},
+          wrapperHints: {},
+          acceptsContext: true,
+        },
+      }),
+    );
+    renderRoute();
+
+    await user.click(screen.getByRole("button", { name: "Add to draft" }));
+    await user.selectOptions(screen.getByRole("combobox", { name: "Existing draft" }), "draft-existing");
+    await user.click(screen.getByRole("button", { name: "Use existing draft" }));
+
+    expect(
+      await screen.findByText("Draft destination: /console/drafts/draft-existing?capability=local.documents.read"),
+    ).toBeInTheDocument();
+  });
+
+  it("creates a seeded draft and routes by the canonical workspace id", async () => {
+    const user = userEvent.setup();
+    const created = draft("canonical-created-id");
+    vi.mocked(authoringClient.createFromCapability).mockResolvedValue(created);
+    mockedUseCapabilityDiscovery.mockReturnValue(
+      controller({
+        selected: {
+          ...summary,
+          isAsync: false,
+          inputSchema: {},
+          outputSchema: {},
+          wrapperHints: {},
+          acceptsContext: true,
+        },
+      }),
+    );
+    renderRoute();
+
+    await user.click(screen.getByRole("button", { name: "Add to draft" }));
+    await user.type(screen.getByRole("textbox", { name: "Workspace id" }), "requested-id");
+    await user.type(screen.getByRole("textbox", { name: "Draft name" }), "seeded-report");
+    await user.click(screen.getByRole("button", { name: "Create seeded draft" }));
+
+    expect(authoringClient.createFromCapability).toHaveBeenCalledWith({
+      workspaceId: "requested-id",
+      name: "seeded-report",
+      title: "",
+      capabilityName: "local.documents.read",
+    });
+    expect(
+      await screen.findByText(
+        "Draft destination: /console/drafts/canonical-created-id?capability=local.documents.read",
+      ),
+    ).toBeInTheDocument();
   });
 });
