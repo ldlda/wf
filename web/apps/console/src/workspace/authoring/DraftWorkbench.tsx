@@ -33,7 +33,12 @@ export const DraftWorkbench = ({
     capabilityName = controller.selection.qualifiedName;
   } else if (controller.selection.kind === "node") {
     const nodeId = controller.selection.nodeId;
-    capabilityName = graph.nodes.find((node) => node.id === nodeId)?.data.nodeRef ?? null;
+    capabilityName =
+      graph.nodes.find((node) => node.id === nodeId)?.data.nodeRef ??
+      (controller.preservedCapabilityForm?.kind === "update" &&
+      controller.preservedCapabilityForm.input.stepId === nodeId
+        ? controller.preservedCapabilityForm.input.capabilityName
+        : null);
   }
   const capabilityDetail = useAuthoringCapabilityDetail(capabilityName);
   const select = useCallback(

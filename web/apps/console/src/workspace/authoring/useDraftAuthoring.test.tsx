@@ -233,6 +233,30 @@ describe("useDraftAuthoring", () => {
     });
   });
 
+  it("preserves an update form when a conflict response has no draft", async () => {
+    const initial = workspace({
+      draft: { steps: { read: { use: "demo.read" } }, routes: {} },
+    });
+    const conflict = workspace({
+      revision: 4,
+      status: "conflict",
+      draft: null,
+      summary: { ...initial.summary, steps: [] },
+    });
+    authoringClient.updateCapabilityStep.mockResolvedValue(conflict);
+    const { result } = renderHook(() => useDraftAuthoring({
+      draft: initial,
+      initialSelection: { kind: "node", nodeId: "read" },
+    }));
+    const input = { ...capabilityInput, stepId: "read", capabilityName: "demo.read" };
+
+    await act(async () => result.current.updateCapability(input));
+
+    expect(result.current.draft).toBe(conflict);
+    expect(result.current.selection).toEqual({ kind: "node", nodeId: "read" });
+    expect(result.current.preservedCapabilityForm).toEqual({ kind: "update", input });
+  });
+
   it("does not send different writes or validation concurrently for one revision", async () => {
     const initial = workspace({ revision: 6 });
     let resolveAdd: ((value: DraftWorkspace) => void) | undefined;

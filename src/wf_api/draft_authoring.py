@@ -559,7 +559,9 @@ class WorkflowDraftAuthoringApi:
             and workspace.draft.get("input_schema", {}) == projected.input_schema
             and workspace.draft.get("state_schema", {}) == projected.state_schema
         ):
-            return _PROJECT_DRAFT_WORKSPACE(summarize_draft_workspace(workspace))
+            return _PROJECT_DRAFT_WORKSPACE(
+                summarize_draft_workspace(workspace, include_draft=True)
+            )
 
         patch = _step_input_bindings_patch(
             workspace=workspace,
@@ -721,7 +723,9 @@ class WorkflowDraftAuthoringApi:
             and workspace.draft.get("input_schema", {}) == input_schema
             and workspace.draft.get("state_schema", {}) == state_schema
         ):
-            return _PROJECT_DRAFT_WORKSPACE(summarize_draft_workspace(workspace))
+            return _PROJECT_DRAFT_WORKSPACE(
+                summarize_draft_workspace(workspace, include_draft=True)
+            )
 
         next_draft = deepcopy(workspace.draft)
         next_steps = next_draft.get("steps")
@@ -842,7 +846,9 @@ class WorkflowDraftAuthoringApi:
 
         payload = [binding.model_dump(mode="json") for binding in bindings]
         if workspace.draft.get("output", []) == payload and projected == output_schema:
-            return _PROJECT_DRAFT_WORKSPACE(summarize_draft_workspace(workspace))
+            return _PROJECT_DRAFT_WORKSPACE(
+                summarize_draft_workspace(workspace, include_draft=True)
+            )
 
         patch: list[dict[str, Any]] = []
         if projected != output_schema:
@@ -927,7 +933,9 @@ class WorkflowDraftAuthoringApi:
             step.get("output", []) == payload
             and workspace.draft.get("state_schema", {}) == projected_state
         ):
-            return _PROJECT_DRAFT_WORKSPACE(summarize_draft_workspace(workspace))
+            return _PROJECT_DRAFT_WORKSPACE(
+                summarize_draft_workspace(workspace, include_draft=True)
+            )
 
         return await self.drafts.patch_draft_workspace(
             workspace_id=workspace_id,
@@ -1341,7 +1349,9 @@ class WorkflowDraftAuthoringApi:
             raise ValueError(f"routes for step {step_id!r} must be an object")
         merged = {**existing, **routes}
         if merged == existing:
-            return _PROJECT_DRAFT_WORKSPACE(summarize_draft_workspace(workspace))
+            return _PROJECT_DRAFT_WORKSPACE(
+                summarize_draft_workspace(workspace, include_draft=True)
+            )
         return await self.drafts.patch_draft_workspace(
             workspace_id=workspace_id,
             revision=revision,
@@ -1371,7 +1381,9 @@ class WorkflowDraftAuthoringApi:
             return checked
         workspace = checked
         if not branches:
-            return _PROJECT_DRAFT_WORKSPACE(summarize_draft_workspace(workspace))
+            return _PROJECT_DRAFT_WORKSPACE(
+                summarize_draft_workspace(workspace, include_draft=True)
+            )
         draft_routes = workspace.draft.get("routes", {})
         if not isinstance(draft_routes, dict):
             raise ValueError("draft routes must be an object")
@@ -1400,7 +1412,9 @@ class WorkflowDraftAuthoringApi:
                 }
             )
         if not patch:
-            return _PROJECT_DRAFT_WORKSPACE(summarize_draft_workspace(workspace))
+            return _PROJECT_DRAFT_WORKSPACE(
+                summarize_draft_workspace(workspace, include_draft=True)
+            )
         return await self.drafts.patch_draft_workspace(
             workspace_id=workspace_id,
             revision=revision,
@@ -1430,7 +1444,9 @@ class WorkflowDraftAuthoringApi:
         if not isinstance(step_routes, dict):
             raise ValueError(f"routes for step {step_id!r} must be an object")
         if outcome not in step_routes:
-            return _PROJECT_DRAFT_WORKSPACE(summarize_draft_workspace(workspace))
+            return _PROJECT_DRAFT_WORKSPACE(
+                summarize_draft_workspace(workspace, include_draft=True)
+            )
         return await self.drafts.patch_draft_workspace(
             workspace_id=workspace_id,
             revision=revision,
@@ -1464,7 +1480,9 @@ class WorkflowDraftAuthoringApi:
         if not isinstance(steps, dict):
             raise ValueError("draft steps must be an object")
         if step_id not in steps:
-            return _PROJECT_DRAFT_WORKSPACE(summarize_draft_workspace(workspace))
+            return _PROJECT_DRAFT_WORKSPACE(
+                summarize_draft_workspace(workspace, include_draft=True)
+            )
         patch = [
             {
                 "op": "remove",
@@ -1528,7 +1546,9 @@ class WorkflowDraftAuthoringApi:
             item for item in current_outputs if item.get("source") not in output_sources
         ]
         if next_inputs == current_inputs and next_outputs == current_outputs:
-            return _PROJECT_DRAFT_WORKSPACE(summarize_draft_workspace(workspace))
+            return _PROJECT_DRAFT_WORKSPACE(
+                summarize_draft_workspace(workspace, include_draft=True)
+            )
         patch: list[dict[str, Any]] = []
         if next_inputs != current_inputs:
             patch.append(

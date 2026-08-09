@@ -1,6 +1,7 @@
 import type {
   CapabilityNodeFormValue,
 } from "./CapabilityNodeForm.js";
+import type { InputBinding, InputPath, LocalInputPath } from "../domain/draft-workspace-models.js";
 import type { DraftWorkspace } from "../domain/draft-workspace-models.js";
 import type { FieldSources } from "../schema-form/schema-values.js";
 import { formatTOMLPath, parseTOMLPath } from "../schema-form/schema-paths.js";
@@ -67,6 +68,58 @@ const metadataValue = (step: JsonRecord, key: string): string | number | null | 
   return undefined;
 };
 
+const localInputPath = (value: unknown): value is LocalInputPath =>
+  typeof value === "string" || (
+    isRecord(value) &&
+    value.root === "local" &&
+    Array.isArray(value.parts) &&
+    value.parts.every((part): part is string => typeof part === "string")
+  );
+
+const inputPath = (value: unknown): value is InputPath =>
+  typeof value === "string" || (
+    isRecord(value) &&
+    (value.root === "input" || value.root === "state" || value.root === "context") &&
+    Array.isArray(value.parts) &&
+    value.parts.every((part): part is string => typeof part === "string")
+  );
+
+const inputBinding = (value: JsonRecord): InputBinding | null => {
+  if (!localInputPath(value.target)) return null;
+  if (inputPath(value.path)) return { target: value.target, path: value.path };
+  if ("value" in value) return { target: value.target, value: value.value };
+  return null;
+};
+
+const formDataFromValue = (
+  input: CapabilityNodeFormValue,
+): CanonicalCapabilityFormData => {
+  const initialInputSources: Record<string, FieldSources[string]> = {};
+  let initialInputValue: unknown = undefined;
+  for (const rawBinding of input.inputBindings ?? []) {
+    const target = localPath(rawBinding.target);
+    if (target === null) continue;
+    if ("path" in rawBinding) {
+      const path = sourcePath(rawBinding.path);
+      if (path !== null) initialInputSources[target] = { mode: "bind", sourcePath: path };
+      continue;
+    }
+    if ("value" in rawBinding) {
+      initialInputValue = setPath(initialInputValue, target, rawBinding.value);
+    }
+  }
+  return {
+    capabilityName: input.capabilityName,
+    initialValue: input,
+    initialInputValue,
+    initialInputSources,
+  };
+};
+
+export const capabilityFormDataFromValue = (
+  input: CapabilityNodeFormValue,
+): CanonicalCapabilityFormData => formDataFromValue(input);
+
 export const canonicalCapabilityFormData = (
   draft: DraftWorkspace,
   stepId: string,
@@ -88,29 +141,23 @@ export const canonicalCapabilityFormData = (
       ? { timeoutSeconds }
       : {}),
   } satisfies Partial<CapabilityNodeFormValue>;
-  const initialInputSources: Record<string, { readonly mode: "bind"; readonly sourcePath: string }> = {};
-  let initialInputValue: unknown = undefined;
+  const inputBindings: InputBinding[] = [];
   const input = step.input;
   if (Array.isArray(input)) {
     for (const rawBinding of input) {
       if (!isRecord(rawBinding)) continue;
-      const target = localPath(rawBinding.target);
-      if (target === null) continue;
-      if ("path" in rawBinding) {
-        const path = sourcePath(rawBinding.path);
-        if (path !== null) initialInputSources[target] = { mode: "bind", sourcePath: path };
-        continue;
-      }
-      if ("value" in rawBinding) {
-        initialInputValue = setPath(initialInputValue, target, rawBinding.value);
-      }
+      const binding = inputBinding(rawBinding);
+      if (binding !== null) inputBindings.push(binding);
     }
   }
 
-  return {
+  return formDataFromValue({
+    ...initialValue,
+    stepId,
     capabilityName,
-    initialValue,
-    initialInputValue,
-    initialInputSources,
-  };
+    description: initialValue.description ?? null,
+    retry: initialValue.retry ?? null,
+    timeoutSeconds: initialValue.timeoutSeconds ?? null,
+    inputBindings,
+  });
 };

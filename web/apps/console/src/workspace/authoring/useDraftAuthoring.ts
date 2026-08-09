@@ -22,6 +22,7 @@ export interface DraftAuthoringController {
   readonly phase: DraftAuthoringPhase;
   readonly message: string | null;
   readonly resetGeneration: number;
+  readonly preservedCapabilityForm: PreservedCapabilityForm;
   readonly addCapability: (input: CapabilityNodeFormValue) => Promise<void>;
   readonly updateCapability: (input: CapabilityNodeFormValue) => Promise<void>;
   readonly setRoute: (input: RouteFormValue) => Promise<void>;
@@ -69,6 +70,11 @@ type LastSubmission =
   | { readonly kind: "add"; readonly input: CapabilityNodeFormValue }
   | { readonly kind: "update"; readonly input: CapabilityNodeFormValue }
   | { readonly kind: "route"; readonly input: RouteFormValue }
+  | null;
+
+export type PreservedCapabilityForm =
+  | { readonly kind: "add"; readonly input: CapabilityNodeFormValue }
+  | { readonly kind: "update"; readonly input: CapabilityNodeFormValue }
   | null;
 
 const canvasSelection: WorkbenchSelection = { kind: "canvas" };
@@ -449,6 +455,10 @@ export const useDraftAuthoring = ({
     validate,
     reload,
     reapply,
+    preservedCapabilityForm:
+      lastSubmissionRef.current?.kind === "add" || lastSubmissionRef.current?.kind === "update"
+        ? lastSubmissionRef.current
+        : null,
     rememberCapabilityForm,
     rememberRouteForm,
     select,

@@ -73,6 +73,7 @@ const controller = {
   markDirty: vi.fn(),
   rememberCapabilityForm: vi.fn(),
   rememberRouteForm: vi.fn(),
+  preservedCapabilityForm: null,
 } satisfies DraftAuthoringController;
 
 describe("ContextInspector", () => {
@@ -117,6 +118,14 @@ describe("ContextInspector", () => {
           repairHint: null,
           details: {},
         },
+        {
+          code: "invalid_node_input_field",
+          path: "nodes[0].input[0].target",
+          message: "Destination field is not declared.",
+          stepId: "read",
+          repairHint: null,
+          details: {},
+        },
       ],
     };
 
@@ -134,5 +143,54 @@ describe("ContextInspector", () => {
 
     expect(screen.getAllByText("Title is not accepted.")).not.toHaveLength(0);
     expect(screen.getAllByText("Retry must be non-negative.")).not.toHaveLength(0);
+    expect(screen.getAllByText("Destination field is not declared.")).not.toHaveLength(0);
+    expect(screen.getByRole("textbox", { name: "Title" })).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+  });
+
+  it("keeps the editable update form when a conflict has no canonical draft", () => {
+    const conflictDraft: DraftWorkspace = {
+      ...draft,
+      status: "conflict",
+      diagnostics: [],
+      summary: { ...draft.summary, steps: [] },
+      draft: null,
+    };
+    const preservedController = {
+      ...controller,
+      draft: conflictDraft,
+      preservedCapabilityForm: {
+        kind: "update" as const,
+        input: {
+          stepId: "read",
+          capabilityName: "demo.read",
+          description: "Locally edited description",
+          retry: 3,
+          timeoutSeconds: 60,
+          inputBindings: [{ target: "title", value: "Locally edited title" }],
+        },
+      },
+    } satisfies DraftAuthoringController;
+
+    render(
+      <ContextInspector
+        capabilities={[]}
+        capabilityDetail={detail}
+        capabilityDetailMessage={null}
+        capabilityDetailPhase="ready"
+        controller={preservedController}
+        draft={conflictDraft}
+        selection={{ kind: "node", nodeId: "read" }}
+      />,
+    );
+
+    expect(screen.getByRole("textbox", { name: "Description" })).toHaveValue(
+      "Locally edited description",
+    );
+    expect(screen.getByRole("textbox", { name: "Title" })).toHaveValue(
+      "Locally edited title",
+    );
   });
 });

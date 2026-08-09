@@ -8,7 +8,11 @@ import { formatBoundedJson } from "./format-bounded-json.js";
 import { CapabilityNodeForm } from "./CapabilityNodeForm.js";
 import { RouteForm } from "./RouteForm.js";
 import type { DraftAuthoringController } from "./useDraftAuthoring.js";
-import { canonicalCapabilityFormData } from "./canonical-capability-form.js";
+import {
+  canonicalCapabilityFormData,
+  capabilityFormDataFromValue,
+} from "./canonical-capability-form.js";
+import { parseTOMLPath } from "../schema-form/schema-paths.js";
 
 type ContextInspectorProps = {
   readonly draft: DraftWorkspace;
@@ -36,27 +40,91 @@ const diagnosticParts = (path: string): string[] => {
   return normalized.split(".").filter((part) => part.length > 0);
 };
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const schemaPathParts = (value: unknown): ReadonlyArray<string | number> | null => {
+  if (typeof value === "string") {
+    const parts = parseTOMLPath(value);
+    return parts?.map((part) => /^\d+$/.test(part) ? Number(part) : part) ?? null;
+  }
+  if (!isRecord(value) || value.root !== "local" || !Array.isArray(value.parts)) return null;
+  return value.parts.every((part): part is string => typeof part === "string")
+    ? value.parts.map((part) => /^\d+$/.test(part) ? Number(part) : part)
+    : null;
+};
+
+const nodeIdForDiagnostic = (
+  draft: DraftWorkspace,
+  parts: ReadonlyArray<string>,
+): string | null => {
+  const nodeIndexPart = parts[parts.indexOf("nodes") + 1];
+  const nodeIndex = nodeIndexPart === undefined ? NaN : Number(nodeIndexPart);
+  if (!Number.isInteger(nodeIndex) || nodeIndex < 0 || !isRecord(draft.draft)) return null;
+  const nodes = draft.draft.nodes;
+  if (Array.isArray(nodes)) {
+    const node = nodes[nodeIndex];
+    return isRecord(node) && typeof node.id === "string" ? node.id : null;
+  }
+  const steps = draft.draft.steps;
+  if (!isRecord(steps)) return null;
+  const stepIds = Object.keys(steps).toSorted();
+  return stepIds[nodeIndex] ?? null;
+};
+
+const inputBindingsForStep = (
+  draft: DraftWorkspace,
+  stepId: string,
+): ReadonlyArray<unknown> | null => {
+  if (!isRecord(draft.draft)) return null;
+  const steps = draft.draft.steps;
+  if (isRecord(steps) && isRecord(steps[stepId]) && Array.isArray(steps[stepId].input)) {
+    return steps[stepId].input;
+  }
+  const nodes = draft.draft.nodes;
+  if (!Array.isArray(nodes)) return null;
+  const node = nodes.find((candidate) => isRecord(candidate) && candidate.id === stepId);
+  return isRecord(node) && Array.isArray(node.input) ? node.input : null;
+};
+
 const fieldDiagnostic = (
   diagnostic: DraftDiagnostic,
   stepId: string,
+  draft: DraftWorkspace,
 ): SchemaValueIssue | null => {
   if (diagnostic.stepId !== null && diagnostic.stepId !== stepId) return null;
   const parts = diagnosticParts(diagnostic.path);
   const stepIndex = parts.findIndex((part) => part === stepId);
   if (stepIndex >= 0 && parts[stepIndex - 1] !== "steps" && parts[stepIndex - 1] !== "nodes") return null;
+  const nodeIndex = parts.indexOf("nodes");
+  const diagnosticStepId = diagnostic.stepId ?? (nodeIndex >= 0 ? nodeIdForDiagnostic(draft, parts) : null);
+  if (diagnosticStepId !== null && diagnosticStepId !== stepId) return null;
   const inputIndex = parts.indexOf("input");
   if (inputIndex < 0) return null;
-  return { path: parts.slice(inputIndex + 1), message: diagnostic.message };
+  const inputPath = parts.slice(inputIndex + 1);
+  const bindingIndex = inputPath[0] === undefined ? NaN : Number(inputPath[0]);
+  if (Number.isInteger(bindingIndex) && bindingIndex >= 0) {
+    const bindings = inputBindingsForStep(draft, stepId);
+    const binding = bindings?.[bindingIndex];
+    if (!isRecord(binding)) return null;
+    const target = schemaPathParts(binding.target);
+    return target === null ? null : { path: target, message: diagnostic.message };
+  }
+  return { path: inputPath, message: diagnostic.message };
 };
 
 const metadataDiagnostics = (
   diagnostics: ReadonlyArray<DraftDiagnostic>,
   stepId: string,
+  draft: DraftWorkspace,
 ): ReadonlyArray<SchemaValueIssue> => diagnostics.flatMap((diagnostic) => {
   if (diagnostic.stepId !== null && diagnostic.stepId !== stepId) return [];
   const parts = diagnosticParts(diagnostic.path);
   const stepIndex = parts.findIndex((part) => part === stepId);
   if (stepIndex >= 0 && parts[stepIndex - 1] !== "steps" && parts[stepIndex - 1] !== "nodes") return [];
+  const nodeIndex = parts.indexOf("nodes");
+  const diagnosticStepId = diagnostic.stepId ?? (nodeIndex >= 0 ? nodeIdForDiagnostic(draft, parts) : null);
+  if (diagnosticStepId !== null && diagnosticStepId !== stepId) return [];
   if (parts.includes("input")) return [];
   const field = parts.at(-1);
   return field === "desc" || field === "retry" || field === "timeout_seconds"
@@ -67,8 +135,9 @@ const metadataDiagnostics = (
 const inputDiagnostics = (
   diagnostics: ReadonlyArray<DraftDiagnostic>,
   stepId: string,
+  draft: DraftWorkspace,
 ): ReadonlyArray<SchemaValueIssue> => diagnostics.flatMap((diagnostic) => {
-  const issue = fieldDiagnostic(diagnostic, stepId);
+  const issue = fieldDiagnostic(diagnostic, stepId, draft);
   return issue === null ? [] : [issue];
 });
 
@@ -236,6 +305,12 @@ export const ContextInspector = ({
     );
   } else {
     const node = graph.nodes.find((candidate) => candidate.id === selection.nodeId);
+    const preservedForm =
+      controller.preservedCapabilityForm?.kind === "update" &&
+      controller.preservedCapabilityForm.input.stepId === selection.nodeId
+        ? capabilityFormDataFromValue(controller.preservedCapabilityForm.input)
+        : null;
+    const formData = canonicalCapabilityFormData(draft, selection.nodeId) ?? preservedForm;
     const unsupported = node?.data.kind === "unsupported";
     content = (
       <section className="authoring-inspector__selection" aria-labelledby="node-selection-heading">
@@ -243,7 +318,7 @@ export const ContextInspector = ({
         <h2 id="node-selection-heading">{selection.nodeId}</h2>
         <dl className="authoring-inspector__facts">
           <Fact label="Kind" value={node?.data.kind ?? "unknown"} />
-          <Fact label="Reference" value={node?.data.nodeRef ?? "none"} />
+          <Fact label="Reference" value={node?.data.nodeRef ?? formData?.capabilityName ?? "none"} />
         </dl>
         {unsupported && <p role="status">Read-only: unsupported step kind.</p>}
         {!unsupported && capabilityDetailPhase === "loading" && (
@@ -253,18 +328,17 @@ export const ContextInspector = ({
           <p role="alert">{capabilityDetailMessage ?? "Capability schema failed to load."}</p>
         )}
         {!unsupported && capabilityDetailPhase === "ready" && capabilityDetail !== null && (() => {
-          const formData = canonicalCapabilityFormData(draft, selection.nodeId);
           if (formData === null) return <p role="status">Canonical node data is unavailable.</p>;
           return (
             <CapabilityNodeForm
               key={`node:${selection.nodeId}:${controller.resetGeneration}`}
               capabilityName={formData.capabilityName}
-              diagnostics={inputDiagnostics(draft.diagnostics, selection.nodeId)}
+              diagnostics={inputDiagnostics(draft.diagnostics, selection.nodeId, draft)}
               initialInputSources={formData.initialInputSources}
               initialInputValue={formData.initialInputValue}
               initialValue={formData.initialValue}
               inputSchema={capabilityDetail.inputSchema}
-              metadataDiagnostics={metadataDiagnostics(draft.diagnostics, selection.nodeId)}
+              metadataDiagnostics={metadataDiagnostics(draft.diagnostics, selection.nodeId, draft)}
               onDirtyChange={controller.markDirty}
               onSubmit={controller.updateCapability}
               onValueChange={(value) => controller.rememberCapabilityForm("update", value)}

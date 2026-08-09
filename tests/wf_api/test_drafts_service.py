@@ -95,6 +95,7 @@ async def test_update_capability_step_changes_metadata_and_inputs_atomically(
     step = inspected["draft"]["steps"]["echo"]
 
     assert result["revision"] == 2
+    assert result["draft"]["steps"]["echo"]["desc"] == "New description"
     assert step["use"] == "demo.personal.echo_tool"
     assert step["desc"] == "New description"
     assert step["retry"] == 0
@@ -410,6 +411,7 @@ async def test_add_step_from_capability_accepts_metadata_and_canonical_inputs(
     step = inspected["draft"]["steps"]["report"]
 
     assert result["revision"] == 2
+    assert result["draft"]["steps"]["report"]["desc"] == "Publish report"
     assert step["desc"] == "Publish report"
     assert step["retry"] == 0
     assert step["timeout_seconds"] == 30
@@ -783,6 +785,7 @@ async def test_create_draft_workspace_creates_workspace(tmp_path: Path) -> None:
 
     assert result["workspace_id"] == "echo_ws"
     assert result["revision"] == 1
+    assert result["draft"]["steps"]["echo"]["use"] == "demo.personal.echo_tool"
     fetched = await api.get_draft_workspace(workspace_id="echo_ws", include_draft=True)
 
     assert fetched["workspace_id"] == "echo_ws"
@@ -1283,6 +1286,7 @@ async def test_draft_workspace_patch_helpers_update_revision_and_bindings(
     assert routed["revision"] == 3
     assert input_mapped["revision"] == 4
     assert output_mapped["revision"] == 5
+    assert routed["draft"]["routes"]["echo"]["error"] == "__end__"
     assert fetched["draft"]["name"] == "echo_v2"
     assert fetched["draft"]["routes"]["echo"]["error"] == "__end__"
     assert fetched["draft"]["steps"]["echo"]["input"] == [
@@ -1584,6 +1588,7 @@ async def test_validate_draft_workspace_refreshes_status(tmp_path: Path) -> None
 
     assert payload["revision"] == 1
     assert payload["status"] == "invalid"
+    assert payload["draft"]["routes"]["echo"] == {"typo": "__end__"}
     assert payload["diagnostics"][0]["code"] in (
         "unknown_outcome",
         "undeclared_edge_outcome",

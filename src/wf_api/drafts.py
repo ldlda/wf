@@ -363,7 +363,11 @@ class WorkflowDraftApi:
         )
         store.save_workspace(refreshed)
         return _PROJECT_DRAFT_WORKSPACE(
-            get_draft_workspace_record(store, workspace_id=workspace_id)
+            get_draft_workspace_record(
+                store,
+                workspace_id=workspace_id,
+                include_draft=True,
+            )
         )
 
     async def compile_draft_workspace(

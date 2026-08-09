@@ -54,7 +54,7 @@ def create_draft_workspace(
             code=WORKSPACE_EXISTS_CODE,
             message=f"draft workspace {workspace_id!r} already exists",
         )
-    return summarize_draft_workspace(workspace)
+    return summarize_draft_workspace(workspace, include_draft=True)
 
 
 def patch_draft_workspace(
@@ -100,7 +100,7 @@ def patch_draft_workspace(
         store.replace_workspace(next_workspace, expected_revision=revision)
     except DraftWorkspaceConflictError as exc:
         return _revision_conflict_payload(exc.workspace, revision)
-    return summarize_draft_workspace(next_workspace)
+    return summarize_draft_workspace(next_workspace, include_draft=True)
 
 
 def replace_draft_workspace_document(
@@ -122,7 +122,7 @@ def replace_draft_workspace_document(
         return _revision_conflict_payload(workspace, revision)
     WorkflowDraft.model_validate(draft)
     if draft == workspace.draft:
-        return summarize_draft_workspace(workspace)
+        return summarize_draft_workspace(workspace, include_draft=True)
 
     stored_draft = deepcopy(draft)
     validation = validate_workflow_draft(
@@ -145,7 +145,7 @@ def replace_draft_workspace_document(
         store.replace_workspace(next_workspace, expected_revision=revision)
     except DraftWorkspaceConflictError as exc:
         return _revision_conflict_payload(exc.workspace, revision)
-    return summarize_draft_workspace(next_workspace)
+    return summarize_draft_workspace(next_workspace, include_draft=True)
 
 
 def replace_validated_draft_document(
@@ -166,7 +166,7 @@ def replace_validated_draft_document(
         return _revision_conflict_payload(workspace, revision)
     WorkflowDraft.model_validate(draft)
     if draft == workspace.draft:
-        return summarize_draft_workspace(workspace)
+        return summarize_draft_workspace(workspace, include_draft=True)
     stored_draft = deepcopy(draft)
     next_workspace = workspace.model_copy(
         update={
@@ -179,7 +179,7 @@ def replace_validated_draft_document(
         store.replace_workspace(next_workspace, expected_revision=revision)
     except DraftWorkspaceConflictError as exc:
         return _revision_conflict_payload(exc.workspace, revision)
-    return summarize_draft_workspace(next_workspace)
+    return summarize_draft_workspace(next_workspace, include_draft=True)
 
 
 def get_draft_workspace(
