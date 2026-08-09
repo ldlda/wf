@@ -222,3 +222,30 @@ export const normalizeSchemaField = (
 
 export const normalizeSchema = (schema: unknown): SchemaField =>
   normalizeSchemaField(schema);
+
+/** Find a normalized field without losing the array index in the returned path. */
+export const schemaFieldAtPath = (
+  root: SchemaField,
+  path: ReadonlyArray<string | number>,
+): SchemaField | null => {
+  let current = root;
+  const actualPath: Array<string | number> = [];
+  for (const part of path) {
+    if (current.kind === "object") {
+      const child = current.children.find((candidate) => candidate.key === String(part));
+      if (child === undefined) return null;
+      current = child;
+      actualPath.push(child.key);
+      continue;
+    }
+    if (current.kind === "array" && current.item !== null) {
+      const index = typeof part === "number" ? part : Number(part);
+      if (!Number.isSafeInteger(index) || index < 0) return null;
+      current = rebaseSchemaField(current.item, [...actualPath, index]);
+      actualPath.push(index);
+      continue;
+    }
+    return null;
+  }
+  return current;
+};

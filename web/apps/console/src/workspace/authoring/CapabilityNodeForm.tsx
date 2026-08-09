@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import type { InputBinding } from "../domain/draft-workspace-models.js";
 import { SchemaForm } from "../schema-form/SchemaForm.js";
 import { normalizeSchema } from "../schema-form/schema-field.js";
@@ -12,9 +12,9 @@ import {
 export type CapabilityNodeFormValue = {
   readonly stepId: string;
   readonly capabilityName: string;
-  readonly description: string | null;
-  readonly retry: number | null;
-  readonly timeoutSeconds: number | null;
+  readonly description?: string | null;
+  readonly retry?: number | null;
+  readonly timeoutSeconds?: number | null;
   readonly inputBindings: ReadonlyArray<InputBinding> | null;
   readonly inputMap?: Record<string, string> | null;
   readonly routes?: Record<string, string> | null;
@@ -36,6 +36,16 @@ export type CapabilityNodeFormProps = {
   readonly stepIdReadOnly?: boolean;
   readonly routeOutcomes?: ReadonlyArray<string>;
   readonly hidden?: boolean;
+};
+
+const optionalNumber = (
+  ref: RefObject<HTMLInputElement | null>,
+  initial: number | null | undefined,
+  touched: boolean,
+): number | null | undefined => {
+  const raw = ref.current?.value.trim() ?? "";
+  if (raw !== "") return Number(raw);
+  return touched && typeof initial === "number" ? null : undefined;
 };
 
 export const CapabilityNodeForm = ({
@@ -60,6 +70,10 @@ export const CapabilityNodeForm = ({
   const timeoutSecondsRef = useRef<HTMLInputElement>(null);
   const routeTargetRefs = useRef(new Map<string, HTMLInputElement>());
   const dirtyRef = useRef(false);
+  const descriptionTouchedRef = useRef(false);
+  const retryTouchedRef = useRef(false);
+  const timeoutTouchedRef = useRef(false);
+  const [metadataIssues, setMetadataIssues] = useState<ReadonlyArray<string>>([]);
   const initialSchemaResult = useMemo(
     () => serializeSchemaValues(
       normalizeSchema(inputSchema),
@@ -73,33 +87,59 @@ export const CapabilityNodeForm = ({
     schemaResultRef.current = initialSchemaResult;
   }, [initialSchemaResult]);
 
-  const valueFor = (result: SchemaSerializationResult): CapabilityNodeFormValue => ({
-    stepId: stepIdRef.current?.value ?? "",
-    capabilityName,
-    description: descriptionRef.current?.value.trim() || null,
-    retry:
-      retryRef.current?.value.trim() === ""
-        ? null
-        : Number(retryRef.current?.value ?? ""),
-    timeoutSeconds:
-      timeoutSecondsRef.current?.value.trim() === ""
-        ? null
-        : Number(timeoutSecondsRef.current?.value ?? ""),
-    inputBindings: [
-      ...result.bindings,
-      ...result.literalBindings,
-    ],
-    ...(routeOutcomes.length > 0
-      ? {
-          routes: Object.fromEntries(
-            routeOutcomes.map((outcome) => [
-              outcome,
-              routeTargetRefs.current.get(outcome)?.value.trim() || "__end__",
-            ]),
-          ),
-        }
-      : {}),
-  });
+  const valueFor = (result: SchemaSerializationResult): CapabilityNodeFormValue => {
+    const description = descriptionRef.current?.value.trim() ?? "";
+    const retry = optionalNumber(retryRef, initialValue?.retry, retryTouchedRef.current);
+    const timeoutSeconds = optionalNumber(
+      timeoutSecondsRef,
+      initialValue?.timeoutSeconds,
+      timeoutTouchedRef.current,
+    );
+    return {
+      stepId: stepIdRef.current?.value ?? "",
+      capabilityName,
+      ...(description !== ""
+        ? { description }
+        : descriptionTouchedRef.current && typeof initialValue?.description === "string"
+          ? { description: null }
+          : {}),
+      ...(retry === undefined ? {} : { retry }),
+      ...(timeoutSeconds === undefined ? {} : { timeoutSeconds }),
+      inputBindings: [
+        ...result.bindings,
+        ...result.literalBindings,
+      ],
+      ...(routeOutcomes.length > 0
+        ? {
+            routes: Object.fromEntries(
+              routeOutcomes.map((outcome) => [
+                outcome,
+                routeTargetRefs.current.get(outcome)?.value.trim() || "__end__",
+              ]),
+            ),
+          }
+        : {}),
+    };
+  };
+
+  const validateMetadata = (): ReadonlyArray<string> => {
+    const issues: string[] = [];
+    const retry = retryRef.current?.value.trim() ?? "";
+    if (retry !== "") {
+      const value = Number(retry);
+      if (!Number.isFinite(value) || !Number.isInteger(value) || value < 0) {
+        issues.push("Retry must be a whole number at least 0.");
+      }
+    }
+    const timeout = timeoutSecondsRef.current?.value.trim() ?? "";
+    if (timeout !== "") {
+      const value = Number(timeout);
+      if (!Number.isFinite(value) || value <= 0) {
+        issues.push("Timeout must be greater than 0.");
+      }
+    }
+    return issues;
+  };
 
   const notifyValueChange = (result: SchemaSerializationResult): void => {
     schemaResultRef.current = result;
@@ -129,7 +169,9 @@ export const CapabilityNodeForm = ({
         onDirtyChange={markDirty}
         onValueChange={notifyValueChange}
         onSubmit={(result) => {
-          if (result.issues.length > 0) return;
+          const nextMetadataIssues = validateMetadata();
+          setMetadataIssues(nextMetadataIssues);
+          if (result.issues.length > 0 || nextMetadataIssues.length > 0) return;
           notifyValueChange(result);
           void Promise.resolve(onSubmit(valueFor(result))).catch(() => undefined);
         }}
@@ -155,6 +197,7 @@ export const CapabilityNodeForm = ({
                 defaultValue={initialValue?.description ?? ""}
                 ref={descriptionRef}
                 onChange={(event) => {
+                  descriptionTouchedRef.current = true;
                   notifyMetadataChange();
                 }}
               />
@@ -170,10 +213,13 @@ export const CapabilityNodeForm = ({
                     : String(initialValue.retry)
                 }
                 inputMode="numeric"
+                min={0}
                 ref={retryRef}
                 onChange={(event) => {
+                  retryTouchedRef.current = true;
                   notifyMetadataChange();
                 }}
+                step={1}
                 type="number"
               />
               {metadataMessage("retry") && <p role="alert">{metadataMessage("retry")}</p>}
@@ -188,10 +234,13 @@ export const CapabilityNodeForm = ({
                     : String(initialValue.timeoutSeconds)
                 }
                 inputMode="numeric"
+                min="0.000001"
                 ref={timeoutSecondsRef}
                 onChange={(event) => {
+                  timeoutTouchedRef.current = true;
                   notifyMetadataChange();
                 }}
+                step="any"
                 type="number"
               />
               {metadataMessage("timeout_seconds") && <p role="alert">{metadataMessage("timeout_seconds")}</p>}
@@ -221,6 +270,11 @@ export const CapabilityNodeForm = ({
         submitLabel={submitLabel}
         schema={inputSchema}
       />
+      {metadataIssues.length > 0 && (
+        <div className="schema-form__diagnostics" role="alert">
+          {metadataIssues.map((issue) => <p key={issue}>{issue}</p>)}
+        </div>
+      )}
     </div>
   );
 };

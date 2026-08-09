@@ -424,9 +424,9 @@ export const useDraftAuthoring = ({
             ...(input.inputMap !== undefined ? { inputMap: input.inputMap } : {}),
             ...(input.inputBindings !== undefined ? { inputBindings: input.inputBindings } : {}),
             ...(input.bindOutputs !== undefined ? { bindOutputs: input.bindOutputs } : {}),
-            description: input.description,
-            retry: input.retry,
-            timeoutSeconds: input.timeoutSeconds,
+            ...(input.description === undefined ? {} : { description: input.description }),
+            ...(input.retry === undefined ? {} : { retry: input.retry }),
+            ...(input.timeoutSeconds === undefined ? {} : { timeoutSeconds: input.timeoutSeconds }),
           }),
         {
           nextSelection: { kind: "node", nodeId: input.stepId },
@@ -450,10 +450,10 @@ export const useDraftAuthoring = ({
             revision: requestDraft.revision,
             stepId: targetStepId,
             update: {
-              description: input.description,
               input: input.inputBindings,
-              retry: input.retry,
-              timeoutSeconds: input.timeoutSeconds,
+              ...(input.description === undefined ? {} : { description: input.description }),
+              ...(input.retry === undefined ? {} : { retry: input.retry }),
+              ...(input.timeoutSeconds === undefined ? {} : { timeoutSeconds: input.timeoutSeconds }),
             },
           }),
         {

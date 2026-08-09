@@ -169,7 +169,7 @@ export const SchemaForm = ({
   };
 
   return (
-    <form className="schema-form" onSubmit={handleSubmit}>
+    <form className="schema-form" noValidate onSubmit={handleSubmit}>
       {renderBeforeFields}
       <SchemaFieldControl
         diagnostics={allDiagnostics}

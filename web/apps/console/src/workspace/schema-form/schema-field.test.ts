@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeSchema, rebaseSchemaField } from "./schema-field.js";
+import { normalizeSchema, rebaseSchemaField, schemaFieldAtPath } from "./schema-field.js";
 
 describe("normalizeSchema", () => {
   it("normalizes primitive, multiline, boolean, and enum fields", () => {
@@ -133,5 +133,31 @@ describe("normalizeSchema", () => {
       "profile",
       "name",
     ]);
+  });
+
+  it("looks up nested object, array, root, and missing schema paths", () => {
+    const root = normalizeSchema({
+      type: "object",
+      properties: {
+        profile: {
+          type: "object",
+          properties: { name: { type: "string" } },
+        },
+        items: { type: "array", items: { type: "integer" } },
+      },
+    });
+
+    expect(schemaFieldAtPath(root, [])).toBe(root);
+    expect(schemaFieldAtPath(root, ["profile", "name"])).toMatchObject({
+      key: "name",
+      kind: "string",
+      path: ["profile", "name"],
+    });
+    expect(schemaFieldAtPath(root, ["items", 2])).toMatchObject({
+      key: "item",
+      kind: "integer",
+      path: ["items", 2],
+    });
+    expect(schemaFieldAtPath(root, ["missing"])).toBeNull();
   });
 });

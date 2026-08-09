@@ -29,8 +29,30 @@ describe("CapabilityNodeForm", () => {
       stepId: "enrich",
       capabilityName: "demo.enrich",
       description: "Enrich report",
-        inputBindings: [{ target: "title", value: "Quarterly report" }],
-      });
+      inputBindings: [{ target: "title", value: "Quarterly report" }],
+    });
+    expect(submissions[0]).not.toHaveProperty("retry");
+    expect(submissions[0]).not.toHaveProperty("timeoutSeconds");
+  });
+
+  it("preserves an explicit zero retry while omitting untouched blank metadata", async () => {
+    const user = userEvent.setup();
+    const submissions: unknown[] = [];
+    render(
+      <CapabilityNodeForm
+        capabilityName="demo.enrich"
+        inputSchema={{ type: "object", properties: {} }}
+        onSubmit={(value) => { submissions.push(value); }}
+      />,
+    );
+
+    await user.type(screen.getByRole("textbox", { name: "Step id" }), "enrich");
+    await user.type(screen.getByRole("spinbutton", { name: "Retry" }), "0");
+    await user.click(screen.getByRole("button", { name: "Add node" }));
+
+    expect(submissions[0]).toHaveProperty("retry", 0);
+    expect(submissions[0]).not.toHaveProperty("timeoutSeconds");
+    expect(submissions[0]).not.toHaveProperty("description");
   });
 
   it("reports local edits as dirty and keeps them when submission fails", async () => {
