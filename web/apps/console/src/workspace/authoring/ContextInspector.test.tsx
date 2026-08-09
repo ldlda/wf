@@ -59,6 +59,7 @@ const detail: CapabilityDetail = {
 const controller = {
   draft,
   selection: { kind: "node", nodeId: "read" },
+  insertionContext: null,
   dirty: false,
   phase: "idle",
   message: null,

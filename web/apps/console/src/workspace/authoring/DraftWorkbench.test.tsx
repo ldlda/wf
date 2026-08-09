@@ -1,4 +1,4 @@
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { act, cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { CapabilityDetail } from "../domain/capability-models.js";
@@ -63,7 +63,10 @@ const setViewport = (width: number): void => {
   });
 };
 
-afterEach(() => cleanup());
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+});
 beforeEach(() => {
   setViewport(1024);
   mockedUseAuthoringCapabilityDetail.mockReturnValue({
@@ -194,5 +197,25 @@ describe("DraftWorkbench", () => {
       within(inspector).getByRole("textbox", { name: "Description" }),
     ).toHaveValue(" locally edited");
     expect(container.querySelector(".draft-workbench")).toHaveAttribute("data-dirty", "true");
+  });
+
+  it("reopens an open desktop sheet as a modal after resizing to mobile", async () => {
+    setViewport(1024);
+    const user = userEvent.setup();
+    const { container } = render(<DraftWorkbench draft={workspace} />);
+    const inspector = container.querySelector("#draft-workbench-inspector") as HTMLDialogElement;
+    const showModal = vi.fn(() => inspector.setAttribute("open", ""));
+    Object.defineProperty(inspector, "showModal", { configurable: true, value: showModal });
+    Object.defineProperty(inspector, "close", {
+      configurable: true,
+      value: vi.fn(() => inspector.removeAttribute("open")),
+    });
+
+    await user.click(screen.getByRole("button", { name: "Open context inspector" }));
+    setViewport(390);
+    await act(async () => window.dispatchEvent(new Event("resize")));
+
+    expect(showModal).toHaveBeenCalledTimes(1);
+    expect(inspector).toHaveAttribute("open", "");
   });
 });

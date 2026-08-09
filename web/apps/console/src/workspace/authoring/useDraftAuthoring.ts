@@ -11,13 +11,18 @@ import {
 import type { DraftWorkspace } from "../domain/draft-workspace-models.js";
 import type { CapabilityNodeFormValue } from "./CapabilityNodeForm.js";
 import type { RouteFormValue } from "./RouteForm.js";
-import { deriveInsertionContext, type WorkbenchSelection } from "./authoring-graph.js";
+import {
+  deriveInsertionContext,
+  type InsertionContext,
+  type WorkbenchSelection,
+} from "./authoring-graph.js";
 
 export type DraftAuthoringPhase = "idle" | "saving" | "conflict" | "error";
 
 export interface DraftAuthoringController {
   readonly draft: DraftWorkspace;
   readonly selection: WorkbenchSelection;
+  readonly insertionContext: InsertionContext | null;
   readonly dirty: boolean;
   readonly phase: DraftAuthoringPhase;
   readonly message: string | null;
@@ -48,6 +53,7 @@ type AuthoringState = {
   readonly draftInput: DraftWorkspace;
   readonly selection: WorkbenchSelection;
   readonly selectionInput: WorkbenchSelection;
+  readonly insertionContext: InsertionContext | null;
   readonly dirty: boolean;
   readonly phase: DraftAuthoringPhase;
   readonly message: string | null;
@@ -134,6 +140,7 @@ export const useDraftAuthoring = ({
     draftInput: initialDraft,
     selection: initialSelection,
     selectionInput: initialSelection,
+    insertionContext: deriveInsertionContext(initialSelection),
     dirty: false,
     phase: "idle",
     message: null,
@@ -148,6 +155,10 @@ export const useDraftAuthoring = ({
   const draft = adoptsDraftInput ? initialDraft : state.draft;
   const adoptsSelectionInput = !sameSelection(state.selectionInput, initialSelection);
   const selection = adoptsSelectionInput ? initialSelection : state.selection;
+  const insertionContext =
+    adoptsSelectionInput && initialSelection.kind === "edge"
+      ? deriveInsertionContext(initialSelection)
+      : state.insertionContext;
   const resetGeneration =
     state.resetGeneration + (adoptsDraftInput || adoptsSelectionInput ? 1 : 0);
   const currentProvenance: Provenance = useMemo(() => ({
@@ -157,20 +168,26 @@ export const useDraftAuthoring = ({
     readExecutor,
   }), [connectedTarget, draft.workspaceId, readExecutor, writeExecutor]);
   const currentDraftRef = useRef(draft);
-  const currentSelectionRef = useRef(selection);
+  const currentInsertionContextRef = useRef(insertionContext);
   const currentProvenanceRef = useRef(currentProvenance);
 
   useEffect(() => {
     currentDraftRef.current = draft;
-    currentSelectionRef.current = selection;
+    currentInsertionContextRef.current = insertionContext;
     currentProvenanceRef.current = currentProvenance;
-  }, [currentProvenance, draft, selection]);
+  }, [currentProvenance, draft, insertionContext, selection]);
 
   const select = useCallback((selection: WorkbenchSelection): void => {
     setState((current) => ({
       ...current,
       selection,
       selectionInput: initialSelection,
+      insertionContext:
+        selection.kind === "edge"
+          ? deriveInsertionContext(selection)
+          : selection.kind === "capability"
+            ? current.insertionContext
+            : null,
     }));
   }, [initialSelection]);
 
@@ -197,6 +214,10 @@ export const useDraftAuthoring = ({
           response.status === "conflict"
             ? current.selection
             : nextSelection ?? current.selection,
+        insertionContext:
+          response.status === "conflict" || nextSelection?.kind !== "node"
+            ? current.insertionContext
+            : null,
         dirty: response.status === "conflict" ? true : false,
         phase: response.status === "conflict" ? "conflict" : "idle",
         message:
@@ -278,7 +299,7 @@ export const useDraftAuthoring = ({
   const addCapability = useCallback(
     (input: CapabilityNodeFormValue): Promise<void> => {
       lastSubmissionRef.current = { kind: "add", input };
-      const insertion = deriveInsertionContext(currentSelectionRef.current);
+      const insertion = currentInsertionContextRef.current;
       return runMutation(
         "add",
         { input, insertion },
@@ -445,6 +466,7 @@ export const useDraftAuthoring = ({
   return {
     draft,
     selection,
+    insertionContext,
     dirty: state.dirty,
     phase: state.phase,
     message: state.message,

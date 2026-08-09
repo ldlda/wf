@@ -61,6 +61,7 @@ const MobileSheet = ({
 }: MobileSheetProps) => {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const wasOpen = useRef(open);
+  const modalRef = useRef(false);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -72,6 +73,7 @@ const MobileSheet = ({
       } else {
         dialog.removeAttribute("open");
       }
+      modalRef.current = false;
     };
 
     if (!isMobile) {
@@ -84,9 +86,16 @@ const MobileSheet = ({
       if (!dialog.open) {
         if (typeof dialog.showModal === "function") {
           dialog.showModal();
+          modalRef.current = true;
         } else {
           dialog.setAttribute("open", "");
         }
+      } else if (!modalRef.current && typeof dialog.showModal === "function") {
+        // A desktop sheet is an open nonmodal dialog; close it before moving
+        // it into the mobile top layer so native inertness and focus trapping apply.
+        closeDialog();
+        dialog.showModal();
+        modalRef.current = true;
       }
     } else {
       closeDialog();

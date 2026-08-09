@@ -29,7 +29,7 @@ let tempRoot: string | undefined;
 let rpcTarget: string;
 let baseUrl: string;
 const managedChildren: ManagedChild[] = [];
-const stopRequests = new Set<string>();
+let unmanagedSentinel: ChildProcessWithoutNullStreams | undefined;
 
 const reservePort = async (): Promise<number> => {
   const listener = createServer();
@@ -113,7 +113,6 @@ const killPosixProcessGroup = (pid: number, signal: NodeJS.Signals): void => {
 
 const stopChild = async (managed: ManagedChild): Promise<void> => {
   const { child } = managed;
-  stopRequests.add(managed.name);
 
   if (process.platform === "win32" && child.pid !== undefined) {
     if (child.exitCode !== null) return;
@@ -208,8 +207,9 @@ const expandEvidence = async (
     readonly request: Record<string, unknown>;
     readonly response: Record<string, unknown>;
   },
+  occurrence = 0,
 ): Promise<void> => {
-  const record = page.locator("details.evidence-record").filter({ hasText: operation }).first();
+  const record = page.locator("details.evidence-record").filter({ hasText: operation }).nth(occurrence);
   await expect(record).toBeVisible();
   await record.locator("summary").click();
   await expect(record.locator(".evidence-detail")).toBeVisible();
@@ -282,18 +282,30 @@ test.beforeAll(async () => {
     { ...process.env, WEB_HOST: "127.0.0.1", WEB_PORT: String(webPort) },
   );
   await waitForWebServer(webServer);
+
+  // This direct child is intentionally outside managedChildren and both owned
+  // server process groups. It lets teardown observe that scoped cleanup did not
+  // broaden into a name- or port-based kill.
+  unmanagedSentinel = spawn(process.execPath, ["-e", "setInterval(() => {}, 1000)"], {
+    cwd: repoRoot,
+    stdio: ["pipe", "pipe", "pipe"],
+  });
 });
 
 test.afterAll(async () => {
+  let sentinelAliveAfterCleanup = false;
   for (const managed of [...managedChildren].reverse()) {
     await stopChild(managed);
+  }
+  sentinelAliveAfterCleanup = unmanagedSentinel?.exitCode === null;
+  if (unmanagedSentinel?.exitCode === null) {
+    unmanagedSentinel.kill();
+    await waitForChildExit(unmanagedSentinel);
   }
   if (tempRoot !== undefined) {
     await fs.rm(tempRoot, { recursive: true, force: true });
   }
-  expect([...stopRequests].toSorted()).toEqual(
-    managedChildren.map(({ name }) => name).toSorted(),
-  );
+  expect(sentinelAliveAfterCleanup).toBe(true);
 });
 
 test("verifies desktop discovery, draft inspection, and evidence receipts", async ({ browser }) => {
@@ -392,7 +404,7 @@ test("keeps mobile draft inspection read-only and horizontally navigable", async
 });
 
 test("authors a draft through real mutations, reloads its direct URL, and repeats add/inspect on mobile", async ({ browser }) => {
-  const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, hasTouch: true });
   const page = await context.newPage();
   const workspaceId = "console-authoring-e2e";
   try {
@@ -440,6 +452,22 @@ test("authors a draft through real mutations, reloads its direct URL, and repeat
     await expect(
       page.locator(".evidence-op").filter({ hasText: "workflow.draft_workspaces.add_step_from_capability" }),
     ).toHaveCount(2);
+    await expandEvidence(page, "workflow.draft_workspaces.add_step_from_capability", {
+      request: {
+        jsonrpc: "2.0",
+        method: "workflow.draft_workspaces.add_step_from_capability",
+        params: {
+          workspace_id: workspaceId,
+          revision: 2,
+          step_id: "list_documents_next",
+          capability_name: capability,
+          route_from_step: "list_documents",
+          route_from_outcome: "ok",
+        },
+      },
+      response: { result: { workspace_id: workspaceId, revision: 3 } },
+    }, 1);
+    await expect(page.getByRole("button", { name: /list_documents.*ok.*list_documents_next/ })).toBeVisible();
     await expect(page.getByTestId("rf__node-list_documents_next")).toBeVisible();
     await page.getByTestId("rf__node-list_documents_next").getByRole("button").click();
 
@@ -528,6 +556,15 @@ test("authors a draft through real mutations, reloads its direct URL, and repeat
     await page.getByRole("button", { name: "Add node" }).click();
     await expect(page.getByTestId("rf__node-mobile_list_documents")).toBeVisible();
     await expect(page.getByRole("region", { name: "Workflow graph" })).toBeVisible();
+    await page.getByRole("button", { name: "Close context inspector" }).click();
+    await expect(page.locator("#draft-workbench-palette")).not.toHaveAttribute("open");
+    await expect(page.locator("#draft-workbench-inspector")).not.toHaveAttribute("open");
+    await page.getByTestId("rf__node-list_documents").locator(".graph-node").tap();
+    await expect(page.locator(".draft-workbench")).toHaveAttribute("data-selection-kind", "node");
+    await expect(page.getByTestId("rf__node-list_documents").locator(".graph-node")).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
   } finally {
     await context.close();
   }
