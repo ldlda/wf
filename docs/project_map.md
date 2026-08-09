@@ -31,7 +31,7 @@ For verified Python 3.14 dependency constraints and their removal criteria, see
 | `wf_contract_manifest` | Tooling that normalizes the composed workflow OpenRPC document into the checked transport-neutral contract manifest and detects drift. | Python and TypeScript contract generation and tests. |
 | `@lda/workflow-rpc` | Effect RPC client boundary plus generated compile-time inventory and raw wire types for all manifest operations. It includes a fail-closed representative JSON Schema-to-Effect translator; runtime decoders and supported operations remain authored subsets. | Web console, Hono server, future TypeScript workflow clients. |
 | `@lda/presentation-sync` | Shared, bounded wire contract for ephemeral LAN presentation rooms. | Browser `@lda/console` and Hono `@lda/web-server`. |
-| `@lda/console` | React console with a persistent routed shell, loopback connection flow, capability discovery, read-only draft workspace inspection, and routed artifact/deployment/run exploration. | Browser users and the built `@lda/web-server` static host. |
+| `@lda/console` | React console with a persistent routed shell, loopback connection flow, capability discovery, bounded capability-backed draft authoring with canonical mutation handling, and routed artifact/deployment/run exploration. | Browser users and the built `@lda/web-server` static host. |
 | `@lda/web-server` | Hono API/static server that enforces the browser operation policy, proxies typed workflow reads, serves `console/dist`, and owns presentation room transport. | Browser `@lda/console` and local workflow operators. |
 
 The TypeScript presentation synchronization boundary is deliberately narrow.

@@ -1,11 +1,15 @@
 import { cleanup, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { CapabilityDetail } from "../domain/capability-models.js";
 import type { DraftWorkspace } from "../domain/draft-workspace-models.js";
 import type { DraftAuthoringController } from "./useDraftAuthoring.js";
 import { ContextInspector } from "./ContextInspector.js";
 
-afterEach(() => cleanup());
+afterEach(() => {
+  cleanup();
+  vi.clearAllMocks();
+});
 
 const draft: DraftWorkspace = {
   workspaceId: "draft-report",
@@ -92,11 +96,45 @@ describe("ContextInspector", () => {
     );
 
     expect(screen.getByRole("textbox", { name: "Description" })).toHaveValue("Read the report");
+    expect(screen.getByRole("textbox", { name: "Step id" })).toHaveAttribute("readonly");
     expect(screen.getByRole("spinbutton", { name: "Retry" })).toHaveValue(2);
     expect(screen.getByRole("spinbutton", { name: "Timeout seconds" })).toHaveValue(45);
     expect(screen.getByRole("textbox", { name: "Title" })).toHaveValue("Existing title");
     expect(screen.getByRole("textbox", { name: "Source path for Count" })).toHaveValue("input.count");
     expect(screen.getAllByText("Bind")).not.toHaveLength(0);
+  });
+
+  it("keeps deferred actions focusable while keyboard activation does not dispatch", async () => {
+    const user = userEvent.setup();
+    render(
+      <ContextInspector
+        capabilities={[]}
+        capabilityDetail={detail}
+        capabilityDetailMessage={null}
+        capabilityDetailPhase="ready"
+        controller={controller}
+        draft={draft}
+        selection={{ kind: "node", nodeId: "read" }}
+      />,
+    );
+
+    const deferred = screen.getAllByRole("button", { name: /Later/ });
+    expect(screen.getByText("These actions are not available in this workbench yet.")).toBeInTheDocument();
+    expect(deferred).toHaveLength(6);
+    deferred[0]?.focus();
+    for (const [index, action] of deferred.entries()) {
+      if (index > 0) await user.tab();
+      expect(document.activeElement).toBe(action);
+      expect(action).toHaveAttribute("aria-disabled", "true");
+      expect(action).not.toBeDisabled();
+      await user.keyboard("{Enter}");
+      await user.keyboard(" ");
+    }
+
+    expect(controller.addCapability).not.toHaveBeenCalled();
+    expect(controller.updateCapability).not.toHaveBeenCalled();
+    expect(controller.setRoute).not.toHaveBeenCalled();
+    expect(controller.validate).not.toHaveBeenCalled();
   });
 
   it("maps server diagnostics to the selected node form", () => {

@@ -116,8 +116,11 @@ describe("DraftWorkbench", () => {
       "Add other step — Later",
       "Create artifact — Later",
     ]) {
-      expect(screen.getByRole("button", { name: label })).toBeDisabled();
+      const action = screen.getByRole("button", { name: label });
+      expect(action).toHaveAttribute("aria-disabled", "true");
+      expect(action).not.toBeDisabled();
     }
+    expect(screen.getByText("These actions are not available in this workbench yet.")).toBeInTheDocument();
   });
 
   it("uses named mobile sheets, keeps selection persistent, and returns focus on close", async () => {

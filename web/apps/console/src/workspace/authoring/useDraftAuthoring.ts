@@ -168,11 +168,13 @@ export const useDraftAuthoring = ({
     readExecutor,
   }), [connectedTarget, draft.workspaceId, readExecutor, writeExecutor]);
   const currentDraftRef = useRef(draft);
+  const currentSelectionRef = useRef(selection);
   const currentInsertionContextRef = useRef(insertionContext);
   const currentProvenanceRef = useRef(currentProvenance);
 
   useEffect(() => {
     currentDraftRef.current = draft;
+    currentSelectionRef.current = selection;
     currentInsertionContextRef.current = insertionContext;
     currentProvenanceRef.current = currentProvenance;
   }, [currentProvenance, draft, insertionContext, selection]);
@@ -332,6 +334,12 @@ export const useDraftAuthoring = ({
   const updateCapability = useCallback(
     (input: CapabilityNodeFormValue): Promise<void> => {
       lastSubmissionRef.current = { kind: "update", input };
+      // The form's Step id is display-only for updates; mutation targets stay
+      // bound to the node selected when the operator opened the inspector.
+      const selectedNodeId =
+        currentSelectionRef.current.kind === "node"
+          ? currentSelectionRef.current.nodeId
+          : input.stepId;
       return runMutation(
         "update",
         input,
@@ -339,7 +347,7 @@ export const useDraftAuthoring = ({
           client.updateCapabilityStep({
             workspaceId: requestDraft.workspaceId,
             revision: requestDraft.revision,
-            stepId: input.stepId,
+            stepId: selectedNodeId,
             update: {
               description: input.description,
               input: input.inputBindings,

@@ -213,6 +213,26 @@ describe("useDraftAuthoring", () => {
     expect(result.current.draft.status).toBe("valid");
   });
 
+  it("targets the selected node when submitted metadata contains a different step id", async () => {
+    const initial = workspace({
+      draft: { steps: { read: { use: "demo.read" } }, routes: {} },
+      summary: { name: "report", start: "read", stepCount: 1, routeCount: 0, steps: ["read"] },
+    });
+    updateCapabilityStep.mockResolvedValue(workspace({ revision: 4 }));
+    const { result } = renderHook(() =>
+      useDraftAuthoring({
+        draft: initial,
+        initialSelection: { kind: "node", nodeId: "read" },
+      }),
+    );
+
+    await act(async () => result.current.updateCapability({ ...capabilityInput, stepId: "other" }));
+
+    expect(updateCapabilityStep).toHaveBeenCalledWith(
+      expect.objectContaining({ stepId: "read" }),
+    );
+  });
+
   it("preserves dirty form ownership on ordinary failures and revision conflicts", async () => {
     const initial = workspace();
     authoringClient.addCapabilityStep.mockRejectedValueOnce(new Error("server unavailable"));

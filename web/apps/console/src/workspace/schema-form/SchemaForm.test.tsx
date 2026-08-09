@@ -160,6 +160,49 @@ describe("SchemaForm", () => {
     expect(explicit[0]?.value).toEqual({ enabled: false });
   });
 
+  it("offers an unset, true, and false choice for a required boolean without a default", async () => {
+    const user = userEvent.setup();
+    const submissions: SchemaSerializationResult[] = [];
+    render(
+      <SchemaForm
+        onSubmit={(result) => submissions.push(result)}
+        schema={{
+          type: "object",
+          properties: { enabled: { type: "boolean" } },
+          required: ["enabled"],
+        }}
+      />,
+    );
+
+    const enabled = screen.getByRole("combobox", { name: "Enabled" });
+    expect(enabled).toHaveValue("");
+    expect(screen.getByRole("option", { name: "Choose true or false" })).toBeInTheDocument();
+    await user.selectOptions(enabled, "false");
+    await user.click(screen.getByRole("button", { name: "Save form" }));
+    expect(submissions[0]?.value).toEqual({ enabled: false });
+    expect(submissions[0]?.issues).toEqual([]);
+  });
+
+  it("serializes the true choice for a required boolean without a default", async () => {
+    const user = userEvent.setup();
+    const submissions: SchemaSerializationResult[] = [];
+    render(
+      <SchemaForm
+        onSubmit={(result) => submissions.push(result)}
+        schema={{
+          type: "object",
+          properties: { enabled: { type: "boolean" } },
+          required: ["enabled"],
+        }}
+      />,
+    );
+
+    await user.selectOptions(screen.getByRole("combobox", { name: "Enabled" }), "true");
+    await user.click(screen.getByRole("button", { name: "Save form" }));
+    expect(submissions[0]?.value).toEqual({ enabled: true });
+    expect(submissions[0]?.issues).toEqual([]);
+  });
+
   it("routes nested diagnostics only to their owning field", () => {
     render(
       <SchemaForm

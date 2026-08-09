@@ -126,6 +126,29 @@ const LeafControl = ({
     id,
   };
   if (field.kind === "boolean") {
+    if (field.required && !field.hasDefault) {
+      const selectedValue = value === true ? "true" : value === false ? "false" : "";
+      return (
+        <select
+          {...common}
+          aria-label={label}
+          onChange={(event) => {
+            onValueChange(
+              event.target.value === "true"
+                ? true
+                : event.target.value === "false"
+                  ? false
+                  : undefined,
+            );
+          }}
+          value={selectedValue}
+        >
+          <option value="">Choose true or false</option>
+          <option value="true">true</option>
+          <option value="false">false</option>
+        </select>
+      );
+    }
     return (
       <input
         {...common}

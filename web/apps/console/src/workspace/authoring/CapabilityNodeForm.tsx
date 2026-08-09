@@ -33,6 +33,7 @@ export type CapabilityNodeFormProps = {
   readonly onValueChange?: (value: CapabilityNodeFormValue) => void;
   readonly onDirtyChange?: (dirty: boolean) => void;
   readonly submitLabel?: string;
+  readonly stepIdReadOnly?: boolean;
   readonly hidden?: boolean;
 };
 
@@ -48,6 +49,7 @@ export const CapabilityNodeForm = ({
   onValueChange,
   onDirtyChange,
   submitLabel = "Add node",
+  stepIdReadOnly = false,
   hidden = false,
 }: CapabilityNodeFormProps) => {
   const stepIdRef = useRef<HTMLInputElement>(null);
@@ -125,8 +127,9 @@ export const CapabilityNodeForm = ({
               <input
                 aria-label="Step id"
                 defaultValue={initialValue?.stepId ?? ""}
+                readOnly={stepIdReadOnly}
                 ref={stepIdRef}
-                onChange={(event) => {
+                onChange={() => {
                   notifyMetadataChange();
                 }}
               />

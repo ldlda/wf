@@ -211,8 +211,15 @@ const RawDraft = ({ draft }: { readonly draft: DraftWorkspace["draft"] }) => (
 );
 
 const DeferredActions = () => (
-  <section className="authoring-inspector__deferred" aria-labelledby="deferred-actions-heading">
+  <section
+    aria-describedby="deferred-actions-description"
+    aria-labelledby="deferred-actions-heading"
+    className="authoring-inspector__deferred"
+  >
     <h3 id="deferred-actions-heading">Deferred actions</h3>
+    <p id="deferred-actions-description">
+      These actions are not available in this workbench yet.
+    </p>
     <div className="authoring-inspector__deferred-actions">
       {[
         "Undo — Later",
@@ -221,7 +228,17 @@ const DeferredActions = () => (
         "Delete route — Later",
         "Add other step — Later",
         "Create artifact — Later",
-      ].map((label) => <button disabled key={label} type="button">{label}</button>)}
+      ].map((label) => (
+        <button
+          aria-describedby="deferred-actions-description"
+          aria-disabled="true"
+          key={label}
+          onClick={(event) => event.preventDefault()}
+          type="button"
+        >
+          {label}
+        </button>
+      ))}
     </div>
   </section>
 );
@@ -342,6 +359,7 @@ export const ContextInspector = ({
               onDirtyChange={controller.markDirty}
               onSubmit={controller.updateCapability}
               onValueChange={(value) => controller.rememberCapabilityForm("update", value)}
+              stepIdReadOnly
               submitLabel="Apply changes"
             />
           );

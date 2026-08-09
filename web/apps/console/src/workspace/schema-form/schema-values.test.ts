@@ -235,6 +235,26 @@ describe("serializeSchemaValues", () => {
     expect(serializeSchemaValues(field, { enabled: false }).value).toEqual({ enabled: false });
   });
 
+  it("requires an explicit true or false value for a required boolean without a default", () => {
+    const field = normalizeSchema({
+      type: "object",
+      properties: { enabled: { type: "boolean" } },
+      required: ["enabled"],
+    });
+
+    expect(serializeSchemaValues(field, { enabled: undefined }).issues).toEqual([
+      { path: ["enabled"], message: "Choose true or false." },
+    ]);
+    expect(serializeSchemaValues(field, { enabled: true })).toMatchObject({
+      value: { enabled: true },
+      issues: [],
+    });
+    expect(serializeSchemaValues(field, { enabled: false })).toMatchObject({
+      value: { enabled: false },
+      issues: [],
+    });
+  });
+
   it("reports and preserves missing required string and JSON values", () => {
     const field = normalizeSchema({
       type: "object",
