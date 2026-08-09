@@ -18,6 +18,8 @@ export type SchemaFieldControlProps = {
   readonly onSourceChange: (field: SchemaField, source: FieldSource) => void;
   readonly onArrayItemRemove: (field: SchemaField, index: number) => void;
   readonly sourceSuggestions?: ReadonlyArray<string>;
+  readonly showSourceControl?: boolean;
+  readonly idPrefix?: string;
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -31,8 +33,8 @@ const samePath = (
   right: ReadonlyArray<string | number>,
 ): boolean => left.length === right.length && left.every((part, index) => part === right[index]);
 
-const fieldId = (field: SchemaField): string =>
-  `schema-field-${encodeSchemaPath(field.path)}`;
+const fieldId = (field: SchemaField, idPrefix: string): string =>
+  `${idPrefix}-${encodeSchemaPath(field.path)}`;
 
 const displayTitle = (title: string): string =>
   title.length === 0 ? "Value" : `${title.slice(0, 1).toUpperCase()}${title.slice(1)}`;
@@ -63,13 +65,15 @@ const defaultArrayItemValue = (field: SchemaField): unknown => {
 const FieldDiagnostics = ({
   field,
   diagnostics,
+  idPrefix,
 }: {
   readonly field: SchemaField;
   readonly diagnostics: ReadonlyArray<SchemaValueIssue>;
+  readonly idPrefix: string;
 }) => {
   if (diagnostics.length === 0) return null;
   return (
-    <div className="schema-form__diagnostics" id={`${fieldId(field)}-diagnostics`} role="alert">
+    <div className="schema-form__diagnostics" id={`${fieldId(field, idPrefix)}-diagnostics`} role="alert">
       {diagnostics.map((diagnostic) => (
         <p key={`${formatTOMLPath(diagnostic.path)}-${diagnostic.message}`}>
           {diagnostic.message}
@@ -110,14 +114,16 @@ const LeafControl = ({
   onValueChange,
   describedBy,
   invalid,
+  idPrefix,
 }: {
   readonly field: SchemaField;
   readonly value: unknown;
   readonly onValueChange: (value: unknown) => void;
   readonly describedBy: string | undefined;
   readonly invalid: boolean;
+  readonly idPrefix: string;
 }) => {
-  const id = fieldId(field);
+  const id = fieldId(field, idPrefix);
   const label = displayTitle(field.title);
   const common = {
     "aria-describedby": describedBy,
@@ -218,8 +224,10 @@ export const SchemaFieldControl = ({
   onSourceChange,
   onArrayItemRemove,
   sourceSuggestions = EMPTY_SUGGESTIONS,
+  showSourceControl = true,
+  idPrefix = "schema-field",
 }: SchemaFieldControlProps) => {
-  const id = fieldId(field);
+  const id = fieldId(field, idPrefix);
   const descriptionId = field.description ? `${id}-description` : undefined;
   const ownDiagnostics = diagnostics.filter((diagnostic) => samePath(diagnostic.path, field.path));
   const diagnosticsId = ownDiagnostics.length > 0 ? `${id}-diagnostics` : undefined;
@@ -245,12 +253,15 @@ export const SchemaFieldControl = ({
             onValueChange={onValueChange}
             sourceSuggestions={sourceSuggestions}
             sources={sources}
+            showSourceControl={showSourceControl}
+            idPrefix={idPrefix}
             value={objectValue[child.key]}
           />
         ))}
         <FieldDiagnostics
           diagnostics={ownDiagnostics}
           field={field}
+          idPrefix={idPrefix}
         />
       </fieldset>
     );
@@ -280,6 +291,8 @@ export const SchemaFieldControl = ({
                 onValueChange={onValueChange}
                 sourceSuggestions={sourceSuggestions}
                 sources={sources}
+                showSourceControl={showSourceControl}
+                idPrefix={idPrefix}
                 value={itemValue}
               />
               <button
@@ -303,28 +316,35 @@ export const SchemaFieldControl = ({
         <FieldDiagnostics
           diagnostics={ownDiagnostics}
           field={field}
+          idPrefix={idPrefix}
         />
       </fieldset>
     );
   }
 
-  const source = sources[pathKey(field)] ?? { mode: "literal", value };
+  const source: FieldSource = showSourceControl
+    ? sources[pathKey(field)] ?? { mode: "literal", value }
+    : { mode: "literal", value };
   return (
     <div className="schema-form__field">
       <FieldLabel field={field} id={id} />
       {field.description && <p id={descriptionId}>{field.description}</p>}
-      <BindingSourceControl
-        field={field}
-        literalValue={value}
-        onChange={(nextSource) => onSourceChange(field, nextSource)}
-        source={source}
-        suggestions={sourceSuggestions}
-      />
+      {showSourceControl && (
+        <BindingSourceControl
+          field={field}
+          idPrefix={idPrefix}
+          literalValue={value}
+          onChange={(nextSource) => onSourceChange(field, nextSource)}
+          source={source}
+          suggestions={sourceSuggestions}
+        />
+      )}
       {source.mode === "literal" && (
         <LeafControl
           describedBy={describedBy}
           field={field}
           invalid={ownDiagnostics.length > 0}
+          idPrefix={idPrefix}
           onValueChange={(nextValue) => onValueChange(field, nextValue)}
           value={value}
         />
@@ -334,7 +354,7 @@ export const SchemaFieldControl = ({
           {field.fallbackReason}
         </p>
       )}
-      <FieldDiagnostics diagnostics={ownDiagnostics} field={field} />
+      <FieldDiagnostics diagnostics={ownDiagnostics} field={field} idPrefix={idPrefix} />
     </div>
   );
 };

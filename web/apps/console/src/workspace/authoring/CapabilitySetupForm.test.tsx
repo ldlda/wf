@@ -75,4 +75,26 @@ describe("CapabilitySetupForm", () => {
 
     expect(submissions).toEqual([{ timeoutSeconds: 2.5 }]);
   });
+
+  it("associates local retry errors with the retry control and avoids duplicate ids", async () => {
+    const user = userEvent.setup();
+    render(
+      <>
+        <CapabilitySetupForm onSubmit={() => undefined} />
+        <CapabilitySetupForm onSubmit={() => undefined} />
+      </>,
+    );
+
+    const retryInputs = screen.getAllByRole("spinbutton", { name: "Retry" });
+    expect(new Set(retryInputs.map((input) => input.id)).size).toBe(2);
+    expect(new Set(retryInputs.map((input) => input.getAttribute("aria-describedby"))).size).toBe(1);
+
+    await user.type(retryInputs[0]!, "-1");
+    await user.click(screen.getAllByRole("button", { name: "Save setup" })[0]!);
+
+    const describedBy = retryInputs[0]!.getAttribute("aria-describedby");
+    expect(retryInputs[0]).toHaveAttribute("aria-invalid", "true");
+    expect(describedBy).toBeTruthy();
+    expect(document.getElementById(describedBy ?? "")).toHaveTextContent("Retry must be at least 0.");
+  });
 });

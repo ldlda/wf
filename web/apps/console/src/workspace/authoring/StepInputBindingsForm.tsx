@@ -1,15 +1,18 @@
-import { useRef, useState, type FormEvent } from "react";
-import type { DraftDiagnostic, InputBinding } from "../domain/draft-workspace-models.js";
+import { useId, useRef, useState, type FormEvent } from "react";
+import type {
+  DraftDiagnostic,
+  InputBinding,
+} from "../domain/draft-workspace-models.js";
 import { SchemaFieldControl } from "../schema-form/SchemaFieldControl.js";
 import { formatTOMLPath, parseGraphSourcePath, parseTOMLPath } from "../schema-form/schema-paths.js";
 import {
   normalizeSchema,
   schemaFieldAtPath,
-  type FieldSource,
   type SchemaField,
 } from "../schema-form/schema-field.js";
 import { serializeSchemaValues, type FieldSources } from "../schema-form/schema-values.js";
 import { formatBoundedJson } from "./format-bounded-json.js";
+import { displayGraphInputPath, displayLocalInputPath } from "./input-binding-paths.js";
 import {
   inputBindingRows,
   isJsonValue,
@@ -47,34 +50,33 @@ export type StepInputBindingsFormProps = {
 const EMPTY_ROWS: ReadonlyArray<InputBindingRow> = [];
 const EMPTY_DIAGNOSTICS: Readonly<Record<number, ReadonlyArray<DraftDiagnostic>>> = {};
 
-const pathText = (
-  value: string | { readonly parts: ReadonlyArray<string>; readonly root: string },
-): string => typeof value === "string" ? value : formatTOMLPath([value.root, ...value.parts]);
-
 const jsonText = (value: unknown): string => {
   const encoded = JSON.stringify(value, null, 2);
   return encoded ?? "";
 };
 
-const rowsFrom = (rows: ReadonlyArray<InputBindingRow>): ReadonlyArray<FormRow> => rows.map((row, index) => {
-  if (row.kind === "unsupported") return { ...row, id: `input-row-${index}` };
+const rowsFrom = (
+  rows: ReadonlyArray<InputBindingRow>,
+  formId: string,
+): ReadonlyArray<FormRow> => rows.map((row, index) => {
+  if (row.kind === "unsupported") return { ...row, id: `${formId}-input-row-${index}` };
   if ("path" in row.value) {
     return {
       kind: "canonical",
-      id: `input-row-${index}`,
+      id: `${formId}-input-row-${index}`,
       rawIndex: row.index,
-      target: pathText(row.value.target),
+      target: displayLocalInputPath(row.value.target),
       mode: "path",
-      sourcePath: pathText(row.value.path),
+      sourcePath: displayGraphInputPath(row.value.path),
       value: null,
       jsonText: null,
     };
   }
   return {
     kind: "canonical",
-    id: `input-row-${index}`,
+    id: `${formId}-input-row-${index}`,
     rawIndex: row.index,
-    target: pathText(row.value.target),
+    target: displayLocalInputPath(row.value.target),
     mode: "literal",
     sourcePath: "input.",
     value: row.value.value,
@@ -98,6 +100,52 @@ const updateRow = (
   row.kind === "canonical" && row.id === id ? update(row) : row,
 );
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const setAtPath = (
+  current: unknown,
+  path: ReadonlyArray<string | number>,
+  value: unknown,
+): unknown => {
+  if (path.length === 0) return value;
+  const head = path[0];
+  if (head === undefined) return current;
+  const tail = path.slice(1);
+  if (typeof head === "number") {
+    const next = Array.isArray(current) ? [...current] : [];
+    next[head] = setAtPath(next[head], tail, value);
+    return next;
+  }
+  const next = isRecord(current) ? { ...current } : {};
+  next[head] = setAtPath(next[head], tail, value);
+  return next;
+};
+
+const removeAtPath = (
+  current: unknown,
+  path: ReadonlyArray<string | number>,
+): unknown => {
+  if (path.length === 0) return current;
+  const head = path[0];
+  if (head === undefined) return current;
+  const tail = path.slice(1);
+  if (typeof head === "number") {
+    if (!Array.isArray(current)) return current;
+    if (tail.length === 0) return current.filter((_, index) => index !== head);
+    const next = [...current];
+    next[head] = removeAtPath(next[head], tail);
+    return next;
+  }
+  if (!isRecord(current)) return current;
+  return { ...current, [head]: removeAtPath(current[head], tail) };
+};
+
+const relativePath = (
+  rootPath: ReadonlyArray<string | number>,
+  changedPath: ReadonlyArray<string | number>,
+): ReadonlyArray<string | number> => changedPath.slice(rootPath.length);
+
 const rowIssueMessages = (
   row: EditableRow,
   rowDiagnostics: Readonly<Record<number, ReadonlyArray<DraftDiagnostic>>>,
@@ -106,6 +154,13 @@ const rowIssueMessages = (
   ...(rowDiagnostics[row.rawIndex] ?? []).map((diagnostic) => diagnostic.message),
   ...(localIssues[row.id] ?? []),
 ];
+
+const schemaFieldForTarget = (root: SchemaField, target: string): SchemaField | null => {
+  const targetParts = parseTOMLPath(target);
+  return targetParts === null
+    ? null
+    : schemaFieldAtPath(root, targetParts.map((part) => /^\d+$/.test(part) ? Number(part) : part));
+};
 
 const literalValueFor = (
   field: SchemaField | null,
@@ -146,10 +201,7 @@ const bindingForRow = (
       ? { binding: null, issues: ["Enter a valid target and source path."] }
       : { binding, issues: [] };
   }
-  const targetParts = parseTOMLPath(target);
-  const field = targetParts === null
-    ? null
-    : schemaFieldAtPath(root, targetParts.map((part) => /^\d+$/.test(part) ? Number(part) : part));
+  const field = schemaFieldForTarget(root, target);
   const literal = literalValueFor(field, row);
   if (literal.issues.length > 0) return { binding: null, issues: literal.issues };
   const binding = serializeInputBindingRow({ target, value: literal.value });
@@ -157,12 +209,6 @@ const bindingForRow = (
     ? { binding: null, issues: ["Enter a valid target and JSON literal."] }
     : { binding, issues: [] };
 };
-
-const sourceForRow = (field: SchemaField, row: EditableRow): FieldSources => ({
-  [formatTOMLPath(field.path)]: row.mode === "path"
-    ? { mode: "bind", sourcePath: row.sourcePath }
-    : { mode: "literal", value: row.value },
-});
 
 export const StepInputBindingsForm = ({
   inputSchema,
@@ -173,12 +219,15 @@ export const StepInputBindingsForm = ({
   onDirtyChange,
   submitLabel = "Save inputs",
 }: StepInputBindingsFormProps) => {
+  const formId = useId();
   const root = normalizeSchema(inputSchema);
   const [rows, setRows] = useState<ReadonlyArray<FormRow>>(() =>
-    rowsFrom(inputRows(initialRows, initialBindings)),
+    rowsFrom(inputRows(initialRows, initialBindings), formId),
   );
   const [localIssues, setLocalIssues] = useState<Readonly<Record<string, ReadonlyArray<string>>>>({});
+  const [formIssue, setFormIssue] = useState<string | null>(null);
   const nextId = useRef(rows.length);
+  const formErrorId = `${formId}-form-error`;
 
   const markDirty = (): void => onDirtyChange?.(true);
 
@@ -204,11 +253,17 @@ export const StepInputBindingsForm = ({
 
   const removeRow = (id: string): void => {
     setRows((current) => current.filter((row) => row.id !== id));
+    setLocalIssues((current) => {
+      const next = { ...current };
+      delete next[id];
+      return next;
+    });
+    setFormIssue(null);
     markDirty();
   };
 
   const addRow = (): void => {
-    const id = `input-row-${nextId.current++}`;
+    const id = `${formId}-input-row-${nextId.current++}`;
     setRows((current) => [
       ...current,
       {
@@ -225,6 +280,8 @@ export const StepInputBindingsForm = ({
     markDirty();
   };
 
+  const unsupportedRows = rows.filter((row): row is UnsupportedRow => row.kind === "unsupported");
+
   const submit = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
     const nextIssues: Record<string, ReadonlyArray<string>> = {};
@@ -239,18 +296,29 @@ export const StepInputBindingsForm = ({
       else bindings.push(result.binding);
     }
     setLocalIssues(nextIssues);
+    setFormIssue(unsupportedRows.length > 0
+      ? "Remove or repair every unsupported input row before saving."
+      : null);
     if (Object.keys(nextIssues).length > 0) return;
     void Promise.resolve(onSubmit(bindings)).catch(() => undefined);
   };
 
   const clear = (): void => {
+    if (unsupportedRows.length > 0) {
+      const message = "Remove or repair this unsupported input row before clearing inputs.";
+      setFormIssue(message);
+      markDirty();
+      return;
+    }
     setLocalIssues({});
+    setFormIssue(null);
     markDirty();
     void Promise.resolve(onSubmit([])).catch(() => undefined);
   };
 
   return (
     <form className="schema-form authoring-form" noValidate onSubmit={submit}>
+      {formIssue !== null && <p id={formErrorId} role="alert">{formIssue}</p>}
       <div className="schema-form__group">
         {rows.length === 0 && <p>No input bindings configured.</p>}
         {rows.map((row, index) => {
@@ -260,6 +328,7 @@ export const StepInputBindingsForm = ({
               ...(rowDiagnostics[row.index] ?? []).map((diagnostic) => diagnostic.message),
               ...(localIssues[row.id] ?? []),
             ];
+            const errorId = `${row.id}-errors`;
             return (
               <fieldset aria-label={`Unsupported input row ${rowNumber}`} className="schema-form__group" key={row.id}>
                 <legend>Input row {rowNumber}: unsupported</legend>
@@ -271,11 +340,12 @@ export const StepInputBindingsForm = ({
                   </pre>
                 </details>
                 {unsupportedIssues.length > 0 && (
-                  <div className="schema-form__diagnostics" role="alert">
+                  <div className="schema-form__diagnostics" id={errorId} role="alert">
                     {unsupportedIssues.map((issue) => <p key={issue}>{issue}</p>)}
                   </div>
                 )}
                 <button
+                  aria-describedby={unsupportedIssues.length > 0 ? errorId : undefined}
                   aria-label={`Remove unsupported input row ${rowNumber}`}
                   className="schema-form__secondary-action"
                   onClick={() => removeRow(row.id)}
@@ -286,91 +356,108 @@ export const StepInputBindingsForm = ({
               </fieldset>
             );
           }
-          const targetParts = parseTOMLPath(row.target.trim());
-          const field = targetParts === null
-            ? null
-            : schemaFieldAtPath(root, targetParts.map((part) => /^\d+$/.test(part) ? Number(part) : part));
+          const field = schemaFieldForTarget(root, row.target.trim());
           const issues = rowIssueMessages(row, rowDiagnostics, localIssues);
-          const source = field === null ? null : sourceForRow(field, row);
+          const targetId = `${row.id}-target`;
+          const errorId = `${row.id}-errors`;
+          const pathId = `${row.id}-source-path`;
+          const literalId = `${row.id}-literal`;
+          const pathModeId = `${row.id}-path-mode`;
+          const literalModeId = `${row.id}-literal-mode`;
+          const hasIssues = issues.length > 0;
+          const literalSources: FieldSources = field === null
+            ? {}
+            : { [formatTOMLPath(field.path)]: { mode: "literal", value: row.value } };
           return (
             <fieldset aria-label={`Input row ${rowNumber}`} className="schema-form__group" key={row.id}>
               <legend>Input row {rowNumber}</legend>
-              <label>
-                Target
-                <input
-                  aria-label={`Target for row ${rowNumber}`}
-                  onChange={(event) => editRow(row.id, (current) => ({ ...current, target: event.target.value }))}
-                  type="text"
-                  value={row.target}
-                />
-              </label>
-              {field !== null && source !== null ? (
+              <label htmlFor={targetId}>Target</label>
+              <input
+                aria-describedby={hasIssues ? errorId : undefined}
+                aria-invalid={hasIssues}
+                aria-label={`Target for row ${rowNumber}`}
+                id={targetId}
+                onChange={(event) => editRow(row.id, (current) => ({ ...current, target: event.target.value }))}
+                type="text"
+                value={row.target}
+              />
+              <fieldset aria-label={`Source mode for input row ${rowNumber}`} className="schema-form__source">
+                <legend>Value source</legend>
+                <div className="schema-form__source-options">
+                  <label htmlFor={pathModeId}>
+                    <input
+                      aria-label={`Path for input row ${rowNumber}`}
+                      checked={row.mode === "path"}
+                      id={pathModeId}
+                      name={`${row.id}-mode`}
+                      onChange={() => editRow(row.id, (current) => ({ ...current, mode: "path" }))}
+                      type="radio"
+                    />
+                    Path
+                  </label>
+                  <label htmlFor={literalModeId}>
+                    <input
+                      aria-label={`Literal value for input row ${rowNumber}`}
+                      checked={row.mode === "literal"}
+                      id={literalModeId}
+                      name={`${row.id}-mode`}
+                      onChange={() => editRow(row.id, (current) => ({ ...current, mode: "literal" }))}
+                      type="radio"
+                    />
+                    Literal value
+                  </label>
+                </div>
+              </fieldset>
+              {row.mode === "path" ? (
+                <label htmlFor={pathId}>
+                  Source path for input row {rowNumber}
+                  <input
+                    aria-describedby={hasIssues ? errorId : undefined}
+                    aria-invalid={hasIssues}
+                    aria-label={`Source path for input row ${rowNumber}`}
+                    id={pathId}
+                    onChange={(event) => editRow(row.id, (current) => ({ ...current, sourcePath: event.target.value }))}
+                    type="text"
+                    value={row.sourcePath}
+                  />
+                </label>
+              ) : field !== null ? (
                 <SchemaFieldControl
                   diagnostics={[]}
                   field={field}
-                  onArrayItemRemove={() => undefined}
-                  onSourceChange={(_changedField, nextSource: FieldSource) => editRow(row.id, (current) =>
-                    nextSource.mode === "bind"
-                      ? { ...current, mode: "path", sourcePath: nextSource.sourcePath }
-                      : { ...current, mode: "literal", value: nextSource.value, jsonText: null },
-                  )}
-                  onValueChange={(_changedField, value) => editRow(row.id, (current) => ({ ...current, value, jsonText: null }))}
-                  sourceSuggestions={[]}
-                  sources={source}
+                  idPrefix={`${row.id}-schema`}
+                  onArrayItemRemove={(arrayField, itemIndex) => editRow(row.id, (current) => ({
+                    ...current,
+                    value: removeAtPath(current.value, [...relativePath(field.path, arrayField.path), itemIndex]),
+                  }))}
+                  onSourceChange={() => undefined}
+                  onValueChange={(changedField, value) => editRow(row.id, (current) => ({
+                    ...current,
+                    value: setAtPath(current.value, relativePath(field.path, changedField.path), value),
+                  }))}
+                  showSourceControl={false}
+                  sources={literalSources}
                   value={row.value}
                 />
               ) : (
-                <>
-                  <fieldset className="schema-form__source">
-                    <legend>Value source</legend>
-                    <div className="schema-form__source-options">
-                      <label>
-                        <input
-                          checked={row.mode === "literal"}
-                          name={`${row.id}-mode`}
-                          onChange={() => editRow(row.id, (current) => ({ ...current, mode: "literal" }))}
-                          type="radio"
-                        />
-                        Literal
-                      </label>
-                      <label>
-                        <input
-                          checked={row.mode === "path"}
-                          name={`${row.id}-mode`}
-                          onChange={() => editRow(row.id, (current) => ({ ...current, mode: "path" }))}
-                          type="radio"
-                        />
-                        Bind
-                      </label>
-                    </div>
-                    {row.mode === "path" ? (
-                      <label>
-                        Source path
-                        <input
-                          aria-label={`Source path for row ${rowNumber}`}
-                          onChange={(event) => editRow(row.id, (current) => ({ ...current, sourcePath: event.target.value }))}
-                          type="text"
-                          value={row.sourcePath}
-                        />
-                      </label>
-                    ) : (
-                      <label>
-                        Literal JSON value
-                        <textarea
-                          aria-label={`Literal JSON value for row ${rowNumber}`}
-                          onChange={(event) => editRow(row.id, (current) => ({ ...current, jsonText: event.target.value, value: event.target.value }))}
-                          value={row.jsonText ?? jsonText(row.value)}
-                        />
-                      </label>
-                    )}
-                  </fieldset>
-                  <p className="schema-form__fallback-reason">
-                    No matching schema field. Edit the binding as raw JSON.
-                  </p>
-                </>
+                <label htmlFor={literalId}>
+                  Literal JSON value for input row {rowNumber}
+                  <textarea
+                    aria-describedby={hasIssues ? errorId : undefined}
+                    aria-invalid={hasIssues}
+                    aria-label={`Literal JSON value for input row ${rowNumber}`}
+                    id={literalId}
+                    onChange={(event) => editRow(row.id, (current) => ({
+                      ...current,
+                      jsonText: event.target.value,
+                      value: event.target.value,
+                    }))}
+                    value={row.jsonText ?? jsonText(row.value)}
+                  />
+                </label>
               )}
-              {issues.length > 0 && (
-                <div className="schema-form__diagnostics" role="alert">
+              {hasIssues && (
+                <div className="schema-form__diagnostics" id={errorId} role="alert">
                   {issues.map((issue) => <p key={issue}>{issue}</p>)}
                 </div>
               )}
@@ -411,7 +498,13 @@ export const StepInputBindingsForm = ({
       </div>
       <div className="schema-form__source-options">
         <button type="submit">{submitLabel}</button>
-        <button onClick={clear} type="button">Clear inputs</button>
+        <button
+          aria-describedby={formIssue !== null ? formErrorId : undefined}
+          onClick={clear}
+          type="button"
+        >
+          Clear inputs
+        </button>
       </div>
     </form>
   );

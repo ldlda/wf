@@ -23,6 +23,7 @@ describe("CapabilityNodeForm", () => {
     await user.type(screen.getByRole("textbox", { name: "Step id" }), "enrich");
     await user.type(screen.getByRole("textbox", { name: "Description" }), "Enrich report");
     await user.type(screen.getByRole("textbox", { name: "Title" }), "Quarterly report");
+    expect(screen.getByRole("spinbutton", { name: "Timeout seconds" })).toHaveAttribute("inputmode", "decimal");
     await user.click(screen.getByRole("button", { name: "Add node" }));
 
     expect(submissions[0]).toMatchObject({

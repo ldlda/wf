@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useId, useRef, useState, type FormEvent } from "react";
 import type { DraftDiagnostic } from "../domain/draft-workspace-models.js";
 import type { SchemaValueIssue } from "../schema-form/schema-values.js";
 import type { CapabilitySetupPatch } from "./selected-step-dataflow.js";
@@ -38,33 +38,41 @@ export const CapabilitySetupForm = ({
   onDirtyChange,
   submitLabel = "Save setup",
 }: CapabilitySetupFormProps) => {
-  const [description, setDescription] = useState(initialText(initialValue.description));
-  const [retry, setRetry] = useState(
+  const [description, setDescription] = useState(() => initialText(initialValue.description));
+  const [retry, setRetry] = useState(() =>
     initialValue.retry === null || initialValue.retry === undefined ? "" : String(initialValue.retry),
   );
-  const [timeoutSeconds, setTimeoutSeconds] = useState(
+  const [timeoutSeconds, setTimeoutSeconds] = useState(() =>
     initialValue.timeoutSeconds === null || initialValue.timeoutSeconds === undefined
       ? ""
       : String(initialValue.timeoutSeconds),
   );
-  const [touched, setTouched] = useState<ReadonlySet<SetupField>>(() => new Set());
-  const [issues, setIssues] = useState<ReadonlyArray<string>>([]);
+  const touchedRef = useRef<ReadonlySet<SetupField>>(new Set());
+  const [issues, setIssues] = useState<Readonly<Partial<Record<SetupField, string>>>>({});
+  const formId = useId();
+
+  const controlId = (field: SetupField): string => `${formId}-${field}`;
+  const errorId = (field: SetupField): string => `${controlId(field)}-error`;
+  const diagnosticFor = (field: SetupField): string | null =>
+    issues[field] ?? issueMessage(diagnostics, field);
 
   const touch = (field: SetupField): void => {
-    setTouched((current) => current.has(field) ? current : new Set([...current, field]));
+    if (!touchedRef.current.has(field)) {
+      touchedRef.current = new Set([...touchedRef.current, field]);
+    }
     onDirtyChange?.(true);
   };
 
   const submit = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
-    const nextIssues: string[] = [];
+    const nextIssues: Partial<Record<SetupField, string>> = {};
     const patch: {
       description?: string | null;
       retry?: number | null;
       timeoutSeconds?: number | null;
     } = {};
 
-    if (touched.has("description")) {
+    if (touchedRef.current.has("description")) {
       if (description.trim() === "") {
         if (initialValue.description !== undefined && initialValue.description !== null) {
           patch.description = null;
@@ -74,30 +82,29 @@ export const CapabilitySetupForm = ({
       }
     }
 
-    if (touched.has("retry")) {
+    if (touchedRef.current.has("retry")) {
       if (retry.trim() === "") {
         if (existingNumber(initialValue.retry)) patch.retry = null;
       } else {
         const parsed = Number(retry);
         if (!Number.isFinite(parsed) || !Number.isInteger(parsed) || parsed < 0) {
-          nextIssues.push(
+          nextIssues.retry =
             !Number.isInteger(parsed) && Number.isFinite(parsed)
               ? "Retry must be a whole number."
-              : "Retry must be at least 0.",
-          );
+              : "Retry must be at least 0.";
         } else {
           patch.retry = parsed;
         }
       }
     }
 
-    if (touched.has("timeoutSeconds")) {
+    if (touchedRef.current.has("timeoutSeconds")) {
       if (timeoutSeconds.trim() === "") {
         if (existingNumber(initialValue.timeoutSeconds)) patch.timeoutSeconds = null;
       } else {
         const parsed = Number(timeoutSeconds);
         if (!Number.isFinite(parsed) || parsed <= 0) {
-          nextIssues.push("Timeout must be greater than 0.");
+          nextIssues.timeoutSeconds = "Timeout must be greater than 0.";
         } else {
           patch.timeoutSeconds = parsed;
         }
@@ -105,7 +112,7 @@ export const CapabilitySetupForm = ({
     }
 
     setIssues(nextIssues);
-    if (nextIssues.length > 0) return;
+    if (Object.keys(nextIssues).length > 0) return;
     void Promise.resolve(onSubmit(patch)).catch(() => undefined);
   };
 
@@ -116,21 +123,25 @@ export const CapabilitySetupForm = ({
         <label>
           Description
           <input
-            aria-describedby={issueMessage(diagnostics, "description") ? "setup-description-diagnostic" : undefined}
+            aria-describedby={diagnosticFor("description") ? errorId("description") : undefined}
             aria-label="Description"
+            aria-invalid={diagnosticFor("description") !== null}
+            id={controlId("description")}
             onChange={(event) => { touch("description"); setDescription(event.target.value); }}
             type="text"
             value={description}
           />
-          {issueMessage(diagnostics, "description") && (
-            <p id="setup-description-diagnostic" role="alert">{issueMessage(diagnostics, "description")}</p>
+          {diagnosticFor("description") && (
+            <p id={errorId("description")} role="alert">{diagnosticFor("description")}</p>
           )}
         </label>
         <label>
           Retry
           <input
-            aria-describedby={issueMessage(diagnostics, "retry") ? "setup-retry-diagnostic" : undefined}
+            aria-describedby={diagnosticFor("retry") ? errorId("retry") : undefined}
             aria-label="Retry"
+            aria-invalid={diagnosticFor("retry") !== null}
+            id={controlId("retry")}
             inputMode="numeric"
             min={0}
             onChange={(event) => { touch("retry"); setRetry(event.target.value); }}
@@ -138,15 +149,17 @@ export const CapabilitySetupForm = ({
             type="number"
             value={retry}
           />
-          {issueMessage(diagnostics, "retry") && (
-            <p id="setup-retry-diagnostic" role="alert">{issueMessage(diagnostics, "retry")}</p>
+          {diagnosticFor("retry") && (
+            <p id={errorId("retry")} role="alert">{diagnosticFor("retry")}</p>
           )}
         </label>
         <label>
           Timeout seconds
           <input
-            aria-describedby={issueMessage(diagnostics, "timeoutSeconds") ? "setup-timeout-diagnostic" : undefined}
+            aria-describedby={diagnosticFor("timeoutSeconds") ? errorId("timeoutSeconds") : undefined}
             aria-label="Timeout seconds"
+            aria-invalid={diagnosticFor("timeoutSeconds") !== null}
+            id={controlId("timeoutSeconds")}
             inputMode="decimal"
             min="0.000001"
             onChange={(event) => { touch("timeoutSeconds"); setTimeoutSeconds(event.target.value); }}
@@ -154,15 +167,10 @@ export const CapabilitySetupForm = ({
             type="number"
             value={timeoutSeconds}
           />
-          {issueMessage(diagnostics, "timeoutSeconds") && (
-            <p id="setup-timeout-diagnostic" role="alert">{issueMessage(diagnostics, "timeoutSeconds")}</p>
+          {diagnosticFor("timeoutSeconds") && (
+            <p id={errorId("timeoutSeconds")} role="alert">{diagnosticFor("timeoutSeconds")}</p>
           )}
         </label>
-        {issues.length > 0 && (
-          <div className="schema-form__diagnostics" role="alert">
-            {issues.map((issue) => <p key={issue}>{issue}</p>)}
-          </div>
-        )}
       </fieldset>
       <button type="submit">{submitLabel}</button>
     </form>

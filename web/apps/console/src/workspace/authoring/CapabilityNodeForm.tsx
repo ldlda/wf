@@ -233,7 +233,7 @@ export const CapabilityNodeForm = ({
                     ? ""
                     : String(initialValue.timeoutSeconds)
                 }
-                inputMode="numeric"
+                inputMode="decimal"
                 min="0.000001"
                 ref={timeoutSecondsRef}
                 onChange={(event) => {

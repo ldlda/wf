@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import type { InputBinding } from "../domain/draft-workspace-models.js";
 import { StepInputBindingsForm } from "./StepInputBindingsForm.js";
+import { displayGraphInputPath, displayLocalInputPath } from "./input-binding-paths.js";
 
 afterEach(() => cleanup());
 
@@ -19,6 +20,13 @@ const schema = {
 };
 
 describe("StepInputBindingsForm", () => {
+  it("formats local and graph path objects at whole and nested paths", () => {
+    expect(displayLocalInputPath({ root: "local", parts: [] })).toBe(".");
+    expect(displayLocalInputPath({ root: "local", parts: ["payload", "item"] })).toBe("payload.item");
+    expect(displayGraphInputPath({ root: "input", parts: ["payload", "item"] })).toBe("input.payload.item");
+    expect(displayGraphInputPath({ root: "state", parts: [] })).toBe("state");
+  });
+
   it("renders ordered path, null literal, nested, and unsupported rows with repair controls", () => {
     render(
       <StepInputBindingsForm
@@ -35,8 +43,8 @@ describe("StepInputBindingsForm", () => {
 
     expect(screen.getByRole("group", { name: "Input row 1" })).toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "Target for row 1" })).toHaveValue("title");
-    expect(screen.getAllByRole("radio", { name: "Bind" })[0]).toBeChecked();
-    expect(screen.getByRole("textbox", { name: "Source path for Title" })).toHaveValue("input.title");
+    expect(screen.getByRole("radio", { name: "Path for input row 1" })).toBeChecked();
+    expect(screen.getByRole("textbox", { name: "Source path for input row 1" })).toHaveValue("input.title");
     expect(screen.getByRole("combobox", { name: "Nullable" })).toHaveValue("0:null");
     expect(screen.getByRole("textbox", { name: "Target for row 3" })).toHaveValue("nested.name");
     expect(screen.getByText("Unsupported input binding.")).toBeInTheDocument();
@@ -89,6 +97,155 @@ describe("StepInputBindingsForm", () => {
     await user.click(screen.getByRole("button", { name: "Clear inputs" }));
 
     expect(submissions).toEqual([[]]);
+  });
+
+  it("blocks clear until every unsupported row is explicitly removed", async () => {
+    const user = userEvent.setup();
+    const submissions: ReadonlyArray<InputBinding>[] = [];
+    render(
+      <StepInputBindingsForm
+        inputSchema={schema}
+        initialRows={[{
+          kind: "unsupported",
+          field: "input",
+          index: 0,
+          raw: { target: "broken" },
+          reason: "Unsupported input binding.",
+        }]}
+        onSubmit={(value) => { submissions.push(value); }}
+      />,
+    );
+
+    const clear = screen.getByRole("button", { name: "Clear inputs" });
+    await user.click(clear);
+
+    expect(submissions).toEqual([]);
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Remove or repair this unsupported input row before clearing inputs.",
+    );
+    expect(clear.getAttribute("aria-describedby")).toBe(screen.getByRole("alert").id);
+
+    await user.click(screen.getByRole("button", { name: "Remove unsupported input row 1" }));
+    await user.click(clear);
+    expect(submissions).toEqual([[]]);
+  });
+
+  it("round-trips whole and nested local paths without adding the local root", async () => {
+    const user = userEvent.setup();
+    const submissions: ReadonlyArray<InputBinding>[] = [];
+    render(
+      <StepInputBindingsForm
+        inputSchema={schema}
+        initialRows={[
+          {
+            kind: "canonical",
+            index: 0,
+            value: {
+              target: { root: "local", parts: ["payload", "item"] },
+              path: { root: "input", parts: ["source"] },
+            },
+          },
+          {
+            kind: "canonical",
+            index: 1,
+            value: {
+              target: { root: "local", parts: [] },
+              path: { root: "state", parts: ["audit", "latest"] },
+            },
+          },
+        ]}
+        onSubmit={(value) => { submissions.push(value); }}
+      />,
+    );
+
+    expect(screen.getByRole("textbox", { name: "Target for row 1" })).toHaveValue("payload.item");
+    expect(screen.getByRole("textbox", { name: "Target for row 2" })).toHaveValue(".");
+    expect(screen.getByRole("textbox", { name: "Source path for input row 1" })).toHaveValue("input.source");
+    expect(screen.getByRole("textbox", { name: "Source path for input row 2" })).toHaveValue("state.audit.latest");
+
+    await user.click(screen.getByRole("button", { name: "Save inputs" }));
+
+    expect(submissions).toEqual([[
+      { target: "payload.item", path: "input.source" },
+      { target: ".", path: "state.audit.latest" },
+    ]]);
+  });
+
+  it("uses explicit row modes and immutably edits a whole object literal", async () => {
+    const user = userEvent.setup();
+    const submissions: ReadonlyArray<InputBinding>[] = [];
+    render(
+      <StepInputBindingsForm
+        inputSchema={{
+          type: "object",
+          properties: {
+            nested: {
+              type: "object",
+              properties: { name: { type: "string" }, count: { type: "integer" } },
+            },
+          },
+        }}
+        initialRows={[{
+          kind: "canonical",
+          index: 0,
+          value: { target: "nested", value: { name: "before", count: 2 } },
+        }]}
+        onSubmit={(value) => { submissions.push(value); }}
+      />,
+    );
+
+    expect(screen.getByRole("radio", { name: "Literal value for input row 1" })).toBeChecked();
+    await user.clear(screen.getByRole("textbox", { name: "Name" }));
+    await user.type(screen.getByRole("textbox", { name: "Name" }), "after");
+    await user.click(screen.getByRole("radio", { name: "Path for input row 1" }));
+    await user.clear(screen.getByRole("textbox", { name: "Source path for input row 1" }));
+    await user.type(screen.getByRole("textbox", { name: "Source path for input row 1" }), "input.nested");
+    await user.click(screen.getByRole("radio", { name: "Literal value for input row 1" }));
+    await user.click(screen.getByRole("button", { name: "Save inputs" }));
+
+    expect(submissions).toEqual([[{ target: "nested", value: { name: "after", count: 2 } }]]);
+  });
+
+  it("preserves array shape while editing a whole array literal", async () => {
+    const user = userEvent.setup();
+    const submissions: ReadonlyArray<InputBinding>[] = [];
+    render(
+      <StepInputBindingsForm
+        inputSchema={{ type: "object", properties: { items: { type: "array", items: { type: "string" } } } }}
+        initialRows={[{
+          kind: "canonical",
+          index: 0,
+          value: { target: "items", value: ["first", "second"] },
+        }]}
+        onSubmit={(value) => { submissions.push(value); }}
+      />,
+    );
+
+    await user.clear(screen.getByRole("textbox", { name: "Item 1" }));
+    await user.type(screen.getByRole("textbox", { name: "Item 1" }), "updated");
+    await user.click(screen.getByRole("button", { name: "Save inputs" }));
+
+    expect(submissions).toEqual([[{ target: "items", value: ["updated", "second"] }]]);
+  });
+
+  it("associates local row errors with the target control", async () => {
+    const user = userEvent.setup();
+    render(
+      <StepInputBindingsForm
+        inputSchema={schema}
+        initialRows={[{ kind: "canonical", index: 0, value: { path: "input.title", target: "title" } }]}
+        onSubmit={() => undefined}
+      />,
+    );
+
+    await user.clear(screen.getByRole("textbox", { name: "Target for row 1" }));
+    await user.click(screen.getByRole("button", { name: "Save inputs" }));
+
+    const target = screen.getByRole("textbox", { name: "Target for row 1" });
+    const describedBy = target.getAttribute("aria-describedby");
+    expect(target).toHaveAttribute("aria-invalid", "true");
+    expect(describedBy).toBeTruthy();
+    expect(document.getElementById(describedBy ?? "")).toHaveTextContent("Target is required.");
   });
 
   it("shows row diagnostics at the row that owns them", () => {

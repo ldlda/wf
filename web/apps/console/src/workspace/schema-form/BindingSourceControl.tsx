@@ -9,6 +9,7 @@ export type BindingSourceControlProps = {
   readonly literalValue: unknown;
   readonly onChange: (source: FieldSource) => void;
   readonly suggestions?: ReadonlyArray<string>;
+  readonly idPrefix?: string;
 };
 
 const fieldKey = (field: SchemaField): string =>
@@ -23,8 +24,9 @@ export const BindingSourceControl = ({
   literalValue,
   onChange,
   suggestions = EMPTY_SUGGESTIONS,
+  idPrefix,
 }: BindingSourceControlProps) => {
-  const key = fieldKey(field);
+  const key = idPrefix === undefined ? fieldKey(field) : `${idPrefix}-${fieldKey(field)}`;
   const literalId = `${key}-literal`;
   const bindId = `${key}-bind`;
   const sourceId = `${key}-source-path`;
