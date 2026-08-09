@@ -63,6 +63,7 @@ export const CreateDraftDialog = ({
   const dialogRef = useRef<HTMLDialogElement>(null);
   const onCloseRef = useRef(onClose);
   const unmountingRef = useRef(false);
+  const requestGenerationRef = useRef(0);
   const client = useMemo<DraftAuthoringClient | null>(
     () => (writeExecutor ? createDraftAuthoringClient(writeExecutor) : null),
     [writeExecutor],
@@ -88,6 +89,7 @@ export const CreateDraftDialog = ({
 
     return () => {
       unmountingRef.current = true;
+      requestGenerationRef.current += 1;
       closeModal(dialog);
       if (previouslyFocused !== null && document.contains(previouslyFocused)) {
         previouslyFocused.focus();
@@ -95,13 +97,26 @@ export const CreateDraftDialog = ({
     };
   }, []);
 
-  const handleCancel = (event: SyntheticEvent<HTMLDialogElement>): void => {
-    event.preventDefault();
+  const invalidatePendingCreate = (): void => {
+    requestGenerationRef.current += 1;
+  };
+
+  const isCurrentRequest = (generation: number): boolean =>
+    !unmountingRef.current && requestGenerationRef.current === generation;
+
+  const requestClose = (): void => {
+    invalidatePendingCreate();
     onCloseRef.current();
   };
 
+  const handleCancel = (event: SyntheticEvent<HTMLDialogElement>): void => {
+    event.preventDefault();
+    requestClose();
+  };
+
   const handleDialogClose = (): void => {
-    if (!unmountingRef.current) onCloseRef.current();
+    if (unmountingRef.current) return;
+    requestClose();
   };
 
   const createDraft = async (): Promise<void> => {
@@ -113,6 +128,8 @@ export const CreateDraftDialog = ({
 
     setPhase("saving");
     setMessage(null);
+    const requestGeneration = requestGenerationRef.current + 1;
+    requestGenerationRef.current = requestGeneration;
     try {
       const created =
         capability === null
@@ -123,8 +140,10 @@ export const CreateDraftDialog = ({
               title,
               capabilityName: capability.name,
             });
+      if (!isCurrentRequest(requestGeneration)) return;
       navigate(draftPath(created.workspaceId, capability));
     } catch (error: unknown) {
+      if (!isCurrentRequest(requestGeneration)) return;
       setPhase("error");
       setMessage(errorMessage(error));
     }
@@ -147,7 +166,7 @@ export const CreateDraftDialog = ({
             {capability === null ? "Create a draft workspace" : "Add capability to draft"}
           </h2>
         </div>
-        <button aria-label="Close" onClick={onClose} type="button">
+        <button aria-label="Close" onClick={requestClose} type="button">
           Close
         </button>
       </div>

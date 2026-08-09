@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
@@ -73,6 +73,19 @@ const authoringClient: DraftAuthoringClient = {
   validate: vi.fn(),
 };
 
+const deferred = <T,>(): {
+  readonly promise: Promise<T>;
+  readonly resolve: (value: T) => void;
+} => {
+  let resolvePromise: (value: T) => void = () => {
+    throw new Error("Deferred promise was resolved before it was initialized.");
+  };
+  const promise = new Promise<T>((resolve) => {
+    resolvePromise = resolve;
+  });
+  return { promise, resolve: resolvePromise };
+};
+
 const DraftDestination = () => {
   const location = useLocation();
   return <p>Destination: {location.pathname}{location.search}</p>;
@@ -106,6 +119,92 @@ beforeEach(() => {
 afterEach(() => cleanup());
 
 describe("CreateDraftDialog", () => {
+  it("does not navigate when a pending create is cancelled and later resolves", async () => {
+    const user = userEvent.setup();
+    const pendingCreate = deferred<DraftWorkspace>();
+    vi.mocked(authoringClient.createEmpty).mockReturnValueOnce(pendingCreate.promise);
+    const DialogHarness = () => {
+      const [open, setOpen] = useState(true);
+      return (
+        <>
+          {open ? (
+            <CreateDraftDialog capability={null} onClose={() => setOpen(false)} />
+          ) : (
+            <button onClick={() => setOpen(true)} type="button">
+              Reopen dialog
+            </button>
+          )}
+        </>
+      );
+    };
+
+    render(
+      <MemoryRouter initialEntries={["/console/discover"]}>
+        <Routes>
+          <Route path="/console/discover" element={<DialogHarness />} />
+          <Route path="/console/drafts/:workspaceId" element={<DraftDestination />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await user.type(screen.getByRole("textbox", { name: "Workspace id" }), "requested-id");
+    await user.type(screen.getByRole("textbox", { name: "Draft name" }), "report-workflow");
+    await user.click(screen.getByRole("button", { name: "Create draft" }));
+    await user.click(screen.getByRole("button", { name: "Close" }));
+
+    expect(screen.getByRole("button", { name: "Reopen dialog" })).toBeInTheDocument();
+    pendingCreate.resolve(workspace("stale-created"));
+    await pendingCreate.promise;
+    await waitFor(() => {
+      expect(screen.queryByText(/Destination:/)).toBeNull();
+    });
+
+    expect(authoringClient.createEmpty).toHaveBeenCalledWith({
+      workspaceId: "requested-id",
+      name: "report-workflow",
+      title: "",
+    });
+  });
+
+  it("does not let a closed instance navigate after its dialog is reopened", async () => {
+    const user = userEvent.setup();
+    const pendingCreate = deferred<DraftWorkspace>();
+    vi.mocked(authoringClient.createEmpty).mockReturnValueOnce(pendingCreate.promise);
+    const DialogHarness = () => {
+      const [open, setOpen] = useState(true);
+      return open ? (
+        <CreateDraftDialog capability={null} onClose={() => setOpen(false)} />
+      ) : (
+        <button onClick={() => setOpen(true)} type="button">
+          Reopen dialog
+        </button>
+      );
+    };
+
+    render(
+      <MemoryRouter initialEntries={["/console/discover"]}>
+        <Routes>
+          <Route path="/console/discover" element={<DialogHarness />} />
+          <Route path="/console/drafts/:workspaceId" element={<DraftDestination />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await user.type(screen.getByRole("textbox", { name: "Workspace id" }), "requested-id");
+    await user.type(screen.getByRole("textbox", { name: "Draft name" }), "report-workflow");
+    await user.click(screen.getByRole("button", { name: "Create draft" }));
+    await user.click(screen.getByRole("button", { name: "Close" }));
+    await user.click(screen.getByRole("button", { name: "Reopen dialog" }));
+
+    pendingCreate.resolve(workspace("stale-created"));
+    await pendingCreate.promise;
+    await waitFor(() => {
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText(/Destination:/)).toBeNull();
+  });
+
   it("uses a native modal lifecycle with focus and cancel handling", async () => {
     const user = userEvent.setup();
     const DialogHarness = () => {
