@@ -75,6 +75,22 @@ Implementation order:
    [`draft authoring workbench`](superpowers/specs/2026-08-05-workflow-console-draft-authoring-workbench-design.md).
    Implementation:
    [`draft authoring workbench plan`](historical/superpowers/plans/2026-08-09-workflow-console-draft-authoring-workbench.md).
+   Planned authoring slices, in order:
+   - Slice 3: selected-step dataflow editing. Inspect and atomically replace
+     ordered step input bindings and output-to-state bindings. Missing state
+     fields are projected from capability output schemas and shown for review.
+   - Slice 4: workflow contract graph. Add selectable Input, State, and Outcomes
+     projections with focused forms for workflow contracts, explicit outcomes,
+     entry point, and final workflow output bindings.
+   - Slice 5: explicit End authoring and a typed Add step palette. End nodes are
+     real stored steps; Input, State, and Outcomes remain graph projections of
+     workflow-level contracts rather than fake runtime steps.
+   - Slice 6: typed forms for interrupt, condition/choose/match, subgraph, and
+     foreach/join steps, built on the focused draft operations already exposed
+     by the workflow API.
+   - Slice 7: direct graph gestures. Typed handles and drag-to-connect lower
+     through the same canonical route and binding mutations used by inspector
+     forms; the graph never owns an independent editable document.
 5. Completed: the web console can operate the prepared
    `examples/lda_report_workflow/` deployment through run start, typed
    `issue_review` interrupt, resume, trace, and final output inspection.
