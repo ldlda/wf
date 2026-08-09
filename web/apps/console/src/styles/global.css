@@ -787,7 +787,8 @@ tbody tr:hover {
 }
 
 .schema-form__group > p,
-.schema-form__field > p {
+.schema-form__field > p,
+.schema-form__note {
   margin: 0;
   color: var(--color-slate);
   font-size: 0.82rem;
@@ -801,6 +802,17 @@ tbody tr:hover {
 
 .schema-form__field > label {
   margin: 0;
+}
+
+.schema-form__output-row-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.schema-form__output-row-fields > * {
+  min-width: 0;
 }
 
 .schema-form__source {
@@ -944,6 +956,54 @@ tbody tr:hover {
   font-size: 0.72rem;
   line-height: 1.4;
   white-space: pre;
+}
+
+.schema-form__preview {
+  min-width: 0;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.schema-form__preview summary {
+  padding: 0.6rem 0.7rem;
+  cursor: pointer;
+  font-family: var(--font-heading);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.schema-form__preview summary:focus-visible {
+  outline: 2px solid var(--color-signal-green);
+  outline-offset: -2px;
+}
+
+.schema-form__preview pre {
+  max-height: 10rem;
+  max-width: 100%;
+  margin: 0;
+  overflow: auto;
+  padding: 0.7rem;
+  background: var(--color-ink);
+  color: var(--color-paper);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  line-height: 1.4;
+  white-space: pre;
+}
+
+.schema-form__confirmation {
+  display: grid;
+  gap: 0.6rem;
+  padding: 0.7rem;
+  border: 1px solid var(--color-amber);
+  background: #fffaf0;
+}
+
+.schema-form__confirmation p {
+  margin: 0;
+  color: var(--color-slate);
+  font-size: 0.82rem;
 }
 
 /* Capability discovery keeps the result list compact while reserving a readable
@@ -1661,6 +1721,10 @@ tbody tr:nth-child(10) { animation-delay: 270ms; }
   .draft-workbench > dialog .authoring-form button,
   .draft-workbench > dialog .schema-form button {
     min-height: 2.75rem;
+  }
+
+  .schema-form__output-row-fields {
+    grid-template-columns: 1fr;
   }
 
   .capability-palette,
