@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ComponentProps } from "react";
@@ -229,6 +229,9 @@ describe("DraftDetailRoute authoring freshness", () => {
     expect(authoringClient.updateCapabilityStep).toHaveBeenCalledWith(
       expect.objectContaining({ workspaceId: "draft-report", revision: 1, stepId: "collect" }),
     );
+    const mutationRenderCount = capture.renderCount;
+    await act(async () => new Promise((resolve) => setTimeout(resolve, 0)));
+    expect(capture.renderCount).toBe(mutationRenderCount);
 
     loaderPhase = "loading";
     view.rerender(routeElement());
@@ -238,17 +241,34 @@ describe("DraftDetailRoute authoring freshness", () => {
     view.rerender(routeElement());
     await waitFor(() => expect(within(header()).getByText("Revision 3")).toBeInTheDocument());
     expect(within(header()).getByText("Invalid")).toBeInTheDocument();
+    act(() => staleCallback?.({ ...committed, revision: 99, status: "valid" }));
+    expect(within(header()).getByText("Revision 3")).toBeInTheDocument();
+    expect(within(header()).queryByText("Revision 99")).toBeNull();
+    const refreshRenderCount = capture.renderCount;
+    await act(async () => new Promise((resolve) => setTimeout(resolve, 0)));
+    expect(capture.renderCount).toBe(refreshRenderCount);
 
     loaderPhase = "disconnected";
     view.rerender(routeElement());
     expect(screen.getByText("Connect a workflow server to view this draft.")).toBeInTheDocument();
     loaderPhase = "ready";
+    view.rerender(routeElement());
+    await waitFor(() => expect(within(header()).getByText("Revision 3")).toBeInTheDocument());
+    act(() => staleCallback?.({ ...committed, revision: 100, status: "valid" }));
+    expect(within(header()).getByText("Revision 3")).toBeInTheDocument();
+    expect(within(header()).queryByText("Revision 100")).toBeNull();
+    const reconnectRenderCount = capture.renderCount;
+    await act(async () => new Promise((resolve) => setTimeout(resolve, 0)));
+    expect(capture.renderCount).toBe(reconnectRenderCount);
+
     await user.click(screen.getByRole("button", { name: "Navigate to other workspace" }));
     await waitFor(() => expect(screen.getByRole("heading", { name: "Other" })).toBeInTheDocument());
     expect(within(header()).getByText("Revision 9")).toBeInTheDocument();
-    staleCallback?.({ ...committed, revision: 99, status: "valid" });
+    act(() => staleCallback?.({ ...committed, revision: 101, status: "valid" }));
     expect(within(header()).getByText("Revision 9")).toBeInTheDocument();
-    expect(within(header()).queryByText("Revision 99")).toBeNull();
-    expect(capture.renderCount).toBeLessThan(20);
+    expect(within(header()).queryByText("Revision 101")).toBeNull();
+    const navigationRenderCount = capture.renderCount;
+    await act(async () => new Promise((resolve) => setTimeout(resolve, 0)));
+    expect(capture.renderCount).toBe(navigationRenderCount);
   });
 });

@@ -107,3 +107,31 @@ The controller-owned dirty edit to
 `web/packages/rpc/src/generated/workflow-contract.test.ts` remained untouched
 and unstaged. The final controller will rerun the full suite and browser
 acceptance against the intended controller state.
+
+## Fix Round 4
+
+The route integration test now invokes a retained callback after a newer loader
+generation for the same `draft-report` workspace and again after a
+disconnect/reconnect cycle. Both assertions prove the revision 3 loader snapshot
+remains authoritative without relying on the workspace-id guard. The existing
+cross-workspace callback check remains a separate identity-gate assertion.
+
+The permissive render-count ceiling was replaced with exact stabilization
+checks after mutation synchronization, loader refresh, reconnect, and
+navigation. Each check records the settled workbench render count, advances an
+event-loop tick, and requires the count to remain unchanged.
+
+A mutation check temporarily removed the `loaderGenerationRef` predicate while
+leaving the workspace-id predicate intact. The focused test failed because the
+same-workspace stale callback regressed the header from revision 3 to revision
+99; production was then restored unchanged.
+
+Fix-round verification passed:
+
+- Focused console command: 3 files and 20 tests.
+- `pnpm --dir web --filter @lda/console typecheck`.
+- `git diff --check`.
+
+The controller-owned dirty edit to
+`web/packages/rpc/src/generated/workflow-contract.test.ts` remained untouched
+and unstaged.
