@@ -19,6 +19,22 @@ Implemented the standalone ordered output-to-state binding form with schema sugg
 
 None.
 
+## Fix Round 2/5
+
+### Status
+
+Added concise parameterized regressions proving add, edit, and remove actions cancel pending clear confirmation and preserve the mutated rows on save. No production changes were required.
+
+### Tests
+
+- Focused Vitest: 15 tests passed.
+- Console typecheck: passed.
+- `git diff --check`: passed with only the repository CRLF conversion warning.
+
+### Concerns
+
+None.
+
 ## Fix Round 1/5
 
 ### Status

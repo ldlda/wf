@@ -24,6 +24,50 @@ const stateSchema = {
   },
 };
 
+type FormUser = ReturnType<typeof userEvent.setup>;
+type ClearMutationCase = {
+  readonly name: string;
+  readonly mutate: (user: FormUser) => Promise<void>;
+  readonly expected: ReadonlyArray<OutputBinding>;
+};
+
+const clearMutationCases: ReadonlyArray<ClearMutationCase> = [
+  {
+    name: "add",
+    mutate: async (user) => {
+      await user.click(screen.getByRole("button", { name: "Add output row" }));
+      await user.type(
+        screen.getByRole("combobox", { name: "Target for output row 3" }),
+        "state.third",
+      );
+    },
+    expected: [
+      { source: "text", target: "state.first" },
+      { source: "audit.latest", target: "state.second" },
+      { source: ".", target: "state.third" },
+    ],
+  },
+  {
+    name: "edit",
+    mutate: async (user) => {
+      const target = screen.getByRole("combobox", { name: "Target for output row 1" });
+      await user.clear(target);
+      await user.type(target, "state.edited");
+    },
+    expected: [
+      { source: "text", target: "state.edited" },
+      { source: "audit.latest", target: "state.second" },
+    ],
+  },
+  {
+    name: "remove",
+    mutate: async (user) => {
+      await user.click(screen.getByRole("button", { name: "Remove output row 2" }));
+    },
+    expected: [{ source: "text", target: "state.first" }],
+  },
+];
+
 describe("StepOutputBindingsForm", () => {
   it("offers capability output sources and existing state targets", () => {
     render(
@@ -250,6 +294,33 @@ describe("StepOutputBindingsForm", () => {
     ]]);
     expect(screen.queryByRole("button", { name: "Confirm clear outputs" })).not.toBeInTheDocument();
   });
+
+  it.each(clearMutationCases)(
+    "cancels pending clear confirmation after $name and preserves the mutated rows",
+    async ({ mutate, expected }) => {
+      const user = userEvent.setup();
+      const submissions: ReadonlyArray<OutputBinding>[] = [];
+      render(
+        <StepOutputBindingsForm
+          outputSchema={outputSchema}
+          stateSchema={stateSchema}
+          initialBindings={[
+            { source: "text", target: "state.first" },
+            { source: "audit.latest", target: "state.second" },
+          ]}
+          onSubmit={(value) => { submissions.push(value); }}
+        />,
+      );
+
+      await user.click(screen.getByRole("button", { name: "Clear outputs" }));
+      await mutate(user);
+      expect(screen.queryByRole("button", { name: "Confirm clear outputs" })).not.toBeInTheDocument();
+
+      await user.click(screen.getByRole("button", { name: "Save outputs" }));
+
+      expect(submissions).toEqual([expected]);
+    },
+  );
 
   it("blocks saving while a malformed stored row remains visible for repair", async () => {
     const user = userEvent.setup();
