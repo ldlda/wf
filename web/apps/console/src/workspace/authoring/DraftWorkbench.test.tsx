@@ -115,6 +115,13 @@ describe("DraftWorkbench", () => {
     expect(screen.getByText("Review needs a route.")).toBeInTheDocument();
   });
 
+  it("reports the controller's current canonical draft to its route owner", () => {
+    const onDraftChange = vi.fn();
+    render(<DraftWorkbench draft={workspace} onDraftChange={onDraftChange} />);
+
+    expect(onDraftChange).toHaveBeenCalledWith(workspace);
+  });
+
   it("keeps the raw draft collapsed and exposes all deferred actions without handlers", () => {
     render(<DraftWorkbench draft={workspace} />);
 

@@ -1,3 +1,4 @@
+import { useCallback, useEffect, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import type {
   DraftWorkspace,
@@ -31,6 +32,26 @@ export const DraftDetailRoute = ({
   const capabilities = useCapabilityDiscovery({ loadAllPages: true });
   const draft =
     drafts.selected?.workspaceId === workspaceId ? drafts.selected : null;
+  const [authoringDraft, setAuthoringDraft] = useState<DraftWorkspace | null>(null);
+
+  useEffect(() => {
+    setAuthoringDraft(draft);
+  }, [draft, drafts.detailPhase, workspaceId]);
+
+  // A successful mutation is displayed immediately; a later loader snapshot
+  // replaces it, and workspace ids prevent an old callback crossing routes.
+  const displayedDraft =
+    draft === null
+      ? null
+      : authoringDraft?.workspaceId === workspaceId
+        ? authoringDraft
+        : draft;
+  const handleDraftChange = useCallback(
+    (nextDraft: DraftWorkspace): void => {
+      if (nextDraft.workspaceId === workspaceId) setAuthoringDraft(nextDraft);
+    },
+    [workspaceId],
+  );
 
   return (
     <div className="draft-detail">
@@ -49,17 +70,17 @@ export const DraftDetailRoute = ({
       )}
       {drafts.detailPhase === "idle" && <p role="status">Select a draft workspace to inspect.</p>}
 
-      {draft && (
+      {draft && displayedDraft && (
         <>
           <header className="draft-detail__header">
             <p className="workspace-route-pending__eyebrow">Draft authoring workbench</p>
-            <h1>{titleFor(draft)}</h1>
-            <p className="draft-detail__workspace-id">{draft.workspaceId}</p>
+            <h1>{titleFor(displayedDraft)}</h1>
+            <p className="draft-detail__workspace-id">{displayedDraft.workspaceId}</p>
             <p className="draft-detail__status-line">
-              <span className="draft-workspaces__status" data-status={draft.status}>
-                {formatStatus(draft.status)}
+              <span className="draft-workspaces__status" data-status={displayedDraft.status}>
+                {formatStatus(displayedDraft.status)}
               </span>
-              <span>Revision {draft.revision}</span>
+              <span>Revision {displayedDraft.revision}</span>
             </p>
           </header>
 
@@ -68,6 +89,7 @@ export const DraftDetailRoute = ({
             draft={draft}
             enableNavigationProtection={enableNavigationProtection}
             initialSelection={initialSelection}
+            onDraftChange={handleDraftChange}
           />
         </>
       )}

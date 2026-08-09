@@ -13,6 +13,7 @@ type DraftWorkbenchProps = {
   readonly draft: DraftWorkspace;
   readonly capabilities?: ReadonlyArray<CapabilitySummary>;
   readonly initialSelection?: WorkbenchSelection;
+  readonly onDraftChange?: (draft: DraftWorkspace) => void;
   readonly onSelectionChange?: (selection: WorkbenchSelection) => void;
   readonly enableNavigationProtection?: boolean;
 };
@@ -130,6 +131,7 @@ export const DraftWorkbench = ({
   draft,
   capabilities = EMPTY_CAPABILITIES,
   initialSelection = { kind: "canvas" },
+  onDraftChange,
   onSelectionChange,
   enableNavigationProtection = false,
 }: DraftWorkbenchProps) => {
@@ -138,6 +140,9 @@ export const DraftWorkbench = ({
   const [openSheet, setOpenSheet] = useState<MobileSheet | null>(null);
   const paletteTriggerRef = useRef<HTMLButtonElement>(null);
   const inspectorTriggerRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    onDraftChange?.(controller.draft);
+  }, [controller.draft, onDraftChange]);
   // Resolve capability details from the controller draft so a newly committed
   // node can immediately render its edit form before the route-level loader refreshes.
   const graph = projectAuthoringGraph(controller.draft.draft);
