@@ -18,9 +18,15 @@ export type SchemaBinding = {
   readonly path: string;
 };
 
+export type SchemaLiteralBinding = {
+  readonly target: string;
+  readonly value: unknown;
+};
+
 export type SchemaSerializationResult = {
   readonly value: unknown;
   readonly bindings: ReadonlyArray<SchemaBinding>;
+  readonly literalBindings: ReadonlyArray<SchemaLiteralBinding>;
   readonly issues: ReadonlyArray<SchemaValueIssue>;
 };
 
@@ -30,6 +36,7 @@ type SerializedField = {
   readonly present: boolean;
   readonly value: unknown;
   readonly bindings: ReadonlyArray<SchemaBinding>;
+  readonly literalBindings: ReadonlyArray<SchemaLiteralBinding>;
   readonly issues: ReadonlyArray<SchemaValueIssue>;
 };
 
@@ -199,6 +206,7 @@ const serializeField = (
         present: field.required,
         value: undefined,
         bindings: [],
+        literalBindings: [],
         issues: [issue(field.path, "Binding path must start with input, state, or context.")],
       };
     }
@@ -206,6 +214,7 @@ const serializeField = (
       present: true,
       value: undefined,
       bindings: [{ target: targetPath(field.path), path: source.sourcePath }],
+      literalBindings: [],
       issues: [],
     };
   }
@@ -223,7 +232,7 @@ const serializeField = (
           : sourceValue
       : sourceValue;
   if (!usingDefault && raw === undefined && !field.required && !hasNestedSource) {
-    return { present: false, value: undefined, bindings: [], issues: [] };
+    return { present: false, value: undefined, bindings: [], literalBindings: [], issues: [] };
   }
   if (
     !usingDefault &&
@@ -232,7 +241,7 @@ const serializeField = (
     isEmptyValue(raw) &&
     !field.required
   ) {
-    return { present: false, value: undefined, bindings: [], issues: [] };
+    return { present: false, value: undefined, bindings: [], literalBindings: [], issues: [] };
   }
 
   if (field.kind === "object") {
@@ -241,22 +250,28 @@ const serializeField = (
         present: field.required,
         value: raw,
         bindings: [],
+        literalBindings: [],
         issues: [issue(field.path, "Enter an object value.")],
       };
     }
     const value: ValueRecord = {};
     const bindings: SchemaBinding[] = [];
+    const literalBindings: SchemaLiteralBinding[] = [];
     const issues: SchemaValueIssue[] = [];
     for (const child of field.children) {
       const childValue = serializeField(child, raw[child.key], sources);
       if (childValue.present) value[child.key] = childValue.value;
       bindings.push(...childValue.bindings);
+      literalBindings.push(...childValue.literalBindings);
       issues.push(...childValue.issues);
     }
     if (Object.keys(value).length === 0 && !field.required && bindings.length === 0 && !usingDefault) {
-      return { present: false, value: undefined, bindings, issues };
+      return { present: false, value: undefined, bindings, literalBindings, issues };
     }
-    return { present: true, value, bindings, issues };
+    if (field.children.length === 0) {
+      literalBindings.push({ target: targetPath(field.path), value });
+    }
+    return { present: true, value, bindings, literalBindings, issues };
   }
 
   if (field.kind === "array") {
@@ -265,11 +280,13 @@ const serializeField = (
         present: field.required,
         value: raw,
         bindings: [],
+        literalBindings: [],
         issues: [issue(field.path, "Enter an array value.")],
       };
     }
     const value: unknown[] = [];
     const bindings: SchemaBinding[] = [];
+    const literalBindings: SchemaLiteralBinding[] = [];
     const issues: SchemaValueIssue[] = [];
     const item = field.item;
     if (item) {
@@ -278,13 +295,17 @@ const serializeField = (
         const serialized = serializeField(itemField, itemValue, sources);
         if (serialized.present) value.push(serialized.value);
         bindings.push(...serialized.bindings);
+        literalBindings.push(...serialized.literalBindings);
         issues.push(...serialized.issues);
       });
     }
     if (value.length === 0 && bindings.length === 0 && !field.required && !usingDefault) {
-      return { present: false, value: undefined, bindings, issues };
+      return { present: false, value: undefined, bindings, literalBindings, issues };
     }
-    return { present: true, value, bindings, issues };
+    if (item === null) {
+      literalBindings.push({ target: targetPath(field.path), value });
+    }
+    return { present: true, value, bindings, literalBindings, issues };
   }
 
   if (field.kind === "string") {
@@ -293,6 +314,7 @@ const serializeField = (
         present: true,
         value: "",
         bindings: [],
+        literalBindings: [{ target: targetPath(field.path), value: "" }],
         issues: [issue(field.path, "Required field is incomplete.")],
       };
     }
@@ -300,6 +322,7 @@ const serializeField = (
       present: true,
       value: raw,
       bindings: [],
+      literalBindings: [{ target: targetPath(field.path), value: raw }],
       issues: field.required && raw === "" ? [issue(field.path, "Required field is incomplete.")] : [],
     };
   }
@@ -309,6 +332,7 @@ const serializeField = (
       present: true,
       value: "",
       bindings: [],
+      literalBindings: [{ target: targetPath(field.path), value: "" }],
       issues: [issue(field.path, "Required field is incomplete.")],
     };
   }
@@ -327,6 +351,10 @@ const serializeField = (
     present: true,
     value: parsed.value,
     bindings: [],
+    literalBindings:
+      parsed.value === undefined
+        ? []
+        : [{ target: targetPath(field.path), value: parsed.value }],
     issues: parsed.message ? [issue(field.path, parsed.message)] : [],
   };
 };
@@ -340,6 +368,7 @@ export const serializeSchemaValues = (
   return {
     value: serialized.value,
     bindings: serialized.bindings,
+    literalBindings: serialized.literalBindings,
     issues: serialized.issues,
   };
 };

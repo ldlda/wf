@@ -5,7 +5,8 @@ import type { DraftWorkspace } from "../domain/draft-workspace-models.js";
 import { AuthoringGraph } from "./AuthoringGraph.js";
 import { CapabilityPalette } from "./CapabilityPalette.js";
 import { ContextInspector } from "./ContextInspector.js";
-import type { WorkbenchSelection } from "./authoring-graph.js";
+import { projectAuthoringGraph, type WorkbenchSelection } from "./authoring-graph.js";
+import { useAuthoringCapabilityDetail } from "./useAuthoringCapabilityDetail.js";
 import { useDraftAuthoring } from "./useDraftAuthoring.js";
 
 type DraftWorkbenchProps = {
@@ -26,6 +27,15 @@ export const DraftWorkbench = ({
   enableNavigationProtection = false,
 }: DraftWorkbenchProps) => {
   const controller = useDraftAuthoring({ draft, initialSelection });
+  const graph = projectAuthoringGraph(draft.draft);
+  let capabilityName: string | null = null;
+  if (controller.selection.kind === "capability") {
+    capabilityName = controller.selection.qualifiedName;
+  } else if (controller.selection.kind === "node") {
+    const nodeId = controller.selection.nodeId;
+    capabilityName = graph.nodes.find((node) => node.id === nodeId)?.data.nodeRef ?? null;
+  }
+  const capabilityDetail = useAuthoringCapabilityDetail(capabilityName);
   const select = useCallback(
     (nextSelection: WorkbenchSelection): void => {
       controller.select(nextSelection);
@@ -50,6 +60,9 @@ export const DraftWorkbench = ({
         />
         <ContextInspector
           capabilities={capabilities}
+          capabilityDetail={capabilityDetail.detail}
+          capabilityDetailMessage={capabilityDetail.message}
+          capabilityDetailPhase={capabilityDetail.phase}
           controller={controller}
           draft={controller.draft}
           selection={controller.selection}

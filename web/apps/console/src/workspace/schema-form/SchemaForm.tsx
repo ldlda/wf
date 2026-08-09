@@ -17,6 +17,7 @@ export type SchemaFormProps = {
   readonly initialSources?: FieldSources;
   readonly diagnostics?: ReadonlyArray<SchemaValueIssue>;
   readonly onSubmit?: (result: SchemaSerializationResult) => void;
+  readonly onValueChange?: (result: SchemaSerializationResult) => void;
   readonly onDirtyChange?: (dirty: boolean) => void;
   readonly renderBeforeFields?: ReactNode;
   readonly submitLabel?: string;
@@ -97,6 +98,7 @@ export const SchemaForm = ({
   initialSources = EMPTY_SOURCES,
   diagnostics = EMPTY_DIAGNOSTICS,
   onSubmit,
+  onValueChange,
   onDirtyChange,
   renderBeforeFields,
   submitLabel = "Save form",
@@ -111,42 +113,52 @@ export const SchemaForm = ({
   const allDiagnostics = [...diagnostics, ...submitIssues];
 
   const handleValueChange = (changedField: SchemaField, nextValue: unknown): void => {
-    setValues((current: unknown) => setAtPath(current, changedField.path, nextValue));
+    const nextValues = setAtPath(values, changedField.path, nextValue);
+    let nextSources = sources;
+    setValues(nextValues);
     onDirtyChange?.(true);
     const currentSource = sources[sourceKey(changedField)];
     if (currentSource?.mode === "literal") {
-      setSources((current) => ({
-        ...current,
+      nextSources = {
+        ...sources,
+        [sourceKey(changedField)]: { mode: "literal", value: nextValue },
+      };
+      setSources(() => ({
+        ...sources,
         [sourceKey(changedField)]: { mode: "literal", value: nextValue },
       }));
     }
+    onValueChange?.(serializeSchemaValues(field, nextValues, nextSources));
   };
 
   const handleSourceChange = (changedField: SchemaField, source: FieldSource): void => {
     onDirtyChange?.(true);
+    const nextValues = source.mode === "literal"
+      ? setAtPath(values, changedField.path, source.value)
+      : values;
+    const nextSources = { ...sources, [sourceKey(changedField)]: source };
     if (source.mode === "literal") {
-      setValues((current: unknown) => setAtPath(current, changedField.path, source.value));
+      setValues(nextValues);
     }
-    setSources((current) => ({ ...current, [sourceKey(changedField)]: source }));
+    setSources(nextSources);
+    onValueChange?.(serializeSchemaValues(field, nextValues, nextSources));
   };
 
   const handleArrayItemRemove = (arrayField: SchemaField, index: number): void => {
     onDirtyChange?.(true);
-    setValues((current: unknown) => {
-      const arrayValue = readAtPath(current, arrayField.path);
-      if (!Array.isArray(arrayValue)) return current;
-      return setAtPath(
-        current,
-        arrayField.path,
-        arrayValue.filter((_, itemIndex) => itemIndex !== index),
-      );
-    });
-    setSources((current) =>
-      rebaseFieldSourcesAfterArrayRemoval(current, arrayField.path, index),
+    const arrayValue = readAtPath(values, arrayField.path);
+    if (!Array.isArray(arrayValue)) return;
+    const nextValues = setAtPath(
+      values,
+      arrayField.path,
+      arrayValue.filter((_, itemIndex) => itemIndex !== index),
     );
-    setSubmitIssues((current) =>
-      rebaseSchemaIssuesAfterArrayRemoval(current, arrayField.path, index),
-    );
+    const nextSources = rebaseFieldSourcesAfterArrayRemoval(sources, arrayField.path, index);
+    const nextIssues = rebaseSchemaIssuesAfterArrayRemoval(submitIssues, arrayField.path, index);
+    setValues(nextValues);
+    setSources(nextSources);
+    setSubmitIssues(nextIssues);
+    onValueChange?.(serializeSchemaValues(field, nextValues, nextSources));
   };
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>): void => {

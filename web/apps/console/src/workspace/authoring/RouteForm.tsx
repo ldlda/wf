@@ -1,4 +1,5 @@
 import { useRef } from "react";
+import type { DraftDiagnostic } from "../domain/draft-workspace-models.js";
 
 export type RouteFormValue = {
   readonly stepId: string;
@@ -9,6 +10,8 @@ export type RouteFormValue = {
 export type RouteFormProps = {
   readonly initialValue?: Partial<RouteFormValue>;
   readonly onSubmit: (value: RouteFormValue) => void | Promise<void>;
+  readonly onValueChange?: (value: RouteFormValue) => void;
+  readonly diagnostics?: ReadonlyArray<DraftDiagnostic>;
   readonly onDirtyChange?: (dirty: boolean) => void;
   readonly hidden?: boolean;
   readonly submitLabel?: string;
@@ -17,6 +20,8 @@ export type RouteFormProps = {
 export const RouteForm = ({
   initialValue,
   onSubmit,
+  onValueChange,
+  diagnostics = [],
   onDirtyChange,
   hidden = false,
   submitLabel = "Set route",
@@ -30,6 +35,15 @@ export const RouteForm = ({
     dirtyRef.current = true;
     onDirtyChange?.(true);
   };
+  const readValue = (): RouteFormValue => ({
+    stepId: stepIdRef.current?.value ?? "",
+    outcome: outcomeRef.current?.value ?? "",
+    target: targetRef.current?.value ?? "",
+  });
+  const notifyValueChange = (): void => {
+    markDirty();
+    onValueChange?.(readValue());
+  };
 
   return (
     <form
@@ -37,11 +51,7 @@ export const RouteForm = ({
       hidden={hidden}
       onSubmit={(event) => {
         event.preventDefault();
-        void onSubmit({
-          stepId: stepIdRef.current?.value ?? "",
-          outcome: outcomeRef.current?.value ?? "",
-          target: targetRef.current?.value ?? "",
-        });
+        void Promise.resolve(onSubmit(readValue())).catch(() => undefined);
       }}
     >
       <label>
@@ -51,7 +61,7 @@ export const RouteForm = ({
           defaultValue={initialValue?.stepId ?? ""}
           ref={stepIdRef}
           onChange={(event) => {
-            markDirty();
+            notifyValueChange();
           }}
         />
       </label>
@@ -62,7 +72,7 @@ export const RouteForm = ({
           defaultValue={initialValue?.outcome ?? ""}
           ref={outcomeRef}
           onChange={(event) => {
-            markDirty();
+            notifyValueChange();
           }}
         />
       </label>
@@ -73,10 +83,13 @@ export const RouteForm = ({
           defaultValue={initialValue?.target ?? ""}
           ref={targetRef}
           onChange={(event) => {
-            markDirty();
+            notifyValueChange();
           }}
         />
       </label>
+      {diagnostics.map((diagnostic) => (
+        <p key={`${diagnostic.code}:${diagnostic.path}`} role="alert">{diagnostic.message}</p>
+      ))}
       <button type="submit">{submitLabel}</button>
     </form>
   );

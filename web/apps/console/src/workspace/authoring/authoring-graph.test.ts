@@ -67,10 +67,8 @@ describe("WorkbenchSelection", () => {
     });
   });
 
-  it("keeps node insertion connected to a step without inventing an outcome", () => {
-    expect(deriveInsertionContext({ kind: "node", nodeId: "collect" })).toEqual({
-      routeFromStep: "collect",
-    });
+  it("does not derive an incoming route from a node without an outcome", () => {
+    expect(deriveInsertionContext({ kind: "node", nodeId: "collect" })).toBeNull();
   });
 
   it("does not derive insertion context from canvas or capability selection", () => {

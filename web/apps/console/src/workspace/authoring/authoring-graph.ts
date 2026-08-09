@@ -199,6 +199,5 @@ export const deriveInsertionContext = (
       routeFromOutcome: selection.outcome,
     };
   }
-  if (selection.kind === "node") return { routeFromStep: selection.nodeId };
   return null;
 };

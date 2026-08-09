@@ -147,8 +147,8 @@ describe("useDraftAuthoring", () => {
     );
 
     await act(async () => result.current.addCapability(capabilityInput));
-    expect(authoringClient.addCapabilityStep).toHaveBeenLastCalledWith(
-      expect.objectContaining({ routeFromStep: "read" }),
+    expect(authoringClient.addCapabilityStep.mock.calls.at(-1)?.[0]).not.toHaveProperty(
+      "routeFromStep",
     );
     expect(authoringClient.addCapabilityStep.mock.calls.at(-1)?.[0]).not.toHaveProperty(
       "routeFromOutcome",
@@ -196,7 +196,12 @@ describe("useDraftAuthoring", () => {
   it("preserves dirty form ownership on ordinary failures and revision conflicts", async () => {
     const initial = workspace();
     authoringClient.addCapabilityStep.mockRejectedValueOnce(new Error("server unavailable"));
-    const { result } = renderHook(() => useDraftAuthoring({ draft: initial }));
+    const { result } = renderHook(() =>
+      useDraftAuthoring({
+        draft: initial,
+        initialSelection: { kind: "capability", qualifiedName: "demo.enrich" },
+      }),
+    );
 
     await act(async () => result.current.addCapability(capabilityInput));
     expect(result.current.phase).toBe("error");
@@ -222,6 +227,86 @@ describe("useDraftAuthoring", () => {
     expect(result.current.phase).toBe("conflict");
     expect(result.current.draft).toBe(conflict);
     expect(result.current.dirty).toBe(true);
+    expect(result.current.selection).toEqual({
+      kind: "capability",
+      qualifiedName: "demo.enrich",
+    });
+  });
+
+  it("does not send different writes or validation concurrently for one revision", async () => {
+    const initial = workspace({ revision: 6 });
+    let resolveAdd: ((value: DraftWorkspace) => void) | undefined;
+    authoringClient.addCapabilityStep.mockReturnValueOnce(
+      new Promise<DraftWorkspace>((resolve) => { resolveAdd = resolve; }),
+    );
+    const { result } = renderHook(() => useDraftAuthoring({ draft: initial }));
+
+    let first: Promise<void> | undefined;
+    act(() => { first = result.current.addCapability(capabilityInput); });
+    const second = result.current.addCapability({ ...capabilityInput, stepId: "publish" });
+    const validation = result.current.validate();
+
+    await expect(second).rejects.toThrow("Another draft authoring request is in progress.");
+    await expect(validation).rejects.toThrow("Another draft authoring request is in progress.");
+    expect(authoringClient.addCapabilityStep).toHaveBeenCalledTimes(1);
+    expect(authoringClient.validate).not.toHaveBeenCalled();
+
+    resolveAdd?.(workspace({ revision: 7 }));
+    await act(async () => first);
+  });
+
+  it("coalesces duplicate validation requests for the loaded revision", async () => {
+    const initial = workspace({ revision: 8 });
+    let resolveValidation: ((value: DraftWorkspace) => void) | undefined;
+    authoringClient.validate.mockReturnValueOnce(
+      new Promise<DraftWorkspace>((resolve) => { resolveValidation = resolve; }),
+    );
+    const { result } = renderHook(() => useDraftAuthoring({ draft: initial }));
+
+    let first: Promise<void> | undefined;
+    let second: Promise<void> | undefined;
+    act(() => {
+      first = result.current.validate();
+      second = result.current.validate();
+    });
+
+    expect(first).toBe(second);
+    expect(authoringClient.validate).toHaveBeenCalledTimes(1);
+    resolveValidation?.(workspace({ revision: 8, status: "valid" }));
+    await act(async () => first);
+  });
+
+  it("rejects mutation, validation, and reload responses for another workspace", async () => {
+    const initial = workspace();
+    const wrongWorkspace = workspace({ workspaceId: "other-workspace", revision: 99 });
+    authoringClient.addCapabilityStep.mockResolvedValueOnce(wrongWorkspace);
+    authoringClient.validate.mockResolvedValueOnce(wrongWorkspace);
+    workspaceClient.load.mockResolvedValueOnce(wrongWorkspace);
+    const { result } = renderHook(() => useDraftAuthoring({ draft: initial }));
+
+    await act(async () => result.current.addCapability(capabilityInput));
+    expect(result.current.draft).toBe(initial);
+    await act(async () => result.current.validate());
+    expect(result.current.draft).toBe(initial);
+    await act(async () => result.current.reload());
+    expect(result.current.draft).toBe(initial);
+  });
+
+  it("reapplies the current preserved form value after a conflict", async () => {
+    const initial = workspace();
+    const conflict = workspace({ revision: 4, status: "conflict" });
+    authoringClient.addCapabilityStep
+      .mockResolvedValueOnce(conflict)
+      .mockResolvedValueOnce(workspace({ revision: 5 }));
+    const { result } = renderHook(() => useDraftAuthoring({ draft: initial }));
+
+    await act(async () => result.current.addCapability(capabilityInput));
+    act(() => result.current.rememberCapabilityForm("add", { ...capabilityInput, description: "edited after conflict" }));
+    await act(async () => result.current.reapply());
+
+    expect(authoringClient.addCapabilityStep).toHaveBeenLastCalledWith(
+      expect.objectContaining({ description: "edited after conflict" }),
+    );
   });
 
   it("reloads explicitly and coalesces duplicate submissions", async () => {

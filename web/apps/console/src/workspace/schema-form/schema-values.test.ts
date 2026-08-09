@@ -79,7 +79,36 @@ describe("serializeSchemaValues", () => {
     expect(result.bindings).toEqual([
       { target: "profile.email", path: "input.user.email" },
     ]);
+    expect(result.literalBindings).toEqual([
+      { target: "title", value: "Report" },
+    ]);
     expect(result.issues).toEqual([]);
+  });
+
+  it("lowers root, nested, array, and null literals without wrappers", () => {
+    const objectResult = serializeSchemaValues(
+      normalizeSchema({
+        type: "object",
+        properties: {
+          profile: {
+            type: "object",
+            properties: { display: { type: "string" } },
+          },
+          tags: { type: "array", items: { type: "string" } },
+          note: { type: "string" },
+        },
+      }),
+      { profile: { display: "Ada" }, tags: ["one", "two"], note: null },
+    );
+    const rootResult = serializeSchemaValues(normalizeSchema({ type: "array", items: { type: "string" } }), ["one"]);
+
+    expect(objectResult.literalBindings).toEqual([
+      { target: "profile.display", value: "Ada" },
+      { target: "tags.0", value: "one" },
+      { target: "tags.1", value: "two" },
+      { target: "note", value: null },
+    ]);
+    expect(rootResult.literalBindings).toEqual([{ target: "0", value: "one" }]);
   });
 
   it("returns a field-local issue for malformed binding paths without throwing", () => {

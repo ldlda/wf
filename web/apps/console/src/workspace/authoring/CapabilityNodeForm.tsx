@@ -1,8 +1,13 @@
-import { useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import type { InputBinding } from "../domain/draft-workspace-models.js";
 import { SchemaForm } from "../schema-form/SchemaForm.js";
-import type { FieldSources } from "../schema-form/schema-values.js";
-import type { SchemaValueIssue } from "../schema-form/schema-values.js";
+import { normalizeSchema } from "../schema-form/schema-field.js";
+import {
+  serializeSchemaValues,
+  type FieldSources,
+  type SchemaSerializationResult,
+  type SchemaValueIssue,
+} from "../schema-form/schema-values.js";
 
 export type CapabilityNodeFormValue = {
   readonly stepId: string;
@@ -18,39 +23,29 @@ export type CapabilityNodeFormValue = {
 
 export type CapabilityNodeFormProps = {
   readonly capabilityName: string;
-  readonly inputSchema?: unknown;
+  readonly inputSchema: unknown;
   readonly initialValue?: Partial<CapabilityNodeFormValue>;
   readonly initialInputValue?: unknown;
   readonly initialInputSources?: FieldSources;
   readonly diagnostics?: ReadonlyArray<SchemaValueIssue>;
+  readonly metadataDiagnostics?: ReadonlyArray<SchemaValueIssue>;
   readonly onSubmit: (value: CapabilityNodeFormValue) => void | Promise<void>;
+  readonly onValueChange?: (value: CapabilityNodeFormValue) => void;
   readonly onDirtyChange?: (dirty: boolean) => void;
   readonly submitLabel?: string;
   readonly hidden?: boolean;
 };
 
-const emptySchema = { type: "object", properties: {} };
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
-
-const literalBindingsFor = (value: unknown): InputBinding[] => {
-  if (!isRecord(value)) return [];
-  return Object.entries(value).flatMap(([target, literal]) =>
-    literal === undefined
-      ? []
-      : [{ target, value: { value: literal } } satisfies InputBinding],
-  );
-};
-
 export const CapabilityNodeForm = ({
   capabilityName,
-  inputSchema = emptySchema,
+  inputSchema,
   initialValue,
   initialInputValue,
   initialInputSources,
   diagnostics,
+  metadataDiagnostics = [],
   onSubmit,
+  onValueChange,
   onDirtyChange,
   submitLabel = "Add node",
   hidden = false,
@@ -60,11 +55,54 @@ export const CapabilityNodeForm = ({
   const retryRef = useRef<HTMLInputElement>(null);
   const timeoutSecondsRef = useRef<HTMLInputElement>(null);
   const dirtyRef = useRef(false);
+  const initialSchemaResult = useMemo(
+    () => serializeSchemaValues(
+      normalizeSchema(inputSchema),
+      initialInputValue,
+      initialInputSources,
+    ),
+    [initialInputSources, initialInputValue, inputSchema],
+  );
+  const schemaResultRef = useRef<SchemaSerializationResult | null>(null);
+  useEffect(() => {
+    schemaResultRef.current = initialSchemaResult;
+  }, [initialSchemaResult]);
+
+  const valueFor = (result: SchemaSerializationResult): CapabilityNodeFormValue => ({
+    stepId: stepIdRef.current?.value ?? "",
+    capabilityName,
+    description: descriptionRef.current?.value.trim() || null,
+    retry:
+      retryRef.current?.value.trim() === ""
+        ? null
+        : Number(retryRef.current?.value ?? ""),
+    timeoutSeconds:
+      timeoutSecondsRef.current?.value.trim() === ""
+        ? null
+        : Number(timeoutSecondsRef.current?.value ?? ""),
+    inputBindings: [
+      ...result.bindings,
+      ...result.literalBindings,
+    ],
+  });
+
+  const notifyValueChange = (result: SchemaSerializationResult): void => {
+    schemaResultRef.current = result;
+    onValueChange?.(valueFor(result));
+  };
+
+  const metadataMessage = (field: string): string | null =>
+    metadataDiagnostics.find((diagnostic) => diagnostic.path.at(-1) === field)?.message ?? null;
 
   const markDirty = (): void => {
     if (dirtyRef.current) return;
     dirtyRef.current = true;
     onDirtyChange?.(true);
+  };
+
+  const notifyMetadataChange = (): void => {
+    markDirty();
+    onValueChange?.(valueFor(schemaResultRef.current ?? initialSchemaResult));
   };
 
   return (
@@ -74,29 +112,11 @@ export const CapabilityNodeForm = ({
         {...(initialInputSources === undefined ? {} : { initialSources: initialInputSources })}
         {...(initialInputValue === undefined ? {} : { initialValue: initialInputValue })}
         onDirtyChange={markDirty}
+        onValueChange={notifyValueChange}
         onSubmit={(result) => {
           if (result.issues.length > 0) return;
-          const inputBindings: InputBinding[] = [
-            ...result.bindings.map((binding) => ({
-              target: binding.target,
-              path: binding.path,
-            })),
-            ...literalBindingsFor(result.value),
-          ];
-          void onSubmit({
-            stepId: stepIdRef.current?.value ?? "",
-            capabilityName,
-            description: descriptionRef.current?.value.trim() || null,
-            retry:
-              retryRef.current?.value.trim() === ""
-                ? null
-                : Number(retryRef.current?.value ?? ""),
-            timeoutSeconds:
-              timeoutSecondsRef.current?.value.trim() === ""
-                ? null
-                : Number(timeoutSecondsRef.current?.value ?? ""),
-            inputBindings,
-          });
+          notifyValueChange(result);
+          void Promise.resolve(onSubmit(valueFor(result))).catch(() => undefined);
         }}
         renderBeforeFields={
           <>
@@ -107,9 +127,10 @@ export const CapabilityNodeForm = ({
                 defaultValue={initialValue?.stepId ?? ""}
                 ref={stepIdRef}
                 onChange={(event) => {
-                  markDirty();
+                  notifyMetadataChange();
                 }}
               />
+              {metadataMessage("stepId") && <p role="alert">{metadataMessage("stepId")}</p>}
             </label>
             <label>
               Description
@@ -118,9 +139,10 @@ export const CapabilityNodeForm = ({
                 defaultValue={initialValue?.description ?? ""}
                 ref={descriptionRef}
                 onChange={(event) => {
-                  markDirty();
+                  notifyMetadataChange();
                 }}
               />
+              {metadataMessage("desc") && <p role="alert">{metadataMessage("desc")}</p>}
             </label>
             <label>
               Retry
@@ -134,10 +156,11 @@ export const CapabilityNodeForm = ({
                 inputMode="numeric"
                 ref={retryRef}
                 onChange={(event) => {
-                  markDirty();
+                  notifyMetadataChange();
                 }}
                 type="number"
               />
+              {metadataMessage("retry") && <p role="alert">{metadataMessage("retry")}</p>}
             </label>
             <label>
               Timeout seconds
@@ -151,10 +174,11 @@ export const CapabilityNodeForm = ({
                 inputMode="numeric"
                 ref={timeoutSecondsRef}
                 onChange={(event) => {
-                  markDirty();
+                  notifyMetadataChange();
                 }}
                 type="number"
               />
+              {metadataMessage("timeout_seconds") && <p role="alert">{metadataMessage("timeout_seconds")}</p>}
             </label>
           </>
         }

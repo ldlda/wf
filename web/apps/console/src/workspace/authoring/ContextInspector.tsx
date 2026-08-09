@@ -1,18 +1,23 @@
 import type { ReactNode } from "react";
 import type { DraftDiagnostic, DraftWorkspace } from "../domain/draft-workspace-models.js";
-import type { CapabilitySummary } from "../domain/capability-models.js";
+import type { CapabilityDetail, CapabilitySummary } from "../domain/capability-models.js";
+import type { SchemaValueIssue } from "../schema-form/schema-values.js";
 import { projectAuthoringGraph, type WorkbenchSelection } from "./authoring-graph.js";
 import { withDiagnosticKeys } from "./diagnostic-key.js";
 import { formatBoundedJson } from "./format-bounded-json.js";
 import { CapabilityNodeForm } from "./CapabilityNodeForm.js";
 import { RouteForm } from "./RouteForm.js";
 import type { DraftAuthoringController } from "./useDraftAuthoring.js";
+import { canonicalCapabilityFormData } from "./canonical-capability-form.js";
 
 type ContextInspectorProps = {
   readonly draft: DraftWorkspace;
   readonly capabilities: ReadonlyArray<CapabilitySummary>;
   readonly selection: WorkbenchSelection;
   readonly controller: DraftAuthoringController;
+  readonly capabilityDetail: CapabilityDetail | null;
+  readonly capabilityDetailPhase: "disconnected" | "loading" | "ready" | "error";
+  readonly capabilityDetailMessage: string | null;
 };
 
 const formatStatus = (status: DraftWorkspace["status"]): string =>
@@ -23,6 +28,58 @@ const formatValue = (value: unknown): string => {
   const encoded = JSON.stringify(value);
   return encoded ?? String(value);
 };
+
+const diagnosticParts = (path: string): string[] => {
+  const normalized = path.startsWith("/")
+    ? path.slice(1).replaceAll("~1", "/").replaceAll("~0", "~")
+    : path.replace(/\[([^\]]+)\]/g, ".$1");
+  return normalized.split(".").filter((part) => part.length > 0);
+};
+
+const fieldDiagnostic = (
+  diagnostic: DraftDiagnostic,
+  stepId: string,
+): SchemaValueIssue | null => {
+  if (diagnostic.stepId !== null && diagnostic.stepId !== stepId) return null;
+  const parts = diagnosticParts(diagnostic.path);
+  const stepIndex = parts.findIndex((part) => part === stepId);
+  if (stepIndex >= 0 && parts[stepIndex - 1] !== "steps" && parts[stepIndex - 1] !== "nodes") return null;
+  const inputIndex = parts.indexOf("input");
+  if (inputIndex < 0) return null;
+  return { path: parts.slice(inputIndex + 1), message: diagnostic.message };
+};
+
+const metadataDiagnostics = (
+  diagnostics: ReadonlyArray<DraftDiagnostic>,
+  stepId: string,
+): ReadonlyArray<SchemaValueIssue> => diagnostics.flatMap((diagnostic) => {
+  if (diagnostic.stepId !== null && diagnostic.stepId !== stepId) return [];
+  const parts = diagnosticParts(diagnostic.path);
+  const stepIndex = parts.findIndex((part) => part === stepId);
+  if (stepIndex >= 0 && parts[stepIndex - 1] !== "steps" && parts[stepIndex - 1] !== "nodes") return [];
+  if (parts.includes("input")) return [];
+  const field = parts.at(-1);
+  return field === "desc" || field === "retry" || field === "timeout_seconds"
+    ? [{ path: [field], message: diagnostic.message }]
+    : [];
+});
+
+const inputDiagnostics = (
+  diagnostics: ReadonlyArray<DraftDiagnostic>,
+  stepId: string,
+): ReadonlyArray<SchemaValueIssue> => diagnostics.flatMap((diagnostic) => {
+  const issue = fieldDiagnostic(diagnostic, stepId);
+  return issue === null ? [] : [issue];
+});
+
+const routeDiagnostics = (
+  diagnostics: ReadonlyArray<DraftDiagnostic>,
+  selection: Extract<WorkbenchSelection, { readonly kind: "edge" }>,
+): ReadonlyArray<DraftDiagnostic> => diagnostics.filter((diagnostic) => {
+  if (diagnostic.stepId !== null && diagnostic.stepId !== selection.stepId) return false;
+  const parts = diagnosticParts(diagnostic.path);
+  return parts.includes("routes") || diagnostic.stepId === selection.stepId;
+});
 
 const Fact = ({ label, value }: { readonly label: string; readonly value: string }) => (
   <div>
@@ -100,7 +157,15 @@ const DeferredActions = () => (
   </section>
 );
 
-export const ContextInspector = ({ draft, capabilities, selection, controller }: ContextInspectorProps) => {
+export const ContextInspector = ({
+  draft,
+  capabilities,
+  selection,
+  controller,
+  capabilityDetail,
+  capabilityDetailPhase,
+  capabilityDetailMessage,
+}: ContextInspectorProps) => {
   const graph = projectAuthoringGraph(draft.draft);
 
   let content: ReactNode;
@@ -127,12 +192,21 @@ export const ContextInspector = ({ draft, capabilities, selection, controller }:
             <Fact label="Outcomes" value={capability?.outcomes.join(", ") || "none"} />
           </dl>
         </section>
-        <CapabilityNodeForm
-          key={`capability:${selection.qualifiedName}:${controller.resetGeneration}`}
-          capabilityName={selection.qualifiedName}
-          onDirtyChange={controller.markDirty}
-          onSubmit={controller.addCapability}
-        />
+        {capabilityDetailPhase === "loading" && <p role="status">Loading capability schema...</p>}
+        {capabilityDetailPhase === "error" && (
+          <p role="alert">{capabilityDetailMessage ?? "Capability schema failed to load."}</p>
+        )}
+        {capabilityDetailPhase === "ready" && capabilityDetail !== null && (
+          <CapabilityNodeForm
+            key={`capability:${selection.qualifiedName}:${controller.resetGeneration}`}
+            capabilityName={selection.qualifiedName}
+            diagnostics={[]}
+            inputSchema={capabilityDetail.inputSchema}
+            onDirtyChange={controller.markDirty}
+            onSubmit={controller.addCapability}
+            onValueChange={(value) => controller.rememberCapabilityForm("add", value)}
+          />
+        )}
       </>
     );
   } else if (selection.kind === "edge") {
@@ -154,7 +228,9 @@ export const ContextInspector = ({ draft, capabilities, selection, controller }:
           key={`edge:${selection.stepId}:${selection.outcome}:${controller.resetGeneration}`}
           initialValue={{ stepId: selection.stepId, outcome: selection.outcome, target: edge?.target ?? "" }}
           onSubmit={controller.setRoute}
+          diagnostics={routeDiagnostics(draft.diagnostics, selection)}
           onDirtyChange={controller.markDirty}
+          onValueChange={controller.rememberRouteForm}
         />
       </>
     );
@@ -170,15 +246,32 @@ export const ContextInspector = ({ draft, capabilities, selection, controller }:
           <Fact label="Reference" value={node?.data.nodeRef ?? "none"} />
         </dl>
         {unsupported && <p role="status">Read-only: unsupported step kind.</p>}
-        {!unsupported && (
-          <CapabilityNodeForm
-            key={`node:${selection.nodeId}:${controller.resetGeneration}`}
-            capabilityName={node?.data.nodeRef ?? selection.nodeId}
-            initialValue={{ stepId: selection.nodeId }}
-            onDirtyChange={controller.markDirty}
-            onSubmit={controller.updateCapability}
-          />
+        {!unsupported && capabilityDetailPhase === "loading" && (
+          <p role="status">Loading capability schema...</p>
         )}
+        {!unsupported && capabilityDetailPhase === "error" && (
+          <p role="alert">{capabilityDetailMessage ?? "Capability schema failed to load."}</p>
+        )}
+        {!unsupported && capabilityDetailPhase === "ready" && capabilityDetail !== null && (() => {
+          const formData = canonicalCapabilityFormData(draft, selection.nodeId);
+          if (formData === null) return <p role="status">Canonical node data is unavailable.</p>;
+          return (
+            <CapabilityNodeForm
+              key={`node:${selection.nodeId}:${controller.resetGeneration}`}
+              capabilityName={formData.capabilityName}
+              diagnostics={inputDiagnostics(draft.diagnostics, selection.nodeId)}
+              initialInputSources={formData.initialInputSources}
+              initialInputValue={formData.initialInputValue}
+              initialValue={formData.initialValue}
+              inputSchema={capabilityDetail.inputSchema}
+              metadataDiagnostics={metadataDiagnostics(draft.diagnostics, selection.nodeId)}
+              onDirtyChange={controller.markDirty}
+              onSubmit={controller.updateCapability}
+              onValueChange={(value) => controller.rememberCapabilityForm("update", value)}
+              submitLabel="Apply changes"
+            />
+          );
+        })()}
       </section>
     );
   }
@@ -190,6 +283,9 @@ export const ContextInspector = ({ draft, capabilities, selection, controller }:
         <h2>Inspector</h2>
       </div>
       {content}
+      {selection.kind !== "canvas" && draft.diagnostics.length > 0 && (
+        <Diagnostics diagnostics={draft.diagnostics} />
+      )}
       {controller.phase === "saving" && <p role="status">Saving canonical draft...</p>}
       {controller.phase === "error" && <p role="alert">{controller.message ?? "Draft mutation failed."}</p>}
       {controller.phase === "conflict" && (

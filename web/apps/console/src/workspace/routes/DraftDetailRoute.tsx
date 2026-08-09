@@ -4,6 +4,7 @@ import type {
 } from "../domain/draft-workspace-models.js";
 import { DraftWorkbench } from "../authoring/DraftWorkbench.js";
 import { useDraftWorkspace } from "./useDraftWorkspace.js";
+import { useCapabilityDiscovery } from "./useCapabilityDiscovery.js";
 
 const titleFor = (workspace: DraftWorkspace): string =>
   workspace.title?.trim() || workspace.workspaceId;
@@ -20,6 +21,7 @@ export const DraftDetailRoute = ({
 }: DraftDetailRouteProps) => {
   const { workspaceId = null } = useParams<{ workspaceId: string }>();
   const drafts = useDraftWorkspace(workspaceId);
+  const capabilities = useCapabilityDiscovery();
   const draft =
     drafts.selected?.workspaceId === workspaceId ? drafts.selected : null;
 
@@ -55,6 +57,7 @@ export const DraftDetailRoute = ({
           </header>
 
           <DraftWorkbench
+            capabilities={capabilities.items}
             draft={draft}
             enableNavigationProtection={enableNavigationProtection}
           />

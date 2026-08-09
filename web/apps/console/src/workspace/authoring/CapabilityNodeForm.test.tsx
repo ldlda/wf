@@ -29,8 +29,8 @@ describe("CapabilityNodeForm", () => {
       stepId: "enrich",
       capabilityName: "demo.enrich",
       description: "Enrich report",
-      inputBindings: [{ target: "title", value: { value: "Quarterly report" } }],
-    });
+        inputBindings: [{ target: "title", value: "Quarterly report" }],
+      });
   });
 
   it("reports local edits as dirty and keeps them when submission fails", async () => {
@@ -39,6 +39,7 @@ describe("CapabilityNodeForm", () => {
     render(
       <CapabilityNodeForm
         capabilityName="demo.enrich"
+        inputSchema={{ type: "object", properties: {} }}
         onDirtyChange={(dirty) => dirtyStates.push(dirty)}
         onSubmit={() => { throw new Error("not sent"); }}
       />,

@@ -23,7 +23,7 @@ export type InputPathBinding = {
 
 export type InputValueBinding = {
   readonly target: LocalInputPath;
-  readonly value: JsonObject;
+  readonly value: unknown;
 };
 
 export type InputBinding = InputPathBinding | InputValueBinding;

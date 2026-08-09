@@ -28,6 +28,11 @@ export interface DraftAuthoringController {
   readonly validate: () => Promise<void>;
   readonly reload: () => Promise<void>;
   readonly reapply: () => Promise<void>;
+  readonly rememberCapabilityForm: (
+    kind: "add" | "update",
+    input: CapabilityNodeFormValue,
+  ) => void;
+  readonly rememberRouteForm: (input: RouteFormValue) => void;
   readonly select: (selection: WorkbenchSelection) => void;
   readonly markDirty: () => void;
 }
@@ -94,6 +99,11 @@ const sameSelection = (
     left.outcome === right.outcome
   );
 };
+
+const responseMatchesRequest = (
+  response: DraftWorkspace,
+  requestProvenance: Provenance,
+): boolean => response.workspaceId === requestProvenance.workspaceId;
 
 const mutationKey = (kind: string, input: unknown, revision: number): string => {
   const encoded = JSON.stringify(input);
@@ -169,12 +179,18 @@ export const useDraftAuthoring = ({
       response: DraftWorkspace,
       requestProvenance: Provenance,
       nextSelection?: WorkbenchSelection,
-    ): void => {
-      if (!sameProvenance(requestProvenance, currentProvenanceRef.current)) return;
+    ): boolean => {
+      if (
+        !sameProvenance(requestProvenance, currentProvenanceRef.current) ||
+        !responseMatchesRequest(response, requestProvenance)
+      ) return false;
       setState((current) => ({
         ...current,
         draft: response,
-        selection: nextSelection ?? current.selection,
+        selection:
+          response.status === "conflict"
+            ? current.selection
+            : nextSelection ?? current.selection,
         dirty: response.status === "conflict" ? true : false,
         phase: response.status === "conflict" ? "conflict" : "idle",
         message:
@@ -184,6 +200,7 @@ export const useDraftAuthoring = ({
         resetGeneration:
           response.status === "conflict" ? current.resetGeneration : current.resetGeneration + 1,
       }));
+      return true;
     },
     [],
   );
@@ -199,6 +216,16 @@ export const useDraftAuthoring = ({
       const key = mutationKey(kind, input, requestDraft.revision);
       const pending = pendingRef.current;
       if (pending?.key === key) return pending.promise;
+      if (pending !== null) {
+        const error = new Error("Another draft authoring request is in progress.");
+        setState((current) => ({
+          ...current,
+          dirty: true,
+          phase: "error",
+          message: error.message,
+        }));
+        return Promise.reject(error);
+      }
       if (!authoringClient) {
         return Promise.resolve().then(() => {
           setState((current) => ({
@@ -218,7 +245,12 @@ export const useDraftAuthoring = ({
         message: null,
       }));
       const promise = operation(authoringClient, requestDraft)
-        .then((response) => commitResponse(response, requestProvenance, nextSelection))
+        .then((response) => {
+          const committed = commitResponse(response, requestProvenance, nextSelection);
+          if (!committed && sameProvenance(requestProvenance, currentProvenanceRef.current)) {
+            throw new Error("The authoring response did not match the requested workspace.");
+          }
+        })
         .catch((error: unknown) => {
           if (!sameProvenance(requestProvenance, currentProvenanceRef.current)) return;
           setState((current) => ({
@@ -322,14 +354,32 @@ export const useDraftAuthoring = ({
       return Promise.resolve();
     }
     const requestProvenance = currentProvenanceRef.current;
+    const key = mutationKey("validate", requestProvenance.workspaceId, currentDraftRef.current.revision);
+    const pending = pendingRef.current;
+    if (pending?.key === key) return pending.promise;
+    if (pending !== null) {
+      const error = new Error("Another draft authoring request is in progress.");
+      setState((current) => ({ ...current, phase: "error", message: error.message }));
+      return Promise.reject(error);
+    }
     setState((current) => ({ ...current, phase: "saving", message: null }));
-    return authoringClient
-      .validate(currentDraftRef.current.workspaceId)
-      .then((response) => commitResponse(response, requestProvenance))
+    const promise = authoringClient
+      .validate(requestProvenance.workspaceId)
+      .then((response) => {
+        const committed = commitResponse(response, requestProvenance);
+        if (!committed && sameProvenance(requestProvenance, currentProvenanceRef.current)) {
+          throw new Error("The validation response did not match the requested workspace.");
+        }
+      })
       .catch((error: unknown) => {
         if (!sameProvenance(requestProvenance, currentProvenanceRef.current)) return;
         setState((current) => ({ ...current, phase: "error", message: errorMessage(error) }));
+      })
+      .finally(() => {
+        if (pendingRef.current?.promise === promise) pendingRef.current = null;
       });
+    pendingRef.current = { key, promise };
+    return promise;
   }, [authoringClient, commitResponse]);
 
   const reload = useCallback((): Promise<void> => {
@@ -338,7 +388,19 @@ export const useDraftAuthoring = ({
     return workspaceClient
       .load(currentDraftRef.current.workspaceId)
       .then((response) => {
-        if (!sameProvenance(requestProvenance, currentProvenanceRef.current)) return;
+        if (
+          !sameProvenance(requestProvenance, currentProvenanceRef.current) ||
+          !responseMatchesRequest(response, requestProvenance)
+        ) {
+          if (sameProvenance(requestProvenance, currentProvenanceRef.current)) {
+            setState((current) => ({
+              ...current,
+              phase: "error",
+              message: "The reload response did not match the requested workspace.",
+            }));
+          }
+          return;
+        }
         setState((current) => ({
           ...current,
           draft: response,
@@ -363,6 +425,17 @@ export const useDraftAuthoring = ({
     return setRoute(last.input);
   }, [addCapability, setRoute, updateCapability]);
 
+  const rememberCapabilityForm = useCallback(
+    (kind: "add" | "update", input: CapabilityNodeFormValue): void => {
+      lastSubmissionRef.current = { kind, input };
+    },
+    [],
+  );
+
+  const rememberRouteForm = useCallback((input: RouteFormValue): void => {
+    lastSubmissionRef.current = { kind: "route", input };
+  }, []);
+
   return {
     draft,
     selection,
@@ -376,6 +449,8 @@ export const useDraftAuthoring = ({
     validate,
     reload,
     reapply,
+    rememberCapabilityForm,
+    rememberRouteForm,
     select,
     markDirty,
   };
