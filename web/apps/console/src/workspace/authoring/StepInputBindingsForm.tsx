@@ -14,9 +14,11 @@ import { serializeSchemaValues, type FieldSources } from "../schema-form/schema-
 import { formatBoundedJson } from "./format-bounded-json.js";
 import { displayGraphInputPath, displayLocalInputPath } from "./input-binding-paths.js";
 import {
+  capabilityLocalPathSuggestions,
   inputBindingRows,
   isJsonValue,
   serializeInputBindingRow,
+  workflowSourceSuggestions,
   type InputBindingRow,
 } from "./selected-step-dataflow.js";
 
@@ -39,6 +41,8 @@ type FormRow = EditableRow | UnsupportedRow;
 
 export type StepInputBindingsFormProps = {
   readonly inputSchema: unknown;
+  readonly workflowInputSchema?: unknown;
+  readonly workflowStateSchema?: unknown;
   readonly initialRows?: ReadonlyArray<InputBindingRow>;
   readonly initialBindings?: ReadonlyArray<InputBinding>;
   readonly rowDiagnostics?: Readonly<Record<number, ReadonlyArray<DraftDiagnostic>>>;
@@ -212,6 +216,8 @@ const bindingForRow = (
 
 export const StepInputBindingsForm = ({
   inputSchema,
+  workflowInputSchema,
+  workflowStateSchema,
   initialRows,
   initialBindings,
   rowDiagnostics = EMPTY_DIAGNOSTICS,
@@ -221,6 +227,10 @@ export const StepInputBindingsForm = ({
 }: StepInputBindingsFormProps) => {
   const formId = useId();
   const root = normalizeSchema(inputSchema);
+  const sourceSuggestions = workflowSourceSuggestions(workflowInputSchema ?? null, workflowStateSchema ?? null);
+  const targetSuggestions = capabilityLocalPathSuggestions(inputSchema);
+  const sourceListId = `${formId}-workflow-sources`;
+  const targetListId = `${formId}-capability-targets`;
   const [rows, setRows] = useState<ReadonlyArray<FormRow>>(() =>
     rowsFrom(inputRows(initialRows, initialBindings), formId),
   );
@@ -285,7 +295,7 @@ export const StepInputBindingsForm = ({
   const submit = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
     const nextIssues: Record<string, ReadonlyArray<string>> = {};
-    const bindings: InputBinding[] = [];
+    const completed: Array<{ readonly id: string; readonly binding: InputBinding }> = [];
     for (const row of rows) {
       if (row.kind === "unsupported") {
         nextIssues[row.id] = ["Remove or repair this unsupported input row before saving."];
@@ -293,14 +303,28 @@ export const StepInputBindingsForm = ({
       }
       const result = bindingForRow(root, row);
       if (result.binding === null) nextIssues[row.id] = result.issues;
-      else bindings.push(result.binding);
+      else completed.push({ id: row.id, binding: result.binding });
+    }
+    const duplicateRows = new Map<string, string[]>();
+    for (const item of completed) {
+      const target = displayLocalInputPath(item.binding.target);
+      duplicateRows.set(target, [...(duplicateRows.get(target) ?? []), item.id]);
+    }
+    for (const ids of duplicateRows.values()) {
+      if (ids.length < 2) continue;
+      for (const id of ids) {
+        nextIssues[id] = [
+          ...(nextIssues[id] ?? []),
+          "Target is duplicated in another input row.",
+        ];
+      }
     }
     setLocalIssues(nextIssues);
     setFormIssue(unsupportedRows.length > 0
       ? "Remove or repair every unsupported input row before saving."
       : null);
     if (Object.keys(nextIssues).length > 0) return;
-    void Promise.resolve(onSubmit(bindings)).catch(() => undefined);
+    void Promise.resolve(onSubmit(completed.map(({ binding }) => binding))).catch(() => undefined);
   };
 
   const clear = (): void => {
@@ -319,6 +343,12 @@ export const StepInputBindingsForm = ({
   return (
     <form className="schema-form authoring-form" noValidate onSubmit={submit}>
       {formIssue !== null && <p id={formErrorId} role="alert">{formIssue}</p>}
+      <datalist id={sourceListId}>
+        {sourceSuggestions.map((suggestion) => <option key={suggestion} value={suggestion} />)}
+      </datalist>
+      <datalist id={targetListId}>
+        {targetSuggestions.map((suggestion) => <option key={suggestion} value={suggestion} />)}
+      </datalist>
       <div className="schema-form__group">
         {rows.length === 0 && <p>No input bindings configured.</p>}
         {rows.map((row, index) => {
@@ -377,6 +407,7 @@ export const StepInputBindingsForm = ({
                 aria-invalid={hasIssues}
                 aria-label={`Target for row ${rowNumber}`}
                 id={targetId}
+                list={targetListId}
                 onChange={(event) => editRow(row.id, (current) => ({ ...current, target: event.target.value }))}
                 type="text"
                 value={row.target}
@@ -416,6 +447,7 @@ export const StepInputBindingsForm = ({
                     aria-invalid={hasIssues}
                     aria-label={`Source path for input row ${rowNumber}`}
                     id={pathId}
+                    list={sourceListId}
                     onChange={(event) => editRow(row.id, (current) => ({ ...current, sourcePath: event.target.value }))}
                     type="text"
                     value={row.sourcePath}

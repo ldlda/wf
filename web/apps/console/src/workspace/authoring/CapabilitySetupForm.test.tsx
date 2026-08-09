@@ -59,7 +59,7 @@ describe("CapabilitySetupForm", () => {
     expect(submissions).toEqual([]);
   });
 
-  it("rejects timeout zero and accepts a positive timeout", async () => {
+  it("requires timeout to be a positive integer", async () => {
     const user = userEvent.setup();
     const submissions: unknown[] = [];
     render(<CapabilitySetupForm onSubmit={(value) => { submissions.push(value); }} />);
@@ -72,8 +72,15 @@ describe("CapabilitySetupForm", () => {
     await user.clear(screen.getByRole("spinbutton", { name: "Timeout seconds" }));
     await user.type(screen.getByRole("spinbutton", { name: "Timeout seconds" }), "2.5");
     await user.click(screen.getByRole("button", { name: "Save setup" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("Timeout must be a whole number greater than 0.");
+    expect(submissions).toEqual([]);
 
-    expect(submissions).toEqual([{ timeoutSeconds: 2.5 }]);
+    await user.clear(screen.getByRole("spinbutton", { name: "Timeout seconds" }));
+    await user.type(screen.getByRole("spinbutton", { name: "Timeout seconds" }), "2");
+    await user.click(screen.getByRole("button", { name: "Save setup" }));
+    expect(submissions).toEqual([{ timeoutSeconds: 2 }]);
+    expect(screen.getByRole("spinbutton", { name: "Timeout seconds" })).toHaveAttribute("step", "1");
+    expect(screen.getByRole("spinbutton", { name: "Timeout seconds" })).toHaveAttribute("inputmode", "numeric");
   });
 
   it("associates local retry errors with the retry control and avoids duplicate ids", async () => {

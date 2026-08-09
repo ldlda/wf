@@ -135,6 +135,39 @@ describe("SelectedCapabilityInspector", () => {
     expect(controller.updateSetup).toHaveBeenCalledWith({});
   });
 
+  it("keeps explicit null and singleton binding containers visible as unsupported rows", async () => {
+    const user = userEvent.setup();
+    const workspace = draft(
+      "read",
+      null,
+      { source: "text", target: "state.existing" },
+    );
+    const controller = controllerFor(workspace);
+
+    render(
+      <SelectedCapabilityInspector
+        capabilityDetail={detail}
+        capabilityDetailMessage={null}
+        capabilityDetailPhase="ready"
+        controller={controller}
+        draft={workspace}
+        nodeKind="use"
+        nodeRef="demo.read"
+        stepId="read"
+      />,
+    );
+
+    await user.click(screen.getByRole("tab", { name: "Inputs" }));
+    expect(screen.getByRole("region", { name: "Raw unsupported input row 1" })).toHaveTextContent("null");
+    await user.click(screen.getByRole("button", { name: "Save inputs" }));
+    expect(controller.setStepInputs).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("tab", { name: "Outputs" }));
+    expect(screen.getByRole("region", { name: "Raw unsupported output row 1" })).toHaveTextContent("text");
+    await user.click(screen.getByRole("button", { name: "Save outputs" }));
+    expect(controller.setStepOutputs).not.toHaveBeenCalled();
+  });
+
   it("keeps diagnostic ids unique across failing setup and hidden binding forms", async () => {
     const user = userEvent.setup();
     const workspace = draft(
@@ -162,7 +195,7 @@ describe("SelectedCapabilityInspector", () => {
     });
     await user.click(screen.getByRole("button", { name: "Save setup" }));
     await user.click(screen.getByRole("tab", { name: "Inputs" }));
-    await user.clear(screen.getByRole("textbox", { name: "Target for row 1" }));
+    await user.clear(screen.getByRole("combobox", { name: "Target for row 1" }));
     await user.click(screen.getByRole("button", { name: "Save inputs" }));
     await user.click(screen.getByRole("tab", { name: "Outputs" }));
     await user.clear(screen.getByRole("combobox", { name: "Target for output row 1" }));
@@ -192,7 +225,7 @@ describe("SelectedCapabilityInspector", () => {
     );
 
     await userEvent.setup().click(screen.getByRole("tab", { name: "Inputs" }));
-    expect(screen.getByRole("textbox", { name: "Target for row 1" })).toHaveValue("title");
+    expect(screen.getByRole("combobox", { name: "Target for row 1" })).toHaveValue("title");
     rerender(
       <SelectedCapabilityInspector
         capabilityDetail={detail}
@@ -207,7 +240,7 @@ describe("SelectedCapabilityInspector", () => {
       />,
     );
     await userEvent.setup().click(screen.getByRole("tab", { name: "Inputs" }));
-    expect(screen.getByRole("textbox", { name: "Target for row 1" })).toHaveValue("title");
+    expect(screen.getByRole("combobox", { name: "Target for row 1" })).toHaveValue("title");
     expect(screen.getByRole("textbox", { name: "Title" })).toHaveValue("Second");
   });
 

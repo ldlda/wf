@@ -26,6 +26,11 @@ const isRecord = (value: unknown): value is JsonRecord =>
 const hasOwn = (value: JsonRecord, key: string): boolean =>
   Object.prototype.hasOwnProperty.call(value, key);
 
+const hasExactKeys = (value: JsonRecord, keys: ReadonlyArray<string>): boolean => {
+  const actual = Reflect.ownKeys(value);
+  return actual.length === keys.length && keys.every((key) => actual.includes(key));
+};
+
 /** Guard the recursive JSON subset used by literal input bindings. */
 export const isJsonValue = (value: unknown): value is JsonValue => {
   if (value === null || typeof value === "boolean" || typeof value === "string") return true;
@@ -65,6 +70,7 @@ const localPathParts = (value: unknown): string[] | null => {
     return parts === null ? null : [...parts];
   }
   if (!isRecord(value) || value.root !== "local") return null;
+  if (!hasExactKeys(value, ["root", "parts"])) return null;
   const parts = stringParts(value.parts);
   return parts !== null && validPathParts(parts) ? parts : null;
 };
@@ -80,6 +86,7 @@ const inputPathParts = (value: unknown): string[] | null => {
   }
   if (!isRecord(value)) return null;
   if (value.root !== "input" && value.root !== "state" && value.root !== "context") return null;
+  if (!hasExactKeys(value, ["root", "parts"])) return null;
   const parts = stringParts(value.parts);
   return parts !== null && validPathParts(parts) ? [value.root, ...parts] : null;
 };
@@ -90,6 +97,7 @@ const statePathParts = (value: unknown): string[] | null => {
     return parts !== null && parts.length > 1 && parts[0] === "state" ? [...parts] : null;
   }
   if (!isRecord(value) || value.root !== "state") return null;
+  if (!hasExactKeys(value, ["root", "parts"])) return null;
   const parts = stringParts(value.parts);
   return parts !== null && parts.length > 0 && validPathParts(parts) ? ["state", ...parts] : null;
 };
@@ -141,14 +149,17 @@ const parsedInputBinding = (value: unknown): InputBinding | null => {
   const hasValue = hasOwn(value, "value");
   if (hasPath === hasValue) return null;
   if (hasPath) {
+    if (!hasExactKeys(value, ["path", "target"])) return null;
     const path = inputPath(value.path);
     return path === null ? null : { path, target };
   }
+  if (!hasExactKeys(value, ["target", "value"])) return null;
   return !isJsonValue(value.value) ? null : { target, value: value.value };
 };
 
 const parsedOutputBinding = (value: unknown): OutputBinding | null => {
   if (!isRecord(value)) return null;
+  if (!hasExactKeys(value, ["source", "target"])) return null;
   const source = localPath(value.source);
   const target = statePath(value.target);
   return source === null || target === null ? null : { source, target };
@@ -169,7 +180,13 @@ const parseRows = <T>(
 ): ParsedRows<T> => {
   const values: T[] = [];
   const unsupported: UnsupportedBindingRow[] = [];
-  const rows = Array.isArray(raw) ? raw : raw === undefined || raw === null ? [] : [raw];
+  if (raw !== undefined && !Array.isArray(raw)) {
+    return {
+      values,
+      unsupported: [{ field, index: 0, raw, reason: unsupportedReason(field, 0) }],
+    };
+  }
+  const rows = raw === undefined ? [] : raw;
   rows.forEach((value, index) => {
     const parsed = parse(value);
     if (parsed === null) {
@@ -268,7 +285,10 @@ const rowsFor = <T>(
   field: "input" | "output",
 ): ReadonlyArray<BindingRow<T>> => {
   const rows: Array<BindingRow<T>> = [];
-  const values = Array.isArray(raw) ? raw : raw === undefined || raw === null ? [] : [raw];
+  if (raw !== undefined && !Array.isArray(raw)) {
+    return [{ kind: "unsupported", field, index: 0, raw, reason: unsupportedReason(field, 0) }];
+  }
+  const values = raw === undefined ? [] : raw;
   values.forEach((value, index) => {
     const parsed = parse(value);
     if (parsed === null) {
@@ -291,10 +311,12 @@ export const serializeInputBindingRow = (value: unknown): InputBinding | null =>
   const target = canonicalLocalPath(value.target);
   if (target === null) return null;
   if (hasOwn(value, "path") && !hasOwn(value, "value")) {
+    if (!hasExactKeys(value, ["path", "target"])) return null;
     const path = canonicalInputPath(value.path);
     return path === null ? null : { path, target };
   }
   if (!hasOwn(value, "path") && hasOwn(value, "value") && isJsonValue(value.value)) {
+    if (!hasExactKeys(value, ["target", "value"])) return null;
     return { target, value: value.value };
   }
   return null;
@@ -315,6 +337,7 @@ export const serializeInputBindingRows = (
 
 export const serializeOutputBindingRow = (value: unknown): OutputBinding | null => {
   if (!isRecord(value)) return null;
+  if (!hasExactKeys(value, ["source", "target"])) return null;
   const source = canonicalLocalPath(value.source);
   const target = canonicalStatePath(value.target);
   return source === null || target === null ? null : { source, target };

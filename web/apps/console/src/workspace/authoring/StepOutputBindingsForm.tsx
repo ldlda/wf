@@ -345,9 +345,11 @@ export const StepOutputBindingsForm = ({
   const targetSuggestions = stateTargetSuggestions(stateSchema);
   const targetListId = `${formId}-state-targets`;
   const formErrorId = `${formId}-form-error`;
+  const initialRowValues = outputRows(initialRows, initialBindings);
   const [rows, setRows] = useState<ReadonlyArray<FormRow>>(() =>
-    rowsFrom(outputRows(initialRows, initialBindings), formId, sourceSuggestions),
+    rowsFrom(initialRowValues, formId, sourceSuggestions),
   );
+  const hadInitialRows = initialRowValues.length > 0;
   const [localIssues, setLocalIssues] = useState<Readonly<Record<string, ReadonlyArray<string>>>>({});
   const [formIssue, setFormIssue] = useState<string | null>(null);
   const [clearConfirmation, setClearConfirmation] = useState(false);
@@ -432,6 +434,11 @@ export const StepOutputBindingsForm = ({
       ? "Remove or repair every unsupported output row before saving."
       : null);
     if (Object.keys(nextIssues).length > 0) return;
+    if (bindings.length === 0 && hadInitialRows) {
+      setFormIssue(CLEAR_COPY);
+      setClearConfirmation(true);
+      return;
+    }
     void Promise.resolve(onSubmit(bindings)).catch(() => undefined);
   };
 

@@ -105,6 +105,8 @@ export const CapabilitySetupForm = ({
         const parsed = Number(timeoutSeconds);
         if (!Number.isFinite(parsed) || parsed <= 0) {
           nextIssues.timeoutSeconds = "Timeout must be greater than 0.";
+        } else if (!Number.isInteger(parsed)) {
+          nextIssues.timeoutSeconds = "Timeout must be a whole number greater than 0.";
         } else {
           patch.timeoutSeconds = parsed;
         }
@@ -160,10 +162,10 @@ export const CapabilitySetupForm = ({
             aria-label="Timeout seconds"
             aria-invalid={diagnosticFor("timeoutSeconds") !== null}
             id={controlId("timeoutSeconds")}
-            inputMode="decimal"
-            min="0.000001"
+            inputMode="numeric"
+            min={1}
             onChange={(event) => { touch("timeoutSeconds"); setTimeoutSeconds(event.target.value); }}
-            step="any"
+            step={1}
             type="number"
             value={timeoutSeconds}
           />

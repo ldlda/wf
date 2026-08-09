@@ -295,6 +295,27 @@ describe("StepOutputBindingsForm", () => {
     expect(screen.queryByRole("button", { name: "Confirm clear outputs" })).not.toBeInTheDocument();
   });
 
+  it("requires fresh confirmation when saving after removing the last stored row", async () => {
+    const user = userEvent.setup();
+    const submissions: ReadonlyArray<OutputBinding>[] = [];
+    render(
+      <StepOutputBindingsForm
+        outputSchema={outputSchema}
+        stateSchema={stateSchema}
+        initialBindings={[{ source: "text", target: "state.existing" }]}
+        onSubmit={(value) => { submissions.push(value); }}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Remove output row 1" }));
+    await user.click(screen.getByRole("button", { name: "Save outputs" }));
+
+    expect(submissions).toEqual([]);
+    expect(screen.getByRole("button", { name: "Confirm clear outputs" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Confirm clear outputs" }));
+    expect(submissions).toEqual([[]]);
+  });
+
   it.each(clearMutationCases)(
     "cancels pending clear confirmation after $name and preserves the mutated rows",
     async ({ mutate, expected }) => {

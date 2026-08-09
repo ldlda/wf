@@ -105,7 +105,9 @@ export const SelectedCapabilityInspector = ({
     ? controller.preservedCapabilityForm.input
     : null;
   // Forms receive raw-row projections so malformed persisted entries stay in order.
-  const inputRows = inputBindingRows(rawStep?.input ?? preservedForm?.inputBindings);
+  const inputRows = inputBindingRows(
+    rawStep?.input !== undefined ? rawStep.input : preservedForm?.inputBindings,
+  );
   const outputRows = outputBindingRows(rawStep?.output);
   const inputDiagnostics = bindingDiagnosticsForStep(draft.diagnostics, stepId, "input", projected?.compiledNodeIndex ?? null);
   const outputDiagnostics = bindingDiagnosticsForStep(draft.diagnostics, stepId, "output", projected?.compiledNodeIndex ?? null);
@@ -178,6 +180,8 @@ export const SelectedCapabilityInspector = ({
                   key={`inputs:${stepId}:${controller.resetGeneration}`}
                   initialRows={inputRows}
                   inputSchema={capabilityDetail.inputSchema}
+                  workflowInputSchema={isRecord(draft.draft) ? draft.draft.input_schema : undefined}
+                  workflowStateSchema={isRecord(draft.draft) ? draft.draft.state_schema : undefined}
                   onDirtyChange={controller.markDirty}
                   onSubmit={controller.setStepInputs}
                   rowDiagnostics={inputDiagnostics.rowIssues}

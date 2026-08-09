@@ -42,11 +42,11 @@ describe("StepInputBindingsForm", () => {
     );
 
     expect(screen.getByRole("group", { name: "Input row 1" })).toBeInTheDocument();
-    expect(screen.getByRole("textbox", { name: "Target for row 1" })).toHaveValue("title");
+    expect(screen.getByRole("combobox", { name: "Target for row 1" })).toHaveValue("title");
     expect(screen.getByRole("radio", { name: "Path for input row 1" })).toBeChecked();
-    expect(screen.getByRole("textbox", { name: "Source path for input row 1" })).toHaveValue("input.title");
+    expect(screen.getByRole("combobox", { name: "Source path for input row 1" })).toHaveValue("input.title");
     expect(screen.getByRole("combobox", { name: "Nullable" })).toHaveValue("0:null");
-    expect(screen.getByRole("textbox", { name: "Target for row 3" })).toHaveValue("nested.name");
+    expect(screen.getByRole("combobox", { name: "Target for row 3" })).toHaveValue("nested.name");
     expect(screen.getByText("Unsupported input binding.")).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Raw unsupported input row 4" })).toHaveTextContent('"target"');
     expect(screen.getByRole("button", { name: "Remove unsupported input row 4" })).toBeInTheDocument();
@@ -158,10 +158,10 @@ describe("StepInputBindingsForm", () => {
       />,
     );
 
-    expect(screen.getByRole("textbox", { name: "Target for row 1" })).toHaveValue("payload.item");
-    expect(screen.getByRole("textbox", { name: "Target for row 2" })).toHaveValue(".");
-    expect(screen.getByRole("textbox", { name: "Source path for input row 1" })).toHaveValue("input.source");
-    expect(screen.getByRole("textbox", { name: "Source path for input row 2" })).toHaveValue("state.audit.latest");
+    expect(screen.getByRole("combobox", { name: "Target for row 1" })).toHaveValue("payload.item");
+    expect(screen.getByRole("combobox", { name: "Target for row 2" })).toHaveValue(".");
+    expect(screen.getByRole("combobox", { name: "Source path for input row 1" })).toHaveValue("input.source");
+    expect(screen.getByRole("combobox", { name: "Source path for input row 2" })).toHaveValue("state.audit.latest");
 
     await user.click(screen.getByRole("button", { name: "Save inputs" }));
 
@@ -198,8 +198,8 @@ describe("StepInputBindingsForm", () => {
     await user.clear(screen.getByRole("textbox", { name: "Name" }));
     await user.type(screen.getByRole("textbox", { name: "Name" }), "after");
     await user.click(screen.getByRole("radio", { name: "Path for input row 1" }));
-    await user.clear(screen.getByRole("textbox", { name: "Source path for input row 1" }));
-    await user.type(screen.getByRole("textbox", { name: "Source path for input row 1" }), "input.nested");
+    await user.clear(screen.getByRole("combobox", { name: "Source path for input row 1" }));
+    await user.type(screen.getByRole("combobox", { name: "Source path for input row 1" }), "input.nested");
     await user.click(screen.getByRole("radio", { name: "Literal value for input row 1" }));
     await user.click(screen.getByRole("button", { name: "Save inputs" }));
 
@@ -238,14 +238,83 @@ describe("StepInputBindingsForm", () => {
       />,
     );
 
-    await user.clear(screen.getByRole("textbox", { name: "Target for row 1" }));
+    await user.clear(screen.getByRole("combobox", { name: "Target for row 1" }));
     await user.click(screen.getByRole("button", { name: "Save inputs" }));
 
-    const target = screen.getByRole("textbox", { name: "Target for row 1" });
+    const target = screen.getByRole("combobox", { name: "Target for row 1" });
     const describedBy = target.getAttribute("aria-describedby");
     expect(target).toHaveAttribute("aria-invalid", "true");
     expect(describedBy).toBeTruthy();
     expect(document.getElementById(describedBy ?? "")).toHaveTextContent("Target is required.");
+  });
+
+  it("offers workflow source and nested capability target choices while retaining text entry", async () => {
+    const user = userEvent.setup();
+    const submissions: ReadonlyArray<InputBinding>[] = [];
+    render(
+      <StepInputBindingsForm
+        inputSchema={{
+          type: "object",
+          properties: { profile: { type: "object", properties: { name: { type: "string" } } } },
+        }}
+        workflowInputSchema={{
+          type: "object",
+          properties: { request: { type: "object", properties: { id: { type: "string" } } } },
+        }}
+        workflowStateSchema={{
+          type: "object",
+          properties: { session: { type: "object", properties: { token: { type: "string" } } } },
+        }}
+        initialBindings={[{ path: "input.request.id", target: "profile.name" }]}
+        onSubmit={(value) => { submissions.push(value); }}
+      />,
+    );
+
+    const target = screen.getByRole("combobox", { name: "Target for row 1" });
+    const targetList = document.getElementById(target.getAttribute("list") ?? "");
+    expect(target.getAttribute("list")).toBeTruthy();
+    expect(targetList).not.toBeNull();
+    expect(targetList?.querySelector('option[value="profile.name"]')).not.toBeNull();
+    const source = screen.getByRole("combobox", { name: "Source path for input row 1" });
+    const sourceList = document.getElementById(source.getAttribute("list") ?? "");
+    expect(source.getAttribute("list")).toBeTruthy();
+    expect(sourceList).not.toBeNull();
+    expect(sourceList?.querySelector('option[value="input.request.id"]')).not.toBeNull();
+    expect(sourceList?.querySelector('option[value="state.session.token"]')).not.toBeNull();
+
+    await user.clear(target);
+    await user.type(target, "profile.custom");
+    await user.clear(source);
+    await user.type(source, "context.custom");
+    await user.click(screen.getByRole("button", { name: "Save inputs" }));
+
+    expect(submissions).toEqual([[{ path: "context.custom", target: "profile.custom" }]]);
+  });
+
+  it("rejects exact duplicate targets across path and literal rows with errors on both rows", async () => {
+    const user = userEvent.setup();
+    const submissions: ReadonlyArray<InputBinding>[] = [];
+    render(
+      <StepInputBindingsForm
+        inputSchema={schema}
+        initialRows={[
+          { kind: "canonical", index: 0, value: { path: "input.title", target: "title" } },
+          { kind: "canonical", index: 1, value: { target: "other", value: "literal" } },
+        ]}
+        onSubmit={(value) => { submissions.push(value); }}
+      />,
+    );
+
+    await user.clear(screen.getByRole("combobox", { name: "Target for row 2" }));
+    await user.type(screen.getByRole("combobox", { name: "Target for row 2" }), "title");
+    await user.click(screen.getByRole("button", { name: "Save inputs" }));
+
+    expect(submissions).toEqual([]);
+    expect(screen.getByRole("combobox", { name: "Target for row 1" })).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByRole("combobox", { name: "Target for row 2" })).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getAllByRole("alert").filter((alert) =>
+      alert.textContent?.includes("Target is duplicated") ?? false,
+    )).toHaveLength(2);
   });
 
   it("shows row diagnostics at the row that owns them", () => {

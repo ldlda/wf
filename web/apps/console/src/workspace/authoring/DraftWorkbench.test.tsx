@@ -246,7 +246,7 @@ describe("DraftWorkbench", () => {
       within(inspector).getByRole("button", { name: "Add input row", hidden: true }),
     );
     await user.type(
-      within(inspector).getByRole("textbox", { name: "Target for row 1", hidden: true }),
+      within(inspector).getByRole("combobox", { name: "Target for row 1", hidden: true }),
       "title",
     );
     await user.click(
@@ -263,7 +263,7 @@ describe("DraftWorkbench", () => {
       within(inspector).getByRole("tab", { name: "Outputs" }),
     ).toHaveAttribute("aria-selected", "true");
     expect(
-      within(inspector).getByRole("textbox", { name: "Target for row 1", hidden: true }),
+      within(inspector).getByRole("combobox", { name: "Target for row 1", hidden: true }),
     ).toHaveValue("title");
   });
 

@@ -161,6 +161,52 @@ describe("selected-step dataflow projection", () => {
     });
   });
 
+  it("preserves malformed binding containers and extra row keys for keyed and compiled steps", () => {
+    const extraInput = { path: "input.items", target: "items", extra: true };
+    const extraOutput = { source: "text", target: "state.report", extra: true };
+    expect(inputBindingRows(undefined)).toEqual([]);
+    expect(inputBindingRows(null)).toEqual([
+      expect.objectContaining({ kind: "unsupported", index: 0, raw: null }),
+    ]);
+    expect(inputBindingRows({ path: "input.items", target: "items" })).toEqual([
+      expect.objectContaining({ kind: "unsupported", index: 0 }),
+    ]);
+    expect(inputBindingRows([extraInput])).toEqual([
+      expect.objectContaining({ kind: "unsupported", index: 0, raw: extraInput }),
+    ]);
+    expect(outputBindingRows(null)).toEqual([
+      expect.objectContaining({ kind: "unsupported", index: 0, raw: null }),
+    ]);
+    expect(outputBindingRows({ source: "text", target: "state.report" })).toEqual([
+      expect.objectContaining({ kind: "unsupported", index: 0 }),
+    ]);
+    expect(outputBindingRows([extraOutput])).toEqual([
+      expect.objectContaining({ kind: "unsupported", index: 0, raw: extraOutput }),
+    ]);
+
+    const keyed = projectSelectedStepDataflow({
+      ...keyedDraft,
+      draft: { steps: { render: { use: "wf.std.concat", input: null, output: extraOutput } } },
+    }, "render");
+    const compiled = projectSelectedStepDataflow({
+      ...compiledDraft,
+      draft: { nodes: [{ id: "render", node: "wf.std.concat", input: extraInput, output: null }] },
+    }, "render");
+
+    expect(keyed?.inputs).toEqual([]);
+    expect(keyed?.outputs).toEqual([]);
+    expect(keyed?.unsupported.map(({ field, index, raw }) => ({ field, index, raw }))).toEqual([
+      { field: "input", index: 0, raw: null },
+      { field: "output", index: 0, raw: extraOutput },
+    ]);
+    expect(compiled?.inputs).toEqual([]);
+    expect(compiled?.outputs).toEqual([]);
+    expect(compiled?.unsupported.map(({ field, index, raw }) => ({ field, index, raw }))).toEqual([
+      { field: "input", index: 0, raw: extraInput },
+      { field: "output", index: 0, raw: null },
+    ]);
+  });
+
   it("returns null for a missing step", () => {
     expect(projectSelectedStepDataflow(keyedDraft, "missing")).toBeNull();
   });
@@ -267,6 +313,17 @@ describe("selected-step schema helpers", () => {
       "account.name",
     ]);
     expect(stateTargetSuggestions(schema)).toEqual(["state.items", "state.items.0", "state.account", "state.account.name"]);
+  });
+
+  it("combines workflow input and state source suggestions with nested local targets", () => {
+    expect(workflowSourceSuggestions(
+      { type: "object", properties: { request: { type: "object", properties: { id: { type: "string" } } } } },
+      { type: "object", properties: { session: { type: "object", properties: { token: { type: "string" } } } } },
+    )).toEqual(["input.request", "input.request.id", "state.session", "state.session.token"]);
+    expect(capabilityLocalPathSuggestions({
+      type: "object",
+      properties: { profile: { type: "object", properties: { name: { type: "string" } } } },
+    })).toEqual([".", "profile", "profile.name"]);
   });
 
   it("previews only the selected output source schema", () => {

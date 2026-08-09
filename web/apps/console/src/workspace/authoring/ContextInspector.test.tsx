@@ -103,8 +103,8 @@ describe("ContextInspector", () => {
     expect(screen.getByRole("spinbutton", { name: "Retry" })).toHaveValue(2);
     expect(screen.getByRole("spinbutton", { name: "Timeout seconds" })).toHaveValue(45);
     fireEvent.click(screen.getByRole("tab", { name: "Inputs" }));
-    expect(screen.getByRole("textbox", { name: "Target for row 1" })).toHaveValue("title");
-    expect(screen.getByRole("textbox", { name: "Source path for input row 2" })).toHaveValue("input.count");
+    expect(screen.getByRole("combobox", { name: "Target for row 1" })).toHaveValue("title");
+    expect(screen.getByRole("combobox", { name: "Source path for input row 2" })).toHaveValue("input.count");
   });
 
   it("keeps deferred actions focusable while keyboard activation does not dispatch", async () => {
@@ -187,7 +187,7 @@ describe("ContextInspector", () => {
     expect(screen.getAllByText("Title is not accepted.")).not.toHaveLength(0);
     expect(screen.getAllByText("Retry must be non-negative.")).not.toHaveLength(0);
     expect(screen.getAllByText("Destination field is not declared.")).not.toHaveLength(0);
-    expect(screen.getByRole("textbox", { name: "Target for row 1" })).toHaveAttribute(
+    expect(screen.getByRole("combobox", { name: "Target for row 1" })).toHaveAttribute(
       "aria-invalid",
       "true",
     );
