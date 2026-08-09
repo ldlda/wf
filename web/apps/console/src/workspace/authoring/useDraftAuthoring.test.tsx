@@ -373,6 +373,38 @@ describe("useDraftAuthoring", () => {
     );
   });
 
+  it("reapplies a conflicted update to its original node after selection changes", async () => {
+    const initial = workspace({
+      draft: {
+        steps: {
+          read: { use: "demo.read" },
+          publish: { use: "demo.publish" },
+        },
+        routes: {},
+      },
+    });
+    const conflict = workspace({ revision: 4, status: "conflict", draft: null });
+    authoringClient.updateCapabilityStep
+      .mockResolvedValueOnce(conflict)
+      .mockResolvedValueOnce(workspace({ revision: 5 }));
+    const { result } = renderHook(() => useDraftAuthoring({
+      draft: initial,
+      initialSelection: { kind: "node", nodeId: "read" },
+    }));
+
+    await act(async () => result.current.updateCapability({
+      ...capabilityInput,
+      stepId: "read",
+      capabilityName: "demo.read",
+    }));
+    act(() => result.current.select({ kind: "node", nodeId: "publish" }));
+    await act(async () => result.current.reapply());
+
+    expect(authoringClient.updateCapabilityStep).toHaveBeenLastCalledWith(
+      expect.objectContaining({ stepId: "read" }),
+    );
+  });
+
   it("reloads explicitly and coalesces duplicate submissions", async () => {
     const initial = workspace();
     const reloaded = workspace({ revision: 10, status: "valid" });
