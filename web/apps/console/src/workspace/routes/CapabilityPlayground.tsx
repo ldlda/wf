@@ -23,8 +23,9 @@ type PlaygroundTab = "contract" | "try";
 
 type SubmittedCall = {
   readonly baselineEvidenceIds: ReadonlySet<string>;
-  readonly deploymentId: string;
+  readonly deploymentId: string | null;
   readonly executor: ConsoleWriteExecutor | null;
+  readonly payload: Record<string, unknown>;
   readonly payloadText: string;
   readonly qualifiedName: string;
   readonly target: string | null;
@@ -46,33 +47,82 @@ const formatKind = (kind: CapabilityDetail["kind"]): string =>
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
-const requestQualifiedName = (request: unknown): string | null => {
+type CapabilityRequestProjection = {
+  readonly deploymentId: string | null;
+  readonly payload: Record<string, unknown>;
+  readonly qualifiedName: string;
+};
+
+const normalizeDeploymentId = (value: unknown): string | null => {
+  if (typeof value !== "string") return null;
+  const normalized = value.trim();
+  return normalized === "" ? null : normalized;
+};
+
+const capabilityRequestProjection = (
+  request: unknown,
+): CapabilityRequestProjection | null => {
   if (!isRecord(request) || typeof request.qualified_name !== "string") {
     return null;
   }
-  return request.qualified_name;
+  if (!isRecord(request.payload)) return null;
+  if (
+    request.deployment_id !== undefined &&
+    request.deployment_id !== null &&
+    typeof request.deployment_id !== "string"
+  ) {
+    return null;
+  }
+  return {
+    deploymentId: normalizeDeploymentId(request.deployment_id),
+    payload: request.payload,
+    qualifiedName: request.qualified_name,
+  };
+};
+
+const jsonDeepEqual = (left: unknown, right: unknown): boolean => {
+  if (Object.is(left, right)) return true;
+  if (left === null || right === null) return false;
+  if (typeof left !== typeof right) return false;
+  if (Array.isArray(left) || Array.isArray(right)) {
+    if (!Array.isArray(left) || !Array.isArray(right) || left.length !== right.length) {
+      return false;
+    }
+    return left.every((value, index) => jsonDeepEqual(value, right[index]));
+  }
+  if (!isRecord(left) || !isRecord(right)) return false;
+  const leftKeys = Object.keys(left).sort();
+  const rightKeys = Object.keys(right).sort();
+  if (leftKeys.length !== rightKeys.length) return false;
+  return leftKeys.every(
+    (key, index) => key === rightKeys[index] && jsonDeepEqual(left[key], right[key]),
+  );
 };
 
 const submittedCallEvidence = (
   evidence: ReadonlyArray<EvidenceRecord>,
   submittedCall: SubmittedCall,
 ): EvidenceRecord | null => {
-  // Evidence is an append-only stream, so the baseline prevents an older
-  // matching call from being mistaken for the call that produced this receipt.
   if (submittedCall.target === null) return null;
-  for (let index = evidence.length - 1; index >= 0; index -= 1) {
-    const record = evidence[index];
-    if (record === undefined) continue;
+  const matches = evidence.filter((record) => {
     if (
-      !submittedCall.baselineEvidenceIds.has(record.id) &&
-      record.operation === "workflow.capabilities.call" &&
-      record.target === submittedCall.target &&
-      requestQualifiedName(record.request) === submittedCall.qualifiedName
+      submittedCall.baselineEvidenceIds.has(record.id) ||
+      record.operation !== "workflow.capabilities.call" ||
+      record.target !== submittedCall.target
     ) {
-      return record;
+      return false;
     }
-  }
-  return null;
+    const request = capabilityRequestProjection(record.request);
+    return (
+      request !== null &&
+      request.qualifiedName === submittedCall.qualifiedName &&
+      request.deploymentId === submittedCall.deploymentId &&
+      jsonDeepEqual(request.payload, submittedCall.payload)
+    );
+  });
+  // Concurrent identical calls are indistinguishable here; fail closed rather
+  // than presenting one call's duration as proof for another call.
+  return matches.length === 1 ? matches[0] ?? null : null;
 };
 
 const schemaText = (value: Record<string, unknown>): string =>
@@ -196,7 +246,7 @@ const ResultReceipt = ({
         <div>
           <dt>Deployment</dt>
           <dd aria-label="Submitted deployment">
-            {submittedCall.deploymentId || "default"}
+            {submittedCall.deploymentId ?? "default"}
           </dd>
         </div>
       </dl>
@@ -312,8 +362,9 @@ const TryView = ({
     }
     setSubmittedCall({
       baselineEvidenceIds: new Set(connection.evidence.map((record) => record.id)),
-      deploymentId: controller.deploymentId.trim(),
+      deploymentId: normalizeDeploymentId(controller.deploymentId),
       executor,
+      payload: result.value,
       payloadText: formatBoundedJson(result.value),
       qualifiedName: capability.name,
       target,

@@ -65,13 +65,19 @@ const capabilityEvidence = (
   qualifiedName: string,
   durationMs: number,
   evidenceTarget = target,
+  payload: Record<string, unknown> = {},
+  deploymentId: string | null = null,
 ): EvidenceRecord => ({
   id,
   target: evidenceTarget,
   operation: "workflow.capabilities.call",
   label: "Call capability",
   equivalentCli: "wf capability call",
-  request: { qualified_name: qualifiedName, payload: {} },
+  request: {
+    qualified_name: qualifiedName,
+    payload,
+    ...(deploymentId === null ? {} : { deployment_id: deploymentId }),
+  },
   response: {},
   durationMs,
 });
@@ -303,7 +309,14 @@ describe("CapabilityPlayground", () => {
     mockedUseCapabilityPlayground.mockReturnValue(activeController);
     mockedUseConsoleWorkspace.mockReturnValue(
       workspaceWithEvidence([
-        capabilityEvidence("call-submitted", wrapperCapability.name, 18),
+        capabilityEvidence(
+          "call-submitted",
+          wrapperCapability.name,
+          18,
+          target,
+          { query: "README.md" },
+          "docs.default",
+        ),
       ]),
     );
     view.rerender(
@@ -354,7 +367,11 @@ describe("CapabilityPlayground", () => {
     });
     mockedUseCapabilityPlayground.mockReturnValue(activeController);
     mockedUseConsoleWorkspace.mockReturnValue(
-      workspaceWithEvidence([capabilityEvidence("call-output", nodeCapability.name, 18)]),
+      workspaceWithEvidence([
+        capabilityEvidence("call-output", nodeCapability.name, 18, target, {
+          query: "README.md",
+        }),
+      ]),
     );
     view.rerender(
       <CapabilityPlayground
@@ -399,7 +416,9 @@ describe("CapabilityPlayground", () => {
     mockedUseConsoleWorkspace.mockReturnValue(
       workspaceWithEvidence([
         capabilityEvidence("call-1", "local.documents.other", 18),
-        capabilityEvidence("call-2", nodeCapability.name, 24),
+        capabilityEvidence("call-2", nodeCapability.name, 24, target, {
+          query: "README.md",
+        }),
       ]),
     );
     view.rerender(
@@ -432,7 +451,9 @@ describe("CapabilityPlayground", () => {
     mockedUseConsoleWorkspace.mockReturnValue(
       workspaceWithEvidence([
         capabilityEvidence("call-1", "local.documents.other", 18),
-        capabilityEvidence("call-runtime", nodeCapability.name, 31),
+        capabilityEvidence("call-runtime", nodeCapability.name, 31, target, {
+          query: "README.md",
+        }),
       ]),
     );
     view.rerender(
@@ -493,7 +514,9 @@ describe("CapabilityPlayground", () => {
     mockedUseConsoleWorkspace.mockReturnValue(
       workspaceWithEvidence([
         capabilityEvidence("call-1", "local.documents.other", 18),
-        capabilityEvidence("call-clear", nodeCapability.name, 22),
+        capabilityEvidence("call-clear", nodeCapability.name, 22, target, {
+          query: "README.md",
+        }),
       ]),
     );
     rerender(
@@ -531,7 +554,9 @@ describe("CapabilityPlayground", () => {
     mockedUseCapabilityPlayground.mockReturnValue(activeController);
     mockedUseConsoleWorkspace.mockReturnValue(
       workspaceWithEvidence([
-        capabilityEvidence("call-submitted", nodeCapability.name, 24),
+        capabilityEvidence("call-submitted", nodeCapability.name, 24, target, {
+          query: "README.md",
+        }),
         capabilityEvidence("call-interleaved", "local.documents.other", 99),
       ]),
     );
@@ -547,11 +572,140 @@ describe("CapabilityPlayground", () => {
     expect(screen.queryByText("99 ms")).not.toBeInTheDocument();
   });
 
+  it("matches the exact submitted payload among same-target calls", async () => {
+    let activeController = controller({ acknowledged: true });
+    mockedUseCapabilityPlayground.mockImplementation(() => activeController);
+    const view = renderPlayground();
+    await submitNodeCall();
+
+    activeController = controller({
+      phase: "result",
+      acknowledged: true,
+      result: callResult(),
+    });
+    mockedUseCapabilityPlayground.mockReturnValue(activeController);
+    mockedUseConsoleWorkspace.mockReturnValue(
+      workspaceWithEvidence([
+        capabilityEvidence("call-payload-match", nodeCapability.name, 24, target, {
+          query: "README.md",
+        }),
+        capabilityEvidence("call-payload-other", nodeCapability.name, 99, target, {
+          query: "CHANGELOG.md",
+        }),
+      ]),
+    );
+    view.rerender(
+      <CapabilityPlayground
+        capability={nodeCapability}
+        executor={writeExecutor}
+        target={target}
+      />,
+    );
+
+    expect(screen.getByText("24 ms")).toBeInTheDocument();
+    expect(screen.queryByText("99 ms")).not.toBeInTheDocument();
+  });
+
+  it("matches the normalized submitted deployment", async () => {
+    let activeController = controller({
+      acknowledged: true,
+      deploymentId: " docs.default ",
+    });
+    mockedUseCapabilityPlayground.mockImplementation(() => activeController);
+    const view = renderPlayground(wrapperCapability);
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("tab", { name: "Try capability" }));
+    await user.type(screen.getByRole("textbox", { name: "Query" }), "README.md");
+    await user.click(screen.getByRole("button", { name: "Call capability" }));
+
+    activeController = controller({
+      phase: "result",
+      acknowledged: true,
+      deploymentId: " docs.default ",
+      result: callResult({
+        qualifiedName: wrapperCapability.name,
+        sourceId: wrapperCapability.sourceId,
+        kind: wrapperCapability.kind,
+        deploymentId: "docs.default",
+      }),
+    });
+    mockedUseCapabilityPlayground.mockReturnValue(activeController);
+    mockedUseConsoleWorkspace.mockReturnValue(
+      workspaceWithEvidence([
+        capabilityEvidence(
+          "call-deployment-match",
+          wrapperCapability.name,
+          27,
+          target,
+          { query: "README.md" },
+          "docs.default",
+        ),
+        capabilityEvidence(
+          "call-deployment-other",
+          wrapperCapability.name,
+          99,
+          target,
+          { query: "README.md" },
+          "docs.other",
+        ),
+      ]),
+    );
+    view.rerender(
+      <CapabilityPlayground
+        capability={wrapperCapability}
+        executor={writeExecutor}
+        target={target}
+      />,
+    );
+
+    expect(screen.getByText("27 ms")).toBeInTheDocument();
+    expect(screen.queryByText("99 ms")).not.toBeInTheDocument();
+  });
+
+  it("omits provenance when identical matching calls are ambiguous", async () => {
+    let activeController = controller({ acknowledged: true });
+    mockedUseCapabilityPlayground.mockImplementation(() => activeController);
+    const view = renderPlayground();
+    await submitNodeCall();
+
+    activeController = controller({
+      phase: "result",
+      acknowledged: true,
+      result: callResult(),
+    });
+    mockedUseCapabilityPlayground.mockReturnValue(activeController);
+    mockedUseConsoleWorkspace.mockReturnValue(
+      workspaceWithEvidence([
+        capabilityEvidence("call-identical-a", nodeCapability.name, 24, target, {
+          query: "README.md",
+        }),
+        capabilityEvidence("call-identical-b", nodeCapability.name, 31, target, {
+          query: "README.md",
+        }),
+      ]),
+    );
+    view.rerender(
+      <CapabilityPlayground
+        capability={nodeCapability}
+        executor={writeExecutor}
+        target={target}
+      />,
+    );
+
+    expect(screen.queryByText("24 ms")).not.toBeInTheDocument();
+    expect(screen.queryByText("31 ms")).not.toBeInTheDocument();
+    expect(screen.getByText("Call evidence was not retained for this connection.")).toBeInTheDocument();
+  });
+
   it("matches only evidence added after the current repeated call", async () => {
     let activeController = controller({ acknowledged: true });
     mockedUseCapabilityPlayground.mockImplementation(() => activeController);
     mockedUseConsoleWorkspace.mockReturnValue(
-      workspaceWithEvidence([capabilityEvidence("call-first", nodeCapability.name, 11)]),
+      workspaceWithEvidence([
+        capabilityEvidence("call-first", nodeCapability.name, 11, target, {
+          query: "first.md",
+        }),
+      ]),
     );
     const view = renderPlayground();
     await submitNodeCall("first.md");
@@ -564,7 +718,11 @@ describe("CapabilityPlayground", () => {
       }),
     );
     mockedUseConsoleWorkspace.mockReturnValue(
-      workspaceWithEvidence([capabilityEvidence("call-first", nodeCapability.name, 11)]),
+      workspaceWithEvidence([
+        capabilityEvidence("call-first", nodeCapability.name, 11, target, {
+          query: "first.md",
+        }),
+      ]),
     );
     view.rerender(
       <CapabilityPlayground
@@ -590,8 +748,12 @@ describe("CapabilityPlayground", () => {
     mockedUseCapabilityPlayground.mockReturnValue(activeController);
     mockedUseConsoleWorkspace.mockReturnValue(
       workspaceWithEvidence([
-        capabilityEvidence("call-first", nodeCapability.name, 11),
-        capabilityEvidence("call-second", nodeCapability.name, 22),
+        capabilityEvidence("call-first", nodeCapability.name, 11, target, {
+          query: "first.md",
+        }),
+        capabilityEvidence("call-second", nodeCapability.name, 22, target, {
+          query: "second.md",
+        }),
       ]),
     );
     view.rerender(
@@ -642,7 +804,11 @@ describe("CapabilityPlayground", () => {
     });
     mockedUseCapabilityPlayground.mockReturnValue(activeController);
     mockedUseConsoleWorkspace.mockReturnValue(
-      workspaceWithEvidence([capabilityEvidence("call-connected", nodeCapability.name, 24)]),
+      workspaceWithEvidence([
+        capabilityEvidence("call-connected", nodeCapability.name, 24, target, {
+          query: "README.md",
+        }),
+      ]),
     );
     view.rerender(
       <CapabilityPlayground
