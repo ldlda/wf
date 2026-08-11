@@ -25,6 +25,10 @@ export const EvidenceLedger = ({ records }: Props) => (
               </summary>
               <dl className="evidence-detail">
                 <div className="evidence-field">
+                  <dt>Target</dt>
+                  <dd><code>{record.target}</code></dd>
+                </div>
+                <div className="evidence-field">
                   <dt>Equivalent CLI</dt>
                   <dd><code>{record.equivalentCli}</code></dd>
                 </div>

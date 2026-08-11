@@ -23,6 +23,7 @@ describe("EvidenceLedger", () => {
     expect(row).not.toHaveAttribute("open");
     expect(row).toHaveTextContent("workflow.health");
     expect(row).toHaveTextContent("11ms");
+    expect(row).toHaveTextContent("http://console.test/rpc");
     expect(row).toHaveTextContent("uv run wf status");
     expect(row).toHaveTextContent('"target": "console"');
     expect(row).toHaveTextContent('"status": "ok"');

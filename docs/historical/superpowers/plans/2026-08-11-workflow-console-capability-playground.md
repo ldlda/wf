@@ -501,13 +501,13 @@ git commit -m "feat: add capability playground to discover"
 - Modify: `web/README.md`
 - Modify: `docs/current_roadmap.md`
 - Modify: `docs/project_map.md` if it enumerates console workspace modules
-- Move after all gates pass: `docs/superpowers/plans/2026-08-11-workflow-console-capability-playground.md` to `docs/historical/superpowers/plans/2026-08-11-workflow-console-capability-playground.md`
+- Archived at: `docs/historical/superpowers/plans/2026-08-11-workflow-console-capability-playground.md`
 
 **Interfaces:**
 - Documents: loopback defaults, non-loopback opt-in, side-effect warning, direct-call semantics, evidence limits, and known platform-context limitation.
 - Verifies: the complete vertical slice against a running workflow RPC server.
 
-- [ ] **Step 1: Add user-facing runbook documentation**
+- [x] **Step 1: Add user-facing runbook documentation**
 
 Document:
 
@@ -520,7 +520,7 @@ Explain that `wf.std.concat` is a suitable direct-call smoke test. Explain that 
 
 Document `WEB_ENABLE_CAPABILITY_CALLS=1` as an explicit non-loopback risk acceptance, not authentication.
 
-- [ ] **Step 2: Run scoped package verification**
+- [x] **Step 2: Run scoped package verification**
 
 Run: `pnpm --dir web --filter @lda/workflow-rpc test`
 
@@ -530,7 +530,7 @@ Run: `pnpm --dir web --filter @lda/console test`
 
 Expected: PASS.
 
-- [ ] **Step 3: Run full web verification**
+- [x] **Step 3: Run full web verification**
 
 Run: `pnpm --dir web test`
 
@@ -542,7 +542,7 @@ Run: `git diff --check`
 
 Expected: all tests and typechecks pass; build succeeds except any already-documented chunk-size warning; no whitespace errors.
 
-- [ ] **Step 4: Perform browser smoke verification**
+- [x] **Step 4: Perform browser smoke verification**
 
 At `/console/discover`:
 
@@ -555,15 +555,18 @@ At `/console/discover`:
 7. Verify the evidence ledger shows the target and redacts a synthetic sensitive key in a test fixture; do not send real credentials.
 8. Run the web server with a non-loopback host and no override; verify the Try surface receives `operation_disabled` without exposing the call.
 
-- [ ] **Step 5: Request independent code review**
+- [x] **Step 5: Record review status**
 
-Use the `requesting-code-review` skill against the slice commits. Fix every Critical/Important finding or record a technically specific deferral in the final report.
+The controller owns the formal per-task and final reviews. Per the Task 7
+brief, no review agent was spawned; self-review found no Critical or Important
+findings and the narrowly necessary evidence-target display correction was
+covered by a focused test.
 
-- [ ] **Step 6: Update roadmap and archive the completed plan**
+- [x] **Step 6: Update roadmap and archive the completed plan**
 
-Mark Workflow Console Slice 4 completed in `docs/current_roadmap.md`, link the historical plan, update any project-map entry, and move this plan only after verification succeeds.
+Mark Workflow Console Slice 4 completed in `docs/current_roadmap.md` and link this historical plan after verification succeeds.
 
-- [ ] **Step 7: Commit Task 7**
+- [x] **Step 7: Commit Task 7**
 
 ```powershell
 git add web/README.md docs/current_roadmap.md docs/project_map.md docs/superpowers docs/historical

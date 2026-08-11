@@ -83,13 +83,14 @@ Implementation order:
    Implementation:
    [`selected-step dataflow plan`](historical/superpowers/plans/2026-08-09-workflow-console-selected-step-dataflow.md).
    Planned authoring slices, in order:
-   - Slice 4: capability playground and schema-form reference support. Resolve
-     self-contained local JSON Schema `$ref` / `$defs` references, then expose
-     the existing `workflow.capabilities.call` operation as a generated input
-     form with typed output, diagnostics, raw evidence, and durable inline
-     failure receipts. A direct capability call is an isolated smoke test, not
-     a persisted workflow run: it does not create workflow state, routes, run
-     records, or trace frames.
+   - Slice 4 is complete: the Discover capability playground resolves
+     self-contained local JSON Schema `$ref` / `$defs` references and exposes
+     the existing `workflow.capabilities.call` operation through a generated
+     input form with typed output, diagnostics, bounded/redacted evidence, and
+     durable inline failure receipts. Direct capability calls are isolated
+     smoke tests, not persisted workflow runs: they create no workflow state,
+     routes, run records, or trace frames. Implementation:
+     [`capability playground plan`](historical/superpowers/plans/2026-08-11-workflow-console-capability-playground.md).
    - Slice 5: composite input values. Extend canonical step-input bindings with
      a deliberate recursive literal/path expression model for arrays and
      objects. Start by exposing per-item Literal/Path controls in existing array

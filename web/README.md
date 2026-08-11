@@ -56,6 +56,41 @@ opens the capability palette and context inspector as independently scrolling,
 accessible full-height sheets. Forms remain mounted while sheets are closed so
 dirty values and selection survive palette/inspector close and reopen cycles.
 
+## Capability Playground
+
+The Discover route includes a generated **Try capability** form for direct
+capability smoke tests. Run the local services with loopback defaults:
+
+```powershell
+# Terminal 1: workflow JSON-RPC server
+uv run wf-rpc-server --config wf.config.json --host 127.0.0.1 --port 8765
+
+# Terminal 2: web console
+pnpm --dir web dev
+```
+
+Connect to `http://127.0.0.1:8765/rpc`, select `wf.std.concat`, acknowledge the
+side-effect warning, and submit `items: ["hello", "world"]` with
+`separator: " "`. A direct capability call executes immediately against the
+target. It is not a workflow run and creates no graph, state, route, run, or
+trace records. The acknowledgement is an accidental-action guard, not
+authentication or authorization; capabilities may still have side effects.
+
+`wf.source.read_resource` is a useful form-generation check. Its local JSON
+Schema `$ref` resolves into `logical_source`, `uri`, and the defaulted `kind`
+field instead of an unresolved reference blob. A node-spec direct call can
+still finish with a `runtime_error` when it requires workflow platform context.
+That completed receipt is truthful runtime behavior, not a failed form
+implementation; use a workflow deployment with the required platform context
+for the successful path.
+
+The evidence ledger retains the target, equivalent CLI, and bounded request and
+response values. It keeps at most 100 records, traverses to depth 8, retains at
+most 100 collection entries, limits strings to 4096 characters, and limits
+each retained request or response to 32 KiB serialized. Sensitive keys such as
+`authorization`, `cookie`, `token`, `secret`, `password`, and `api_key` are
+redacted before evidence enters the console state.
+
 ## Production Build
 
 ```powershell
@@ -177,6 +212,23 @@ combined explorer screen.
 - Request bodies are limited to 256 KiB
 - Response bodies are limited to 4 MiB
 - The server binds to `127.0.0.1` by default
+- Browser capability calls are enabled automatically only when `WEB_HOST` is
+  loopback
+- A non-loopback bind requires the explicit override
+  `WEB_ENABLE_CAPABILITY_CALLS=1` before the Try capability surface can call
+  upstream capabilities
+
+The non-loopback override is an explicit risk acceptance for a trusted
+environment, not authentication, TLS, tenant isolation, or a public-internet
+security boundary. It can let LAN clients execute side-effecting capabilities
+against the configured workflow target:
+
+```powershell
+pnpm --dir web build
+$env:WEB_HOST = "0.0.0.0"
+$env:WEB_ENABLE_CAPABILITY_CALLS = "1"
+pnpm --dir web start
+```
 
 ## Smoke Test
 
@@ -188,17 +240,24 @@ With the Python server running, verify in the browser:
    inspection
 4. Raw health and capability exchanges are selectable in the evidence inspector
 5. Equivalent CLI text is visible
-6. Create a draft, add and edit a capability step, set a route, validate, and
+6. Select **Try capability**, acknowledge the immediate-call warning, and
+   submit `wf.std.concat` with `items: ["hello", "world"]` and `separator: " "`;
+   verify `hello world`, the target-bearing evidence receipt, and no workflow
+   run or trace record
+7. Select `wf.source.read_resource`; verify `logical_source`, `uri`, and the
+   defaulted `kind` field render, then verify a completed `runtime_error` receipt
+   when it is called without platform context
+8. Create a draft, add and edit a capability step, set a route, validate, and
    reload its direct draft URL while checking graph and evidence state
-7. `http://example.com:8765/rpc` is rejected without upstream fetch
-8. Stopping the Python server produces the unreachable state while preserving
+9. `http://example.com:8765/rpc` is rejected without upstream fetch
+10. Stopping the Python server produces the unreachable state while preserving
    the entered URL
-9. Persisted draft workspaces populate and a selected draft shows its graph,
+11. Persisted draft workspaces populate and a selected draft shows its graph,
    diagnostics, and revision
-10. Artifact, deployment, and run routes populate independently
-11. Selecting an artifact shows its plan graph and detail panel
-12. Selecting a run shows trace frames and interrupt details
-13. Clicking a trace frame shows resolved input and output
+12. Artifact, deployment, and run routes populate independently
+13. Selecting an artifact shows its plan graph and detail panel
+14. Selecting a run shows trace frames and interrupt details
+15. Clicking a trace frame shows resolved input and output
 
 ### LDA Report Workflow Smoke
 
