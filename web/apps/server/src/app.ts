@@ -9,7 +9,7 @@ import {
 import type { upgradeWebSocket } from "@hono/node-server";
 import { addPresentationSyncRoutes } from "./presentation-sync/routes.js";
 import type { PresentationRoomService } from "./presentation-sync/rooms.js";
-import { isBrowserAllowedOperationName } from "./browser-operation-policy.js";
+import type { BrowserOperationPolicy } from "./browser-operation-policy.js";
 import { addStaticRoutes, validateConsoleRoot } from "./static.js";
 
 export type RunOperation = (
@@ -21,6 +21,7 @@ export type RunOperation = (
 type BrowserErrorCode =
   | "invalid_target"
   | "unknown_operation"
+  | "operation_disabled"
   | "upstream_unreachable"
   | "upstream_timeout"
   | "rpc_remote_error"
@@ -69,9 +70,15 @@ export function createApp(dependencies: {
     readonly rooms: PresentationRoomService;
     readonly upgradeWebSocket: typeof upgradeWebSocket;
   };
+  readonly browserOperationPolicy: BrowserOperationPolicy;
   readonly consoleRoot?: string;
 }): Hono {
-  const { runOperation, presentationSync, consoleRoot } = dependencies;
+  const {
+    runOperation,
+    presentationSync,
+    browserOperationPolicy,
+    consoleRoot,
+  } = dependencies;
   const app = new Hono();
 
   addPresentationSyncRoutes(app, presentationSync);
@@ -170,11 +177,7 @@ export function createApp(dependencies: {
       );
     }
 
-    if (
-      !body.operation ||
-      typeof body.operation !== "string" ||
-      !isBrowserAllowedOperationName(body.operation)
-    ) {
+    if (!body.operation || typeof body.operation !== "string") {
       return c.json(
         {
           ok: false,
@@ -187,6 +190,38 @@ export function createApp(dependencies: {
         400,
       );
     }
+
+    const decision = browserOperationPolicy.classify(body.operation);
+    if (decision === "unknown") {
+      return c.json(
+        {
+          ok: false,
+          error: {
+            code: "unknown_operation",
+            message: `unknown operation: ${body.operation}`,
+          },
+          exchange: { request: null, response: null },
+        },
+        400,
+      );
+    }
+    if (decision === "disabled") {
+      return c.json(
+        {
+          ok: false,
+          error: {
+            code: "operation_disabled",
+            message:
+              "workflow.capabilities.call is disabled for this console server",
+          },
+          exchange: { request: null, response: null },
+        },
+        403,
+      );
+    }
+
+    // The policy only returns allowed for the authored or conditional RPC names.
+    const operation = body.operation as OperationName;
 
     if (!body.target || typeof body.target !== "string") {
       return c.json(
@@ -201,7 +236,7 @@ export function createApp(dependencies: {
 
     try {
       const exchange = await runOperation(
-        body.operation,
+        operation,
         body.target,
         body.params ?? {},
       );

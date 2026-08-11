@@ -3,6 +3,7 @@ import * as v from "valibot";
 const KnownBrowserErrorCodeSchema = v.union([
   v.literal("invalid_target"),
   v.literal("unknown_operation"),
+  v.literal("operation_disabled"),
   v.literal("upstream_unreachable"),
   v.literal("upstream_timeout"),
   v.literal("rpc_remote_error"),

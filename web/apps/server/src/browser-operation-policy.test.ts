@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   browserAllowedOperationNames,
+  capabilityCallsEnabledForHost,
+  createBrowserOperationPolicy,
   isBrowserAllowedOperationName,
 } from "./browser-operation-policy.js";
 
@@ -44,4 +46,34 @@ describe("browser operation policy", () => {
     );
     expect(isBrowserAllowedOperationName("workflow.admin.auth.list")).toBe(false);
   });
+
+  it("classifies static, conditional, and unexposed operations", () => {
+    const disabled = createBrowserOperationPolicy({
+      enableCapabilityCalls: false,
+    });
+    const enabled = createBrowserOperationPolicy({
+      enableCapabilityCalls: true,
+    });
+
+    expect(disabled.classify("workflow.health")).toBe("allowed");
+    expect(disabled.classify("workflow.capabilities.call")).toBe("disabled");
+    expect(enabled.classify("workflow.capabilities.call")).toBe("allowed");
+    expect(disabled.classify("workflow.admin.auth.list")).toBe("unknown");
+  });
+
+  it.each([
+    ["127.0.0.1", undefined, true],
+    ["localhost", undefined, true],
+    ["::1", undefined, true],
+    ["0.0.0.0", undefined, false],
+    ["192.168.1.20", undefined, false],
+    ["192.168.1.20", "0", false],
+    ["192.168.1.20", "1", true],
+    ["192.168.1.20", "true", false],
+  ] as const)(
+    "computes capability-call access for host %s with override %s",
+    (hostname, override, expected) => {
+      expect(capabilityCallsEnabledForHost(hostname, override)).toBe(expected);
+    },
+  );
 });

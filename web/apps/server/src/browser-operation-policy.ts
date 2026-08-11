@@ -40,6 +40,35 @@ const browserAllowedOperationNameSet: ReadonlySet<string> = new Set(
   browserAllowedOperationNames,
 );
 
+const conditionalOperations = new Set<OperationName>([
+  "workflow.capabilities.call",
+]);
+
+export type BrowserOperationDecision = "allowed" | "disabled" | "unknown";
+
+export type BrowserOperationPolicy = {
+  readonly classify: (operation: string) => BrowserOperationDecision;
+};
+
+export const createBrowserOperationPolicy = (options: {
+  readonly enableCapabilityCalls: boolean;
+}): BrowserOperationPolicy => ({
+  classify: (operation) => {
+    if (browserAllowedOperationNameSet.has(operation)) return "allowed";
+    if (conditionalOperations.has(operation as OperationName)) {
+      return options.enableCapabilityCalls ? "allowed" : "disabled";
+    }
+    return "unknown";
+  },
+});
+
+const loopbackHostnames = new Set(["127.0.0.1", "localhost", "::1"]);
+
+export const capabilityCallsEnabledForHost = (
+  hostname: string,
+  override: string | undefined,
+): boolean => loopbackHostnames.has(hostname) || override === "1";
+
 export const isBrowserAllowedOperationName = (
   value: string,
 ): value is BrowserAllowedOperationName =>

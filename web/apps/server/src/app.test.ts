@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { upgradeWebSocket } from "@hono/node-server";
 import { createApp, type RunOperation } from "./app.js";
+import { createBrowserOperationPolicy } from "./browser-operation-policy.js";
 import { createPresentationRoomService } from "./presentation-sync/rooms.js";
 import type { OperationExchange } from "@lda/workflow-rpc";
 import * as fs from "node:fs";
@@ -33,11 +34,20 @@ const failRunner =
     });
   };
 
+type AppDependencies = Parameters<typeof createApp>[0];
+
+const disabledBrowserOperationPolicy = createBrowserOperationPolicy({
+  enableCapabilityCalls: false,
+});
+
 const makeApp = (
-  dependencies: Omit<Parameters<typeof createApp>[0], "presentationSync">,
+  dependencies: Omit<AppDependencies, "presentationSync" | "browserOperationPolicy"> &
+    Partial<Pick<AppDependencies, "browserOperationPolicy">>,
 ) =>
   createApp({
     ...dependencies,
+    browserOperationPolicy:
+      dependencies.browserOperationPolicy ?? disabledBrowserOperationPolicy,
     presentationSync: {
       rooms: createPresentationRoomService(),
       upgradeWebSocket,
@@ -218,6 +228,61 @@ describe("POST /api/rpc", () => {
     const body = await res.json();
     expect(body.ok).toBe(true);
     expect(body.operation).toBe("workflow.sources.list");
+  });
+
+  it("returns a distinct 403 when capability calls are disabled", async () => {
+    const runOperation = vi.fn<RunOperation>();
+    const disabledApp = makeApp({ runOperation });
+    const res = await disabledApp.request("/api/rpc", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        operation: "workflow.capabilities.call",
+        target: "http://127.0.0.1:8000/rpc",
+        params: { capability_name: "local.example.echo", input: {} },
+      }),
+    });
+
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({
+      ok: false,
+      error: {
+        code: "operation_disabled",
+        message:
+          "workflow.capabilities.call is disabled for this console server",
+      },
+      exchange: { request: null, response: null },
+    });
+    expect(runOperation).not.toHaveBeenCalled();
+  });
+
+  it("invokes capability calls when the injected policy enables them", async () => {
+    const runOperation: RunOperation = vi.fn(async (operation) =>
+      makeExchange({ operation }),
+    );
+    const enabledApp = makeApp({
+      runOperation,
+      browserOperationPolicy: createBrowserOperationPolicy({
+        enableCapabilityCalls: true,
+      }),
+    });
+    const params = { capability_name: "local.example.echo", input: {} };
+    const res = await enabledApp.request("/api/rpc", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        operation: "workflow.capabilities.call",
+        target: "http://127.0.0.1:8000/rpc",
+        params,
+      }),
+    });
+
+    expect(res.status).toBe(200);
+    expect(runOperation).toHaveBeenCalledWith(
+      "workflow.capabilities.call",
+      "http://127.0.0.1:8000/rpc",
+      params,
+    );
   });
 
   it("returns 400 for unknown operation", async () => {

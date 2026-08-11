@@ -14,6 +14,10 @@ import {
   type OperationName,
 } from "@lda/workflow-rpc";
 import { createApp, type RunOperation } from "./app.js";
+import {
+  capabilityCallsEnabledForHost,
+  createBrowserOperationPolicy,
+} from "./browser-operation-policy.js";
 import { createPresentationRoomService } from "./presentation-sync/rooms.js";
 import { shutdownServer } from "./shutdown.js";
 import { WebSocketServer } from "ws";
@@ -25,6 +29,22 @@ if (Number.isNaN(port) || port < 1 || port > 65535) {
 }
 
 const hostname = process.env.WEB_HOST ?? "127.0.0.1";
+const capabilityCallsOverride = process.env.WEB_ENABLE_CAPABILITY_CALLS;
+const capabilityCallsEnabled = capabilityCallsEnabledForHost(
+  hostname,
+  capabilityCallsOverride,
+);
+const browserOperationPolicy = createBrowserOperationPolicy({
+  enableCapabilityCalls: capabilityCallsEnabled,
+});
+if (
+  capabilityCallsOverride === "1" &&
+  !capabilityCallsEnabledForHost(hostname, undefined)
+) {
+  console.warn(
+    `WARNING: WEB_ENABLE_CAPABILITY_CALLS=1 enables browser capability calls on non-loopback host ${hostname}; this is not authentication or TLS and may let LAN clients execute side-effecting capabilities against the server's workflow target.`,
+  );
+}
 
 const liveLayer = makeWorkflowRpcLayer();
 const consoleRoot = fileURLToPath(new URL("../../console/dist", import.meta.url));
@@ -53,6 +73,7 @@ try {
   app = createApp({
     runOperation,
     presentationSync: { rooms, upgradeWebSocket },
+    browserOperationPolicy,
     ...(staticConsoleRoot ? { consoleRoot: staticConsoleRoot } : {}),
   });
 } catch (error) {
