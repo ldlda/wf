@@ -96,7 +96,8 @@ Implementation order:
      objects. Start by exposing per-item Literal/Path controls in existing array
      editors, preserving order and schema-validating every element. Do not
      encode array assembly as synthetic targets such as `items.0`; retain the
-     current simple path/literal bindings for ordinary fields.
+     current simple path/literal bindings for ordinary fields. Design:
+     [`composite input expressions`](superpowers/specs/2026-08-12-composite-input-expressions-design.md).
    - Slice 6: workflow contract graph. Add selectable Input, State, and Outcomes
      projections with focused forms for workflow contracts, explicit outcomes,
      entry point, and final workflow output bindings.

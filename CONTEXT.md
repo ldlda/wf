@@ -80,6 +80,16 @@ workspaces/accounts while allowing validation to detect missing, disabled, or
 incompatible sources.
 _Avoid_: Ad-hoc environment variables, hidden source lookup
 
+**Step Input Binding**:
+A node-local assignment from one workflow source or constructed input expression
+to one capability input target.
+_Avoid_: Indexed local targets, output binding
+
+**Input Expression**:
+A finite recursive value construction made only from JSON literals, workflow
+paths, arrays, and objects. It assembles data but does not compute behavior.
+_Avoid_: Formula, transform, inline capability call
+
 **Platform Source**:
 A process-provided source with a fixed identity, such as `wf.std` or
 `wf.source`. Platform sources can satisfy workflow requirements without

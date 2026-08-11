@@ -31,6 +31,25 @@
 - [x] CLI help and agent instructions describe step-input targets as bare local
   fields and do not document the nested composition behavior already supported
   by the canonical runtime model.
+- [ ] Canonical bindings cannot yet construct array values from independently
+  sourced elements. A binding target such as `items.0` is rejected because
+  binding-path validation only traverses object properties. This blocks mixed
+  inputs such as `wf.std.concat` with `items[0]` from state and `items[1]` as a
+  literal; the fix belongs in the canonical binding/schema model before the UI
+  exposes per-item source controls.
+
+## Console workflow-client gaps
+
+- [ ] `first_item` and `last_item` currently reuse the broad `SequenceInput`
+  contract even though they reject empty arrays at runtime. Their capability
+  schemas therefore truthfully allow `{ "items": [] }`, and the generated form
+  correctly permits submission. Give only those two operations a non-empty
+  input model and project its `minItems` constraint into form validation;
+  empty-aware sequence operations must continue accepting empty arrays.
+- [ ] Artifact creation, deployment creation/rebinding, and complete run
+  start/interrupt/resume/output/trace journeys are not yet usable end-to-end
+  from the console. Existing routes are inspection-oriented and must not be
+  presented as completed acceptance-test coverage.
 
 ## Draft workspace lifecycle parity
 
