@@ -98,6 +98,8 @@ Implementation order:
      encode array assembly as synthetic targets such as `items.0`; retain the
      current simple path/literal bindings for ordinary fields. Design:
      [`composite input expressions`](superpowers/specs/2026-08-12-composite-input-expressions-design.md).
+     Implementation:
+     [`composite input expressions plan`](superpowers/plans/2026-08-12-composite-input-expressions.md).
    - Slice 6: workflow contract graph. Add selectable Input, State, and Outcomes
      projections with focused forms for workflow contracts, explicit outcomes,
      entry point, and final workflow output bindings.

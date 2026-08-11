@@ -2,7 +2,7 @@
 
 Date: 2026-08-12
 
-Status: Design direction approved; written contract awaiting final review.
+Status: Approved design for Workflow Console authoring Slice 5.
 
 Related:
 
