@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type KeyboardEvent } from "react";
 import { AlertCircle, CheckCircle2, Clock3, Play } from "lucide-react";
 import type { EvidenceRecord } from "../../app/state.js";
 import { formatBoundedJson } from "../domain/format-bounded-json.js";
@@ -21,22 +21,53 @@ export type CapabilityPlaygroundProps = {
 
 type PlaygroundTab = "contract" | "try";
 
+type SubmittedCall = {
+  readonly baselineEvidenceIds: ReadonlySet<string>;
+  readonly deploymentId: string;
+  readonly executor: ConsoleWriteExecutor | null;
+  readonly payloadText: string;
+  readonly qualifiedName: string;
+  readonly target: string | null;
+};
+
+const PLAYGROUND_TABS: readonly PlaygroundTab[] = ["contract", "try"];
+const TAB_IDS: Record<PlaygroundTab, string> = {
+  contract: "capability-playground-tab-contract",
+  try: "capability-playground-tab-try",
+};
+const PANEL_IDS: Record<PlaygroundTab, string> = {
+  contract: "capability-playground-contract-panel",
+  try: "capability-playground-try-panel",
+};
+
 const formatKind = (kind: CapabilityDetail["kind"]): string =>
   kind === "node_spec" ? "Node spec" : "Wrapper artifact";
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
-const latestCallEvidence = (
+const requestQualifiedName = (request: unknown): string | null => {
+  if (!isRecord(request) || typeof request.qualified_name !== "string") {
+    return null;
+  }
+  return request.qualified_name;
+};
+
+const submittedCallEvidence = (
   evidence: ReadonlyArray<EvidenceRecord>,
-  target: string | null,
+  submittedCall: SubmittedCall,
 ): EvidenceRecord | null => {
+  // Evidence is an append-only stream, so the baseline prevents an older
+  // matching call from being mistaken for the call that produced this receipt.
+  if (submittedCall.target === null) return null;
   for (let index = evidence.length - 1; index >= 0; index -= 1) {
     const record = evidence[index];
     if (record === undefined) continue;
     if (
+      !submittedCall.baselineEvidenceIds.has(record.id) &&
       record.operation === "workflow.capabilities.call" &&
-      (target === null || record.target === target)
+      record.target === submittedCall.target &&
+      requestQualifiedName(record.request) === submittedCall.qualifiedName
     ) {
       return record;
     }
@@ -71,9 +102,9 @@ const ContractView = ({
   readonly onAddToDraft: (() => void) | undefined;
 }) => (
   <section
-    aria-labelledby="capability-playground-contract-heading"
+    aria-labelledby={TAB_IDS.contract}
     className="capability-playground__panel"
-    id="capability-playground-contract-panel"
+    id={PANEL_IDS.contract}
     role="tabpanel"
     tabIndex={0}
   >
@@ -124,15 +155,20 @@ const formatSerializationIssues = (
   result: SchemaSerializationResult,
 ): string => result.issues.map((issue) => issue.message).join(" ");
 
+const diagnosticKey = (diagnostic: CapabilityCallResult["diagnostics"][number]): string =>
+  [diagnostic.code, diagnostic.logicalRef, diagnostic.severity, diagnostic.message].join("|");
+
 const outcomeLabel = (outcome: string): string =>
   outcome === "runtime_error" ? "Completed with runtime error" : "Completed";
 
 const ResultReceipt = ({
   result,
   evidence,
+  submittedCall,
 }: {
   readonly result: CapabilityCallResult;
   readonly evidence: EvidenceRecord | null;
+  readonly submittedCall: SubmittedCall;
 }) => (
   <section
     aria-labelledby="capability-playground-result-heading"
@@ -150,6 +186,21 @@ const ResultReceipt = ({
         <CheckCircle2 aria-hidden="true" size={17} strokeWidth={2} />
         <span>{outcomeLabel(result.outcome)}</span>
       </p>
+    </div>
+    <div
+      aria-labelledby="capability-playground-submitted-heading"
+      className="capability-playground__submitted-request"
+    >
+      <h4 id="capability-playground-submitted-heading">Submitted request</h4>
+      <dl className="capability-playground__receipt-facts">
+        <div>
+          <dt>Deployment</dt>
+          <dd aria-label="Submitted deployment">
+            {submittedCall.deploymentId || "default"}
+          </dd>
+        </div>
+      </dl>
+      <pre aria-label="Submitted payload">{submittedCall.payloadText}</pre>
     </div>
     <dl className="capability-playground__receipt-facts">
       <div>
@@ -180,17 +231,20 @@ const ResultReceipt = ({
         </>
       )}
     </dl>
-    {result.outcome === "runtime_error" && (
-      <p className="capability-playground__runtime-note">
-        No workflow run or trace was created.
+    {!evidence && (
+      <p className="capability-playground__muted">
+        Call evidence was not retained for this connection.
       </p>
     )}
+    <p className="capability-playground__runtime-note">
+      A direct capability call creates no workflow run or trace.
+    </p>
     <div className="capability-playground__receipt-section">
       <h4>Diagnostics</h4>
       {result.diagnostics.length > 0 ? (
         <ul className="capability-playground__diagnostics">
-          {result.diagnostics.map((diagnostic, index) => (
-            <li key={`${diagnostic.code}-${index}`}>
+          {result.diagnostics.map((diagnostic) => (
+            <li key={diagnosticKey(diagnostic)}>
               <span className="capability-playground__diagnostic-meta">
                 {diagnostic.severity} / {diagnostic.code}
               </span>
@@ -230,10 +284,20 @@ const TryView = ({
   const controller = useCapabilityPlayground(capability.name);
   const { connection } = useConsoleWorkspace();
   const [localError, setLocalError] = useState<string | null>(null);
-  const evidence =
-    controller.phase === "result"
-      ? latestCallEvidence(connection.evidence, target)
+  const [submittedCall, setSubmittedCall] = useState<SubmittedCall | null>(null);
+
+  const currentSubmittedCall =
+    submittedCall !== null &&
+    submittedCall.executor === executor &&
+    submittedCall.qualifiedName === capability.name &&
+    submittedCall.target === target &&
+    controller.phase === "result" &&
+    controller.result?.qualifiedName === submittedCall.qualifiedName
+      ? submittedCall
       : null;
+  const evidence = currentSubmittedCall
+    ? submittedCallEvidence(connection.evidence, currentSubmittedCall)
+    : null;
   const operationAvailable = executor !== null && target !== null && controller.phase !== "disconnected";
 
   const handleSubmit = (result: SchemaSerializationResult): void => {
@@ -246,14 +310,22 @@ const TryView = ({
       setLocalError("Capability inputs must serialize to an object.");
       return;
     }
+    setSubmittedCall({
+      baselineEvidenceIds: new Set(connection.evidence.map((record) => record.id)),
+      deploymentId: controller.deploymentId.trim(),
+      executor,
+      payloadText: formatBoundedJson(result.value),
+      qualifiedName: capability.name,
+      target,
+    });
     controller.call(result.value);
   };
 
   return (
     <section
-      aria-labelledby="capability-playground-try-heading"
+      aria-labelledby={TAB_IDS.try}
       className="capability-playground__panel capability-playground__panel--try"
-      id="capability-playground-try-panel"
+      id={PANEL_IDS.try}
       role="tabpanel"
       tabIndex={0}
     >
@@ -322,7 +394,17 @@ const TryView = ({
         </p>
       )}
       {controller.phase === "result" && controller.result && (
-        <ResultReceipt result={controller.result} evidence={evidence} />
+        currentSubmittedCall ? (
+          <ResultReceipt
+            evidence={evidence}
+            result={controller.result}
+            submittedCall={currentSubmittedCall}
+          />
+        ) : (
+          <p className="capability-playground__muted" role="status">
+            Result receipt unavailable; call again to capture the submitted request.
+          </p>
+        )
       )}
     </section>
   );
@@ -335,7 +417,29 @@ export const CapabilityPlayground = ({
   onAddToDraft,
 }: CapabilityPlaygroundProps) => {
   const [activeTab, setActiveTab] = useState<PlaygroundTab>("contract");
-  const tabId = (tab: PlaygroundTab): string => `capability-playground-tab-${tab}`;
+
+  const activateTab = (tab: PlaygroundTab): void => {
+    setActiveTab(tab);
+    document.getElementById(TAB_IDS[tab])?.focus();
+  };
+
+  const handleTabKeyDown = (
+    event: KeyboardEvent<HTMLButtonElement>,
+    tab: PlaygroundTab,
+  ): void => {
+    const currentIndex = PLAYGROUND_TABS.indexOf(tab);
+    let nextIndex: number | null = null;
+    if (event.key === "ArrowRight") nextIndex = (currentIndex + 1) % PLAYGROUND_TABS.length;
+    if (event.key === "ArrowLeft") {
+      nextIndex = (currentIndex - 1 + PLAYGROUND_TABS.length) % PLAYGROUND_TABS.length;
+    }
+    if (event.key === "Home") nextIndex = 0;
+    if (event.key === "End") nextIndex = PLAYGROUND_TABS.length - 1;
+    if (nextIndex === null) return;
+    event.preventDefault();
+    const nextTab = PLAYGROUND_TABS[nextIndex];
+    if (nextTab !== undefined) activateTab(nextTab);
+  };
 
   return (
     <section
@@ -352,23 +456,25 @@ export const CapabilityPlayground = ({
         className="capability-playground__tabs"
         role="tablist"
       >
-        {([
-          ["contract", "Contract"],
-          ["try", "Try capability"],
-        ] as const).map(([tab, label]) => (
+        {PLAYGROUND_TABS.map((tab) => {
+          const label = tab === "contract" ? "Contract" : "Try capability";
+          return (
           <button
-            aria-controls={`capability-playground-${tab}-panel`}
+            aria-controls={PANEL_IDS[tab]}
             aria-selected={activeTab === tab}
             className="capability-playground__tab"
-            id={tabId(tab)}
+            id={TAB_IDS[tab]}
             key={tab}
             onClick={() => setActiveTab(tab)}
+            onKeyDown={(event) => handleTabKeyDown(event, tab)}
             role="tab"
+            tabIndex={activeTab === tab ? 0 : -1}
             type="button"
           >
             {label}
           </button>
-        ))}
+          );
+        })}
       </div>
       {activeTab === "contract" ? (
         <ContractView capability={capability} onAddToDraft={onAddToDraft} />

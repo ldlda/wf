@@ -1303,7 +1303,7 @@ tbody tr:hover {
 .capability-playground__receipt-facts dt {
   color: var(--color-slate);
   font-family: var(--font-heading);
-  font-size: 0.72rem;
+  font-size: 0.78rem;
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -1317,7 +1317,7 @@ tbody tr:hover {
   margin: 0.15rem 0 0;
   overflow-wrap: anywhere;
   font-family: var(--font-mono);
-  font-size: 0.75rem;
+  font-size: 0.82rem;
 }
 
 .capability-playground__description,
@@ -1344,7 +1344,7 @@ tbody tr:hover {
   padding: 0.5rem 0.65rem;
   cursor: pointer;
   font-family: var(--font-heading);
-  font-size: 0.78rem;
+  font-size: 0.82rem;
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -1359,7 +1359,7 @@ tbody tr:hover {
   background: var(--color-ink);
   color: var(--color-paper);
   font-family: var(--font-mono);
-  font-size: 0.72rem;
+  font-size: 0.82rem;
   line-height: 1.4;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -1463,6 +1463,25 @@ tbody tr:hover {
   background: var(--color-paper);
 }
 
+.capability-playground__submitted-request {
+  margin: 0 0 0.9rem;
+  padding: 0.65rem;
+  border: 1px solid var(--color-border);
+  background: var(--color-paper);
+}
+
+.capability-playground__submitted-request h4 {
+  margin: 0 0 0.35rem;
+  font-family: var(--font-heading);
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.capability-playground__submitted-request .capability-playground__receipt-facts {
+  margin-bottom: 0.55rem;
+}
+
 .capability-playground__receipt-label {
   margin: 0 0 0.25rem;
   text-transform: uppercase;
@@ -1510,6 +1529,7 @@ tbody tr:hover {
   gap: 0.45rem;
   margin: 0;
   padding-left: 1.1rem;
+  font-size: 0.85rem;
 }
 
 .capability-playground__diagnostics li {
