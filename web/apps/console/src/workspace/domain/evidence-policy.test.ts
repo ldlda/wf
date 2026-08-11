@@ -38,6 +38,44 @@ describe("evidence policy", () => {
     expect(value.Authorization).toBe(secret);
   });
 
+  it("redacts only the approved sensitive keys with case-insensitive matching", () => {
+    const sanitized = sanitizeEvidenceValue({
+      AUTHORIZATION: "authorization-secret",
+      Cookie: "cookie-secret",
+      "SET-COOKIE": "set-cookie-secret",
+      ToKeN: "token-secret",
+      Access_Token: "access-token-secret",
+      REFRESH_TOKEN: "refresh-token-secret",
+      Secret: "secret-value",
+      PASSWORD: "password-secret",
+      Api_Key: "api-key-secret",
+      "API-KEY": "api-key-secret",
+      tokenCount: 3,
+      authorizationStatus: "ok",
+      cookieJar: "safe",
+      secretary: "safe",
+    }) as Record<string, unknown>;
+
+    for (const key of [
+      "AUTHORIZATION",
+      "Cookie",
+      "SET-COOKIE",
+      "ToKeN",
+      "Access_Token",
+      "REFRESH_TOKEN",
+      "Secret",
+      "PASSWORD",
+      "Api_Key",
+      "API-KEY",
+    ]) {
+      expect(sanitized[key]).toBe("[redacted]");
+    }
+    expect(sanitized.tokenCount).toBe(3);
+    expect(sanitized.authorizationStatus).toBe("ok");
+    expect(sanitized.cookieJar).toBe("safe");
+    expect(sanitized.secretary).toBe("safe");
+  });
+
   it("truncates recursive depth with a stable marker", () => {
     let value: unknown = { leaf: true };
     for (let index = 0; index < 20; index += 1) {

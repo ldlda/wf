@@ -56,3 +56,61 @@ cycle, preserving separate coverage for depth and circular-reference markers.
   chunk larger than 500 kB; this task did not alter bundling or UI structure.
 - Presentation replay evidence uses the explicit target label `replay`, while
   live demo evidence records its connected target.
+
+## Fix Round 1
+
+Review findings addressed:
+
+- Routed presentation replay initialization and live evidence appends through
+  the existing `retainEvidence` policy boundary. Initial replay projection now
+  sanitizes each record and retains only the newest 100; live appends use the
+  same function rather than a second retention implementation.
+- Replaced the unanchored redaction regex with exact case-insensitive matching
+  for only: `authorization`, `cookie`, `set-cookie`, `token`, `access_token`,
+  `refresh_token`, `secret`, `password`, `api_key`, and `api-key`.
+- Added coverage for every approved key variant, plus unchanged
+  `tokenCount`, `authorizationStatus`, `cookieJar`, and `secretary` keys.
+- Added presentation projection coverage for sanitized initial replay evidence
+  and newest-100 retention.
+
+Test files changed in this fix round:
+
+- `web/apps/console/src/workspace/domain/evidence-policy.test.ts`
+- `web/apps/console/src/presentation/PresentationRoute.test.tsx`
+
+TDD RED command and output:
+
+```text
+pnpm --dir web --filter @lda/console test -- src/workspace/domain/evidence-policy.test.ts src/presentation/PresentationRoute.test.tsx
+FAIL: 2 failed, 93 passed (95 total)
+- ordinary tokenCount was redacted
+- projectRecordingToEvidence was not a function
+```
+
+Focused GREEN command and output:
+
+```text
+pnpm --dir web --filter @lda/console test -- src/workspace/domain/evidence-policy.test.ts src/presentation/PresentationRoute.test.tsx
+PASS: 2 files, 95 tests
+```
+
+Broader test command and output:
+
+```text
+pnpm --dir web --filter @lda/console test
+PASS: 144 files, 1,225 tests
+```
+
+Typecheck command and output:
+
+```text
+pnpm --dir web --filter @lda/console typecheck
+PASS: @lda/presentation-sync build; tsc -b --pretty false
+```
+
+Diff hygiene:
+
+```text
+git diff --check
+PASS: exit code 0
+```

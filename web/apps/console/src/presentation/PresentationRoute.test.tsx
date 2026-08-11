@@ -2,6 +2,8 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testi
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { callOperation } from "../connection/api.js";
+import type { DemoRecording } from "../demo/timeline/models.js";
+import { projectRecordingToEvidence } from "./PresentationRoute.js";
 
 vi.mock("../connection/api.js", () => ({
   callOperation: vi.fn().mockResolvedValue({
@@ -174,6 +176,43 @@ afterEach(() => {
 });
 
 describe("PresentationRoute", () => {
+  it("sanitizes and bounds initial replay evidence through the evidence policy", () => {
+    const recording = {
+      schemaVersion: 1,
+      recordingId: "reviewed-recording",
+      title: "Reviewed recording",
+      createdAt: "2026-08-11T00:00:00.000Z",
+      deploymentId: "lda_report_case_study.default",
+      source: "reviewed_live_capture",
+      events: Array.from({ length: 101 }, (_, index) => ({
+        id: `event-${index}`,
+        sequence: index,
+        stage: "trace_read",
+        operation: "workflow.runs.trace",
+        reason: "Read trace",
+        equivalentCli: "uv run wf run trace run_demo",
+        params: { tokenCount: index, cookieJar: "safe" },
+        rawResponse: {
+          AUTHORIZATION: "Bearer secret",
+          secretary: "safe",
+        },
+        interpreted: null,
+        durationMs: 1,
+        resultingIds: { deploymentId: null, runId: null },
+        recordedAt: "2026-08-11T00:00:00.000Z",
+      })),
+    } as DemoRecording;
+
+    const evidence = projectRecordingToEvidence(recording);
+
+    expect(evidence).toHaveLength(100);
+    expect(evidence[0]?.id).toBe("event-1");
+    expect(evidence.at(-1)?.response).toEqual({
+      AUTHORIZATION: "[redacted]",
+      secretary: "safe",
+    });
+  });
+
   it("renders the uniform audience pairing panel on /present", { timeout: 15000 }, async () => {
     const { PresentationRoute } = await import("./PresentationRoute.js");
     render(<PresentationRoute />);

@@ -13,8 +13,20 @@ const CIRCULAR_MARKER = "[truncated: circular reference]";
 const UNSUPPORTED_MARKER = "[unsupported: value]";
 const TRUNCATION_KEY = EVIDENCE_LIMIT_MARKER;
 
-const sensitiveKeyPattern =
-  /authorization|cookie|token|password|secret|credential|api[-_]?key|private[-_]?key/i;
+const sensitiveKeys = new Set([
+  "authorization",
+  "cookie",
+  "set-cookie",
+  "token",
+  "access_token",
+  "refresh_token",
+  "secret",
+  "password",
+  "api_key",
+  "api-key",
+]);
+
+const isSensitiveKey = (key: string): boolean => sensitiveKeys.has(key.toLowerCase());
 
 const byteLength = (value: unknown): number => {
   const serialized = JSON.stringify(value);
@@ -95,7 +107,7 @@ const projectValue = (
       if (key === undefined) continue;
       const safeKey = truncateString(key, MAX_STRING_LENGTH);
       // Check the key before reading its value so secrets behind getters or cycles are never traversed.
-      result[safeKey] = sensitiveKeyPattern.test(key)
+      result[safeKey] = isSensitiveKey(key)
         ? REDACTED_MARKER
         : projectValue(readProperty(value, key), depth + 1, active);
     }

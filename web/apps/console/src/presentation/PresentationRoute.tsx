@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import type { EvidenceRecord } from "../app/state.js";
+import { retainEvidence } from "../workspace/domain/evidence-policy.js";
 import { resolvePresentationTarget } from "./live-target.js";
 import { usePresentationTargetStatus } from "./usePresentationTargetStatus.js";
 import { useTimelineAgent } from "../demo/agent/timelineAgent.js";
@@ -20,7 +21,7 @@ import { usePresentationSync } from "./sync/usePresentationSync.js";
 import "./presentation.css";
 import "./styles/demo-workflow.css";
 
-const projectRecordingToEvidence = (
+export const projectRecordingToEvidence = (
   recording: import("../demo/timeline/models.js").DemoRecording,
 ): readonly EvidenceRecord[] =>
   recording.events
@@ -34,7 +35,11 @@ const projectRecordingToEvidence = (
       request: event.params,
       response: event.rawResponse,
       durationMs: event.durationMs,
-    }));
+    }))
+    .reduce<readonly EvidenceRecord[]>(
+      (records, record) => retainEvidence(records, record),
+      [],
+    );
 
 export const PresentationRoute = () => {
   const [state, dispatch] = useReducer(
@@ -80,7 +85,7 @@ export const PresentationRoute = () => {
 
   const [evidence, setEvidence] = useState<readonly EvidenceRecord[]>(replayEvidence);
   const recordEvidence = useCallback((record: EvidenceRecord) => {
-    setEvidence((records) => [...records, record]);
+    setEvidence((records) => retainEvidence(records, record));
   }, []);
 
   const presentationTarget = useMemo(() => resolvePresentationTarget(), []);
