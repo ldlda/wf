@@ -83,16 +83,29 @@ Implementation order:
    Implementation:
    [`selected-step dataflow plan`](historical/superpowers/plans/2026-08-09-workflow-console-selected-step-dataflow.md).
    Planned authoring slices, in order:
-   - Slice 4: workflow contract graph. Add selectable Input, State, and Outcomes
+   - Slice 4: capability playground and schema-form reference support. Resolve
+     self-contained local JSON Schema `$ref` / `$defs` references, then expose
+     the existing `workflow.capabilities.call` operation as a generated input
+     form with typed output, diagnostics, raw evidence, and durable inline
+     failure receipts. A direct capability call is an isolated smoke test, not
+     a persisted workflow run: it does not create workflow state, routes, run
+     records, or trace frames.
+   - Slice 5: composite input values. Extend canonical step-input bindings with
+     a deliberate recursive literal/path expression model for arrays and
+     objects. Start by exposing per-item Literal/Path controls in existing array
+     editors, preserving order and schema-validating every element. Do not
+     encode array assembly as synthetic targets such as `items.0`; retain the
+     current simple path/literal bindings for ordinary fields.
+   - Slice 6: workflow contract graph. Add selectable Input, State, and Outcomes
      projections with focused forms for workflow contracts, explicit outcomes,
      entry point, and final workflow output bindings.
-   - Slice 5: explicit End authoring and a typed Add step palette. End nodes are
+   - Slice 7: explicit End authoring and a typed Add step palette. End nodes are
      real stored steps; Input, State, and Outcomes remain graph projections of
      workflow-level contracts rather than fake runtime steps.
-   - Slice 6: typed forms for interrupt, condition/choose/match, subgraph, and
+   - Slice 8: typed forms for interrupt, condition/choose/match, subgraph, and
      foreach/join steps, built on the focused draft operations already exposed
      by the workflow API.
-   - Slice 7: direct graph gestures. Typed handles and drag-to-connect lower
+   - Slice 9: direct graph gestures. Typed handles and drag-to-connect lower
      through the same canonical route and binding mutations used by inspector
      forms; the graph never owns an independent editable document.
 5. Completed: the web console can operate the prepared
@@ -923,9 +936,9 @@ Agent evaluation cohort status and policy:
 
 Planned challenge-driven UX follow-ups:
 
-- Design a separate composite-binding/data-shaping slice for cases such as
-  mapping state fields into a structured `report` object. Do not hide this
-  behind the existing path binding syntax without a deliberate model.
+- Composite binding and data shaping is now tracked as console authoring Slice
+  5 above. It covers mixed literal/path arrays as well as the underlying model
+  needed later to map state fields into structured objects such as `report`.
 
 ## Historical References
 
