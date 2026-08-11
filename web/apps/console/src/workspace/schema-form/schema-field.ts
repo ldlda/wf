@@ -1,4 +1,4 @@
-import { resolveLocalSchemaNode } from "./schema-reference.js";
+import { resolveLocalSchemaNodeWithAncestry } from "./schema-reference.js";
 
 export type SchemaField = {
   readonly path: ReadonlyArray<string | number>;
@@ -36,6 +36,8 @@ export const rebaseSchemaField = (
 
 type SchemaRecord = Record<string, unknown>;
 type EnumValue = string | number | boolean | null;
+
+const MAX_NORMALIZATION_DEPTH = 64;
 
 const isRecord = (value: unknown): value is SchemaRecord =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -109,8 +111,25 @@ const normalizeField = (
   key: string,
   required: boolean,
   defaultTitle: string,
+  referenceAncestry: ReadonlySet<string>,
+  depth: number,
 ): SchemaField => {
-  const resolution = resolveLocalSchemaNode(rootSchema, schema);
+  if (depth >= MAX_NORMALIZATION_DEPTH) {
+    return fallback(
+      schema,
+      path,
+      key,
+      required,
+      defaultTitle,
+      "Schema normalization depth limit exceeded.",
+    );
+  }
+
+  const resolution = resolveLocalSchemaNodeWithAncestry(
+    rootSchema,
+    schema,
+    referenceAncestry,
+  );
   if (!resolution.ok) {
     const title = isRecord(schema) ? stringValue(schema.title) ?? defaultTitle : defaultTitle;
     return fallback(schema, path, key, required, title, resolution.reason);
@@ -164,6 +183,8 @@ const normalizeField = (
             propertyKey,
             requiredNames.has(propertyKey),
             stringValue(propertySchema && isRecord(propertySchema) ? propertySchema.title : null) ?? propertyKey,
+            resolution.referenceAncestry,
+            depth + 1,
           ),
         )
       : [];
@@ -188,7 +209,16 @@ const normalizeField = (
     if (itemSchema === undefined) {
       return fallback(resolvedSchema, path, key, required, title, "The array has no item schema; edit JSON directly.");
     }
-    const item = normalizeField(rootSchema, itemSchema, [...path, 0], "item", true, `${title} item`);
+    const item = normalizeField(
+      rootSchema,
+      itemSchema,
+      [...path, 0],
+      "item",
+      true,
+      `${title} item`,
+      resolution.referenceAncestry,
+      depth + 1,
+    );
     return {
       path,
       key,
@@ -230,7 +260,17 @@ export const normalizeSchemaField = (
   path: ReadonlyArray<string | number> = [],
   key = "root",
   required = true,
-): SchemaField => normalizeField(schema, schema, path, key, required, key === "root" ? "Value" : key);
+): SchemaField =>
+  normalizeField(
+    schema,
+    schema,
+    path,
+    key,
+    required,
+    key === "root" ? "Value" : key,
+    new Set(),
+    0,
+  );
 
 export const normalizeSchema = (schema: unknown): SchemaField =>
   normalizeSchemaField(schema);

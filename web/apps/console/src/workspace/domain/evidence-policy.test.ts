@@ -121,6 +121,60 @@ describe("evidence policy", () => {
     expect(jsonByteLength(record.response)).toBeLessThanOrEqual(32 * 1024);
   });
 
+  it("replaces retained CLI metadata when the raw request has an exact sensitive key", () => {
+    const record = makeRecord(
+      "secret-cli",
+      {
+        jsonrpc: "2.0",
+        method: "workflow.capabilities.call",
+        params: {
+          qualified_name: "local.example.login",
+          payload: { password: "correct horse battery staple" },
+        },
+        id: 7,
+      },
+    );
+    const originalCli =
+      "uv run wf cap call local.example.login --input '{\"password\":\"correct horse battery staple\"}'";
+    const recordWithCli = { ...record, equivalentCli: originalCli };
+
+    const sanitized = sanitizeEvidenceRecord(recordWithCli);
+
+    expect(sanitized.equivalentCli).toBe("[redacted: sensitive request]");
+    expect(sanitized.equivalentCli).not.toContain("correct horse");
+    expect(recordWithCli.equivalentCli).toBe(originalCli);
+  });
+
+  it("does not redact CLI metadata for near-match request keys", () => {
+    const record = makeRecord("safe-cli", {
+      params: {
+        payload: {
+          password_hint: "first pet",
+          tokenCount: 3,
+        },
+      },
+    });
+
+    expect(sanitizeEvidenceRecord(record).equivalentCli).toBe(
+      "uv run wf cap list",
+    );
+  });
+
+  it("deterministically bounds a near-256 KiB retained CLI string", () => {
+    const record = {
+      ...makeRecord("large-cli", { params: { payload: { value: "safe" } } }),
+      equivalentCli: `uv run wf cap call local.example.echo --input '${"x".repeat(255 * 1024)}'`,
+    };
+
+    const first = sanitizeEvidenceRecord(record).equivalentCli;
+    const second = sanitizeEvidenceRecord(record).equivalentCli;
+
+    expect(new TextEncoder().encode(first).length).toBeLessThanOrEqual(4096);
+    expect(first).toBe(second);
+    expect(first).toMatch(/\[truncated: evidence limit\]$/);
+    expect(record.equivalentCli.length).toBeGreaterThan(250 * 1024);
+  });
+
   it("preserves ordinary scalar data", () => {
     expect(sanitizeEvidenceValue({ ok: true, count: 3, empty: null, text: "hello" })).toEqual({
       ok: true,

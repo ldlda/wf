@@ -4,6 +4,14 @@ export type SchemaReferenceResolution =
   | { readonly ok: true; readonly schema: unknown }
   | { readonly ok: false; readonly reason: string };
 
+export type SchemaReferenceTraversalResolution =
+  | {
+      readonly ok: true;
+      readonly schema: unknown;
+      readonly referenceAncestry: ReadonlySet<string>;
+    }
+  | { readonly ok: false; readonly reason: string };
+
 const ANNOTATION_KEYS = ["title", "description", "default"] as const;
 
 const isRecord = (value: unknown): value is SchemaRecord =>
@@ -12,7 +20,9 @@ const isRecord = (value: unknown): value is SchemaRecord =>
 const hasOwn = (value: SchemaRecord, key: string): boolean =>
   Object.prototype.hasOwnProperty.call(value, key);
 
-const failure = (reason: string): SchemaReferenceResolution => ({
+const failure = (
+  reason: string,
+): { readonly ok: false; readonly reason: string } => ({
   ok: false,
   reason,
 });
@@ -93,10 +103,10 @@ const mergeAnnotations = (
 const resolveNode = (
   rootSchema: unknown,
   schemaNode: unknown,
-  activeReferences: Set<string>,
-): SchemaReferenceResolution => {
+  referenceAncestry: ReadonlySet<string>,
+): SchemaReferenceTraversalResolution => {
   if (!isRecord(schemaNode) || !hasOwn(schemaNode, "$ref")) {
-    return { ok: true, schema: schemaNode };
+    return { ok: true, schema: schemaNode, referenceAncestry };
   }
 
   const ref = schemaNode.$ref;
@@ -114,7 +124,7 @@ const resolveNode = (
   if (hasStructuralSiblings(schemaNode)) {
     return failure("Structural siblings beside $ref are not supported.");
   }
-  if (activeReferences.has(ref))
+  if (referenceAncestry.has(ref))
     return failure("Local schema reference cycle detected.");
 
   const target = pointerTarget(rootSchema, ref);
@@ -126,15 +136,36 @@ const resolveNode = (
     );
   }
 
-  // Track only the current reference path so repeated sibling refs remain valid.
-  activeReferences.add(ref);
-  const resolved = resolveNode(rootSchema, target.value, activeReferences);
-  activeReferences.delete(ref);
+  // Keep references active for structural child descent. Callers pass the
+  // resulting immutable ancestry to each child, so sibling reuse stays valid.
+  const nextAncestry = new Set(referenceAncestry);
+  nextAncestry.add(ref);
+  const resolved = resolveNode(rootSchema, target.value, nextAncestry);
   if (!resolved.ok) return resolved;
-  return { ok: true, schema: mergeAnnotations(resolved.schema, schemaNode) };
+  return {
+    ok: true,
+    schema: mergeAnnotations(resolved.schema, schemaNode),
+    referenceAncestry: resolved.referenceAncestry,
+  };
 };
+
+export const resolveLocalSchemaNodeWithAncestry = (
+  rootSchema: unknown,
+  schemaNode: unknown,
+  referenceAncestry: ReadonlySet<string>,
+): SchemaReferenceTraversalResolution =>
+  resolveNode(rootSchema, schemaNode, referenceAncestry);
 
 export const resolveLocalSchemaNode = (
   rootSchema: unknown,
   schemaNode: unknown,
-): SchemaReferenceResolution => resolveNode(rootSchema, schemaNode, new Set());
+): SchemaReferenceResolution => {
+  const resolution = resolveLocalSchemaNodeWithAncestry(
+    rootSchema,
+    schemaNode,
+    new Set(),
+  );
+  return resolution.ok
+    ? { ok: true, schema: resolution.schema }
+    : resolution;
+};

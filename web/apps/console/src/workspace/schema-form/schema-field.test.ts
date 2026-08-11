@@ -173,6 +173,78 @@ describe("normalizeSchema", () => {
     });
   });
 
+  it("falls back deterministically for an object reference cycle through a property", () => {
+    const field = normalizeSchema({
+      $defs: {
+        Node: {
+          type: "object",
+          properties: {
+            label: { type: "string" },
+            child: { $ref: "#/$defs/Node" },
+          },
+        },
+      },
+      type: "object",
+      properties: {
+        root: { $ref: "#/$defs/Node" },
+      },
+    });
+
+    const root = field.children.find((child) => child.key === "root");
+    const child = root?.children.find((candidate) => candidate.key === "child");
+    expect(child).toMatchObject({
+      kind: "json",
+      fallbackReason: "Local schema reference cycle detected.",
+    });
+  });
+
+  it("falls back deterministically for an array reference cycle through its items", () => {
+    const field = normalizeSchema({
+      $defs: {
+        RecursiveList: {
+          type: "array",
+          items: { $ref: "#/$defs/RecursiveList" },
+        },
+      },
+      type: "object",
+      properties: {
+        values: { $ref: "#/$defs/RecursiveList" },
+      },
+    });
+
+    const values = field.children.find((child) => child.key === "values");
+    expect(values).toMatchObject({ kind: "array" });
+    expect(values?.item).toMatchObject({
+      kind: "json",
+      fallbackReason: "Local schema reference cycle detected.",
+    });
+  });
+
+  it("allows independent sibling fields to reuse the same referenced schema", () => {
+    const field = normalizeSchema({
+      $defs: {
+        Shared: {
+          type: "object",
+          properties: { value: { type: "string" } },
+        },
+      },
+      type: "object",
+      properties: {
+        first: { $ref: "#/$defs/Shared" },
+        second: { $ref: "#/$defs/Shared" },
+      },
+    });
+
+    expect(field.children.map((child) => child.kind)).toEqual([
+      "object",
+      "object",
+    ]);
+    expect(field.children.map((child) => child.children[0]?.kind)).toEqual([
+      "string",
+      "string",
+    ]);
+  });
+
   it("recursively rebases nested object and array item paths", () => {
     const field = normalizeSchema({
       type: "object",

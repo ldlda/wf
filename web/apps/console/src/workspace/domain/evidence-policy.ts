@@ -2,6 +2,7 @@ import type { EvidenceRecord } from "../../app/state.js";
 
 export const EVIDENCE_MAX_BYTES = 32 * 1024;
 export const EVIDENCE_MAX_RECORDS = 100;
+export const EVIDENCE_MAX_CLI_BYTES = 4 * 1024;
 
 const MAX_DEPTH = 8;
 const MAX_STRING_LENGTH = 4096;
@@ -12,6 +13,8 @@ const EVIDENCE_LIMIT_MARKER = "[truncated: evidence limit]";
 const CIRCULAR_MARKER = "[truncated: circular reference]";
 const UNSUPPORTED_MARKER = "[unsupported: value]";
 const TRUNCATION_KEY = EVIDENCE_LIMIT_MARKER;
+const SENSITIVE_REQUEST_CLI_MARKER = "[redacted: sensitive request]";
+const MAX_REQUEST_SCAN_OBJECTS = 100_000;
 
 const sensitiveKeys = new Set([
   "authorization",
@@ -27,6 +30,9 @@ const sensitiveKeys = new Set([
 ]);
 
 const isSensitiveKey = (key: string): boolean => sensitiveKeys.has(key.toLowerCase());
+
+const utf8ByteLength = (value: string): number =>
+  new TextEncoder().encode(value).length;
 
 const byteLength = (value: unknown): number => {
   const serialized = JSON.stringify(value);
@@ -54,6 +60,59 @@ const readProperty = (value: object, key: string): unknown => {
   } catch {
     return "[unavailable: evidence value]";
   }
+};
+
+/**
+ * Scan raw request keys before sanitization so a redacted projection cannot
+ * hide the fact that equivalent CLI metadata contains the same credential.
+ */
+const requestContainsSensitiveKey = (value: unknown): boolean => {
+  const pending: object[] = [];
+  const seen = new WeakSet<object>();
+  if (value !== null && typeof value === "object") pending.push(value);
+
+  let scannedObjects = 0;
+  while (pending.length > 0) {
+    const current = pending.pop();
+    if (current === undefined || seen.has(current)) continue;
+    seen.add(current);
+    scannedObjects += 1;
+    // Ambiguous/pathological requests redact rather than risk retaining a secret.
+    if (scannedObjects > MAX_REQUEST_SCAN_OBJECTS) return true;
+
+    let keys: string[];
+    try {
+      keys = Object.keys(current);
+    } catch {
+      return true;
+    }
+    for (const key of keys) {
+      if (isSensitiveKey(key)) return true;
+      const child = readProperty(current, key);
+      if (child !== null && typeof child === "object") pending.push(child);
+    }
+  }
+  return false;
+};
+
+const fitCliString = (value: string): string => {
+  if (utf8ByteLength(value) <= EVIDENCE_MAX_CLI_BYTES) return value;
+
+  const characters = Array.from(value);
+  let low = 0;
+  let high = characters.length;
+  let best = EVIDENCE_LIMIT_MARKER;
+  while (low <= high) {
+    const middle = Math.floor((low + high) / 2);
+    const candidate = `${characters.slice(0, middle).join("")}${EVIDENCE_LIMIT_MARKER}`;
+    if (utf8ByteLength(candidate) <= EVIDENCE_MAX_CLI_BYTES) {
+      best = candidate;
+      low = middle + 1;
+    } else {
+      high = middle - 1;
+    }
+  }
+  return best;
 };
 
 const projectValue = (
@@ -245,6 +304,9 @@ export const sanitizeEvidenceValue = (value: unknown): unknown =>
 
 export const sanitizeEvidenceRecord = (record: EvidenceRecord): EvidenceRecord => ({
   ...record,
+  equivalentCli: requestContainsSensitiveKey(record.request)
+    ? SENSITIVE_REQUEST_CLI_MARKER
+    : fitCliString(record.equivalentCli),
   // Keep request context visible even when a response is independently oversized.
   request: sanitizeEvidenceValue(record.request),
   response: sanitizeEvidenceValue(record.response),
