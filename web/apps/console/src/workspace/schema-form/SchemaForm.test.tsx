@@ -40,6 +40,23 @@ describe("SchemaForm", () => {
     expect(screen.getByText("Raw schema").closest("details")).not.toHaveAttribute("open");
   });
 
+  it("suppresses source selectors when source controls are disabled", () => {
+    render(
+      <SchemaForm
+        initialSources={{ summary: { mode: "bind", sourcePath: "input.summary" } }}
+        initialValue={{ summary: "literal summary" }}
+        schema={{ type: "object", properties: { summary: { type: "string" } } }}
+        showSourceControls={false}
+        submitLabel="Call capability"
+      />,
+    );
+
+    expect(screen.getByRole("textbox", { name: "Summary" })).toHaveValue("literal summary");
+    expect(screen.queryByRole("group", { name: "Value source" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: "Source path for Summary" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Call capability" })).toBeInTheDocument();
+  });
+
   it("renders unsupported fields as JSON editors with their exact fallback reason", () => {
     render(
       <SchemaForm

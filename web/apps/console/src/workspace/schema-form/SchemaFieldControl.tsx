@@ -322,6 +322,7 @@ export const SchemaFieldControl = ({
     );
   }
 
+  // Hidden source controls intentionally project the current value as literal input.
   const source: FieldSource = showSourceControl
     ? sources[pathKey(field)] ?? { mode: "literal", value }
     : { mode: "literal", value };

@@ -1,3 +1,5 @@
+import { resolveLocalSchemaNode } from "./schema-reference.js";
+
 export type SchemaField = {
   readonly path: ReadonlyArray<string | number>;
   readonly key: string;
@@ -101,31 +103,40 @@ const requiredPropertyNames = (schema: SchemaRecord): ReadonlySet<string> => {
 };
 
 const normalizeField = (
+  rootSchema: unknown,
   schema: unknown,
   path: ReadonlyArray<string | number>,
   key: string,
   required: boolean,
   defaultTitle: string,
 ): SchemaField => {
-  const title = isRecord(schema) ? stringValue(schema.title) ?? defaultTitle : defaultTitle;
-  if (!isRecord(schema)) {
+  const resolution = resolveLocalSchemaNode(rootSchema, schema);
+  if (!resolution.ok) {
+    const title = isRecord(schema) ? stringValue(schema.title) ?? defaultTitle : defaultTitle;
+    return fallback(schema, path, key, required, title, resolution.reason);
+  }
+  const resolvedSchema = resolution.schema;
+  const title = isRecord(resolvedSchema)
+    ? stringValue(resolvedSchema.title) ?? defaultTitle
+    : defaultTitle;
+  if (!isRecord(resolvedSchema)) {
     return fallback(schema, path, key, required, title, "The schema is not a JSON object; edit JSON directly.");
   }
 
-  const reason = unsupportedReason(schema);
-  if (reason) return fallback(schema, path, key, required, title, reason);
+  const reason = unsupportedReason(resolvedSchema);
+  if (reason) return fallback(resolvedSchema, path, key, required, title, reason);
 
-  const enumValue = schema.enum;
+  const enumValue = resolvedSchema.enum;
   if (Array.isArray(enumValue) && enumValue.every(isEnumValue)) {
     return {
       path,
       key,
       title,
-      description: stringValue(schema.description),
+      description: stringValue(resolvedSchema.description),
       kind: "enum",
       required,
-      hasDefault: hasOwn(schema, "default"),
-      defaultValue: schema.default,
+      hasDefault: hasOwn(resolvedSchema, "default"),
+      defaultValue: resolvedSchema.default,
       enumValues: enumValue,
       children: [],
       item: null,
@@ -133,20 +144,21 @@ const normalizeField = (
     };
   }
 
-  const type = schema.type;
+  const type = resolvedSchema.type;
   if (type === undefined) {
-    return fallback(schema, path, key, required, title, "The schema is unconstrained; edit JSON directly.");
+    return fallback(resolvedSchema, path, key, required, title, "The schema is unconstrained; edit JSON directly.");
   }
 
   if (type === "object") {
-    const properties = schema.properties;
+    const properties = resolvedSchema.properties;
     if (properties !== undefined && !isRecord(properties)) {
-      return fallback(schema, path, key, required, title, "The schema has invalid properties; edit JSON directly.");
+      return fallback(resolvedSchema, path, key, required, title, "The schema has invalid properties; edit JSON directly.");
     }
-    const requiredNames = requiredPropertyNames(schema);
+    const requiredNames = requiredPropertyNames(resolvedSchema);
     const children = properties
       ? Object.entries(properties).map(([propertyKey, propertySchema]) =>
           normalizeField(
+            rootSchema,
             propertySchema,
             [...path, propertyKey],
             propertyKey,
@@ -159,11 +171,11 @@ const normalizeField = (
       path,
       key,
       title,
-      description: stringValue(schema.description),
+      description: stringValue(resolvedSchema.description),
       kind: "object",
       required,
-      hasDefault: hasOwn(schema, "default"),
-      defaultValue: schema.default,
+      hasDefault: hasOwn(resolvedSchema, "default"),
+      defaultValue: resolvedSchema.default,
       enumValues: [],
       children,
       item: null,
@@ -172,20 +184,20 @@ const normalizeField = (
   }
 
   if (type === "array") {
-    const itemSchema = schema.items;
+    const itemSchema = resolvedSchema.items;
     if (itemSchema === undefined) {
-      return fallback(schema, path, key, required, title, "The array has no item schema; edit JSON directly.");
+      return fallback(resolvedSchema, path, key, required, title, "The array has no item schema; edit JSON directly.");
     }
-    const item = normalizeField(itemSchema, [...path, 0], "item", true, `${title} item`);
+    const item = normalizeField(rootSchema, itemSchema, [...path, 0], "item", true, `${title} item`);
     return {
       path,
       key,
       title,
-      description: stringValue(schema.description),
+      description: stringValue(resolvedSchema.description),
       kind: "array",
       required,
-      hasDefault: hasOwn(schema, "default"),
-      defaultValue: schema.default,
+      hasDefault: hasOwn(resolvedSchema, "default"),
+      defaultValue: resolvedSchema.default,
       enumValues: [],
       children: [],
       item,
@@ -198,11 +210,11 @@ const normalizeField = (
       path,
       key,
       title,
-      description: stringValue(schema.description),
+      description: stringValue(resolvedSchema.description),
       kind: type,
       required,
-      hasDefault: hasOwn(schema, "default"),
-      defaultValue: schema.default,
+      hasDefault: hasOwn(resolvedSchema, "default"),
+      defaultValue: resolvedSchema.default,
       enumValues: [],
       children: [],
       item: null,
@@ -210,7 +222,7 @@ const normalizeField = (
     };
   }
 
-  return fallback(schema, path, key, required, title, "The schema type is unsupported; edit JSON directly.");
+  return fallback(resolvedSchema, path, key, required, title, "The schema type is unsupported; edit JSON directly.");
 };
 
 export const normalizeSchemaField = (
@@ -218,7 +230,7 @@ export const normalizeSchemaField = (
   path: ReadonlyArray<string | number> = [],
   key = "root",
   required = true,
-): SchemaField => normalizeField(schema, path, key, required, key === "root" ? "Value" : key);
+): SchemaField => normalizeField(schema, schema, path, key, required, key === "root" ? "Value" : key);
 
 export const normalizeSchema = (schema: unknown): SchemaField =>
   normalizeSchemaField(schema);

@@ -22,6 +22,7 @@ export type SchemaFormProps = {
   readonly renderBeforeFields?: ReactNode;
   readonly submitLabel?: string;
   readonly sourceSuggestions?: ReadonlyArray<string>;
+  readonly showSourceControls?: boolean;
 };
 
 const EMPTY_SOURCES: FieldSources = {};
@@ -103,6 +104,7 @@ export const SchemaForm = ({
   renderBeforeFields,
   submitLabel = "Save form",
   sourceSuggestions = EMPTY_SUGGESTIONS,
+  showSourceControls = true,
 }: SchemaFormProps) => {
   const field = normalizeSchema(schema);
   const [values, setValues] = useState<unknown>(() =>
@@ -179,6 +181,7 @@ export const SchemaForm = ({
         onValueChange={handleValueChange}
         sourceSuggestions={sourceSuggestions}
         sources={sources}
+        showSourceControl={showSourceControls}
         value={values}
       />
       <button type="submit">{submitLabel}</button>

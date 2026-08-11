@@ -98,7 +98,78 @@ describe("normalizeSchema", () => {
     });
     expect(field.children[1]).toMatchObject({
       kind: "json",
-      fallbackReason: "The schema contains an unresolved $ref, which the native form cannot represent.",
+      fallbackReason: "Local schema reference target was not found.",
+    });
+  });
+
+  it("projects the local ref in the wf.source.read_resource input schema", () => {
+    const field = normalizeSchema({
+      $defs: {
+        SourceResourceRef: {
+          description:
+            "Workflow-safe resource handle. Only explicit source-aware helper nodes dereference it.",
+          properties: {
+            kind: {
+              const: "source_resource_ref",
+              default: "source_resource_ref",
+              title: "Kind",
+              type: "string",
+            },
+            logical_source: { minLength: 1, title: "Logical Source", type: "string" },
+            uri: { minLength: 1, title: "Uri", type: "string" },
+            mime_type: {
+              anyOf: [{ type: "string" }, { type: "null" }],
+              default: null,
+              title: "Mime Type",
+            },
+            name: {
+              anyOf: [{ type: "string" }, { type: "null" }],
+              default: null,
+              title: "Name",
+            },
+          },
+          required: ["logical_source", "uri"],
+          title: "SourceResourceRef",
+          type: "object",
+        },
+      },
+      description: "Input model for wf.source.read_resource node.",
+      properties: {
+        ref: { $ref: "#/$defs/SourceResourceRef" },
+        max_chars: {
+          default: 4000,
+          maximum: 20000,
+          minimum: 1,
+          title: "Max Chars",
+          type: "integer",
+        },
+      },
+      required: ["ref"],
+      title: "ReadResourceInput",
+      type: "object",
+    });
+
+    const ref = field.children.find((child) => child.key === "ref");
+    expect(ref).toMatchObject({ kind: "object", required: true });
+    expect(ref?.children.map((child) => child.key)).toEqual([
+      "kind",
+      "logical_source",
+      "uri",
+      "mime_type",
+      "name",
+    ]);
+    expect(ref?.children.find((child) => child.key === "logical_source")).toMatchObject({
+      kind: "string",
+      required: true,
+    });
+    expect(ref?.children.find((child) => child.key === "uri")).toMatchObject({
+      kind: "string",
+      required: true,
+    });
+    expect(ref?.children.find((child) => child.key === "kind")).toMatchObject({
+      kind: "string",
+      hasDefault: true,
+      defaultValue: "source_resource_ref",
     });
   });
 
