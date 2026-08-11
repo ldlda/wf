@@ -150,6 +150,12 @@ describe("DraftDetailRoute", () => {
     );
   });
 
+  it("keeps route outcomes scrollable inside the bounded graph panel", () => {
+    expect(globalStyles).toMatch(
+      /\.authoring-graph__routes\s*\{[\s\S]*?min-height:\s*0;[\s\S]*?overflow-y:\s*auto/,
+    );
+  });
+
   it("explains when the full draft document was not returned", () => {
     mockedUseDraftWorkspace.mockReturnValue(
       controller({ selected: workspace({ draft: null }) }),

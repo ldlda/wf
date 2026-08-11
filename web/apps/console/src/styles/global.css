@@ -270,13 +270,14 @@ tbody tr:hover {
   overflow: hidden;
 }
 
-/* The workspace keeps connection, navigation, content, and receipts visible together. */
+/* Operation receipts belong to the route that produced them; the shell reserves
+   its width for navigation and the active workflow surface. */
 .console-workspace {
   display: grid;
-  grid-template-columns: minmax(9rem, 13rem) minmax(0, 1fr) minmax(18rem, 24rem);
+  grid-template-columns: minmax(9rem, 13rem) minmax(0, 1fr);
   grid-template-areas:
-    "header header header"
-    "nav main evidence";
+    "header header"
+    "nav main";
   gap: 0 1rem;
   min-height: 100vh;
   padding: 1rem;
@@ -377,23 +378,6 @@ tbody tr:hover {
 .console-workspace > main {
   grid-area: main;
   min-width: 0;
-}
-
-.console-workspace__evidence {
-  grid-area: evidence;
-  align-self: start;
-  min-width: 0;
-  position: sticky;
-  top: 1rem;
-  max-height: calc(100vh - 2rem);
-  overflow: auto;
-  margin: 0;
-}
-
-.console-workspace__evidence h2 {
-  position: sticky;
-  top: 0;
-  background: var(--color-surface);
 }
 
 .workspace-route-pending {
@@ -1054,9 +1038,13 @@ tbody tr:hover {
 }
 
 .capability-discovery__results,
-.capability-discovery__detail {
+.capability-discovery__detail,
+.capability-playground {
   min-width: 0;
   margin: 0;
+  max-height: calc(100vh - 10rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .capability-discovery__section-heading {
@@ -1803,6 +1791,8 @@ tbody tr:hover {
 
 .authoring-graph {
   overflow: hidden;
+  display: grid;
+  grid-template-rows: auto minmax(20rem, 1fr) minmax(0, auto);
 }
 
 .authoring-graph__heading {
@@ -1820,11 +1810,15 @@ tbody tr:hover {
 }
 
 .authoring-graph .workflow-graph {
-  height: 34rem;
+  height: 100%;
   border-color: var(--color-border);
 }
 
 .authoring-graph__routes {
+  min-height: 0;
+  max-height: 12rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   margin-top: 0.75rem;
   padding-top: 0.65rem;
   border-top: 1px solid var(--color-border);
@@ -2002,13 +1996,11 @@ tbody tr:nth-child(10) { animation-delay: 270ms; }
     grid-template-areas:
       "header"
       "nav"
-      "main"
-      "evidence";
+      "main";
     gap: 1rem;
   }
 
-  .console-workspace__nav,
-  .console-workspace__evidence {
+  .console-workspace__nav {
     position: static;
   }
 
@@ -2034,10 +2026,6 @@ tbody tr:nth-child(10) { animation-delay: 270ms; }
     border-bottom-color: var(--color-signal-green);
   }
 
-  .console-workspace__evidence {
-    max-height: none;
-  }
-
   .capability-discovery__panes {
     grid-template-columns: 1fr;
   }
@@ -2048,10 +2036,12 @@ tbody tr:nth-child(10) { animation-delay: 270ms; }
 
   .capability-discovery__detail {
     position: static;
+    max-height: 70dvh;
   }
 
   .capability-playground {
     position: static;
+    max-height: 70dvh;
   }
 
   .capability-discovery__filters {

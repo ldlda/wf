@@ -1,4 +1,5 @@
 import { cleanup, render, screen, within } from "@testing-library/react";
+import { readFileSync } from "node:fs";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -33,6 +34,7 @@ vi.mock("../domain/draft-authoring-client.js", () => ({
 
 const mockedUseCapabilityDiscovery = vi.mocked(useCapabilityDiscovery);
 const mockedUseDraftWorkspace = vi.mocked(useDraftWorkspace);
+const globalStyles = readFileSync("src/styles/global.css", "utf8");
 const mockedUseConsoleWorkspace = vi.mocked(useConsoleWorkspace);
 const mockedCreateDraftAuthoringClient = vi.mocked(createDraftAuthoringClient);
 
@@ -334,5 +336,11 @@ describe("DiscoverRoute", () => {
         "Draft destination: /console/drafts/canonical-created-id?capability=local.documents.read",
       ),
     ).toBeInTheDocument();
+  });
+
+  it("keeps both discovery panes scrollable within the viewport", () => {
+    expect(globalStyles).toMatch(
+      /\.capability-discovery__results,\s*\.capability-discovery__detail,\s*\.capability-playground\s*\{[\s\S]*?max-height:\s*calc\(100vh - 10rem\);[\s\S]*?overflow-y:\s*auto/,
+    );
   });
 });

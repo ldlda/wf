@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 import { NavLink } from "react-router-dom";
 import type { ConnectionState } from "../app/state.js";
 import { ConnectionHeader } from "../components/ConnectionHeader.js";
-import { EvidenceLedger } from "./EvidenceLedger.js";
 
 type Props = {
   readonly connection: ConnectionState;
@@ -59,9 +58,5 @@ export const ConsoleShell = ({
     <main id="console-workspace-main" aria-label="Console workspace" tabIndex={-1}>
       {children}
     </main>
-    <aside aria-label="Operation evidence" className="console-workspace__evidence">
-      <h2>Operation evidence</h2>
-      <EvidenceLedger records={connection.evidence} />
-    </aside>
   </div>
 );

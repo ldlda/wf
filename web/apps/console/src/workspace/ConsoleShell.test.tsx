@@ -3,13 +3,16 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { cleanup } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
+import { readFileSync } from "node:fs";
 import { initialState } from "../app/state.js";
 import { ConsoleShell } from "./ConsoleShell.js";
+
+const globalStyles = readFileSync("src/styles/global.css", "utf8");
 
 afterEach(() => cleanup());
 
 describe("ConsoleShell", () => {
-  it("renders the connection header, lifecycle rail, main content, and evidence surface", () => {
+  it("renders the connection header, lifecycle rail, and main content without a global evidence panel", () => {
     render(
       <MemoryRouter initialEntries={["/console/discover"]}>
         <ConsoleShell
@@ -27,11 +30,19 @@ describe("ConsoleShell", () => {
     expect(screen.getByRole("main", { name: "Console workspace" })).toHaveTextContent(
       "Discover content",
     );
-    expect(screen.getByRole("complementary", { name: "Operation evidence" })).toBeInTheDocument();
+    expect(screen.queryByRole("complementary", { name: "Operation evidence" })).toBeNull();
     expect(screen.getByRole("link", { name: "Discover" })).toHaveAttribute(
       "aria-current",
       "page",
     );
+  });
+
+  it("reserves the workspace width for navigation and route content", () => {
+    expect(globalStyles).toMatch(
+      /\.console-workspace\s*\{[\s\S]*?grid-template-columns:\s*minmax\(9rem, 13rem\)\s+minmax\(0, 1fr\)/,
+    );
+    expect(globalStyles).toContain('"nav main"');
+    expect(globalStyles).not.toContain('"nav main evidence"');
   });
 
   it("renders all lifecycle links with route destinations", () => {

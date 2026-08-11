@@ -149,13 +149,13 @@ describe("ConsoleWorkspace", () => {
     expect(screen.getByTestId("executor-state")).toHaveTextContent("available");
     expect(screen.getByTestId("write-executor-state")).toHaveTextContent("available");
     expect(screen.getByTestId("executor-stable")).toHaveTextContent("yes");
-    expect(screen.getAllByText("Health check")).toHaveLength(1);
+    expect(screen.getByTestId("evidence-ids")).toHaveTextContent("workflow.health-0");
     expect(mockedCallOperation).not.toHaveBeenCalled();
 
     await userEvent.click(screen.getByRole("button", { name: "Navigate to drafts" }));
 
     expect(await screen.findByText("Drafts route")).toBeInTheDocument();
-    expect(screen.getAllByText("Health check")).toHaveLength(1);
+    expect(screen.getByTestId("evidence-ids")).toHaveTextContent("workflow.health-0");
     expect(screen.getByTestId("connected-target")).toHaveTextContent("http://one.example/rpc");
   });
 
@@ -273,6 +273,6 @@ describe("ConsoleWorkspace", () => {
         "http://two.example/rpc",
       );
     });
-    expect(screen.getAllByText("Health check")).toHaveLength(1);
+    expect(screen.getByTestId("evidence-ids")).toHaveTextContent("workflow.health-0");
   });
 });

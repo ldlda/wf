@@ -188,6 +188,21 @@ describe("DraftWorkbench", () => {
     expect(within(inspector as HTMLElement).getByText("demo.collect")).toBeInTheDocument();
   });
 
+  it("opens the context inspector when a route outcome is selected on mobile", async () => {
+    setViewport(390);
+    const user = userEvent.setup();
+    const { container } = render(<DraftWorkbench draft={workspace} />);
+
+    const routes = screen.getByLabelText("Route outcomes");
+    await user.click(within(routes).getByRole("button", { name: /collect.*ok/i }));
+
+    const inspector = container.querySelector("#draft-workbench-inspector");
+    expect(inspector).toHaveAttribute("open", "");
+    expect(within(inspector as HTMLElement).getByRole("heading", { name: "Route inspector" })).toBeInTheDocument();
+    expect(within(inspector as HTMLElement).getByRole("textbox", { name: "Source step" })).toHaveValue("collect");
+    expect(within(inspector as HTMLElement).getByRole("textbox", { name: "Outcome" })).toHaveValue("ok");
+  });
+
   it("keeps a dirty inspector form mounted and intact across mobile close and reopen", async () => {
     setViewport(390);
     mockedUseAuthoringCapabilityDetail.mockReturnValue({
