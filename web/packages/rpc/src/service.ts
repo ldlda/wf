@@ -33,6 +33,7 @@ import {
   WorkflowSourcesListPayloadSchema,
   WorkflowCapabilitiesListPayloadSchema,
   WorkflowCapabilitiesInspectPayloadSchema,
+  WorkflowCapabilitiesCallPayloadSchema,
   WorkflowDraftWorkspacesListPayloadSchema,
   WorkflowDraftWorkspacesGetPayloadSchema,
   WorkflowDraftWorkspacesCreateEmptyPayloadSchema,
@@ -301,6 +302,13 @@ const executeImpl =
               params,
             );
             return yield* client.workflow["capabilities.inspect"](payload);
+          }
+          case "workflow.capabilities.call": {
+            const payload = yield* decodeParams(
+              WorkflowCapabilitiesCallPayloadSchema,
+              params,
+            );
+            return yield* client.workflow["capabilities.call"](payload);
           }
           case "workflow.draft_workspaces.list": {
             const payload = yield* decodeParams(

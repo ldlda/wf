@@ -17,6 +17,7 @@ describe("runtimeSchemasFor", () => {
     expect(Object.keys(workflowRuntimeContract.operations)).toEqual([
       "workflow.artifacts.inspect",
       "workflow.artifacts.list",
+      "workflow.capabilities.call",
       "workflow.capabilities.inspect",
       "workflow.capabilities.list",
       "workflow.deployments.inspect",

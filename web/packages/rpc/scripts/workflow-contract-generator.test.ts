@@ -141,6 +141,7 @@ const fixtureManifest = JSON.stringify(fixture);
 const runtimeOperationNames = [
   "workflow.health",
   "workflow.sources.list",
+  "workflow.capabilities.call",
   "workflow.capabilities.list",
   "workflow.capabilities.inspect",
   "workflow.draft_workspaces.add_step_from_capability",

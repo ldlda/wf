@@ -12,6 +12,8 @@ import {
   WorkflowCapabilitiesListResultSchema,
   WorkflowCapabilitiesInspectPayloadSchema,
   WorkflowCapabilitiesInspectResultSchema,
+  WorkflowCapabilitiesCallPayloadSchema,
+  WorkflowCapabilitiesCallResultSchema,
   WorkflowDraftWorkspacesListResultSchema,
   WorkflowDraftWorkspacesGetPayloadSchema,
   WorkflowDraftWorkspacesGetResultSchema,
@@ -96,6 +98,23 @@ export type CapabilitySummaryInterpreted = {
   readonly artifactId?: string;
   readonly version?: number;
   readonly title?: string;
+};
+
+export type CapabilityCallInterpreted = {
+  readonly qualifiedName: string;
+  readonly sourceId: string;
+  readonly kind: "node_spec" | "wrapper_artifact";
+  readonly deploymentId: string | null;
+  readonly outcome: string;
+  readonly output: Record<string, unknown> | null;
+  readonly diagnostics: ReadonlyArray<{
+    readonly boundSource: string | null;
+    readonly code: string;
+    readonly logicalRef: string;
+    readonly message: string;
+    readonly repairHint: string | null;
+    readonly severity: string;
+  }>;
 };
 
 export type DraftWorkspaceInterpreted = {
@@ -418,6 +437,49 @@ const operationEntries = defineOperationEntries([
       return {
         ...base,
         acceptsContext: decoded.accepts_context,
+      };
+    },
+  },
+  {
+    method: "workflow.capabilities.call",
+    label: "Call capability",
+    explanation: "Call one workflow-authorable capability directly",
+    idempotency: "write",
+    equivalentCli: (params) => {
+      const p = Schema.decodeUnknownSync(WorkflowCapabilitiesCallPayloadSchema)(
+        params,
+        { onExcessProperty: "error" },
+      );
+      const parts = [
+        "uv run wf cap call",
+        shellArg(p.qualified_name),
+        "--input",
+        shellArg(JSON.stringify(p.payload ?? {})),
+      ];
+      if (p.deployment_id != null) {
+        parts.push("--deployment", shellArg(p.deployment_id));
+      }
+      return parts.join(" ");
+    },
+    interpret: (result): CapabilityCallInterpreted => {
+      const decoded = Schema.decodeUnknownSync(
+        WorkflowCapabilitiesCallResultSchema,
+      )(result);
+      return {
+        qualifiedName: decoded.qualified_name,
+        sourceId: decoded.source_id,
+        kind: decoded.kind,
+        deploymentId: decoded.deployment_id,
+        outcome: decoded.outcome,
+        output: decoded.output,
+        diagnostics: decoded.diagnostics.map((diagnostic) => ({
+          boundSource: diagnostic.bound_source,
+          code: diagnostic.code,
+          logicalRef: diagnostic.logical_ref,
+          message: diagnostic.message,
+          repairHint: diagnostic.repair_hint,
+          severity: diagnostic.severity,
+        })),
       };
     },
   },

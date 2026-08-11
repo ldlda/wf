@@ -86,6 +86,7 @@ const compareText = (left: string, right: string): number =>
 const runtimeOperationNameList = [
   "workflow.health",
   "workflow.sources.list",
+  "workflow.capabilities.call",
   "workflow.capabilities.list",
   "workflow.capabilities.inspect",
   "workflow.draft_workspaces.add_step_from_capability",

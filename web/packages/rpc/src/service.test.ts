@@ -14,7 +14,6 @@ import {
   type OperationExchange,
   type WorkflowRpcOptions,
 } from "./service.js";
-import type { OperationName } from "./method-registry.js";
 
 type JsonRpcRequest = {
   readonly jsonrpc: "2.0";
@@ -52,7 +51,7 @@ const jsonResponse = (body: unknown, status = 200): Response =>
 
 const runOperation = (
   options: WorkflowRpcOptions,
-  operation: OperationName = "workflow.health",
+  operation: string = "workflow.health",
   params: unknown = {},
 ): Promise<OperationExchange> =>
   Effect.gen(function* () {
@@ -989,5 +988,95 @@ describe("lifecycle operations", () => {
         canContinue: true,
       },
     });
+  });
+});
+
+describe("capability call", () => {
+  it("rejects malformed payloads before fetching", async () => {
+    let fetchCalled = false;
+    const fetch: typeof globalThis.fetch = async () => {
+      fetchCalled = true;
+      throw new Error("fetch must not be called");
+    };
+
+    const result = await Effect.gen(function* () {
+      const rpc = yield* WorkflowRpc;
+      return yield* rpc
+        .execute(
+          "workflow.capabilities.call",
+          "http://127.0.0.1:8765/rpc",
+          { qualified_name: "" },
+        )
+        .pipe(Effect.either);
+    }).pipe(Effect.provide(makeWorkflowRpcLayer({ fetch })), Effect.runPromise);
+
+    expect(Either.isLeft(result)).toBe(true);
+    if (Either.isRight(result)) return;
+    expect(result.left).toBeInstanceOf(RpcDecodeError);
+    expect(fetchCalled).toBe(false);
+  });
+
+  it("dispatches the exact method and interprets the result", async () => {
+    const params = {
+      qualified_name: "local.example.echo",
+      payload: { text: "hello" },
+      deployment_id: "demo.default",
+    };
+    const result = {
+      qualified_name: "local.example.echo",
+      source_id: "local.example",
+      kind: "node_spec" as const,
+      deployment_id: "demo.default",
+      outcome: "ok",
+      output: { text: "hello" },
+      diagnostics: [
+        {
+          bound_source: "local.example",
+          code: "ok",
+          logical_ref: "local.example.echo",
+          message: "called",
+          repair_hint: null,
+          severity: "info",
+        },
+      ],
+    };
+    const fetch: typeof globalThis.fetch = async (input, init) => {
+      const request = await requestBody(input, init);
+      expect(request.method).toBe("workflow.capabilities.call");
+      expect(request.params).toEqual(params);
+      return jsonResponse({
+        jsonrpc: "2.0",
+        id: request.id,
+        result,
+      });
+    };
+
+    const exchange = await runOperation(
+      { fetch },
+      "workflow.capabilities.call",
+      params,
+    );
+
+    expect(exchange.interpreted).toEqual({
+      qualifiedName: "local.example.echo",
+      sourceId: "local.example",
+      kind: "node_spec",
+      deploymentId: "demo.default",
+      outcome: "ok",
+      output: { text: "hello" },
+      diagnostics: [
+        {
+          boundSource: "local.example",
+          code: "ok",
+          logicalRef: "local.example.echo",
+          message: "called",
+          repairHint: null,
+          severity: "info",
+        },
+      ],
+    });
+    expect(exchange.equivalentCli).toBe(
+      "uv run wf cap call local.example.echo --input '{\"text\":\"hello\"}' --deployment demo.default",
+    );
   });
 });

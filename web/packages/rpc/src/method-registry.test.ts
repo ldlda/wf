@@ -7,6 +7,60 @@ describe("run operation registry", () => {
     vi.doUnmock("./rpcs.js");
   });
 
+  it("registers capability calls with the exact CLI and interpreted fields", async () => {
+    const { getOperationMeta } = await import("./method-registry.js");
+    const operation = getOperationMeta("workflow.capabilities.call");
+    if (operation === undefined) throw new Error("missing capability call operation");
+
+    expect(operation.idempotency).toBe("write");
+    expect(
+      operation.equivalentCli({
+        qualified_name: "local.example.echo",
+        payload: { text: "hello world" },
+        deployment_id: "demo.default",
+      }),
+    ).toBe(
+      "uv run wf cap call local.example.echo --input '{\"text\":\"hello world\"}' --deployment demo.default",
+    );
+    expect(
+      operation.interpret({
+        qualified_name: "local.example.echo",
+        source_id: "local.example",
+        kind: "node_spec",
+        deployment_id: null,
+        outcome: "ok",
+        output: { text: "hello" },
+        diagnostics: [
+          {
+            bound_source: null,
+            code: "ok",
+            logical_ref: "local.example.echo",
+            message: "called",
+            repair_hint: null,
+            severity: "info",
+          },
+        ],
+      }),
+    ).toEqual({
+      qualifiedName: "local.example.echo",
+      sourceId: "local.example",
+      kind: "node_spec",
+      deploymentId: null,
+      outcome: "ok",
+      output: { text: "hello" },
+      diagnostics: [
+        {
+          boundSource: null,
+          code: "ok",
+          logicalRef: "local.example.echo",
+          message: "called",
+          repairHint: null,
+          severity: "info",
+        },
+      ],
+    });
+  });
+
   it("decodes start results with the start success schema", async () => {
     vi.doMock("./rpcs.js", async () => {
       const actual = await vi.importActual<typeof import("./rpcs.js")>(

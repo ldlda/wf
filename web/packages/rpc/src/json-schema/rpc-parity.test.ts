@@ -2,7 +2,11 @@ import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { Either, Schema } from "effect";
 import { beforeAll, describe, expect, it } from "vitest";
-import { WorkflowRpcs } from "../rpcs.js";
+import {
+  WorkflowCapabilitiesCallPayloadSchema,
+  WorkflowCapabilitiesCallResultSchema,
+  WorkflowRpcs,
+} from "../rpcs.js";
 import { authoredRpcSchemas } from "./authored-rpc-fixtures.js";
 import { translateJsonSchema } from "./translator.js";
 
@@ -360,6 +364,35 @@ const parityCases: ReadonlyArray<ParityCase> = [
       outcomes: ["ok"],
       input_schema: { type: "object" },
       output_schema: { type: "object" },
+    },
+  },
+  {
+    method: "workflow.capabilities.call",
+    payload: WorkflowCapabilitiesCallPayloadSchema,
+    success: WorkflowCapabilitiesCallResultSchema,
+    validPayload: {
+      qualified_name: "local.example.echo",
+      payload: { text: "hello" },
+      deployment_id: null,
+    },
+    invalidPayload: { qualified_name: "" },
+    validSuccess: {
+      qualified_name: "local.example.echo",
+      source_id: "local.example",
+      kind: "node_spec",
+      deployment_id: null,
+      outcome: "ok",
+      output: { text: "hello" },
+      diagnostics: [],
+    },
+    invalidSuccess: {
+      qualified_name: "local.example.echo",
+      source_id: "local.example",
+      kind: "node_spec",
+      deployment_id: null,
+      outcome: "ok",
+      output: { text: "hello" },
+      diagnostics: [{ code: "missing" }],
     },
   },
   {
@@ -1073,6 +1106,7 @@ describe("authored RPC and manifest schema parity", () => {
       "workflow.sources.list",
       "workflow.capabilities.list",
       "workflow.capabilities.inspect",
+      "workflow.capabilities.call",
       "workflow.draft_workspaces.list",
       "workflow.draft_workspaces.get",
       "workflow.draft_workspaces.create_empty",

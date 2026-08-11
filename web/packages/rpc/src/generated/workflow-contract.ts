@@ -2667,6 +2667,63 @@ export const workflowRuntimeContract = {
       ],
       "type": "string"
     },
+    "CapabilityCallResult": {
+      "description": "Outcome returned by a direct node-spec or wrapper capability call.",
+      "properties": {
+        "deployment_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "diagnostics": {
+          "items": {
+            "$ref": "#/components/schemas/DependencyDiagnosticPayload"
+          },
+          "type": "array"
+        },
+        "kind": {
+          "enum": [
+            "node_spec",
+            "wrapper_artifact"
+          ],
+          "type": "string"
+        },
+        "outcome": {
+          "type": "string"
+        },
+        "output": {
+          "anyOf": [
+            {
+              "$ref": "#/components/schemas/JsonObject"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "qualified_name": {
+          "type": "string"
+        },
+        "source_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "qualified_name",
+        "source_id",
+        "kind",
+        "deployment_id",
+        "outcome",
+        "output",
+        "diagnostics"
+      ],
+      "type": "object"
+    },
     "CapabilityKindPayload": {
       "enum": [
         "tool",
@@ -4920,6 +4977,39 @@ export const workflowRuntimeContract = {
       },
       "success": {
         "$ref": "#/components/schemas/ListArtifactsResult"
+      }
+    },
+    "workflow.capabilities.call": {
+      "payload": {
+        "additionalProperties": false,
+        "properties": {
+          "qualified_name": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "deployment_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "qualified_name"
+        ],
+        "type": "object"
+      },
+      "success": {
+        "$ref": "#/components/schemas/CapabilityCallResult"
       }
     },
     "workflow.capabilities.inspect": {

@@ -61,6 +61,18 @@ export const WorkflowCapabilitiesInspect = Rpc.make(
   },
 );
 
+const capabilityCallSchemas = runtimeSchemasFor("workflow.capabilities.call");
+export const WorkflowCapabilitiesCallPayloadSchema =
+  capabilityCallSchemas.payload;
+export const WorkflowCapabilitiesCallResultSchema =
+  capabilityCallSchemas.success;
+
+export const WorkflowCapabilitiesCall = Rpc.make("workflow.capabilities.call", {
+  payload: WorkflowCapabilitiesCallPayloadSchema,
+  success: WorkflowCapabilitiesCallResultSchema,
+  error: Schema.Never,
+});
+
 const draftWorkspacesListSchemas = runtimeSchemasFor(
   "workflow.draft_workspaces.list",
 );
@@ -350,6 +362,7 @@ export const WorkflowRpcs = RpcGroup.make(
   WorkflowSourcesList,
   WorkflowCapabilitiesList,
   WorkflowCapabilitiesInspect,
+  WorkflowCapabilitiesCall,
   WorkflowDraftWorkspacesList,
   WorkflowDraftWorkspacesGet,
   WorkflowDraftWorkspacesCreateEmpty,

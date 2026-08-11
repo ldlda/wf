@@ -19,6 +19,7 @@ export {
   WorkflowSourcesList,
   WorkflowCapabilitiesList,
   WorkflowCapabilitiesInspect,
+  WorkflowCapabilitiesCall,
   WorkflowDraftWorkspacesList,
   WorkflowDraftWorkspacesGet,
   WorkflowDraftWorkspacesCreateEmpty,
@@ -43,6 +44,8 @@ export {
   WorkflowCapabilitiesListResultSchema,
   WorkflowCapabilitiesInspectPayloadSchema,
   WorkflowCapabilitiesInspectResultSchema,
+  WorkflowCapabilitiesCallPayloadSchema,
+  WorkflowCapabilitiesCallResultSchema,
   WorkflowDraftWorkspacesListPayloadSchema,
   WorkflowDraftWorkspacesListResultSchema,
   WorkflowDraftWorkspacesGetPayloadSchema,
@@ -82,6 +85,7 @@ export type {
   WorkflowHealthInterpreted,
   WorkflowSourcesListInterpreted,
   CapabilitySummaryInterpreted,
+  CapabilityCallInterpreted,
   DraftWorkspaceInterpreted,
 } from "./method-registry.js";
 

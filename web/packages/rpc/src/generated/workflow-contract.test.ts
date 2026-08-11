@@ -24,6 +24,7 @@ describe("generated workflow contract", () => {
       "workflow.sources.list",
       "workflow.capabilities.list",
       "workflow.capabilities.inspect",
+      "workflow.capabilities.call",
       "workflow.draft_workspaces.list",
       "workflow.draft_workspaces.get",
       "workflow.draft_workspaces.create_empty",
