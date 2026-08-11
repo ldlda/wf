@@ -5,7 +5,7 @@ import type {
   OutputBinding,
   StatePath,
 } from "../domain/draft-workspace-models.js";
-import { formatBoundedJson } from "./format-bounded-json.js";
+import { formatBoundedJson } from "../domain/format-bounded-json.js";
 import {
   capabilityLocalPathSuggestions,
   inferredStateSchemaPreview,

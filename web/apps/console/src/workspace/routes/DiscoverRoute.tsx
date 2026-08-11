@@ -1,10 +1,9 @@
 import { useState } from "react";
 import { Boxes, PackageOpen } from "lucide-react";
-import type {
-  CapabilityDetail,
-  CapabilitySummary,
-} from "../domain/capability-models.js";
+import type { CapabilitySummary } from "../domain/capability-models.js";
 import { CreateDraftDialog } from "../authoring/CreateDraftDialog.js";
+import { useConsoleWorkspace } from "../context.js";
+import { CapabilityPlayground } from "./CapabilityPlayground.js";
 import { useCapabilityDiscovery } from "./useCapabilityDiscovery.js";
 
 const formatKind = (kind: CapabilitySummary["kind"]): string =>
@@ -14,19 +13,6 @@ const KindIcon = ({ kind }: { readonly kind: CapabilitySummary["kind"] }) => {
   const Icon = kind === "node_spec" ? Boxes : PackageOpen;
   return <Icon aria-hidden="true" size={16} strokeWidth={1.8} />;
 };
-
-const SchemaBlock = ({
-  heading,
-  value,
-}: {
-  readonly heading: string;
-  readonly value: Record<string, unknown>;
-}) => (
-  <div className="capability-discovery__schema-block">
-    <h3>{heading}</h3>
-    <pre>{JSON.stringify(value, null, 2)}</pre>
-  </div>
-);
 
 const CapabilityRow = ({
   item,
@@ -64,33 +50,9 @@ const CapabilityRow = ({
   </li>
 );
 
-const DetailView = ({
-  detail,
-  onAddToDraft,
-}: {
-  readonly detail: CapabilityDetail;
-  readonly onAddToDraft: () => void;
-}) => (
-  <section aria-labelledby="capability-detail-heading" className="capability-discovery__detail" id="capability-detail">
-    <p className="workspace-route-pending__eyebrow">Selected contract</p>
-    <h2 id="capability-detail-heading">{detail.name}</h2>
-    <dl className="capability-discovery__facts">
-      <div><dt>Kind</dt><dd>{formatKind(detail.kind)}</dd></div>
-      <div><dt>Source</dt><dd>{detail.sourceId}</dd></div>
-      <div><dt>Async</dt><dd>{detail.isAsync ? "yes" : "no"}</dd></div>
-      <div><dt>Outcomes</dt><dd>{detail.outcomes.join(", ") || "none"}</dd></div>
-    </dl>
-    <div className="capability-discovery__schemas">
-      <SchemaBlock heading="Input schema" value={detail.inputSchema} />
-      <SchemaBlock heading="Output schema" value={detail.outputSchema} />
-      <SchemaBlock heading="Wrapper hints" value={detail.wrapperHints} />
-    </div>
-    <button onClick={onAddToDraft} type="button">Add to draft</button>
-  </section>
-);
-
 export const DiscoverRoute = () => {
   const discovery = useCapabilityDiscovery();
+  const { connectedTarget, writeExecutor } = useConsoleWorkspace();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const isReady = discovery.phase === "ready";
 
@@ -174,9 +136,12 @@ export const DiscoverRoute = () => {
         </section>
 
         {discovery.selected ? (
-          <DetailView
-            detail={discovery.selected}
+          <CapabilityPlayground
+            capability={discovery.selected}
+            executor={writeExecutor}
+            key={discovery.selected.name}
             onAddToDraft={() => setCreateDialogOpen(true)}
+            target={connectedTarget}
           />
         ) : (
           <section aria-labelledby="capability-detail-empty-heading" className="capability-discovery__detail capability-discovery__detail--empty" id="capability-detail">

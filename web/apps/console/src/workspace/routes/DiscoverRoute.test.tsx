@@ -183,11 +183,46 @@ describe("DiscoverRoute", () => {
     );
     renderRoute();
 
+    expect(screen.getByRole("tab", { name: "Contract" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(screen.getByRole("tab", { name: "Try capability" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Input schema" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Output schema" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Wrapper hints" })).toBeInTheDocument();
     expect(screen.getAllByText(/"names"/)).toHaveLength(2);
     expect(screen.getByRole("button", { name: "Add to draft" })).toBeInTheDocument();
+  });
+
+  it("keeps a disconnected operation state inline with the selected capability", async () => {
+    mockedUseCapabilityDiscovery.mockReturnValue(
+      controller({
+        selected: {
+          ...summary,
+          isAsync: false,
+          inputSchema: { type: "object", properties: {} },
+          outputSchema: {},
+          wrapperHints: {},
+          acceptsContext: false,
+        },
+      }),
+    );
+    mockedUseConsoleWorkspace.mockReturnValue({
+      connection: initialState(),
+      connectedTarget: null,
+      recordEvidence: vi.fn(),
+      readExecutor: null,
+      writeExecutor: null,
+    });
+    renderRoute();
+
+    await userEvent.click(screen.getByRole("tab", { name: "Try capability" }));
+
+    expect(
+      screen.getByText("Capability calls are unavailable until a workflow server is connected."),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Capabilities" })).toBeInTheDocument();
   });
 
   it("exposes selected row state and associates the result with its detail", () => {

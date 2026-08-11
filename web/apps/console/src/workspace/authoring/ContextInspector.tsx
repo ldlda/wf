@@ -3,7 +3,7 @@ import type { DraftDiagnostic, DraftWorkspace } from "../domain/draft-workspace-
 import type { CapabilityDetail, CapabilitySummary } from "../domain/capability-models.js";
 import { projectAuthoringGraph, type WorkbenchSelection } from "./authoring-graph.js";
 import { withDiagnosticKeys } from "./diagnostic-key.js";
-import { formatBoundedJson } from "./format-bounded-json.js";
+import { formatBoundedJson } from "../domain/format-bounded-json.js";
 import { CapabilityNodeForm } from "./CapabilityNodeForm.js";
 import { SelectedCapabilityInspector } from "./SelectedCapabilityInspector.js";
 import { RouteForm } from "./RouteForm.js";

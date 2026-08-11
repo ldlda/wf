@@ -6,7 +6,7 @@ import type { DraftWorkspace } from "../domain/draft-workspace-models.js";
 import type { DraftWorkspaceController } from "./useDraftWorkspace.js";
 import { useDraftWorkspace } from "./useDraftWorkspace.js";
 import { DraftDetailRoute } from "./DraftDetailRoute.js";
-import { formatBoundedJson } from "../authoring/format-bounded-json.js";
+import { formatBoundedJson } from "../domain/format-bounded-json.js";
 
 const globalStyles = readFileSync(
   "src/styles/global.css",

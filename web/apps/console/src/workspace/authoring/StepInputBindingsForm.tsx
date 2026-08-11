@@ -11,7 +11,7 @@ import {
   type SchemaField,
 } from "../schema-form/schema-field.js";
 import { serializeSchemaValues, type FieldSources } from "../schema-form/schema-values.js";
-import { formatBoundedJson } from "./format-bounded-json.js";
+import { formatBoundedJson } from "../domain/format-bounded-json.js";
 import { displayGraphInputPath, displayLocalInputPath } from "./input-binding-paths.js";
 import {
   capabilityLocalPathSuggestions,
