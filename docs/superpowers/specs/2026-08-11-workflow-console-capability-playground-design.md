@@ -2,7 +2,7 @@
 
 Date: 2026-08-11
 
-Status: Draft design for review for Workflow Console Slice 4.
+Status: Approved design for Workflow Console Slice 4.
 
 Related:
 
