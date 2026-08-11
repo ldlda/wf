@@ -15,6 +15,25 @@ const decode = <T>(
 const JsonObjectSchema = v.record(v.string(), v.unknown());
 const WrapperHintsSchema = v.record(v.string(), v.unknown());
 
+const DependencyDiagnosticSchema = v.object({
+  boundSource: v.nullable(v.string()),
+  code: v.string(),
+  logicalRef: v.string(),
+  message: v.string(),
+  repairHint: v.nullable(v.string()),
+  severity: v.string(),
+});
+
+const CapabilityCallResultSchema = v.object({
+  qualifiedName: v.string(),
+  sourceId: v.string(),
+  kind: v.union([v.literal("node_spec"), v.literal("wrapper_artifact")]),
+  deploymentId: v.nullable(v.string()),
+  outcome: v.string(),
+  output: v.nullable(JsonObjectSchema),
+  diagnostics: v.array(DependencyDiagnosticSchema),
+});
+
 const CapabilitySummarySchema = v.variant("kind", [
   v.object({
     kind: v.literal("node_spec"),
@@ -75,9 +94,17 @@ const CapabilityDetailSchema = v.variant("kind", [
 export type CapabilitySummary = v.InferOutput<typeof CapabilitySummarySchema>;
 export type CapabilityPage = v.InferOutput<typeof CapabilityPageSchema>;
 export type CapabilityDetail = v.InferOutput<typeof CapabilityDetailSchema>;
+export type CapabilityCallResult = v.InferOutput<
+  typeof CapabilityCallResultSchema
+>;
 
 export const decodeCapabilityPage = (value: unknown): CapabilityPage =>
   decode("CapabilityPage", CapabilityPageSchema, value);
 
 export const decodeCapabilityDetail = (value: unknown): CapabilityDetail =>
   decode("CapabilityDetail", CapabilityDetailSchema, value);
+
+export const decodeCapabilityCallResult = (
+  value: unknown,
+): CapabilityCallResult =>
+  decode("CapabilityCallResult", CapabilityCallResultSchema, value);

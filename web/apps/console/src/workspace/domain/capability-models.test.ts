@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  decodeCapabilityCallResult,
   decodeCapabilityDetail,
   decodeCapabilityPage,
 } from "./capability-models.js";
@@ -80,5 +81,53 @@ describe("capability models", () => {
     if (wrapper.kind === "wrapper_artifact") {
       expect(wrapper.version).toBe(2);
     }
+  });
+
+  it("decodes a successful capability call with dependency diagnostics", () => {
+    const result = decodeCapabilityCallResult({
+      qualifiedName: "local.docs.read_documents",
+      sourceId: "local.docs",
+      kind: "node_spec",
+      deploymentId: null,
+      outcome: "ok",
+      output: { documents: [{ name: "README.md" }] },
+      diagnostics: [
+        {
+          boundSource: "local.docs",
+          code: "source_missing",
+          logicalRef: "local.docs",
+          message: "The source is not configured.",
+          repairHint: "Configure the source before calling.",
+          severity: "error",
+        },
+      ],
+    });
+
+    expect(result.qualifiedName).toBe("local.docs.read_documents");
+    expect(result.output).toEqual({ documents: [{ name: "README.md" }] });
+    expect(result.diagnostics[0]?.repairHint).toBe(
+      "Configure the source before calling.",
+    );
+  });
+
+  it("decodes runtime_error as a normal completed capability result", () => {
+    const result = decodeCapabilityCallResult({
+      qualifiedName: "local.docs.read_documents",
+      sourceId: "local.docs",
+      kind: "wrapper_artifact",
+      deploymentId: "docs.default",
+      outcome: "runtime_error",
+      output: null,
+      diagnostics: [],
+    });
+
+    expect(result.outcome).toBe("runtime_error");
+    expect(result.output).toBeNull();
+  });
+
+  it("rejects malformed capability call results", () => {
+    expect(() => decodeCapabilityCallResult({ outcome: "ok" })).toThrow(
+      "CapabilityCallResult is malformed",
+    );
   });
 });
