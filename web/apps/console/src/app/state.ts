@@ -1,4 +1,5 @@
 import type { ConnectionSuccess } from "../connection/contracts.js";
+import { retainEvidence } from "../workspace/domain/evidence-policy.js";
 
 export type ConnectionPhase =
   | "not_configured"
@@ -12,6 +13,7 @@ export type ConnectionPhase =
 
 export type EvidenceRecord = {
   readonly id: string;
+  readonly target: string;
   readonly operation: string;
   readonly label: string;
   readonly equivalentCli: string;
@@ -111,15 +113,10 @@ export const connectionReducer = (
     case "evidence_recorded":
       return {
         ...state,
-        evidence: appendEvidence(state.evidence, action.record),
+        evidence: retainEvidence(state.evidence, action.record),
       };
   }
 };
-
-const appendEvidence = (
-  existing: ReadonlyArray<EvidenceRecord>,
-  record: EvidenceRecord,
-): ReadonlyArray<EvidenceRecord> => [...existing, record];
 
 const mapCodeToPhase = (code: string): ConnectionPhase => {
   switch (code) {

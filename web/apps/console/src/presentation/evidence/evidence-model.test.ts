@@ -8,6 +8,7 @@ import {
 
 const record = (response: unknown): EvidenceRecord => ({
   id: "run-start",
+  target: "http://console.test/rpc",
   operation: "workflow.runs.start",
   label: "Start run",
   equivalentCli: "uv run wf run start demo.default",

@@ -186,6 +186,7 @@ export const useDemoTimeline = (
           if (event.stage === "run_resume" && event.operation) {
             recordEvidenceRef.current({
               id: event.id,
+              target,
               operation: event.operation,
               label: "Resume run",
               equivalentCli: event.equivalentCli ?? "",
@@ -204,6 +205,7 @@ export const useDemoTimeline = (
           if (event.stage === "trace_read" && event.operation) {
             recordEvidenceRef.current({
               id: event.id,
+              target,
               operation: event.operation,
               label: "Read trace",
               equivalentCli: event.equivalentCli ?? "",
@@ -215,6 +217,7 @@ export const useDemoTimeline = (
           if (event.operation && event.stage !== "run_resume" && event.stage !== "trace_read") {
             recordEvidenceRef.current({
               id: event.id,
+              target,
               operation: event.operation,
               label: event.reason,
               equivalentCli: event.equivalentCli ?? "",

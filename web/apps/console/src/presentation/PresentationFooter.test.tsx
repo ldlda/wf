@@ -10,6 +10,7 @@ describe("PresentationFooter", () => {
   it("combines scene progress and evidence provenance", () => {
     const evidence: EvidenceRecord = {
       id: "trace",
+      target: "http://console.test/rpc",
       operation: "workflow.runs.trace",
       label: "Inspect trace",
       equivalentCli: "uv run wf run trace run_demo",

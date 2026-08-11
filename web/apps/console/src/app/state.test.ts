@@ -23,6 +23,7 @@ const makeSuccess = (target = "http://127.0.0.1:8765/rpc") =>
 
 const evidence: EvidenceRecord = {
   id: "e1",
+  target: "http://console.test/rpc",
   operation: "workflow.sources.list",
   label: "Source inventory",
   equivalentCli: "uv run wf source list",
@@ -270,5 +271,28 @@ describe("evidence", () => {
       record: evidence,
     });
     expect(next.evidence).toEqual([evidence]);
+  });
+
+  it("sanitizes evidence and retains only the newest 100 records", () => {
+    const state: ConnectionState = {
+      ...initialState(),
+      evidence: Array.from({ length: 100 }, (_, index) => ({
+        ...evidence,
+        id: `e${index}`,
+      })),
+    };
+
+    const next = connectionReducer(state, {
+      type: "evidence_recorded",
+      record: {
+        ...evidence,
+        id: "e100",
+        request: { Authorization: "Bearer secret" },
+      },
+    });
+
+    expect(next.evidence).toHaveLength(100);
+    expect(next.evidence[0]?.id).toBe("e1");
+    expect(next.evidence.at(-1)?.request).toEqual({ Authorization: "[redacted]" });
   });
 });

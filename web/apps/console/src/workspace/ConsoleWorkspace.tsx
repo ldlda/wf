@@ -75,6 +75,7 @@ export const ConsoleWorkspace = () => {
             type: "evidence_recorded",
             record: {
               id: allocateEvidenceId("workflow.health"),
+              target: response.connection.target,
               operation: "workflow.health",
               label: "Health check",
               equivalentCli: response.equivalentCli,

@@ -71,6 +71,7 @@ export const createConsoleExecutor = (
     if (options.shouldRecordEvidence?.() === false) return;
     options.recordEvidence({
       id: allocateEvidenceId(operation),
+      target: options.target,
       operation,
       label,
       equivalentCli,

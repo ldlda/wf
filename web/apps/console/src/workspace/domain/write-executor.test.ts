@@ -47,6 +47,7 @@ describe("ConsoleWriteExecutor", () => {
     expect(recordEvidence).toHaveBeenCalledTimes(1);
     expect(recordEvidence.mock.calls[0]?.[0]).toMatchObject({
       id: "workflow.draft_workspaces.create_empty-0",
+      target: "http://console.test/rpc",
       operation: "workflow.draft_workspaces.create_empty",
       request: { sent: true },
       response: { status: 200 },
@@ -71,6 +72,7 @@ describe("ConsoleWriteExecutor", () => {
     expect(recordEvidence).toHaveBeenCalledTimes(1);
     expect(recordEvidence.mock.calls[0]?.[0]).toMatchObject({
       operation: "workflow.draft_workspaces.validate",
+      target: "http://console.test/rpc",
       label: "workflow.draft_workspaces.validate failed",
       response: { status: 502 },
     });
@@ -100,15 +102,17 @@ describe("ConsoleWriteExecutor", () => {
     expect(decode).not.toHaveBeenCalled();
     expect(recordEvidence.mock.calls[0]?.[0]).toMatchObject({
       operation: "workflow.draft_workspaces.create_empty",
+      target: "http://console.test/rpc",
       equivalentCli: "unavailable: response operation mismatch",
     });
   });
 
   it("preserves decoder and transport causes", async () => {
     const decodeCause = new Error("invalid draft response");
+    const decodeEvidence = vi.fn();
     const decodeExecutor = createConsoleWriteExecutor({
       target: "http://console.test/rpc",
-      recordEvidence: vi.fn(),
+      recordEvidence: decodeEvidence,
       invoke: vi.fn(async () => createSuccess({ malformed: true })),
     });
 
@@ -117,11 +121,13 @@ describe("ConsoleWriteExecutor", () => {
         throw decodeCause;
       }),
     ).rejects.toMatchObject({ kind: "decode", cause: decodeCause });
+    expect(decodeEvidence.mock.calls[0]?.[0]?.target).toBe("http://console.test/rpc");
 
     const transportCause = new Error("fetch failed");
+    const transportEvidence = vi.fn();
     const transportExecutor = createConsoleWriteExecutor({
       target: "http://console.test/rpc",
-      recordEvidence: vi.fn(),
+      recordEvidence: transportEvidence,
       invoke: vi.fn(async () => {
         throw transportCause;
       }),
@@ -130,10 +136,12 @@ describe("ConsoleWriteExecutor", () => {
     await expect(
       transportExecutor.run("workflow.draft_workspaces.create_empty", {}, (value) => value),
     ).rejects.toMatchObject({ kind: "transport", cause: transportCause });
+    expect(transportEvidence.mock.calls[0]?.[0]?.target).toBe("http://console.test/rpc");
 
+    const protocolEvidence = vi.fn();
     const protocolExecutor = createConsoleWriteExecutor({
       target: "http://console.test/rpc",
-      recordEvidence: vi.fn(),
+      recordEvidence: protocolEvidence,
       invoke: vi.fn(async () => {
         throw new ConsoleApiError("protocol", "malformed JSON response");
       }),
@@ -141,6 +149,7 @@ describe("ConsoleWriteExecutor", () => {
     await expect(
       protocolExecutor.run("workflow.draft_workspaces.create_empty", {}, (value) => value),
     ).rejects.toMatchObject({ kind: "decode" });
+    expect(protocolEvidence.mock.calls[0]?.[0]?.target).toBe("http://console.test/rpc");
   });
 
   it("records elapsed duration for failures without response metadata", async () => {

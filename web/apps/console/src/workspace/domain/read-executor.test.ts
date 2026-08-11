@@ -47,6 +47,7 @@ describe("ConsoleReadExecutor", () => {
     expect(recordEvidence).toHaveBeenCalledTimes(1);
     expect(recordEvidence.mock.calls[0]?.[0]).toMatchObject({
       id: "workflow.capabilities.list-0",
+      target: "http://console.test/rpc",
       operation: "workflow.capabilities.list",
       request: { sent: true },
       response: { status: 200 },
@@ -70,6 +71,7 @@ describe("ConsoleReadExecutor", () => {
     expect(recordEvidence).toHaveBeenCalledTimes(1);
     expect(recordEvidence.mock.calls[0]?.[0]).toMatchObject({
       id: "workflow.capabilities.list-0",
+      target: "http://console.test/rpc",
       label: "workflow.capabilities.list failed",
       response: { status: 502 },
     });
@@ -112,6 +114,7 @@ describe("ConsoleReadExecutor", () => {
     expect(recordEvidence).toHaveBeenCalledTimes(1);
     expect(recordEvidence.mock.calls[0]?.[0]).toMatchObject({
       operation: "workflow.capabilities.list",
+      target: "http://console.test/rpc",
       label: "workflow.capabilities.list failed",
       equivalentCli: "unavailable: response operation mismatch",
     });
@@ -132,6 +135,7 @@ describe("ConsoleReadExecutor", () => {
       }),
     ).rejects.toMatchObject({ kind: "decode", cause });
     expect(recordEvidence).toHaveBeenCalledTimes(1);
+    expect(recordEvidence.mock.calls[0]?.[0]?.target).toBe("http://console.test/rpc");
   });
 
   it("maps rejected invocations to transport errors", async () => {
@@ -149,6 +153,7 @@ describe("ConsoleReadExecutor", () => {
       executor.run("workflow.capabilities.list", {}, (value) => value),
     ).rejects.toMatchObject({ kind: "transport", cause });
     expect(recordEvidence).toHaveBeenCalledTimes(1);
+    expect(recordEvidence.mock.calls[0]?.[0]?.target).toBe("http://console.test/rpc");
   });
 
   it("measures duration for failures before operation metadata exists", async () => {
@@ -212,6 +217,7 @@ describe("ConsoleReadExecutor", () => {
         executor.run("workflow.capabilities.list", {}, (value) => value),
       ).rejects.toMatchObject({ kind: "decode", message });
       expect(recordEvidence).toHaveBeenCalledTimes(1);
+      expect(recordEvidence.mock.calls[0]?.[0]?.target).toBe("http://console.test/rpc");
     },
   );
 

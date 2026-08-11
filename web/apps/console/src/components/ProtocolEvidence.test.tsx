@@ -15,6 +15,7 @@ afterEach(() => {
 const makeRecord = (
   overrides: Partial<EvidenceRecord> & { id: string },
 ): EvidenceRecord => ({
+  target: "http://console.test/rpc",
   operation: "workflow.health",
   label: "Health check",
   equivalentCli: "uv run wf status",

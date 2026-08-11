@@ -27,6 +27,7 @@ const projectRecordingToEvidence = (
     .filter((event) => event.operation !== null)
     .map((event) => ({
       id: event.id,
+      target: "replay",
       operation: event.operation!,
       label: event.reason,
       equivalentCli: event.equivalentCli ?? "",

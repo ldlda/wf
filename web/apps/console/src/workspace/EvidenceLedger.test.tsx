@@ -5,6 +5,7 @@ import { EvidenceLedger } from "./EvidenceLedger.js";
 
 const record: EvidenceRecord = {
   id: "health-0",
+  target: "http://console.test/rpc",
   operation: "workflow.health",
   label: "Health check",
   equivalentCli: "uv run wf status",
