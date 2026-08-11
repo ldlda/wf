@@ -135,3 +135,44 @@ Fix-round verification passed:
 The controller-owned dirty edit to
 `web/packages/rpc/src/generated/workflow-contract.test.ts` remained untouched
 and unstaged.
+
+## Final Browser Acceptance
+
+The controller subsequently ran the real browser path against the live console,
+Hono bridge, and workflow RPC service on ports 5173, 8787, and 8765. The
+disposable workspace `codex_bind_smoke_0810` verified:
+
+- setup updates omit blank retry/timeout fields and advance the revision;
+- literal input replacement persists;
+- ordered output fan-out persists after reload;
+- clearing outputs preserves the projected state schema;
+- the route header shows the committed revision without a reload; and
+- Setup, Inputs, and Outputs remain available in the mobile inspector.
+
+The gitignored evidence is recorded under
+`web/apps/console/.visual-smoke/selected-step-dataflow-evidence.md` with desktop
+and mobile screenshots in the same directory.
+
+## Final React Ownership Cleanup
+
+Commit `070cbe6d` moved the route identity header beside the workbench's
+canonical controller state. It supersedes the route-level draft mirror,
+render-time generation refs, and child-to-parent effect while retaining the
+same immediate mutation and loader-replacement behavior. The focused route and
+workbench tests pass, and React Doctor reports 100/100 for the changed files.
+
+## Final Whole-Slice Fix Round
+
+Commit `167f080d` closes the valid Important findings from the whole-slice
+review. Persisted binding containers and rows are now strict and unsupported
+data stays visible; Inputs expose workflow/capability schema suggestions while
+retaining free text; duplicate local targets receive row-owned errors; timeout
+values match the positive-integer transport contract; and removing the final
+output row routes Save through the explicit clear confirmation.
+
+The focused authoring suite passed with 65 tests, and console typecheck and the
+commit diff check passed independently after the implementation worker finished.
+The controller also reopened the live disposable draft after the fix: a `0.5`
+timeout was rejected locally, capability targets offered `.` and `message`, and
+workflow sources offered `input.message`, `state.content`, and
+`state.content_copy` from the live workflow schemas.
