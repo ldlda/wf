@@ -43,3 +43,28 @@ PASS
 No functional concerns identified. The controller intentionally leaves
 acknowledgement enforcement to the future playground UI while exposing and
 resetting the acknowledgement state at this domain boundary.
+
+## Fix Round 1
+
+### Review Finding Addressed
+
+Added direct coverage for changing from connected target A and executor A to
+target B and executor B while a call is pending. The test asserts the idle
+reset state, rejects the stale target-A promise without allowing an overwrite,
+and verifies a subsequent target-B call completes successfully.
+
+### TDD Evidence
+
+The regression test was written before any production edit and passed
+immediately, confirming the existing selection-identity and generation guards
+already handled target/executor changes. No production change was warranted.
+
+### Verification
+
+```text
+pnpm --dir web --filter @lda/console test -- src/workspace/routes/useCapabilityPlayground.test.tsx
+PASS: 1 file, 10 tests
+
+pnpm --dir web --filter @lda/console typecheck
+PASS
+```

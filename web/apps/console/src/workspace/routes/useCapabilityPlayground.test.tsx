@@ -170,6 +170,70 @@ describe("useCapabilityPlayground", () => {
     expect(hook.current.result).toBeNull();
   });
 
+  it("resets and isolates a pending call when the connected target changes", async () => {
+    const targetA = {} as ConsoleWriteExecutor;
+    const targetB = {} as ConsoleWriteExecutor;
+    const targetACall = deferred<CapabilityCallResult>();
+    const targetBCall = deferred<CapabilityCallResult>();
+    mockedCallCapability
+      .mockReturnValueOnce(targetACall.promise)
+      .mockReturnValueOnce(targetBCall.promise);
+    mockedUseConsoleWorkspace.mockReturnValue({
+      connection: connectedState,
+      connectedTarget: "http://target-a.example/rpc",
+      recordEvidence: vi.fn(),
+      readExecutor: null,
+      writeExecutor: targetA,
+    });
+    const { result: hook, rerender } = renderHook(() =>
+      useCapabilityPlayground("local.docs.read_documents"),
+    );
+
+    await waitFor(() => expect(hook.current.phase).toBe("idle"));
+    act(() => {
+      hook.current.setAcknowledged(true);
+      hook.current.setDeploymentId("target-a.default");
+      hook.current.call({ target: "a" });
+    });
+    expect(hook.current.phase).toBe("calling");
+
+    mockedUseConsoleWorkspace.mockReturnValue({
+      connection: connectedState,
+      connectedTarget: "http://target-b.example/rpc",
+      recordEvidence: vi.fn(),
+      readExecutor: null,
+      writeExecutor: targetB,
+    });
+    rerender();
+
+    expect(hook.current.phase).toBe("idle");
+    expect(hook.current.acknowledged).toBe(false);
+    expect(hook.current.deploymentId).toBe("");
+    expect(hook.current.result).toBeNull();
+    expect(hook.current.message).toBeNull();
+
+    targetACall.reject(new Error("target A failed"));
+    await Promise.resolve();
+    expect(hook.current.phase).toBe("idle");
+    expect(hook.current.message).toBeNull();
+    expect(hook.current.result).toBeNull();
+
+    act(() => hook.current.call({ target: "b" }));
+    expect(hook.current.phase).toBe("calling");
+    targetBCall.resolve({
+      ...result(),
+      qualifiedName: "local.docs.read_documents",
+    });
+
+    await waitFor(() => expect(hook.current.phase).toBe("result"));
+    expect(hook.current.result?.outcome).toBe("ok");
+    expect(mockedCallCapability).toHaveBeenLastCalledWith(targetB, {
+      qualifiedName: "local.docs.read_documents",
+      payload: { target: "b" },
+      deploymentId: "",
+    });
+  });
+
   it("ignores a stale completion after the selected capability changes", async () => {
     const first = deferred<CapabilityCallResult>();
     const second = deferred<CapabilityCallResult>();
