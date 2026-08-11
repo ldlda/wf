@@ -49,7 +49,6 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 type CapabilityRequestProjection = {
   readonly deploymentId: string | null;
-  readonly payload: Record<string, unknown>;
   readonly qualifiedName: string;
 };
 
@@ -62,41 +61,27 @@ const normalizeDeploymentId = (value: unknown): string | null => {
 const capabilityRequestProjection = (
   request: unknown,
 ): CapabilityRequestProjection | null => {
-  if (!isRecord(request) || typeof request.qualified_name !== "string") {
+  if (
+    !isRecord(request) ||
+    request.jsonrpc !== "2.0" ||
+    request.method !== "workflow.capabilities.call" ||
+    !isRecord(request.params)
+  ) {
     return null;
   }
-  if (!isRecord(request.payload)) return null;
+  const params = request.params;
+  if (typeof params.qualified_name !== "string") return null;
   if (
-    request.deployment_id !== undefined &&
-    request.deployment_id !== null &&
-    typeof request.deployment_id !== "string"
+    params.deployment_id !== undefined &&
+    params.deployment_id !== null &&
+    typeof params.deployment_id !== "string"
   ) {
     return null;
   }
   return {
-    deploymentId: normalizeDeploymentId(request.deployment_id),
-    payload: request.payload,
-    qualifiedName: request.qualified_name,
+    deploymentId: normalizeDeploymentId(params.deployment_id),
+    qualifiedName: params.qualified_name,
   };
-};
-
-const jsonDeepEqual = (left: unknown, right: unknown): boolean => {
-  if (Object.is(left, right)) return true;
-  if (left === null || right === null) return false;
-  if (typeof left !== typeof right) return false;
-  if (Array.isArray(left) || Array.isArray(right)) {
-    if (!Array.isArray(left) || !Array.isArray(right) || left.length !== right.length) {
-      return false;
-    }
-    return left.every((value, index) => jsonDeepEqual(value, right[index]));
-  }
-  if (!isRecord(left) || !isRecord(right)) return false;
-  const leftKeys = Object.keys(left).sort();
-  const rightKeys = Object.keys(right).sort();
-  if (leftKeys.length !== rightKeys.length) return false;
-  return leftKeys.every(
-    (key, index) => key === rightKeys[index] && jsonDeepEqual(left[key], right[key]),
-  );
 };
 
 const submittedCallEvidence = (
@@ -116,12 +101,11 @@ const submittedCallEvidence = (
     return (
       request !== null &&
       request.qualifiedName === submittedCall.qualifiedName &&
-      request.deploymentId === submittedCall.deploymentId &&
-      jsonDeepEqual(request.payload, submittedCall.payload)
+      request.deploymentId === submittedCall.deploymentId
     );
   });
-  // Concurrent identical calls are indistinguishable here; fail closed rather
-  // than presenting one call's duration as proof for another call.
+  // Sanitized payloads cannot provide identity. Any concurrent same-identity
+  // call is therefore ambiguous and must fail closed.
   return matches.length === 1 ? matches[0] ?? null : null;
 };
 
@@ -146,14 +130,17 @@ const SchemaBlock = ({
 
 const ContractView = ({
   capability,
+  hidden,
   onAddToDraft,
 }: {
   readonly capability: CapabilityDetail;
+  readonly hidden: boolean;
   readonly onAddToDraft: (() => void) | undefined;
 }) => (
   <section
     aria-labelledby={TAB_IDS.contract}
     className="capability-playground__panel"
+    hidden={hidden}
     id={PANEL_IDS.contract}
     role="tabpanel"
     tabIndex={0}
@@ -324,10 +311,12 @@ const ResultReceipt = ({
 
 const TryView = ({
   capability,
+  hidden,
   target,
   executor,
 }: {
   readonly capability: CapabilityDetail;
+  readonly hidden: boolean;
   readonly target: string | null;
   readonly executor: ConsoleWriteExecutor | null;
 }) => {
@@ -373,91 +362,103 @@ const TryView = ({
   };
 
   return (
-    <section
-      aria-labelledby={TAB_IDS.try}
-      className="capability-playground__panel capability-playground__panel--try"
-      id={PANEL_IDS.try}
-      role="tabpanel"
-      tabIndex={0}
-    >
-      <div className="capability-playground__try-heading">
-        <div>
-          <h3 id="capability-playground-try-heading">Try capability</h3>
-          <p>
-            Use literal values from this form. Nothing runs until you acknowledge the immediate call.
-          </p>
+    <>
+      <section
+        aria-labelledby={TAB_IDS.try}
+        className="capability-playground__panel capability-playground__panel--try"
+        hidden={hidden}
+        id={PANEL_IDS.try}
+        role="tabpanel"
+        tabIndex={0}
+      >
+        <div className="capability-playground__try-heading">
+          <div>
+            <h3 id="capability-playground-try-heading">Try capability</h3>
+            <p>
+              Use literal values from this form. Nothing runs until you acknowledge the immediate call.
+            </p>
+          </div>
+          <Play aria-hidden="true" size={20} strokeWidth={1.8} />
         </div>
-        <Play aria-hidden="true" size={20} strokeWidth={1.8} />
-      </div>
-      <div className="capability-playground__warning" role="note">
-        <AlertCircle aria-hidden="true" size={18} strokeWidth={1.8} />
-        <p>This calls the capability immediately against the connected workflow server.</p>
-      </div>
-      {!operationAvailable ? (
-        <p className="capability-playground__disabled" role="status">
-          Capability calls are unavailable until a workflow server is connected.
-        </p>
-      ) : (
-        <>
-          {capability.kind === "wrapper_artifact" && (
-            <div className="capability-playground__deployment">
-              <label htmlFor="capability-wrapper-deployment">Wrapper deployment ID</label>
-              <input
-                id="capability-wrapper-deployment"
-                onChange={(event) => controller.setDeploymentId(event.target.value)}
-                type="text"
-                value={controller.deploymentId}
-              />
-              <small>Optional. Leave blank to use the server default.</small>
-            </div>
-          )}
-          <label className="capability-playground__acknowledgement">
-            <input
-              checked={controller.acknowledged}
-              onChange={(event) => controller.setAcknowledged(event.target.checked)}
-              type="checkbox"
-            />
-            <span>I understand this executes the capability now.</span>
-          </label>
-          <fieldset
-            className="capability-playground__form-fieldset"
-            disabled={!controller.acknowledged || controller.phase === "calling"}
-          >
-            <legend className="visually-hidden">Literal capability inputs</legend>
-            <SchemaForm
-              schema={capability.inputSchema}
-              onValueChange={() => setLocalError(null)}
-              onSubmit={handleSubmit}
-              showSourceControls={false}
-              submitLabel={controller.phase === "calling" ? "Calling capability..." : "Call capability"}
-            />
-          </fieldset>
-        </>
-      )}
-      {localError && (
-        <p className="capability-playground__local-error" role="alert">
-          {localError}
-        </p>
-      )}
-      {controller.phase === "error" && controller.message && (
-        <p className="capability-playground__local-error" role="alert">
-          {controller.message}
-        </p>
-      )}
-      {controller.phase === "result" && controller.result && (
-        currentSubmittedCall ? (
-          <ResultReceipt
-            evidence={evidence}
-            result={controller.result}
-            submittedCall={currentSubmittedCall}
-          />
-        ) : (
-          <p className="capability-playground__muted" role="status">
-            Result receipt unavailable; call again to capture the submitted request.
+        <div className="capability-playground__warning" role="note">
+          <AlertCircle aria-hidden="true" size={18} strokeWidth={1.8} />
+          <p>This calls the capability immediately against the connected workflow server.</p>
+        </div>
+        {!operationAvailable ? (
+          <p className="capability-playground__disabled" role="status">
+            Capability calls are unavailable until a workflow server is connected.
           </p>
-        )
+        ) : (
+          <>
+            {capability.kind === "wrapper_artifact" && (
+              <div className="capability-playground__deployment">
+                <label htmlFor="capability-wrapper-deployment">Wrapper deployment ID</label>
+                <input
+                  id="capability-wrapper-deployment"
+                  onChange={(event) => controller.setDeploymentId(event.target.value)}
+                  type="text"
+                  value={controller.deploymentId}
+                />
+                <small>Optional. Leave blank to use the server default.</small>
+              </div>
+            )}
+            <label className="capability-playground__acknowledgement">
+              <input
+                checked={controller.acknowledged}
+                onChange={(event) => controller.setAcknowledged(event.target.checked)}
+                type="checkbox"
+              />
+              <span>I understand this executes the capability now.</span>
+            </label>
+            <fieldset
+              className="capability-playground__form-fieldset"
+              disabled={!controller.acknowledged || controller.phase === "calling"}
+            >
+              <legend className="visually-hidden">Literal capability inputs</legend>
+              <SchemaForm
+                schema={capability.inputSchema}
+                onValueChange={() => setLocalError(null)}
+                onSubmit={handleSubmit}
+                showSourceControls={false}
+                submitLabel={
+                  controller.phase === "calling"
+                    ? "Calling capability..."
+                    : "Call capability now"
+                }
+              />
+            </fieldset>
+          </>
+        )}
+        {localError && (
+          <p className="capability-playground__local-error" role="alert">
+            {localError}
+          </p>
+        )}
+        {controller.phase === "error" && controller.message && (
+          <p className="capability-playground__local-error" role="alert">
+            {controller.message}
+          </p>
+        )}
+        {controller.phase === "result" && controller.result && (
+          currentSubmittedCall ? (
+            <ResultReceipt
+              evidence={evidence}
+              result={controller.result}
+              submittedCall={currentSubmittedCall}
+            />
+          ) : (
+            <p className="capability-playground__muted">
+              Result receipt unavailable; call again to capture the submitted request.
+            </p>
+          )
+        )}
+      </section>
+      {controller.phase === "result" && controller.result && (
+        <p className="visually-hidden" role="status">
+          Capability call completed. Outcome: {controller.result.outcome}.
+        </p>
       )}
-    </section>
+    </>
   );
 };
 
@@ -527,11 +528,17 @@ export const CapabilityPlayground = ({
           );
         })}
       </div>
-      {activeTab === "contract" ? (
-        <ContractView capability={capability} onAddToDraft={onAddToDraft} />
-      ) : (
-        <TryView capability={capability} executor={executor} target={target} />
-      )}
+      <ContractView
+        capability={capability}
+        hidden={activeTab !== "contract"}
+        onAddToDraft={onAddToDraft}
+      />
+      <TryView
+        capability={capability}
+        executor={executor}
+        hidden={activeTab !== "try"}
+        target={target}
+      />
     </section>
   );
 };

@@ -65,8 +65,9 @@ const capabilityEvidence = (
   qualifiedName: string,
   durationMs: number,
   evidenceTarget = target,
-  payload: Record<string, unknown> = {},
+  payload: unknown = {},
   deploymentId: string | null = null,
+  method = "workflow.capabilities.call",
 ): EvidenceRecord => ({
   id,
   target: evidenceTarget,
@@ -74,9 +75,14 @@ const capabilityEvidence = (
   label: "Call capability",
   equivalentCli: "wf capability call",
   request: {
-    qualified_name: qualifiedName,
-    payload,
-    ...(deploymentId === null ? {} : { deployment_id: deploymentId }),
+    jsonrpc: "2.0",
+    method,
+    params: {
+      qualified_name: qualifiedName,
+      payload,
+      ...(deploymentId === null ? {} : { deployment_id: deploymentId }),
+    },
+    id,
   },
   response: {},
   durationMs,
@@ -142,7 +148,7 @@ const submitNodeCall = async (query = "README.md"): Promise<void> => {
   const user = userEvent.setup();
   await user.click(screen.getByRole("tab", { name: "Try capability" }));
   await user.type(screen.getByRole("textbox", { name: "Query" }), query);
-  await user.click(screen.getByRole("button", { name: "Call capability" }));
+  await user.click(screen.getByRole("button", { name: "Call capability now" }));
 };
 
 beforeEach(() => {
@@ -219,7 +225,7 @@ describe("CapabilityPlayground", () => {
     expect(screen.getByRole("textbox", { name: "Query" })).toBeInTheDocument();
     expect(screen.queryByRole("group", { name: "Value source" })).not.toBeInTheDocument();
     expect(screen.getByRole("checkbox", { name: /I understand/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Call capability" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Call capability now" })).toBeDisabled();
   });
 
   it("gates the call behind acknowledgement and never calls for render, tab selection, or edits", async () => {
@@ -248,7 +254,7 @@ describe("CapabilityPlayground", () => {
 
     await user.click(screen.getByRole("tab", { name: "Try capability" }));
     await user.type(screen.getByRole("textbox", { name: "Query" }), "README.md");
-    await user.click(screen.getByRole("button", { name: "Call capability" }));
+    await user.click(screen.getByRole("button", { name: "Call capability now" }));
 
     expect(call).toHaveBeenCalledWith({ query: "README.md" });
   });
@@ -278,7 +284,7 @@ describe("CapabilityPlayground", () => {
 
     await user.click(screen.getByRole("tab", { name: "Try capability" }));
     await user.type(screen.getByRole("textbox", { name: "Query" }), "README.md");
-    await user.click(screen.getByRole("button", { name: "Call capability" }));
+    await user.click(screen.getByRole("button", { name: "Call capability now" }));
     await user.clear(screen.getByRole("textbox", { name: "Query" }));
     await user.type(screen.getByRole("textbox", { name: "Query" }), "changed.md");
     await user.clear(screen.getByRole("textbox", { name: "Wrapper deployment ID" }));
@@ -342,7 +348,7 @@ describe("CapabilityPlayground", () => {
     renderPlayground();
 
     await user.click(screen.getByRole("tab", { name: "Try capability" }));
-    await user.click(screen.getByRole("button", { name: "Call capability" }));
+    await user.click(screen.getByRole("button", { name: "Call capability now" }));
 
     expect(call).not.toHaveBeenCalled();
     expect(screen.getAllByRole("alert").at(-1)).toHaveTextContent(
@@ -358,7 +364,7 @@ describe("CapabilityPlayground", () => {
 
     await user.click(screen.getByRole("tab", { name: "Try capability" }));
     await user.type(screen.getByRole("textbox", { name: "Query" }), "README.md");
-    await user.click(screen.getByRole("button", { name: "Call capability" }));
+    await user.click(screen.getByRole("button", { name: "Call capability now" }));
 
     activeController = controller({
       phase: "result",
@@ -435,6 +441,54 @@ describe("CapabilityPlayground", () => {
     expect(screen.getByText("Document source was checked.")).toBeInTheDocument();
     expect(screen.getByText("A direct capability call creates no workflow run or trace.")).toBeInTheDocument();
     expect(screen.getByLabelText("Capability output")).toHaveTextContent("README.md");
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Capability call completed. Outcome: ok.",
+    );
+    expect(screen.getByRole("status")).not.toContainElement(
+      screen.getByLabelText("Capability output"),
+    );
+  });
+
+  it("preserves the submitted snapshot and completed receipt across Contract and Try tabs", async () => {
+    const user = userEvent.setup();
+    let activeController = controller({ acknowledged: true });
+    mockedUseCapabilityPlayground.mockImplementation(() => activeController);
+    const view = renderPlayground();
+    await submitNodeCall();
+
+    activeController = controller({
+      phase: "result",
+      acknowledged: true,
+      result: callResult(),
+    });
+    mockedUseCapabilityPlayground.mockReturnValue(activeController);
+    mockedUseConsoleWorkspace.mockReturnValue(
+      workspaceWithEvidence([
+        capabilityEvidence("call-tab-state", nodeCapability.name, 26, target, {
+          query: "README.md",
+        }),
+      ]),
+    );
+    view.rerender(
+      <CapabilityPlayground
+        capability={nodeCapability}
+        executor={writeExecutor}
+        target={target}
+      />,
+    );
+
+    expect(screen.getByLabelText("Submitted payload")).toHaveTextContent("README.md");
+    await user.click(screen.getByRole("tab", { name: "Contract" }));
+    expect(screen.getAllByRole("status")).toHaveLength(1);
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Capability call completed. Outcome: ok.",
+    );
+    await user.click(screen.getByRole("tab", { name: "Try capability" }));
+
+    expect(screen.getByLabelText("Submitted payload")).toHaveTextContent("README.md");
+    expect(screen.getAllByRole("status")).toHaveLength(1);
+    expect(screen.getByText("26 ms")).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: /I understand/i })).toBeChecked();
   });
 
   it("labels runtime_error as completed without claiming a workflow run or trace", async () => {
@@ -481,7 +535,7 @@ describe("CapabilityPlayground", () => {
     });
 
     await user.click(screen.getByRole("tab", { name: "Try capability" }));
-    await user.click(screen.getByRole("button", { name: "Call capability" }));
+    await user.click(screen.getByRole("button", { name: "Call capability now" }));
 
     expect(call).not.toHaveBeenCalled();
     expect(screen.getByRole("alert")).toHaveTextContent(
@@ -505,7 +559,7 @@ describe("CapabilityPlayground", () => {
 
     await userEvent.click(screen.getByRole("tab", { name: "Try capability" }));
     await userEvent.type(screen.getByRole("textbox", { name: "Query" }), "README.md");
-    await userEvent.click(screen.getByRole("button", { name: "Call capability" }));
+    await userEvent.click(screen.getByRole("button", { name: "Call capability now" }));
     firstState = controller({
       phase: "result",
       acknowledged: true,
@@ -572,7 +626,92 @@ describe("CapabilityPlayground", () => {
     expect(screen.queryByText("99 ms")).not.toBeInTheDocument();
   });
 
-  it("matches the exact submitted payload among same-target calls", async () => {
+  it.each([
+    {
+      label: "redacted",
+      payload: { query: "[redacted]" },
+      durationMs: 33,
+    },
+    {
+      label: "truncated",
+      payload: "[truncated: evidence limit]",
+      durationMs: 34,
+    },
+  ])("attributes realistic evidence with a $label payload projection", async ({
+    payload,
+    durationMs,
+  }) => {
+    let activeController = controller({ acknowledged: true });
+    mockedUseCapabilityPlayground.mockImplementation(() => activeController);
+    const view = renderPlayground();
+    await submitNodeCall();
+
+    activeController = controller({
+      phase: "result",
+      acknowledged: true,
+      result: callResult(),
+    });
+    mockedUseCapabilityPlayground.mockReturnValue(activeController);
+    mockedUseConsoleWorkspace.mockReturnValue(
+      workspaceWithEvidence([
+        capabilityEvidence(
+          `call-${durationMs}`,
+          nodeCapability.name,
+          durationMs,
+          target,
+          payload,
+        ),
+      ]),
+    );
+    view.rerender(
+      <CapabilityPlayground
+        capability={nodeCapability}
+        executor={writeExecutor}
+        target={target}
+      />,
+    );
+
+    expect(screen.getByText(`${durationMs} ms`)).toBeInTheDocument();
+  });
+
+  it("ignores an evidence record whose JSON-RPC method does not match", async () => {
+    let activeController = controller({ acknowledged: true });
+    mockedUseCapabilityPlayground.mockImplementation(() => activeController);
+    const view = renderPlayground();
+    await submitNodeCall();
+
+    activeController = controller({
+      phase: "result",
+      acknowledged: true,
+      result: callResult(),
+    });
+    mockedUseCapabilityPlayground.mockReturnValue(activeController);
+    mockedUseConsoleWorkspace.mockReturnValue(
+      workspaceWithEvidence([
+        capabilityEvidence(
+          "call-wrong-method",
+          nodeCapability.name,
+          88,
+          target,
+          { query: "README.md" },
+          null,
+          "workflow.capabilities.list",
+        ),
+      ]),
+    );
+    view.rerender(
+      <CapabilityPlayground
+        capability={nodeCapability}
+        executor={writeExecutor}
+        target={target}
+      />,
+    );
+
+    expect(screen.queryByText("88 ms")).not.toBeInTheDocument();
+    expect(screen.getByText("Call evidence was not retained for this connection.")).toBeInTheDocument();
+  });
+
+  it("fails closed when same-identity calls differ only by sanitized payload", async () => {
     let activeController = controller({ acknowledged: true });
     mockedUseCapabilityPlayground.mockImplementation(() => activeController);
     const view = renderPlayground();
@@ -602,8 +741,9 @@ describe("CapabilityPlayground", () => {
       />,
     );
 
-    expect(screen.getByText("24 ms")).toBeInTheDocument();
+    expect(screen.queryByText("24 ms")).not.toBeInTheDocument();
     expect(screen.queryByText("99 ms")).not.toBeInTheDocument();
+    expect(screen.getByText("Call evidence was not retained for this connection.")).toBeInTheDocument();
   });
 
   it("matches the normalized submitted deployment", async () => {
@@ -616,7 +756,7 @@ describe("CapabilityPlayground", () => {
     const user = userEvent.setup();
     await user.click(screen.getByRole("tab", { name: "Try capability" }));
     await user.type(screen.getByRole("textbox", { name: "Query" }), "README.md");
-    await user.click(screen.getByRole("button", { name: "Call capability" }));
+    await user.click(screen.getByRole("button", { name: "Call capability now" }));
 
     activeController = controller({
       phase: "result",
@@ -738,7 +878,7 @@ describe("CapabilityPlayground", () => {
     const user = userEvent.setup();
     await user.clear(screen.getByRole("textbox", { name: "Query" }));
     await user.type(screen.getByRole("textbox", { name: "Query" }), "second.md");
-    await user.click(screen.getByRole("button", { name: "Call capability" }));
+    await user.click(screen.getByRole("button", { name: "Call capability now" }));
 
     activeController = controller({
       phase: "result",

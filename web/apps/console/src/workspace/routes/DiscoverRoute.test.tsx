@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -191,7 +191,8 @@ describe("DiscoverRoute", () => {
     expect(screen.getByRole("heading", { name: "Input schema" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Output schema" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Wrapper hints" })).toBeInTheDocument();
-    expect(screen.getAllByText(/"names"/)).toHaveLength(2);
+    const contractPanel = screen.getByRole("tabpanel", { name: "Contract" });
+    expect(within(contractPanel).getAllByText(/"names"/)).toHaveLength(2);
     expect(screen.getByRole("button", { name: "Add to draft" })).toBeInTheDocument();
   });
 
