@@ -45,6 +45,7 @@ const OperationNameSchema = v.union([
   v.literal("workflow.sources.list"),
   v.literal("workflow.capabilities.list"),
   v.literal("workflow.capabilities.inspect"),
+  v.literal("workflow.capabilities.call"),
   v.literal("workflow.draft_workspaces.list"),
   v.literal("workflow.draft_workspaces.get"),
   v.literal("workflow.draft_workspaces.create_empty"),
