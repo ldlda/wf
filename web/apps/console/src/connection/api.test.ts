@@ -40,7 +40,10 @@ describe("connectToServer", () => {
 
     expect(mockFetch).toHaveBeenCalledWith("/api/connect", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: {
+        "content-type": "application/json",
+        "x-workflow-console": "1",
+      },
       body: JSON.stringify({ target: "http://127.0.0.1:8000/rpc" }),
     });
     expect(result.ok).toBe(true);
@@ -110,7 +113,10 @@ describe("callOperation", () => {
 
     expect(mockFetch).toHaveBeenCalledWith("/api/rpc", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: {
+        "content-type": "application/json",
+        "x-workflow-console": "1",
+      },
       body: JSON.stringify({
         operation: "workflow.sources.list",
         target: "http://127.0.0.1:8000/rpc",

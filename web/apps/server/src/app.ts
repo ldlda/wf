@@ -20,6 +20,7 @@ export type RunOperation = (
 
 type BrowserErrorCode =
   | "invalid_target"
+  | "request_rejected"
   | "unknown_operation"
   | "operation_disabled"
   | "upstream_unreachable"
@@ -28,6 +29,93 @@ type BrowserErrorCode =
   | "rpc_protocol_error"
   | "rpc_decode_error"
   | "response_too_large";
+
+const CONSOLE_REQUEST_HEADER = "x-workflow-console";
+
+type ConsoleRequestRejection = {
+  readonly status: 403 | 415;
+  readonly message: string;
+};
+
+/**
+ * Blocks browser-simple and cross-origin POSTs before they can reach an RPC.
+ * The Vite proxy preserves the console-facing origin in the request URL, so
+ * comparing against it keeps development and production on the same contract.
+ */
+const consoleRequestRejection = (
+  request: Request,
+): ConsoleRequestRejection | null => {
+  const contentType = request.headers
+    .get("content-type")
+    ?.split(";", 1)[0]
+    ?.trim()
+    .toLowerCase();
+  if (contentType !== "application/json") {
+    return {
+      status: 415,
+      message: "console POST requests require application/json",
+    };
+  }
+  if (request.headers.get(CONSOLE_REQUEST_HEADER) !== "1") {
+    return {
+      status: 403,
+      message: "console POST request header is missing or invalid",
+    };
+  }
+
+  const fetchSite = request.headers.get("sec-fetch-site")?.toLowerCase();
+  if (
+    fetchSite !== undefined &&
+    fetchSite !== "same-origin" &&
+    fetchSite !== "none"
+  ) {
+    return { status: 403, message: "cross-origin console POST rejected" };
+  }
+
+  const origin = request.headers.get("origin");
+  if (origin !== null) {
+    let parsedOrigin: URL;
+    try {
+      parsedOrigin = new URL(origin);
+    } catch {
+      return { status: 403, message: "invalid console request origin" };
+    }
+    if (parsedOrigin.origin !== new URL(request.url).origin) {
+      return { status: 403, message: "cross-origin console POST rejected" };
+    }
+  }
+  return null;
+};
+
+const rejectInvalidConsoleRequest = (
+  request: Request,
+):
+  | {
+      readonly status: 403 | 415;
+      readonly body: {
+        readonly ok: false;
+        readonly error: {
+          readonly code: "request_rejected";
+          readonly message: string;
+        };
+        readonly exchange: {
+          readonly request: null;
+          readonly response: null;
+        };
+      };
+    }
+  | null => {
+  const rejection = consoleRequestRejection(request);
+  if (rejection === null) return null;
+  return {
+    status: rejection.status,
+    body: {
+      ok: false,
+      error: { code: "request_rejected", message: rejection.message },
+      exchange: { request: null, response: null },
+    },
+  };
+};
 
 const isHealthInterpreted = (
   value: unknown,
@@ -89,6 +177,9 @@ export function createApp(dependencies: {
 
   app.use("/api/connect", bodyLimit({ maxSize: 256 * 1024 }));
   app.post("/api/connect", async (c) => {
+    const rejected = rejectInvalidConsoleRequest(c.req.raw);
+    if (rejected !== null) return c.json(rejected.body, rejected.status);
+
     let body: { target?: string };
     try {
       body = await c.req.json();
@@ -163,6 +254,9 @@ export function createApp(dependencies: {
 
   app.use("/api/rpc", bodyLimit({ maxSize: 256 * 1024 }));
   app.post("/api/rpc", async (c) => {
+    const rejected = rejectInvalidConsoleRequest(c.req.raw);
+    if (rejected !== null) return c.json(rejected.body, rejected.status);
+
     let body: { operation?: string; target?: string; params?: unknown };
     try {
       body = await c.req.json();

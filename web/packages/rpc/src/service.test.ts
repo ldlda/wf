@@ -14,6 +14,7 @@ import {
   type OperationExchange,
   type WorkflowRpcOptions,
 } from "./service.js";
+import type { OperationName } from "./method-registry.js";
 
 type JsonRpcRequest = {
   readonly jsonrpc: "2.0";
@@ -51,7 +52,7 @@ const jsonResponse = (body: unknown, status = 200): Response =>
 
 const runOperation = (
   options: WorkflowRpcOptions,
-  operation: string = "workflow.health",
+  operation: OperationName = "workflow.health",
   params: unknown = {},
 ): Promise<OperationExchange> =>
   Effect.gen(function* () {

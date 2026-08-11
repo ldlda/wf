@@ -22,6 +22,12 @@ export class ConsoleApiError extends Error {
 const errorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
 
+const consoleJsonHeaders = {
+  "content-type": "application/json",
+  // This non-safelisted header forces cross-origin browser requests to preflight.
+  "x-workflow-console": "1",
+} as const;
+
 const fetchJson = async <T>(
   url: string,
   init: RequestInit,
@@ -61,7 +67,7 @@ export const connectToServer = async (
     "/api/connect",
     {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: consoleJsonHeaders,
       body: JSON.stringify({ target }),
     },
     parseConnectResponse,
@@ -76,7 +82,7 @@ export const callOperation = async (
     "/api/rpc",
     {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: consoleJsonHeaders,
       body: JSON.stringify({ operation, target, params }),
     },
     parseRpcResponse,

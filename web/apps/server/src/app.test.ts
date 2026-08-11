@@ -56,6 +56,11 @@ const makeApp = (
 
 const app = makeApp({ runOperation: okRunner });
 
+const validConsoleHeaders = {
+  "content-type": "application/json",
+  "x-workflow-console": "1",
+} as const;
+
 describe("GET /api/health", () => {
   it("returns 200 with ok status", async () => {
     const res = await app.request("/api/health");
@@ -69,7 +74,7 @@ describe("POST /api/connect", () => {
   it("calls workflow.health and returns connected DTO", async () => {
     const res = await app.request("/api/connect", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: validConsoleHeaders,
       body: JSON.stringify({ target: "http://127.0.0.1:8000/rpc" }),
     });
     expect(res.status).toBe(200);
@@ -89,7 +94,7 @@ describe("POST /api/connect", () => {
   it("returns 400 when target is missing", async () => {
     const res = await app.request("/api/connect", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: validConsoleHeaders,
       body: JSON.stringify({}),
     });
     expect(res.status).toBe(400);
@@ -104,13 +109,121 @@ describe("POST /api/connect", () => {
     });
     const res = await malformedApp.request("/api/connect", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: validConsoleHeaders,
       body: JSON.stringify({ target: "http://127.0.0.1:8000/rpc" }),
     });
     expect(res.status).toBe(502);
     const body = await res.json();
     expect(body.ok).toBe(false);
     expect(body.error.code).toBe("rpc_decode_error");
+  });
+});
+
+describe("console POST request boundary", () => {
+  const routes = [
+    {
+      path: "/api/connect",
+      body: { target: "http://127.0.0.1:8000/rpc" },
+    },
+    {
+      path: "/api/rpc",
+      body: {
+        operation: "workflow.health",
+        target: "http://127.0.0.1:8000/rpc",
+        params: {},
+      },
+    },
+  ] as const;
+
+  it.each(routes)("rejects text/plain at $path before invoking the runner", async ({
+    path: requestPath,
+    body,
+  }) => {
+    const runOperation = vi.fn<RunOperation>(async (operation) =>
+      makeExchange({ operation }),
+    );
+    const guardedApp = makeApp({ runOperation });
+
+    const res = await guardedApp.request(requestPath, {
+      method: "POST",
+      headers: {
+        "content-type": "text/plain",
+        "x-workflow-console": "1",
+      },
+      body: JSON.stringify(body),
+    });
+
+    expect(res.status).toBe(415);
+    expect(runOperation).not.toHaveBeenCalled();
+  });
+
+  it.each(routes)("rejects a missing console header at $path before invoking the runner", async ({
+    path: requestPath,
+    body,
+  }) => {
+    const runOperation = vi.fn<RunOperation>(async (operation) =>
+      makeExchange({ operation }),
+    );
+    const guardedApp = makeApp({ runOperation });
+
+    const res = await guardedApp.request(requestPath, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+
+    expect(res.status).toBe(403);
+    expect(runOperation).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    {
+      label: "foreign Origin",
+      headers: { ...validConsoleHeaders, origin: "https://foreign.example" },
+    },
+    {
+      label: "foreign Sec-Fetch-Site",
+      headers: { ...validConsoleHeaders, "sec-fetch-site": "cross-site" },
+    },
+  ])("rejects $label before either runner is invoked", async ({ headers }) => {
+    const runOperation = vi.fn<RunOperation>(async (operation) =>
+      makeExchange({ operation }),
+    );
+    const guardedApp = makeApp({ runOperation });
+
+    for (const route of routes) {
+      const res = await guardedApp.request(route.path, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(route.body),
+      });
+      expect(res.status).toBe(403);
+    }
+
+    expect(runOperation).not.toHaveBeenCalled();
+  });
+
+  it.each(routes)("allows a same-origin console request through $path", async ({
+    path: requestPath,
+    body,
+  }) => {
+    const runOperation = vi.fn<RunOperation>(async (operation) =>
+      makeExchange({ operation }),
+    );
+    const guardedApp = makeApp({ runOperation });
+
+    const res = await guardedApp.request(`http://localhost:5173${requestPath}`, {
+      method: "POST",
+      headers: {
+        ...validConsoleHeaders,
+        origin: "http://localhost:5173",
+        "sec-fetch-site": "same-origin",
+      },
+      body: JSON.stringify(body),
+    });
+
+    expect(res.status).toBe(200);
+    expect(runOperation).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -195,7 +308,7 @@ describe("POST /api/rpc", () => {
   }) => {
     const res = await app.request("/api/rpc", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: validConsoleHeaders,
       body: JSON.stringify({
         operation,
         target: "http://127.0.0.1:8000/rpc",
@@ -217,7 +330,7 @@ describe("POST /api/rpc", () => {
   it("invokes the requested operation", async () => {
     const res = await app.request("/api/rpc", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: validConsoleHeaders,
       body: JSON.stringify({
         operation: "workflow.sources.list",
         target: "http://127.0.0.1:8000/rpc",
@@ -235,7 +348,7 @@ describe("POST /api/rpc", () => {
     const disabledApp = makeApp({ runOperation });
     const res = await disabledApp.request("/api/rpc", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: validConsoleHeaders,
       body: JSON.stringify({
         operation: "workflow.capabilities.call",
         target: "http://127.0.0.1:8000/rpc",
@@ -269,7 +382,7 @@ describe("POST /api/rpc", () => {
     const params = { capability_name: "local.example.echo", input: {} };
     const res = await enabledApp.request("/api/rpc", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: validConsoleHeaders,
       body: JSON.stringify({
         operation: "workflow.capabilities.call",
         target: "http://127.0.0.1:8000/rpc",
@@ -290,7 +403,7 @@ describe("POST /api/rpc", () => {
     const rejectedApp = makeApp({ runOperation });
     const res = await rejectedApp.request("/api/rpc", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: validConsoleHeaders,
       body: JSON.stringify({
         operation: "foo.bar",
         target: "http://127.0.0.1:8000/rpc",
@@ -306,7 +419,7 @@ describe("POST /api/rpc", () => {
   it("does not authorize generated operations outside the console boundary", async () => {
     const res = await app.request("/api/rpc", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: validConsoleHeaders,
       body: JSON.stringify({
         operation: "workflow.admin.auth.list",
         target: "http://127.0.0.1:8000/rpc",
@@ -321,7 +434,7 @@ describe("POST /api/rpc", () => {
   it("does not authorize generic draft workspace mutations", async () => {
     const res = await app.request("/api/rpc", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: validConsoleHeaders,
       body: JSON.stringify({
         operation: "workflow.draft_workspaces.replace_document",
         target: "http://127.0.0.1:8000/rpc",
@@ -336,7 +449,7 @@ describe("POST /api/rpc", () => {
   it("returns 400 for invalid JSON body", async () => {
     const res = await app.request("/api/rpc", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: validConsoleHeaders,
       body: "not json",
     });
     expect(res.status).toBe(400);
@@ -348,7 +461,7 @@ describe("POST body size limit", () => {
     const bigBody = JSON.stringify({ data: "x".repeat(257 * 1024) });
     const res = await app.request("/api/rpc", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: validConsoleHeaders,
       body: bigBody,
     });
     expect(res.status).toBe(413);
@@ -362,7 +475,7 @@ describe("error mapping", () => {
     });
     const res = await timeoutApp.request("/api/rpc", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: validConsoleHeaders,
       body: JSON.stringify({
         operation: "workflow.health",
         target: "http://127.0.0.1:8000/rpc",
@@ -385,7 +498,7 @@ describe("error mapping", () => {
     });
     const res = await connApp.request("/api/rpc", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: validConsoleHeaders,
       body: JSON.stringify({
         operation: "workflow.health",
         target: "http://127.0.0.1:8000/rpc",
@@ -404,7 +517,7 @@ describe("error mapping", () => {
     });
     const res = await remoteApp.request("/api/rpc", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: validConsoleHeaders,
       body: JSON.stringify({
         operation: "workflow.health",
         target: "http://127.0.0.1:8000/rpc",
@@ -423,7 +536,7 @@ describe("error mapping", () => {
     });
     const res = await invalidApp.request("/api/rpc", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: validConsoleHeaders,
       body: JSON.stringify({
         operation: "workflow.health",
         target: "not-a-url",
@@ -442,7 +555,7 @@ describe("error mapping", () => {
     });
     const res = await unknownApp.request("/api/rpc", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: validConsoleHeaders,
       body: JSON.stringify({
         operation: "workflow.health",
         target: "http://127.0.0.1:8000/rpc",
@@ -464,7 +577,7 @@ describe("error mapping", () => {
     for (const a of apps) {
       const res = await a.request("/api/rpc", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: validConsoleHeaders,
         body: JSON.stringify({
           operation: "workflow.health",
           target: "http://127.0.0.1:8000/rpc",
