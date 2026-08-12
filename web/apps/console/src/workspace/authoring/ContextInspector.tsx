@@ -168,7 +168,16 @@ export const ContextInspector = ({
           <h2 id="capability-selection-heading">{selection.qualifiedName}</h2>
           <p>{capability?.description ?? "Configure this capability before adding it."}</p>
           <dl className="authoring-inspector__facts">
-            <Fact label="Kind" value={capability?.kind === "wrapper_artifact" ? "Wrapper artifact" : "Node spec"} />
+            <Fact
+              label="Kind"
+              value={
+                capability === undefined
+                  ? "unknown"
+                  : capability.kind === "wrapper_artifact"
+                    ? "Wrapper artifact"
+                    : "Node spec"
+              }
+            />
             <Fact label="Outcomes" value={capability?.outcomes.join(", ") || "none"} />
           </dl>
         </section>

@@ -329,7 +329,8 @@ export const StepInputBindingsForm = ({
 
   const clear = (): void => {
     if (unsupportedRows.length > 0) {
-      const message = "Remove or repair this unsupported input row before clearing inputs.";
+      const message =
+        "Remove or repair this unsupported input row before clearing inputs.";
       setFormIssue(message);
       markDirty();
       return;
@@ -337,9 +338,10 @@ export const StepInputBindingsForm = ({
     setLocalIssues({});
     setFormIssue(null);
     markDirty();
-    void Promise.resolve(onSubmit([])).catch(() => undefined);
+    void Promise.resolve(onSubmit([]))
+      .then(() => setRows([]))
+      .catch(() => undefined);
   };
-
   return (
     <form className="schema-form authoring-form" noValidate onSubmit={submit}>
       {formIssue !== null && <p id={formErrorId} role="alert">{formIssue}</p>}

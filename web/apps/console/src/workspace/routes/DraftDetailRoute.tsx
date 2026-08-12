@@ -13,9 +13,9 @@ export const DraftDetailRoute = ({
 }: DraftDetailRouteProps) => {
   const { workspaceId = null } = useParams<{ workspaceId: string }>();
   const [searchParams] = useSearchParams();
-  const capabilityName = searchParams.get("capability");
+  const capabilityName = searchParams.get("capability")?.trim() ?? "";
   const initialSelection: WorkbenchSelection =
-    capabilityName !== null && capabilityName.trim() !== ""
+    capabilityName !== ""
       ? { kind: "capability", qualifiedName: capabilityName }
       : { kind: "canvas" };
   const drafts = useDraftWorkspace(workspaceId);

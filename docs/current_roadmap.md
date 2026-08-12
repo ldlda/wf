@@ -91,6 +91,9 @@ Implementation order:
      smoke tests, not persisted workflow runs: they create no workflow state,
      routes, run records, or trace frames. Implementation:
      [`capability playground plan`](historical/superpowers/plans/2026-08-11-workflow-console-capability-playground.md).
+   - Active remediation gate: repair and verify the high-value console review
+     findings before extending the same authoring surfaces. Triage and order:
+     [`workflow console review remediation`](workflow-console-review-remediation.md).
    - Slice 5: composite input values. Extend canonical step-input bindings with
      a deliberate recursive literal/path expression model for arrays and
      objects. Start by exposing per-item Literal/Path controls in existing array

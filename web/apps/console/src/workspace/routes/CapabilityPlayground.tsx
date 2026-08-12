@@ -214,13 +214,21 @@ const ResultReceipt = ({
     <div className="capability-playground__receipt-heading">
       <div>
         <p className="capability-playground__receipt-label">Result receipt</p>
-        <h3 id="capability-playground-result-heading">{result.qualifiedName}</h3>
+        <h3 id="capability-playground-result-heading">
+          {result.qualifiedName}
+        </h3>
       </div>
       <p
         className="capability-playground__outcome"
-        data-outcome={result.outcome === "runtime_error" ? "runtime-error" : "completed"}
+        data-outcome={
+          result.outcome === "runtime_error" ? "runtime-error" : "completed"
+        }
       >
-        <CheckCircle2 aria-hidden="true" size={17} strokeWidth={2} />
+        {result.outcome === "runtime_error" ? (
+          <AlertCircle aria-hidden="true" size={17} strokeWidth={2} />
+        ) : (
+          <CheckCircle2 aria-hidden="true" size={17} strokeWidth={2} />
+        )}
         <span>{outcomeLabel(result.outcome)}</span>
       </p>
     </div>

@@ -495,7 +495,7 @@ describe("run operation registry", () => {
         bind_outputs: { "output value": "state target" },
       }),
     ).toBe(
-      "uv run wf draft add capability console.demo --revision 1 --step echo --capability local.example.echo --route 'when done=state path' --input 'input value=local target''s' --bind-output 'output value=state target'",
+      "uv run wf draft add capability console.demo --revision 1 --step echo --capability local.example.echo --route 'when done=state path' --input 'input value=local target'\\''s' --bind-output 'output value=state target'",
     );
   });
 

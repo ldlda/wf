@@ -5341,6 +5341,7 @@ async def test_workflow_output_map_merge_checks_revision_before_ambiguity(
     )
     assert result["status"] == "conflict"
     assert result["diagnostics"][0]["code"] == "revision_conflict"
+    assert result["draft"] == before["draft"]
     assert after == before
 
 

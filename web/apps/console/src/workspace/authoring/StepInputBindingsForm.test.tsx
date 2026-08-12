@@ -1,6 +1,6 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { InputBinding } from "../domain/draft-workspace-models.js";
 import { StepInputBindingsForm } from "./StepInputBindingsForm.js";
 import { displayGraphInputPath, displayLocalInputPath } from "./input-binding-paths.js";
@@ -97,6 +97,26 @@ describe("StepInputBindingsForm", () => {
     await user.click(screen.getByRole("button", { name: "Clear inputs" }));
 
     expect(submissions).toEqual([[]]);
+    expect(screen.queryByRole("group", { name: "Input row 1" })).toBeNull();
+  });
+
+  it("keeps input rows when clearing fails", async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn().mockRejectedValue(new Error("clear failed"));
+    render(
+      <StepInputBindingsForm
+        inputSchema={schema}
+        initialRows={[
+          { kind: "canonical", index: 0, value: { path: "input.title", target: "title" } },
+        ]}
+        onSubmit={onSubmit}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Clear inputs" }));
+
+    expect(onSubmit).toHaveBeenCalledWith([]);
+    expect(screen.getByRole("group", { name: "Input row 1" })).toBeInTheDocument();
   });
 
   it("blocks clear until every unsupported row is explicitly removed", async () => {

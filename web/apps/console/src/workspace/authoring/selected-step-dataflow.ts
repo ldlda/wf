@@ -32,22 +32,35 @@ const hasExactKeys = (value: JsonRecord, keys: ReadonlyArray<string>): boolean =
 };
 
 /** Guard the recursive JSON subset used by literal input bindings. */
-export const isJsonValue = (value: unknown): value is JsonValue => {
-  if (value === null || typeof value === "boolean" || typeof value === "string") return true;
+const MAX_JSON_DEPTH = 64;
+
+const isJsonValueAtDepth = (value: unknown, depth: number): boolean => {
+  if (depth > MAX_JSON_DEPTH) return false;
+  if (value === null || typeof value === "boolean" || typeof value === "string")
+    return true;
   if (typeof value === "number") return Number.isFinite(value);
   if (Array.isArray(value)) {
     if (Object.getOwnPropertySymbols(value).length > 0) return false;
     for (const item of value) {
-      if (!isJsonValue(item)) return false;
+      if (!isJsonValueAtDepth(item, depth + 1)) return false;
     }
     return Object.keys(value).every((key) => /^(0|[1-9]\d*)$/.test(key));
   }
   if (!isRecord(value)) return false;
-  if (Object.getPrototypeOf(value) !== Object.prototype && Object.getPrototypeOf(value) !== null) return false;
+  if (
+    Object.getPrototypeOf(value) !== Object.prototype &&
+    Object.getPrototypeOf(value) !== null
+  )
+    return false;
   if (Object.getOwnPropertySymbols(value).length > 0) return false;
-  return Object.values(value).every(isJsonValue);
+  return Object.values(value).every((item) =>
+    isJsonValueAtDepth(item, depth + 1),
+  );
 };
 
+/** Guard the recursive JSON subset used by literal input bindings. */
+export const isJsonValue = (value: unknown): value is JsonValue =>
+  isJsonValueAtDepth(value, 0);
 const stringParts = (value: unknown): string[] | null => {
   if (!Array.isArray(value)) return null;
   const parts: string[] = [];

@@ -125,10 +125,7 @@ export const SchemaForm = ({
         ...sources,
         [sourceKey(changedField)]: { mode: "literal", value: nextValue },
       };
-      setSources(() => ({
-        ...sources,
-        [sourceKey(changedField)]: { mode: "literal", value: nextValue },
-      }));
+      setSources(nextSources);
     }
     onValueChange?.(serializeSchemaValues(field, nextValues, nextSources));
   };

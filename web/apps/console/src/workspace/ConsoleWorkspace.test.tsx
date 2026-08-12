@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useRef } from "react";
 import { MemoryRouter, Outlet, Route, Routes, useNavigate } from "react-router-dom";
@@ -240,11 +240,12 @@ describe("ConsoleWorkspace", () => {
     });
 
     oldWrite.resolve(successfulWrite());
-    await waitFor(() => {
-      expect(screen.getByTestId("evidence-ids")).toHaveTextContent(
-        "workflow.health-0|workflow.health-1",
-      );
+    await act(async () => {
+      await oldWrite.promise;
     });
+    expect(screen.getByTestId("evidence-ids")).toHaveTextContent(
+      "workflow.health-0|workflow.health-1",
+    );
   });
 
   it("ignores a stale health response after a newer target connects", async () => {

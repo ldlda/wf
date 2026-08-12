@@ -306,6 +306,16 @@ describe("useDraftAuthoring", () => {
     expect(result.current.preservedCapabilityForm).toEqual({ kind: "update", input });
   });
 
+  it("publishes remembered capability form changes to consumers", () => {
+    const initial = workspace();
+    const { result } = renderHook(() => useDraftAuthoring({ draft: initial }));
+    const input = { ...capabilityInput, description: "Unsaved operator edit" };
+
+    act(() => result.current.rememberCapabilityForm("add", input));
+
+    expect(result.current.preservedCapabilityForm).toEqual({ kind: "add", input });
+  });
+
   it("does not send different writes or validation concurrently for one revision", async () => {
     const initial = workspace({ revision: 6 });
     let resolveAdd: ((value: DraftWorkspace) => void) | undefined;
@@ -325,6 +335,68 @@ describe("useDraftAuthoring", () => {
     expect(authoringClient.validate).not.toHaveBeenCalled();
 
     resolveAdd?.(workspace({ revision: 7 }));
+    await act(async () => first);
+  });
+
+  it("rejects reload while a mutation is in progress", async () => {
+    const initial = workspace({ revision: 6 });
+    let resolveAdd: ((value: DraftWorkspace) => void) | undefined;
+    authoringClient.addCapabilityStep.mockReturnValueOnce(
+      new Promise<DraftWorkspace>((resolve) => { resolveAdd = resolve; }),
+    );
+    const { result } = renderHook(() => useDraftAuthoring({ draft: initial }));
+
+    let mutation: Promise<void> | undefined;
+    act(() => { mutation = result.current.addCapability(capabilityInput); });
+
+    await expect(result.current.reload()).rejects.toThrow(
+      "Another draft authoring request is in progress.",
+    );
+    expect(workspaceClient.load).not.toHaveBeenCalled();
+
+    resolveAdd?.(workspace({ revision: 7 }));
+    await act(async () => mutation);
+  });
+
+  it("rejects mutations while reload is in progress", async () => {
+    const initial = workspace({ revision: 6 });
+    let resolveReload: ((value: DraftWorkspace) => void) | undefined;
+    workspaceClient.load.mockReturnValueOnce(
+      new Promise<DraftWorkspace>((resolve) => { resolveReload = resolve; }),
+    );
+    const { result } = renderHook(() => useDraftAuthoring({ draft: initial }));
+
+    let reloadRequest: Promise<void> | undefined;
+    act(() => { reloadRequest = result.current.reload(); });
+
+    await expect(result.current.addCapability(capabilityInput)).rejects.toThrow(
+      "Another draft authoring request is in progress.",
+    );
+    expect(authoringClient.addCapabilityStep).not.toHaveBeenCalled();
+
+    resolveReload?.(workspace({ revision: 7 }));
+    await act(async () => reloadRequest);
+  });
+
+  it("coalesces duplicate reload requests for the same revision", async () => {
+    const initial = workspace({ revision: 6 });
+    let resolveReload: ((value: DraftWorkspace) => void) | undefined;
+    workspaceClient.load.mockReturnValueOnce(
+      new Promise<DraftWorkspace>((resolve) => { resolveReload = resolve; }),
+    );
+    const { result } = renderHook(() => useDraftAuthoring({ draft: initial }));
+
+    let first: Promise<void> | undefined;
+    let second: Promise<void> | undefined;
+    act(() => {
+      first = result.current.reload();
+      second = result.current.reload();
+    });
+
+    expect(first).toBe(second);
+    expect(workspaceClient.load).toHaveBeenCalledTimes(1);
+
+    resolveReload?.(workspace({ revision: 7 }));
     await act(async () => first);
   });
 
@@ -379,6 +451,26 @@ describe("useDraftAuthoring", () => {
 
     expect(authoringClient.addCapabilityStep).toHaveBeenLastCalledWith(
       expect.objectContaining({ description: "edited after conflict" }),
+    );
+  });
+
+  it("reapplies an add with its original connector insertion context", async () => {
+    const initial = workspace();
+    const conflict = workspace({ revision: 4, status: "conflict" });
+    authoringClient.addCapabilityStep
+      .mockResolvedValueOnce(conflict)
+      .mockResolvedValueOnce(workspace({ revision: 5 }));
+    const { result } = renderHook(() => useDraftAuthoring({
+      draft: initial,
+      initialSelection: { kind: "edge", stepId: "read", outcome: "ok" },
+    }));
+
+    await act(async () => result.current.addCapability(capabilityInput));
+    act(() => result.current.select({ kind: "edge", stepId: "fallback", outcome: "error" }));
+    await act(async () => result.current.reapply());
+
+    expect(authoringClient.addCapabilityStep).toHaveBeenLastCalledWith(
+      expect.objectContaining({ routeFromStep: "read", routeFromOutcome: "ok" }),
     );
   });
 
@@ -463,6 +555,38 @@ describe("useDraftAuthoring", () => {
 
     expect(result.current.draft).toBe(initial);
     expect(result.current.dirty).toBe(true);
+  });
+
+  it("ignores a stale targeted response after provenance and selection both change", async () => {
+    const initial = workspace({ revision: 7 });
+    let resolveInputs: ((value: DraftWorkspace) => void) | undefined;
+    setStepInputBindings.mockReturnValueOnce(
+      new Promise<DraftWorkspace>((resolve) => { resolveInputs = resolve; }),
+    );
+    const { result, rerender } = renderHook(() => useDraftAuthoring({
+      draft: initial,
+      initialSelection: { kind: "node", nodeId: "render" },
+    }));
+
+    const request = result.current.setStepInputs([{ path: "input.title", target: "title" }]);
+    act(() => result.current.select({ kind: "node", nodeId: "publish" }));
+    contextValue = { ...contextValue, connectedTarget: "server-b" };
+    rerender();
+    const stateBeforeResponse = {
+      dirty: result.current.dirty,
+      phase: result.current.phase,
+      message: result.current.message,
+    };
+    resolveInputs?.(workspace({ revision: 8 }));
+    await act(async () => request);
+
+    expect(result.current.draft).toBe(initial);
+    expect(result.current.selection).toEqual({ kind: "node", nodeId: "publish" });
+    expect({
+      dirty: result.current.dirty,
+      phase: result.current.phase,
+      message: result.current.message,
+    }).toEqual(stateBeforeResponse);
   });
 
   it("submits selected-step inputs against the selected node and current revision", async () => {
@@ -592,6 +716,39 @@ describe("useDraftAuthoring", () => {
 
     expect(result.current.draft).toBe(initial);
     expect(result.current.selection).toEqual({ kind: "node", nodeId: "publish" });
+    expect(result.current.phase).toBe("idle");
+    expect(result.current.message).toBeNull();
+  });
+
+  it("ignores a capability update response after selecting another node", async () => {
+    const initial = workspace({
+      revision: 7,
+      draft: {
+        steps: { read: { use: "demo.read" }, publish: { use: "demo.publish" } },
+        routes: {},
+      },
+    });
+    let resolveUpdate: ((value: DraftWorkspace) => void) | undefined;
+    updateCapabilityStep.mockReturnValueOnce(
+      new Promise<DraftWorkspace>((resolve) => { resolveUpdate = resolve; }),
+    );
+    const { result } = renderHook(() => useDraftAuthoring({
+      draft: initial,
+      initialSelection: { kind: "node", nodeId: "read" },
+    }));
+
+    const request = result.current.updateCapability({
+      ...capabilityInput,
+      stepId: "read",
+      capabilityName: "demo.read",
+    });
+    act(() => result.current.select({ kind: "node", nodeId: "publish" }));
+    resolveUpdate?.(workspace({ revision: 8 }));
+    await act(async () => request);
+
+    expect(result.current.draft).toBe(initial);
+    expect(result.current.selection).toEqual({ kind: "node", nodeId: "publish" });
+    expect(result.current.phase).toBe("idle");
   });
 
   it("reapplies the exact input submission to its original step after reload", async () => {

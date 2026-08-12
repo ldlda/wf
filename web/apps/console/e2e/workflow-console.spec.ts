@@ -396,7 +396,7 @@ test("keeps mobile draft inspection read-only and horizontally navigable", async
 
     const deferredMutationButtons = page.locator(".authoring-inspector__deferred-actions button");
     await expect(deferredMutationButtons).toHaveCount(6);
-    await expect(deferredMutationButtons.locator(":not([disabled])")).toHaveCount(0);
+    await expect(page.locator(".authoring-inspector__deferred-actions button:not([disabled])")).toHaveCount(0);
     await expect(page.getByRole("link", { name: /graph/i })).toHaveCount(0);
   } finally {
     await context.close();

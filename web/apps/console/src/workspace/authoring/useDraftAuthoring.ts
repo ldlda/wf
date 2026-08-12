@@ -81,7 +81,11 @@ type PendingMutation = {
 };
 
 type LastSubmission =
-  | { readonly kind: "add"; readonly input: CapabilityNodeFormValue }
+  | {
+      readonly kind: "add";
+      readonly input: CapabilityNodeFormValue;
+      readonly insertion: InsertionContext | null;
+    }
   | {
       readonly kind: "update";
       readonly targetStepId: string;
@@ -242,6 +246,8 @@ export const useDraftAuthoring = ({
   // tabs and unsaved rows; this ref stores only the exact mutation payload
   // needed for an explicit conflict reapply.
   const lastSubmissionRef = useRef<LastSubmission>(null);
+  const [preservedCapabilityForm, setPreservedCapabilityForm] =
+    useState<PreservedCapabilityForm>(null);
 
   const adoptsDraftInput =
     state.draftInput !== initialDraft &&
@@ -362,6 +368,11 @@ export const useDraftAuthoring = ({
 
       if (options.submission !== undefined) {
         lastSubmissionRef.current = options.submission;
+        setPreservedCapabilityForm(
+          options.submission.kind === "add" || options.submission.kind === "update"
+            ? { kind: options.submission.kind, input: options.submission.input }
+            : null,
+        );
       }
       const requestProvenance = currentProvenanceRef.current;
       setState((current) => ({
@@ -372,14 +383,24 @@ export const useDraftAuthoring = ({
       }));
       const promise = operation(authoringClient, requestDraft)
         .then((response) => {
+          if (!sameProvenance(requestProvenance, currentProvenanceRef.current)) return;
           const targetIsCurrent =
             options.targetStepId === undefined ||
             options.allowTargetSelectionChange === true ||
             (currentSelectionRef.current.kind === "node" &&
               currentSelectionRef.current.nodeId === options.targetStepId);
-          const committed =
-            targetIsCurrent &&
-            commitResponse(response, requestProvenance, options.nextSelection);
+          if (!targetIsCurrent) {
+            // Do not reset the newly selected inspector with a response for the
+            // previous node. The canonical server state remains reloadable.
+            setState((current) => ({
+              ...current,
+              dirty: true,
+              phase: "idle",
+              message: null,
+            }));
+            return;
+          }
+          const committed = commitResponse(response, requestProvenance, options.nextSelection);
           if (!committed && sameProvenance(requestProvenance, currentProvenanceRef.current)) {
             throw new Error("The authoring response did not match the requested workspace.");
           }
@@ -402,9 +423,11 @@ export const useDraftAuthoring = ({
     [authoringClient, commitResponse],
   );
 
-  const addCapability = useCallback(
-    (input: CapabilityNodeFormValue): Promise<void> => {
-      const insertion = currentInsertionContextRef.current;
+  const submitCapabilityAdd = useCallback(
+    (
+      input: CapabilityNodeFormValue,
+      insertion: InsertionContext | null,
+    ): Promise<void> => {
       return runMutation(
         "add",
         { input, insertion },
@@ -430,15 +453,25 @@ export const useDraftAuthoring = ({
           }),
         {
           nextSelection: { kind: "node", nodeId: input.stepId },
-          submission: { kind: "add", input },
+          submission: { kind: "add", input, insertion },
         },
       );
     },
     [runMutation],
   );
 
+  const addCapability = useCallback(
+    (input: CapabilityNodeFormValue): Promise<void> =>
+      submitCapabilityAdd(input, currentInsertionContextRef.current),
+    [submitCapabilityAdd],
+  );
+
   const submitCapabilityUpdate = useCallback(
-    (targetStepId: string, input: CapabilityNodeFormValue): Promise<void> => {
+    (
+      targetStepId: string,
+      input: CapabilityNodeFormValue,
+      allowTargetSelectionChange = false,
+    ): Promise<void> => {
       // Persist the immutable mutation target with the form. A conflict may
       // outlive the current graph selection before the operator reapplies it.
       return runMutation(
@@ -457,6 +490,8 @@ export const useDraftAuthoring = ({
             },
           }),
         {
+          targetStepId,
+          allowTargetSelectionChange,
           submission: { kind: "update", targetStepId, input },
         },
       );
@@ -673,8 +708,17 @@ export const useDraftAuthoring = ({
   const reload = useCallback((): Promise<void> => {
     if (!workspaceClient) return Promise.resolve();
     const requestProvenance = currentProvenanceRef.current;
-    return workspaceClient
-      .load(currentDraftRef.current.workspaceId)
+    const workspaceId = currentDraftRef.current.workspaceId;
+    const key = mutationKey("reload", workspaceId, currentDraftRef.current.revision);
+    const pending = pendingRef.current;
+    if (pending?.key === key) return pending.promise;
+    if (pending !== null) {
+      const error = new Error("Another draft authoring request is in progress.");
+      setState((current) => ({ ...current, phase: "error", message: error.message }));
+      return Promise.reject(error);
+    }
+    const promise = workspaceClient
+      .load(workspaceId)
       .then((response) => {
         if (
           !sameProvenance(requestProvenance, currentProvenanceRef.current) ||
@@ -702,21 +746,28 @@ export const useDraftAuthoring = ({
       .catch((error: unknown) => {
         if (!sameProvenance(requestProvenance, currentProvenanceRef.current)) return;
         setState((current) => ({ ...current, phase: "error", message: errorMessage(error) }));
+      })
+      .finally(() => {
+        if (pendingRef.current?.promise === promise) pendingRef.current = null;
       });
+    pendingRef.current = { key, promise };
+    return promise;
   }, [initialDraft, workspaceClient]);
 
   const reapply = useCallback((): Promise<void> => {
     const last = lastSubmissionRef.current;
     if (last === null) return Promise.resolve();
-    if (last.kind === "add") return addCapability(last.input);
-    if (last.kind === "update") return submitCapabilityUpdate(last.targetStepId, last.input);
+    if (last.kind === "add") return submitCapabilityAdd(last.input, last.insertion);
+    if (last.kind === "update") {
+      return submitCapabilityUpdate(last.targetStepId, last.input, true);
+    }
     if (last.kind === "route") return setRoute(last.input);
     if (last.kind === "setup") return submitSetup(last.targetStepId, last.patch, true);
     if (last.kind === "inputs") return submitStepInputs(last.targetStepId, last.bindings, true);
     return submitStepOutputs(last.targetStepId, last.bindings, true);
   }, [
-    addCapability,
     setRoute,
+    submitCapabilityAdd,
     submitCapabilityUpdate,
     submitSetup,
     submitStepInputs,
@@ -726,7 +777,13 @@ export const useDraftAuthoring = ({
   const rememberCapabilityForm = useCallback(
     (kind: "add" | "update", input: CapabilityNodeFormValue): void => {
       if (kind === "add") {
-        lastSubmissionRef.current = { kind, input };
+        const previous = lastSubmissionRef.current;
+        const insertion =
+          previous?.kind === "add"
+            ? previous.insertion
+            : currentInsertionContextRef.current;
+        lastSubmissionRef.current = { kind, input, insertion };
+        setPreservedCapabilityForm({ kind, input });
         return;
       }
       const previous = lastSubmissionRef.current;
@@ -737,12 +794,14 @@ export const useDraftAuthoring = ({
             ? currentSelectionRef.current.nodeId
             : input.stepId;
       lastSubmissionRef.current = { kind, targetStepId, input };
+      setPreservedCapabilityForm({ kind, input });
     },
     [],
   );
 
   const rememberRouteForm = useCallback((input: RouteFormValue): void => {
     lastSubmissionRef.current = { kind: "route", input };
+    setPreservedCapabilityForm(null);
   }, []);
 
   return {
@@ -762,13 +821,7 @@ export const useDraftAuthoring = ({
     validate,
     reload,
     reapply,
-    preservedCapabilityForm:
-      lastSubmissionRef.current?.kind === "add" || lastSubmissionRef.current?.kind === "update"
-        ? {
-            kind: lastSubmissionRef.current.kind,
-            input: lastSubmissionRef.current.input,
-          }
-        : null,
+    preservedCapabilityForm,
     rememberCapabilityForm,
     rememberRouteForm,
     select,

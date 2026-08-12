@@ -129,10 +129,10 @@ export const CreateDraftDialog = ({
       return;
     }
 
-    setPhase("saving");
-    setMessage(null);
     const lifecycleToken = lifecycleTokenRef.current;
     if (lifecycleToken === null) return;
+    setPhase("saving");
+    setMessage(null);
     const requestGeneration = requestGenerationRef.current + 1;
     requestGenerationRef.current = requestGeneration;
     try {

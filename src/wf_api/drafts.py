@@ -152,7 +152,7 @@ class WorkflowDraftApi:
             return workspace
         return _PROJECT_DRAFT_WORKSPACE(
             {
-                **summarize_draft_workspace(workspace),
+                **summarize_draft_workspace(workspace, include_draft=True),
                 "status": "conflict",
                 "diagnostics": [
                     {

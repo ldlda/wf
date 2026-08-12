@@ -302,8 +302,24 @@ const fitValue = (value: unknown, maxBytes: number): unknown => {
 export const sanitizeEvidenceValue = (value: unknown): unknown =>
   fitValue(projectValue(value, 0, new WeakSet()), EVIDENCE_MAX_BYTES);
 
+const sanitizeTarget = (target: string): string => {
+  try {
+    const url = new URL(target);
+    if (url.username !== "" || url.password !== "") {
+      url.username = "";
+      url.password = "";
+      return fitString(url.toString(), MAX_STRING_LENGTH);
+    }
+  } catch {
+    // Fall through: a non-absolute target is bounded but not rewritten.
+  }
+  return fitString(target, MAX_STRING_LENGTH);
+};
+
 export const sanitizeEvidenceRecord = (record: EvidenceRecord): EvidenceRecord => ({
   ...record,
+  target: sanitizeTarget(record.target),
+  label: fitString(record.label, MAX_STRING_LENGTH),
   equivalentCli: requestContainsSensitiveKey(record.request)
     ? SENSITIVE_REQUEST_CLI_MARKER
     : fitCliString(record.equivalentCli),
