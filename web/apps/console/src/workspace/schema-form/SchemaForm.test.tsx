@@ -57,6 +57,42 @@ describe("SchemaForm", () => {
     expect(screen.getByRole("button", { name: "Call capability" })).toBeInTheDocument();
   });
 
+  it("isolates control ids and radio groups across form instances", () => {
+    render(
+      <>
+        <SchemaForm schema={{ type: "object", properties: { value: { type: "string" } } }} />
+        <SchemaForm schema={{ type: "object", properties: { value: { type: "string" } } }} />
+      </>,
+    );
+
+    const literalRadios = screen.getAllByRole("radio", { name: /Literal/ });
+    expect(literalRadios[0]).not.toHaveAttribute("name", literalRadios[1]?.getAttribute("name"));
+    const valueInputs = screen.getAllByRole("textbox", { name: "Value" });
+    expect(valueInputs[0]?.id).not.toBe(valueInputs[1]?.id);
+  });
+
+  it("resets values when the represented schema changes", async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(
+      <SchemaForm
+        initialValue={{ first: "initial" }}
+        schema={{ type: "object", properties: { first: { type: "string" } } }}
+      />,
+    );
+    await user.clear(screen.getByRole("textbox", { name: "First" }));
+    await user.type(screen.getByRole("textbox", { name: "First" }), "edited");
+
+    rerender(
+      <SchemaForm
+        initialValue={{ second: "replacement" }}
+        schema={{ type: "object", properties: { second: { type: "string" } } }}
+      />,
+    );
+
+    expect(screen.queryByRole("textbox", { name: "First" })).not.toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Second" })).toHaveValue("replacement");
+  });
+
   it("renders unsupported fields as JSON editors with their exact fallback reason", () => {
     render(
       <SchemaForm
@@ -150,6 +186,29 @@ describe("SchemaForm", () => {
     expect(submissions[0]?.bindings).toEqual([
       { target: "items.0.name", path: "input.second" },
     ]);
+  });
+
+  it("keeps later array controls mounted when an earlier row is removed", async () => {
+    const user = userEvent.setup();
+    render(
+      <SchemaForm
+        initialValue={{ items: [{ name: "first" }, { name: "second" }] }}
+        schema={{
+          type: "object",
+          properties: {
+            items: {
+              type: "array",
+              items: { type: "object", properties: { name: { type: "string" } } },
+            },
+          },
+        }}
+      />,
+    );
+    const secondControl = screen.getAllByRole("textbox", { name: "Name" })[1];
+    await user.click(screen.getByRole("button", { name: "Remove item 1" }));
+
+    expect(screen.getByRole("textbox", { name: "Name" })).toBe(secondControl);
+    expect(secondControl).toHaveValue("second");
   });
 
   it("omits an untouched optional boolean but preserves explicit false", async () => {

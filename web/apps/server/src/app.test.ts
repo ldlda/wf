@@ -225,6 +225,27 @@ describe("console POST request boundary", () => {
     expect(res.status).toBe(200);
     expect(runOperation).toHaveBeenCalledTimes(1);
   });
+
+  it("allows an exact configured origin behind a TLS-terminating proxy", async () => {
+    const runOperation = vi.fn<RunOperation>(async (operation) => makeExchange({ operation }));
+    const guardedApp = makeApp({
+      runOperation,
+      trustedOrigins: new Set(["https://console.example"]),
+    });
+
+    const res = await guardedApp.request("http://internal:8787/api/connect", {
+      method: "POST",
+      headers: {
+        ...validConsoleHeaders,
+        origin: "https://console.example",
+        "sec-fetch-site": "same-origin",
+      },
+      body: JSON.stringify({ target: "http://127.0.0.1:8765/rpc" }),
+    });
+
+    expect(res.status).toBe(200);
+    expect(runOperation).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe("POST /api/rpc", () => {

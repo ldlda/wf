@@ -134,8 +134,8 @@ export const CapabilityNodeForm = ({
     const timeout = timeoutSecondsRef.current?.value.trim() ?? "";
     if (timeout !== "") {
       const value = Number(timeout);
-      if (!Number.isFinite(value) || value <= 0) {
-        issues.push("Timeout must be greater than 0.");
+      if (!Number.isFinite(value) || !Number.isInteger(value) || value <= 0) {
+        issues.push("Timeout must be a whole number greater than 0.");
       }
     }
     return issues;
@@ -233,14 +233,14 @@ export const CapabilityNodeForm = ({
                     ? ""
                     : String(initialValue.timeoutSeconds)
                 }
-                inputMode="decimal"
-                min="0.000001"
+                inputMode="numeric"
+                min={1}
                 ref={timeoutSecondsRef}
                 onChange={(event) => {
                   timeoutTouchedRef.current = true;
                   notifyMetadataChange();
                 }}
-                step="any"
+                step={1}
                 type="number"
               />
               {metadataMessage("timeout_seconds") && <p role="alert">{metadataMessage("timeout_seconds")}</p>}

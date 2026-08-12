@@ -23,7 +23,7 @@ describe("CapabilityNodeForm", () => {
     await user.type(screen.getByRole("textbox", { name: "Step id" }), "enrich");
     await user.type(screen.getByRole("textbox", { name: "Description" }), "Enrich report");
     await user.type(screen.getByRole("textbox", { name: "Title" }), "Quarterly report");
-    expect(screen.getByRole("spinbutton", { name: "Timeout seconds" })).toHaveAttribute("inputmode", "decimal");
+    expect(screen.getByRole("spinbutton", { name: "Timeout seconds" })).toHaveAttribute("inputmode", "numeric");
     await user.click(screen.getByRole("button", { name: "Add node" }));
 
     expect(submissions[0]).toMatchObject({
@@ -54,6 +54,30 @@ describe("CapabilityNodeForm", () => {
     expect(submissions[0]).toHaveProperty("retry", 0);
     expect(submissions[0]).not.toHaveProperty("timeoutSeconds");
     expect(submissions[0]).not.toHaveProperty("description");
+  });
+
+  it("requires timeout seconds to be a positive whole number", async () => {
+    const user = userEvent.setup();
+    const submissions: unknown[] = [];
+    render(
+      <CapabilityNodeForm
+        capabilityName="demo.enrich"
+        inputSchema={{ type: "object", properties: {} }}
+        onSubmit={(value) => { submissions.push(value); }}
+      />,
+    );
+
+    await user.type(screen.getByRole("textbox", { name: "Step id" }), "enrich");
+    const timeout = screen.getByRole("spinbutton", { name: "Timeout seconds" });
+    expect(timeout).toHaveAttribute("min", "1");
+    expect(timeout).toHaveAttribute("step", "1");
+    await user.type(timeout, "1.5");
+    await user.click(screen.getByRole("button", { name: "Add node" }));
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Timeout must be a whole number greater than 0.",
+    );
+    expect(submissions).toHaveLength(0);
   });
 
   it("reports local edits as dirty and keeps them when submission fails", async () => {

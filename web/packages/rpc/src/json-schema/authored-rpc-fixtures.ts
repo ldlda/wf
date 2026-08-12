@@ -262,7 +262,8 @@ const TraceFrameSchema = Schema.Struct({
   state_changes: JsonObjectSchema,
 });
 
-const StructuralPathPartsSchema = Schema.Array(PathSegmentSchema).pipe(
+const StructuralPathPartsSchema = Schema.Array(PathSegmentSchema);
+const StatePathPartsSchema = StructuralPathPartsSchema.pipe(
   Schema.filter((parts) => parts.length > 0),
 );
 
@@ -310,7 +311,7 @@ const OutputBindingSchema = Schema.Struct({
   target: Schema.Union(
     Schema.String,
     Schema.Struct({
-      parts: StructuralPathPartsSchema,
+      parts: StatePathPartsSchema,
       root: Schema.Literal("state"),
     }),
   ),

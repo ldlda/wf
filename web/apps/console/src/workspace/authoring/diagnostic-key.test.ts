@@ -70,4 +70,11 @@ describe("withDiagnosticKeys", () => {
       withDifferentHint,
     ]);
   });
+
+  it("deduplicates equivalent nested details regardless of object key order", () => {
+    const left = diagnostic({ details: { field: "title", context: { row: 1, source: "input" } } });
+    const right = diagnostic({ details: { context: { source: "input", row: 1 }, field: "title" } });
+
+    expect(withDiagnosticKeys([left, right])).toHaveLength(1);
+  });
 });

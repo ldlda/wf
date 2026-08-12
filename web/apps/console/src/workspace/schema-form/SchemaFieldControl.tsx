@@ -17,6 +17,7 @@ export type SchemaFieldControlProps = {
   readonly onValueChange: (field: SchemaField, value: unknown) => void;
   readonly onSourceChange: (field: SchemaField, source: FieldSource) => void;
   readonly onArrayItemRemove: (field: SchemaField, index: number) => void;
+  readonly arrayItemKey?: ((field: SchemaField, index: number) => string) | undefined;
   readonly sourceSuggestions?: ReadonlyArray<string>;
   readonly showSourceControl?: boolean;
   readonly idPrefix?: string;
@@ -216,6 +217,7 @@ const LeafControl = ({
 };
 
 export const SchemaFieldControl = ({
+  arrayItemKey,
   field,
   value,
   sources,
@@ -246,8 +248,9 @@ export const SchemaFieldControl = ({
         {field.children.map((child) => (
           <SchemaFieldControl
             diagnostics={diagnostics.filter((diagnostic) => isPathPrefix(child.path, diagnostic.path))}
+            arrayItemKey={arrayItemKey}
             field={child}
-            key={pathKey(child)}
+            key={String(child.key)}
             onArrayItemRemove={onArrayItemRemove}
             onSourceChange={onSourceChange}
             onValueChange={onValueChange}
@@ -282,8 +285,12 @@ export const SchemaFieldControl = ({
             : null;
           if (!itemField) return null;
           return (
-            <div className="schema-form__array-item" key={pathKey(itemField)}>
+            <div
+              className="schema-form__array-item"
+              key={arrayItemKey?.(field, index) ?? pathKey(itemField)}
+            >
               <SchemaFieldControl
+                arrayItemKey={arrayItemKey}
                 diagnostics={diagnostics.filter((diagnostic) => isPathPrefix(itemField.path, diagnostic.path))}
                 field={itemField}
                 onSourceChange={onSourceChange}

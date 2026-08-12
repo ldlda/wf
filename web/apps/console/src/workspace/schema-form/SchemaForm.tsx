@@ -1,4 +1,4 @@
-import { useState, type FormEvent, type ReactNode } from "react";
+import { useId, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { normalizeSchema, type FieldSource, type SchemaField } from "./schema-field.js";
 import { SchemaFieldControl } from "./SchemaFieldControl.js";
 import {
@@ -93,7 +93,7 @@ const rawSchemaText = (schema: unknown): string => {
   }
 };
 
-export const SchemaForm = ({
+const SchemaFormState = ({
   schema,
   initialValue,
   initialSources = EMPTY_SOURCES,
@@ -106,6 +106,9 @@ export const SchemaForm = ({
   sourceSuggestions = EMPTY_SUGGESTIONS,
   showSourceControls = true,
 }: SchemaFormProps) => {
+  const formId = useId();
+  const nextArrayRowId = useRef(0);
+  const arrayRowIds = useRef(new Map<string, string[]>());
   const field = normalizeSchema(schema);
   const [values, setValues] = useState<unknown>(() =>
     initialValue !== undefined ? initialValue : emptyValueFor(field),
@@ -147,6 +150,7 @@ export const SchemaForm = ({
     onDirtyChange?.(true);
     const arrayValue = readAtPath(values, arrayField.path);
     if (!Array.isArray(arrayValue)) return;
+    arrayRowIds.current.get(sourceKey(arrayField))?.splice(index, 1);
     const nextValues = setAtPath(
       values,
       arrayField.path,
@@ -160,6 +164,16 @@ export const SchemaForm = ({
     onValueChange?.(serializeSchemaValues(field, nextValues, nextSources));
   };
 
+  const arrayItemKey = (arrayField: SchemaField, index: number): string => {
+    const path = sourceKey(arrayField);
+    const ids = arrayRowIds.current.get(path) ?? [];
+    while (ids.length <= index) {
+      ids.push(`${formId}-array-row-${nextArrayRowId.current++}`);
+    }
+    arrayRowIds.current.set(path, ids);
+    return ids[index] ?? `${formId}-array-row-missing`;
+  };
+
   const handleSubmit = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
     const result = serializeSchemaValues(field, values, sources);
@@ -171,8 +185,10 @@ export const SchemaForm = ({
     <form className="schema-form" noValidate onSubmit={handleSubmit}>
       {renderBeforeFields}
       <SchemaFieldControl
+        arrayItemKey={arrayItemKey}
         diagnostics={allDiagnostics}
         field={field}
+        idPrefix={`schema-form-${formId}`}
         onArrayItemRemove={handleArrayItemRemove}
         onSourceChange={handleSourceChange}
         onValueChange={handleValueChange}
@@ -189,3 +205,8 @@ export const SchemaForm = ({
     </form>
   );
 };
+
+/** Remounts form-local state only when the represented schema changes. */
+export const SchemaForm = (props: SchemaFormProps) => (
+  <SchemaFormState key={rawSchemaText(props.schema)} {...props} />
+);

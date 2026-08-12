@@ -40,4 +40,19 @@ describe("canonical capability form projection", () => {
       timeoutSeconds: null,
     });
   });
+
+  it("ignores negative and sparse array targets instead of creating array properties", () => {
+    const projected = canonicalCapabilityFormData(
+      draft({
+        use: "wf.std.concat",
+        input: [
+          { target: { root: "local", parts: ["items", "-1"] }, value: "negative" },
+          { target: { root: "local", parts: ["items", "2"] }, value: "sparse" },
+        ],
+      }),
+      "render",
+    );
+
+    expect(projected?.initialInputValue).toEqual({ items: [] });
+  });
 });

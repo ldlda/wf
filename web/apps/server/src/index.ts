@@ -20,6 +20,7 @@ import {
 } from "./browser-operation-policy.js";
 import { createPresentationRoomService } from "./presentation-sync/rooms.js";
 import { shutdownServer } from "./shutdown.js";
+import { parseTrustedOrigins } from "./trusted-origins.js";
 import { WebSocketServer } from "ws";
 
 const port = Number(process.env.WEB_PORT ?? "8787");
@@ -37,6 +38,14 @@ const capabilityCallsEnabled = capabilityCallsEnabledForHost(
 const browserOperationPolicy = createBrowserOperationPolicy({
   enableCapabilityCalls: capabilityCallsEnabled,
 });
+let trustedOrigins: ReadonlySet<string>;
+try {
+  trustedOrigins = parseTrustedOrigins(process.env.WEB_TRUSTED_ORIGINS);
+} catch (error) {
+  const message = error instanceof Error ? error.message : String(error);
+  console.error(`Invalid WEB_TRUSTED_ORIGINS: ${message}`);
+  process.exit(1);
+}
 if (
   capabilityCallsOverride === "1" &&
   !capabilityCallsEnabledForHost(hostname, undefined)
@@ -74,6 +83,7 @@ try {
     runOperation,
     presentationSync: { rooms, upgradeWebSocket },
     browserOperationPolicy,
+    trustedOrigins,
     ...(staticConsoleRoot ? { consoleRoot: staticConsoleRoot } : {}),
   });
 } catch (error) {

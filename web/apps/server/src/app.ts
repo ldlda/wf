@@ -44,6 +44,7 @@ type ConsoleRequestRejection = {
  */
 const consoleRequestRejection = (
   request: Request,
+  trustedOrigins: ReadonlySet<string>,
 ): ConsoleRequestRejection | null => {
   const contentType = request.headers
     .get("content-type")
@@ -80,7 +81,10 @@ const consoleRequestRejection = (
     } catch {
       return { status: 403, message: "invalid console request origin" };
     }
-    if (parsedOrigin.origin !== new URL(request.url).origin) {
+    if (
+      parsedOrigin.origin !== new URL(request.url).origin &&
+      !trustedOrigins.has(parsedOrigin.origin)
+    ) {
       return { status: 403, message: "cross-origin console POST rejected" };
     }
   }
@@ -89,6 +93,7 @@ const consoleRequestRejection = (
 
 const rejectInvalidConsoleRequest = (
   request: Request,
+  trustedOrigins: ReadonlySet<string>,
 ):
   | {
       readonly status: 403 | 415;
@@ -105,7 +110,7 @@ const rejectInvalidConsoleRequest = (
       };
     }
   | null => {
-  const rejection = consoleRequestRejection(request);
+  const rejection = consoleRequestRejection(request, trustedOrigins);
   if (rejection === null) return null;
   return {
     status: rejection.status,
@@ -159,12 +164,14 @@ export function createApp(dependencies: {
     readonly upgradeWebSocket: typeof upgradeWebSocket;
   };
   readonly browserOperationPolicy: BrowserOperationPolicy;
+  readonly trustedOrigins?: ReadonlySet<string>;
   readonly consoleRoot?: string;
 }): Hono {
   const {
     runOperation,
     presentationSync,
     browserOperationPolicy,
+    trustedOrigins = new Set(),
     consoleRoot,
   } = dependencies;
   const app = new Hono();
@@ -177,7 +184,7 @@ export function createApp(dependencies: {
 
   app.use("/api/connect", bodyLimit({ maxSize: 256 * 1024 }));
   app.post("/api/connect", async (c) => {
-    const rejected = rejectInvalidConsoleRequest(c.req.raw);
+    const rejected = rejectInvalidConsoleRequest(c.req.raw, trustedOrigins);
     if (rejected !== null) return c.json(rejected.body, rejected.status);
 
     let body: { target?: string };
@@ -254,7 +261,7 @@ export function createApp(dependencies: {
 
   app.use("/api/rpc", bodyLimit({ maxSize: 256 * 1024 }));
   app.post("/api/rpc", async (c) => {
-    const rejected = rejectInvalidConsoleRequest(c.req.raw);
+    const rejected = rejectInvalidConsoleRequest(c.req.raw, trustedOrigins);
     if (rejected !== null) return c.json(rejected.body, rejected.status);
 
     let body: { operation?: string; target?: string; params?: unknown };

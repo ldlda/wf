@@ -5,6 +5,19 @@ export type DiagnosticEntry = {
   readonly key: string;
 };
 
+const isRecord = (value: unknown): value is Readonly<Record<string, unknown>> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const canonicalize = (value: unknown): unknown => {
+  if (Array.isArray(value)) return value.map(canonicalize);
+  if (!isRecord(value)) return value;
+  return Object.fromEntries(
+    Object.entries(value)
+      .toSorted(([left], [right]) => left.localeCompare(right))
+      .map(([key, item]) => [key, canonicalize(item)]),
+  );
+};
+
 const diagnosticIdentity = (diagnostic: DraftDiagnostic): string =>
   JSON.stringify([
     diagnostic.code,
@@ -12,7 +25,7 @@ const diagnosticIdentity = (diagnostic: DraftDiagnostic): string =>
     diagnostic.message,
     diagnostic.stepId,
     diagnostic.repairHint,
-    diagnostic.details,
+    canonicalize(diagnostic.details),
   ]);
 
 export const withDiagnosticKeys = (

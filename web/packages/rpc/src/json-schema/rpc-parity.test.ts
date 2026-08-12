@@ -5,6 +5,26 @@ import { beforeAll, describe, expect, it } from "vitest";
 import {
   WorkflowCapabilitiesCallPayloadSchema,
   WorkflowCapabilitiesCallResultSchema,
+  WorkflowDraftWorkspacesAddStepFromCapabilityPayloadSchema,
+  WorkflowDraftWorkspacesAddStepFromCapabilityResultSchema,
+  WorkflowDraftWorkspacesCreateEmptyPayloadSchema,
+  WorkflowDraftWorkspacesCreateEmptyResultSchema,
+  WorkflowDraftWorkspacesCreateFromCapabilityPayloadSchema,
+  WorkflowDraftWorkspacesCreateFromCapabilityResultSchema,
+  WorkflowDraftWorkspacesGetPayloadSchema,
+  WorkflowDraftWorkspacesGetResultSchema,
+  WorkflowDraftWorkspacesListPayloadSchema,
+  WorkflowDraftWorkspacesListResultSchema,
+  WorkflowDraftWorkspacesSetRoutePayloadSchema,
+  WorkflowDraftWorkspacesSetRouteResultSchema,
+  WorkflowDraftWorkspacesSetStepInputBindingsPayloadSchema,
+  WorkflowDraftWorkspacesSetStepInputBindingsResultSchema,
+  WorkflowDraftWorkspacesSetStepOutputBindingsPayloadSchema,
+  WorkflowDraftWorkspacesSetStepOutputBindingsResultSchema,
+  WorkflowDraftWorkspacesUpdateCapabilityStepPayloadSchema,
+  WorkflowDraftWorkspacesUpdateCapabilityStepResultSchema,
+  WorkflowDraftWorkspacesValidatePayloadSchema,
+  WorkflowDraftWorkspacesValidateResultSchema,
   WorkflowRpcs,
 } from "../rpcs.js";
 import { authoredRpcSchemas } from "./authored-rpc-fixtures.js";
@@ -26,46 +46,6 @@ const WorkflowCapabilitiesInspectPayloadSchema =
   authoredRpcSchemas["workflow.capabilities.inspect"].payload;
 const WorkflowCapabilitiesInspectResultSchema =
   authoredRpcSchemas["workflow.capabilities.inspect"].success;
-const WorkflowDraftWorkspacesListPayloadSchema =
-  authoredRpcSchemas["workflow.draft_workspaces.list"].payload;
-const WorkflowDraftWorkspacesListResultSchema =
-  authoredRpcSchemas["workflow.draft_workspaces.list"].success;
-const WorkflowDraftWorkspacesGetPayloadSchema =
-  authoredRpcSchemas["workflow.draft_workspaces.get"].payload;
-const WorkflowDraftWorkspacesGetResultSchema =
-  authoredRpcSchemas["workflow.draft_workspaces.get"].success;
-const WorkflowDraftWorkspacesCreateEmptyPayloadSchema =
-  authoredRpcSchemas["workflow.draft_workspaces.create_empty"].payload;
-const WorkflowDraftWorkspacesCreateEmptyResultSchema =
-  authoredRpcSchemas["workflow.draft_workspaces.create_empty"].success;
-const WorkflowDraftWorkspacesCreateFromCapabilityPayloadSchema =
-  authoredRpcSchemas["workflow.draft_workspaces.create_from_capability"].payload;
-const WorkflowDraftWorkspacesCreateFromCapabilityResultSchema =
-  authoredRpcSchemas["workflow.draft_workspaces.create_from_capability"].success;
-const WorkflowDraftWorkspacesAddStepFromCapabilityPayloadSchema =
-  authoredRpcSchemas["workflow.draft_workspaces.add_step_from_capability"].payload;
-const WorkflowDraftWorkspacesAddStepFromCapabilityResultSchema =
-  authoredRpcSchemas["workflow.draft_workspaces.add_step_from_capability"].success;
-const WorkflowDraftWorkspacesUpdateCapabilityStepPayloadSchema =
-  authoredRpcSchemas["workflow.draft_workspaces.update_capability_step"].payload;
-const WorkflowDraftWorkspacesUpdateCapabilityStepResultSchema =
-  authoredRpcSchemas["workflow.draft_workspaces.update_capability_step"].success;
-const WorkflowDraftWorkspacesSetRoutePayloadSchema =
-  authoredRpcSchemas["workflow.draft_workspaces.set_route"].payload;
-const WorkflowDraftWorkspacesSetRouteResultSchema =
-  authoredRpcSchemas["workflow.draft_workspaces.set_route"].success;
-const WorkflowDraftWorkspacesSetStepInputBindingsPayloadSchema =
-  authoredRpcSchemas["workflow.draft_workspaces.set_step_input_bindings"].payload;
-const WorkflowDraftWorkspacesSetStepInputBindingsResultSchema =
-  authoredRpcSchemas["workflow.draft_workspaces.set_step_input_bindings"].success;
-const WorkflowDraftWorkspacesSetStepOutputBindingsPayloadSchema =
-  authoredRpcSchemas["workflow.draft_workspaces.set_step_output_bindings"].payload;
-const WorkflowDraftWorkspacesSetStepOutputBindingsResultSchema =
-  authoredRpcSchemas["workflow.draft_workspaces.set_step_output_bindings"].success;
-const WorkflowDraftWorkspacesValidatePayloadSchema =
-  authoredRpcSchemas["workflow.draft_workspaces.validate"].payload;
-const WorkflowDraftWorkspacesValidateResultSchema =
-  authoredRpcSchemas["workflow.draft_workspaces.validate"].success;
 const WorkflowArtifactsListPayloadSchema =
   authoredRpcSchemas["workflow.artifacts.list"].payload;
 const WorkflowArtifactsListResultSchema =
@@ -1100,47 +1080,20 @@ describe("authored RPC and manifest schema parity", () => {
     }
   });
 
-  it("rejects structural binding paths without any segments", () => {
-    const inputPayload = {
+  it("accepts root graph/local paths but rejects a root-only writable state path", () => {
+    const basePayload = {
       workspace_id: "console.demo",
       revision: 3,
       step_id: "render",
     };
-    const outputPayload = { ...inputPayload, revision: 4 };
-    const cases = [
-      {
-        schema: WorkflowDraftWorkspacesSetStepInputBindingsPayloadSchema,
-        payload: {
-          ...inputPayload,
-          bindings: [{ path: { root: "input", parts: [] }, target: "title" }],
-        },
-      },
-      {
-        schema: WorkflowDraftWorkspacesSetStepInputBindingsPayloadSchema,
-        payload: {
-          ...inputPayload,
-          bindings: [{ path: "input.title", target: { root: "local", parts: [] } }],
-        },
-      },
-      {
-        schema: WorkflowDraftWorkspacesSetStepInputBindingsPayloadSchema,
-        payload: {
-          ...inputPayload,
-          bindings: [{ target: { root: "local", parts: [] }, value: "title" }],
-        },
-      },
-      {
-        schema: WorkflowDraftWorkspacesSetStepOutputBindingsPayloadSchema,
-        payload: {
-          ...outputPayload,
-          bindings: [{ source: { root: "local", parts: [] }, target: "state.title" }],
-        },
-      },
-    ];
-
-    for (const testCase of cases) {
-      expect(accepts(testCase.schema, testCase.payload)).toBe(false);
-    }
+    expect(accepts(WorkflowDraftWorkspacesSetStepInputBindingsPayloadSchema, {
+      ...basePayload,
+      bindings: [{ path: { root: "input", parts: [] }, target: { root: "local", parts: [] } }],
+    })).toBe(true);
+    expect(accepts(WorkflowDraftWorkspacesSetStepOutputBindingsPayloadSchema, {
+      ...basePayload,
+      bindings: [{ source: { root: "local", parts: [] }, target: { root: "state", parts: [] } }],
+    })).toBe(false);
   });
 
   it("catalogs every authored RPC exactly once", () => {

@@ -217,6 +217,9 @@ combined explorer screen.
 - A non-loopback bind requires the explicit override
   `WEB_ENABLE_CAPABILITY_CALLS=1` before the Try capability surface can call
   upstream capabilities
+- TLS-terminating proxies can allow exact browser origins with the
+  comma-separated `WEB_TRUSTED_ORIGINS` setting. Forwarded headers are not
+  trusted implicitly.
 
 The non-loopback override is an explicit risk acceptance for a trusted
 environment, not authentication, TLS, tenant isolation, or a public-internet
@@ -227,6 +230,7 @@ against the configured workflow target:
 pnpm --dir web build
 $env:WEB_HOST = "0.0.0.0"
 $env:WEB_ENABLE_CAPABILITY_CALLS = "1"
+$env:WEB_TRUSTED_ORIGINS = "https://workflow-console.example"
 pnpm --dir web start
 ```
 

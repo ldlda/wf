@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useState, type KeyboardEvent, type ReactNode } from "react";
 import type { CapabilityDetail } from "../domain/capability-models.js";
 import type { DraftDiagnostic, DraftWorkspace } from "../domain/draft-workspace-models.js";
 import { CapabilitySetupForm } from "./CapabilitySetupForm.js";
@@ -64,6 +64,7 @@ const setupDiagnostics = (
 
 const emptyStateSchema = { type: "object", properties: {} };
 const tabLabels: Record<InspectorTab, string> = { setup: "Setup", inputs: "Inputs", outputs: "Outputs" };
+const inspectorTabs = Object.keys(tabLabels) as InspectorTab[];
 const tabPanelId = (tab: InspectorTab): string => `selected-step-panel-${tab}`;
 const tabId = (tab: InspectorTab): string => `selected-step-tab-${tab}`;
 
@@ -98,6 +99,26 @@ export const SelectedCapabilityInspector = ({
   capabilityDetailMessage,
 }: SelectedCapabilityInspectorProps) => {
   const [activeTab, setActiveTab] = useState<InspectorTab>("setup");
+  const activateTab = (tab: InspectorTab): void => {
+    setActiveTab(tab);
+    document.getElementById(tabId(tab))?.focus();
+  };
+  const handleTabKeyDown = (event: KeyboardEvent<HTMLButtonElement>, tab: InspectorTab): void => {
+    const currentIndex = inspectorTabs.indexOf(tab);
+    const targetIndex = event.key === "Home"
+      ? 0
+      : event.key === "End"
+        ? inspectorTabs.length - 1
+        : event.key === "ArrowRight"
+          ? (currentIndex + 1) % inspectorTabs.length
+          : event.key === "ArrowLeft"
+            ? (currentIndex - 1 + inspectorTabs.length) % inspectorTabs.length
+            : null;
+    if (targetIndex === null) return;
+    event.preventDefault();
+    const target = inspectorTabs[targetIndex];
+    if (target !== undefined) activateTab(target);
+  };
   const rawStep = selectedStep(draft, stepId);
   const projected = projectSelectedStepDataflow(draft, stepId);
   const preservedForm = controller.preservedCapabilityForm?.kind === "update" &&
@@ -140,7 +161,7 @@ export const SelectedCapabilityInspector = ({
       {!isUnsupported && (
         <>
           <div aria-label="Selected step views" className="selected-capability-inspector__tabs" role="tablist">
-            {(Object.keys(tabLabels) as InspectorTab[]).map((tab) => (
+            {inspectorTabs.map((tab) => (
               <button
                 aria-controls={tabPanelId(tab)}
                 aria-selected={activeTab === tab}
@@ -148,6 +169,7 @@ export const SelectedCapabilityInspector = ({
                 id={tabId(tab)}
                 key={tab}
                 onClick={() => setActiveTab(tab)}
+                onKeyDown={(event) => handleTabKeyDown(event, tab)}
                 role="tab"
                 tabIndex={activeTab === tab ? 0 : -1}
                 type="button"

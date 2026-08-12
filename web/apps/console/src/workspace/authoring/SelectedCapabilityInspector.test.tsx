@@ -101,6 +101,15 @@ describe("SelectedCapabilityInspector", () => {
     expect(screen.getAllByRole("tab")).toHaveLength(3);
     expect(screen.getByRole("tab", { name: "Setup" })).toHaveAttribute("aria-selected", "true");
 
+    screen.getByRole("tab", { name: "Setup" }).focus();
+    await user.keyboard("{ArrowRight}");
+    expect(screen.getByRole("tab", { name: "Inputs" })).toHaveFocus();
+    expect(screen.getByRole("tab", { name: "Inputs" })).toHaveAttribute("aria-selected", "true");
+    await user.keyboard("{End}");
+    expect(screen.getByRole("tab", { name: "Outputs" })).toHaveFocus();
+    await user.keyboard("{Home}");
+    expect(screen.getByRole("tab", { name: "Setup" })).toHaveFocus();
+
     await user.click(screen.getByRole("tab", { name: "Inputs" }));
     expect(screen.getByRole("region", { name: "Raw unsupported input row 2" })).toHaveTextContent("broken");
     await user.click(screen.getByRole("button", { name: "Save inputs" }));

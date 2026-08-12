@@ -52,7 +52,7 @@ const setPath = (current: unknown, path: string, value: unknown): unknown => {
   }
   if (Array.isArray(current)) {
     const index = Number(head);
-    if (!Number.isInteger(index)) return current;
+    if (!Number.isInteger(index) || index < 0 || index > current.length) return current;
     const next = [...current];
     next[index] = setPath(next[index], formatTOMLPath(tail), value);
     return next;
