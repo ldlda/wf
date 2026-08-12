@@ -1100,6 +1100,49 @@ describe("authored RPC and manifest schema parity", () => {
     }
   });
 
+  it("rejects structural binding paths without any segments", () => {
+    const inputPayload = {
+      workspace_id: "console.demo",
+      revision: 3,
+      step_id: "render",
+    };
+    const outputPayload = { ...inputPayload, revision: 4 };
+    const cases = [
+      {
+        schema: WorkflowDraftWorkspacesSetStepInputBindingsPayloadSchema,
+        payload: {
+          ...inputPayload,
+          bindings: [{ path: { root: "input", parts: [] }, target: "title" }],
+        },
+      },
+      {
+        schema: WorkflowDraftWorkspacesSetStepInputBindingsPayloadSchema,
+        payload: {
+          ...inputPayload,
+          bindings: [{ path: "input.title", target: { root: "local", parts: [] } }],
+        },
+      },
+      {
+        schema: WorkflowDraftWorkspacesSetStepInputBindingsPayloadSchema,
+        payload: {
+          ...inputPayload,
+          bindings: [{ target: { root: "local", parts: [] }, value: "title" }],
+        },
+      },
+      {
+        schema: WorkflowDraftWorkspacesSetStepOutputBindingsPayloadSchema,
+        payload: {
+          ...outputPayload,
+          bindings: [{ source: { root: "local", parts: [] }, target: "state.title" }],
+        },
+      },
+    ];
+
+    for (const testCase of cases) {
+      expect(accepts(testCase.schema, testCase.payload)).toBe(false);
+    }
+  });
+
   it("catalogs every authored RPC exactly once", () => {
     const expectedMethods = [
       "workflow.health",

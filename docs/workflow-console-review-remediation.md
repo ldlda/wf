@@ -15,15 +15,6 @@ expressions:
 2. Keep the corrected POSIX shell quoting and update its stale RPC expectation.
 3. Clear input rows only after `onSubmit([])` succeeds; preserve rows on failure.
 
-## Must Fix
-
-- Normalize nullable Pydantic `anyOf: [T, null]` fields into typed controls.
-- Bound automatic capability pagination when cursors repeat or do not advance.
-- Reject empty structural path parts consistently across authored RPC schemas.
-- Restrict contract-generator `oneOf` to `anyOf` rewriting so exclusivity is not
-  silently weakened for future overlapping branches.
-- Keep correct POSIX apostrophe escaping covered by a regression test.
-
 ## Completed In The Current Working Tree
 
 - Repaired the incompatible CSS test lookup, stale shell-quoting expectation,
@@ -40,6 +31,13 @@ expressions:
   the current authoring state, including the stale-selection path.
 - Revision-conflict responses now include the current canonical draft for
   refresh and rebase.
+- Nullable Pydantic `anyOf: [T, null]` fields normalize into typed controls
+  while retaining their title, description, and default metadata.
+- Automatic capability pagination stops when a server repeats its cursor.
+- Every structural authored binding path requires at least one path segment.
+- Runtime generation rewrites `oneOf` only when distinct JSON branch types
+  prove that exclusivity is preserved; overlapping branches remain `oneOf`.
+- Correct POSIX apostrophe escaping remains covered by an RPC regression test.
 
 ## Should Fix
 

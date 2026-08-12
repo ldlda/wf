@@ -262,6 +262,36 @@ describe("workflow contract generator", () => {
     expect(runtimeSource).not.toContain('"FailureResult"');
   });
 
+  it("preserves oneOf when runtime branches can overlap", async () => {
+    const overlapping = {
+      ...completeRuntimeFixture,
+      components: {
+        ...completeRuntimeFixture.components,
+        schemas: {
+          ...completeRuntimeFixture.components.schemas,
+          HealthResult: {
+            additionalProperties: false,
+            properties: {
+              status: {
+                oneOf: [
+                  { minLength: 1, type: "string" },
+                  { const: "ok", type: "string" },
+                ],
+              },
+            },
+            required: ["status"],
+            type: "object",
+          },
+        },
+      },
+    };
+
+    const source = await generateWorkflowContractSource(JSON.stringify(overlapping));
+    const runtimeSource = source.slice(source.indexOf("export const workflowRuntimeContract"));
+
+    expect(runtimeSource).toContain('"oneOf": [');
+  });
+
   it("rejects a manifest missing a configured runtime operation", async () => {
     const reduced = {
       ...completeRuntimeFixture,

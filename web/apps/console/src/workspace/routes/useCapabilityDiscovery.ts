@@ -107,6 +107,7 @@ export const useCapabilityDiscovery = (
   const [state, setState] = useState<DiscoveryStateWithAppliedFilters>(initialState);
   const listGenerationRef = useRef(0);
   const inspectGenerationRef = useRef(0);
+  const automaticPageCursorsRef = useRef<Set<string>>(new Set());
   const committedProvenanceRef = useRef<ConnectionProvenance | null>(null);
   const listProvenanceRef = useRef<ConnectionProvenance | null>(null);
   const selectedProvenanceRef = useRef<ConnectionProvenance | null>(null);
@@ -123,7 +124,10 @@ export const useCapabilityDiscovery = (
       if (!client || currentProvenance === null) return;
       const requestProvenance = currentProvenance;
       const generation = ++listGenerationRef.current;
-      if (append === false) inspectGenerationRef.current++;
+      if (append === false) {
+        inspectGenerationRef.current++;
+        automaticPageCursorsRef.current.clear();
+      }
       listProvenanceRef.current = requestProvenance;
       setState((current) => ({
         ...current,
@@ -226,8 +230,11 @@ export const useCapabilityDiscovery = (
 
   useEffect(() => {
     if (!loadAllPages || state.phase !== "ready" || state.nextCursor === null) return;
+    if (automaticPageCursorsRef.current.has(state.nextCursor)) return;
+    automaticPageCursorsRef.current.add(state.nextCursor);
     // Authoring palettes need the complete catalog because they do not expose
-    // discovery pagination; continue one page at a time through the same guarded loader.
+    // discovery pagination. Stop when a server repeats a cursor rather than
+    // hiding an infinite request loop behind item deduplication.
     loadMore();
   }, [loadAllPages, loadMore, state.nextCursor, state.phase]);
 

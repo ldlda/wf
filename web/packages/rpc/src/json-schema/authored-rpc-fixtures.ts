@@ -262,18 +262,22 @@ const TraceFrameSchema = Schema.Struct({
   state_changes: JsonObjectSchema,
 });
 
+const StructuralPathPartsSchema = Schema.Array(PathSegmentSchema).pipe(
+  Schema.filter((parts) => parts.length > 0),
+);
+
 const InputPathBindingSchema = Schema.Struct({
   path: Schema.Union(
     Schema.String,
     Schema.Struct({
-      parts: Schema.Array(PathSegmentSchema),
+      parts: StructuralPathPartsSchema,
       root: Schema.Literal("input", "state", "context"),
     }),
   ),
   target: Schema.Union(
     Schema.String,
     Schema.Struct({
-      parts: Schema.Array(PathSegmentSchema),
+      parts: StructuralPathPartsSchema,
       root: Schema.Literal("local"),
     }),
   ),
@@ -283,7 +287,7 @@ const InputValueBindingSchema = Schema.Struct({
   target: Schema.Union(
     Schema.String,
     Schema.Struct({
-      parts: Schema.Array(PathSegmentSchema),
+      parts: StructuralPathPartsSchema,
       root: Schema.Literal("local"),
     }),
   ),
@@ -295,22 +299,18 @@ const InputBindingSchema = Schema.Union(
   InputValueBindingSchema,
 );
 
-const StatePathPartsSchema = Schema.Array(PathSegmentSchema).pipe(
-  Schema.filter((parts) => parts.length > 0),
-);
-
 const OutputBindingSchema = Schema.Struct({
   source: Schema.Union(
     Schema.String,
     Schema.Struct({
-      parts: Schema.Array(PathSegmentSchema),
+      parts: StructuralPathPartsSchema,
       root: Schema.Literal("local"),
     }),
   ),
   target: Schema.Union(
     Schema.String,
     Schema.Struct({
-      parts: StatePathPartsSchema,
+      parts: StructuralPathPartsSchema,
       root: Schema.Literal("state"),
     }),
   ),

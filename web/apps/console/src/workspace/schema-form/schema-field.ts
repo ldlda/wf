@@ -45,6 +45,25 @@ const isRecord = (value: unknown): value is SchemaRecord =>
 const hasOwn = (value: SchemaRecord, key: string): boolean =>
   Object.prototype.hasOwnProperty.call(value, key);
 
+const nullableNonNullSchema = (schema: SchemaRecord): SchemaRecord | null => {
+  const anyOf = schema.anyOf;
+  if (!Array.isArray(anyOf) || anyOf.length !== 2) return null;
+  const nullBranches = anyOf.filter(
+    (branch) => isRecord(branch) && branch.type === "null",
+  );
+  const nonNullBranches = anyOf.filter(
+    (branch): branch is SchemaRecord => isRecord(branch) && branch.type !== "null",
+  );
+  if (nullBranches.length !== 1 || nonNullBranches.length !== 1) return null;
+
+  const annotations = Object.fromEntries(
+    ["default", "description", "title"]
+      .filter((key) => hasOwn(schema, key))
+      .map((key) => [key, schema[key]]),
+  );
+  return { ...nonNullBranches[0], ...annotations };
+};
+
 const stringValue = (value: unknown): string | null =>
   typeof value === "string" ? value : null;
 
@@ -134,7 +153,30 @@ const normalizeField = (
     const title = isRecord(schema) ? stringValue(schema.title) ?? defaultTitle : defaultTitle;
     return fallback(schema, path, key, required, title, resolution.reason);
   }
-  const resolvedSchema = resolution.schema;
+  let resolvedSchema = resolution.schema;
+  let resolvedReferenceAncestry = resolution.referenceAncestry;
+  if (isRecord(resolvedSchema)) {
+    const nullableSchema = nullableNonNullSchema(resolvedSchema);
+    if (nullableSchema !== null) {
+      const nullableResolution = resolveLocalSchemaNodeWithAncestry(
+        rootSchema,
+        nullableSchema,
+        resolvedReferenceAncestry,
+      );
+      if (!nullableResolution.ok) {
+        return fallback(
+          resolvedSchema,
+          path,
+          key,
+          required,
+          stringValue(resolvedSchema.title) ?? defaultTitle,
+          nullableResolution.reason,
+        );
+      }
+      resolvedSchema = nullableResolution.schema;
+      resolvedReferenceAncestry = nullableResolution.referenceAncestry;
+    }
+  }
   const title = isRecord(resolvedSchema)
     ? stringValue(resolvedSchema.title) ?? defaultTitle
     : defaultTitle;
@@ -183,7 +225,7 @@ const normalizeField = (
             propertyKey,
             requiredNames.has(propertyKey),
             stringValue(propertySchema && isRecord(propertySchema) ? propertySchema.title : null) ?? propertyKey,
-            resolution.referenceAncestry,
+            resolvedReferenceAncestry,
             depth + 1,
           ),
         )
@@ -216,7 +258,7 @@ const normalizeField = (
       "item",
       true,
       `${title} item`,
-      resolution.referenceAncestry,
+      resolvedReferenceAncestry,
       depth + 1,
     );
     return {

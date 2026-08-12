@@ -234,6 +234,16 @@ const runtimeParamsSchemaFor = (
   type: "object",
 });
 
+const hasDistinctBranchTypes = (branches: ReadonlyArray<JsonValue>): boolean => {
+  const types = branches.map((branch) =>
+    branch !== null && !Array.isArray(branch) && typeof branch === "object"
+      ? branch.type
+      : undefined,
+  );
+  return types.every((type): type is string => typeof type === "string") &&
+    new Set(types).size === types.length;
+};
+
 const normalizeRuntimeSchema = (value: JsonValue): JsonValue => {
   if (Array.isArray(value)) return value.map(normalizeRuntimeSchema);
   if (value === null || typeof value !== "object") return value;
@@ -245,10 +255,14 @@ const normalizeRuntimeSchema = (value: JsonValue): JsonValue => {
     ]),
   );
   const oneOf = normalized.oneOf;
-  if (Array.isArray(oneOf) && normalized.anyOf === undefined) {
+  if (
+    Array.isArray(oneOf) &&
+    normalized.anyOf === undefined &&
+    hasDistinctBranchTypes(oneOf)
+  ) {
     const { oneOf: _, ...withoutOneOf } = normalized;
-    // These generated path unions are mutually exclusive; anyOf is the
-    // equivalent keyword supported by the checked runtime translator.
+    // Distinct JSON types cannot overlap, so oneOf and anyOf accept the same
+    // values. Unknown or same-type branches keep oneOf and fail closed later.
     return { ...withoutOneOf, anyOf: oneOf };
   }
   return normalized;

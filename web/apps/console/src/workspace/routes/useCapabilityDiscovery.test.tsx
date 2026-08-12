@@ -236,6 +236,25 @@ describe("useCapabilityDiscovery", () => {
     expect(result.current.nextCursor).toBeNull();
   });
 
+  it("stops automatic pagination when the server repeats a cursor", async () => {
+    const repeatedPage = deferred<CapabilityPage>();
+    client.list
+      .mockResolvedValueOnce(page([summary("serena.default.search")], "page-2"))
+      .mockReturnValueOnce(repeatedPage.promise)
+      .mockReturnValue(new Promise<CapabilityPage>(() => undefined));
+
+    const { result } = renderHook(() =>
+      useCapabilityDiscovery({ loadAllPages: true }),
+    );
+
+    await waitFor(() => expect(client.list).toHaveBeenCalledTimes(2));
+    repeatedPage.resolve(page([summary("wf.std.constant", "wf.std")], "page-2"));
+    await waitFor(() => expect(result.current.items).toHaveLength(2));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(client.list).toHaveBeenCalledTimes(2);
+    expect(result.current.nextCursor).toBe("page-2");
+  });
+
   it("uses the applied filters when loading more after draft edits", async () => {
     client.list
       .mockResolvedValueOnce(page([summary("local.documents.read")], "page-2"))

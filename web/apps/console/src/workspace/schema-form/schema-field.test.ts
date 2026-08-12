@@ -171,6 +171,20 @@ describe("normalizeSchema", () => {
       hasDefault: true,
       defaultValue: "source_resource_ref",
     });
+    expect(ref?.children.find((child) => child.key === "mime_type")).toMatchObject({
+      kind: "string",
+      title: "Mime Type",
+      hasDefault: true,
+      defaultValue: null,
+      fallbackReason: null,
+    });
+    expect(ref?.children.find((child) => child.key === "name")).toMatchObject({
+      kind: "string",
+      title: "Name",
+      hasDefault: true,
+      defaultValue: null,
+      fallbackReason: null,
+    });
   });
 
   it("falls back deterministically for an object reference cycle through a property", () => {
