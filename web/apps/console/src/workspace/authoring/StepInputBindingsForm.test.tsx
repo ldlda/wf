@@ -1,7 +1,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { InputBinding } from "../domain/draft-workspace-models.js";
+import type { StepInputBinding } from "../domain/draft-workspace-models.js";
 import { StepInputBindingsForm } from "./StepInputBindingsForm.js";
 import { displayGraphInputPath, displayLocalInputPath } from "./input-binding-paths.js";
 
@@ -58,7 +58,7 @@ describe("StepInputBindingsForm", () => {
 
   it("submits canonical rows in exact reordered order and preserves fan-out", async () => {
     const user = userEvent.setup();
-    const submissions: ReadonlyArray<InputBinding>[] = [];
+    const submissions: ReadonlyArray<StepInputBinding>[] = [];
     render(
       <StepInputBindingsForm
         inputSchema={schema}
@@ -81,7 +81,7 @@ describe("StepInputBindingsForm", () => {
 
   it("supports explicit clear and removes unsupported rows before saving", async () => {
     const user = userEvent.setup();
-    const submissions: ReadonlyArray<InputBinding>[] = [];
+    const submissions: ReadonlyArray<StepInputBinding>[] = [];
     render(
       <StepInputBindingsForm
         inputSchema={schema}
@@ -121,7 +121,7 @@ describe("StepInputBindingsForm", () => {
 
   it("blocks clear until every unsupported row is explicitly removed", async () => {
     const user = userEvent.setup();
-    const submissions: ReadonlyArray<InputBinding>[] = [];
+    const submissions: ReadonlyArray<StepInputBinding>[] = [];
     render(
       <StepInputBindingsForm
         inputSchema={schema}
@@ -152,7 +152,7 @@ describe("StepInputBindingsForm", () => {
 
   it("round-trips whole and nested local paths without adding the local root", async () => {
     const user = userEvent.setup();
-    const submissions: ReadonlyArray<InputBinding>[] = [];
+    const submissions: ReadonlyArray<StepInputBinding>[] = [];
     render(
       <StepInputBindingsForm
         inputSchema={schema}
@@ -193,7 +193,7 @@ describe("StepInputBindingsForm", () => {
 
   it("uses explicit row modes and immutably edits a whole object literal", async () => {
     const user = userEvent.setup();
-    const submissions: ReadonlyArray<InputBinding>[] = [];
+    const submissions: ReadonlyArray<StepInputBinding>[] = [];
     render(
       <StepInputBindingsForm
         inputSchema={{
@@ -228,7 +228,7 @@ describe("StepInputBindingsForm", () => {
 
   it("preserves array shape while editing a whole array literal", async () => {
     const user = userEvent.setup();
-    const submissions: ReadonlyArray<InputBinding>[] = [];
+    const submissions: ReadonlyArray<StepInputBinding>[] = [];
     render(
       <StepInputBindingsForm
         inputSchema={{ type: "object", properties: { items: { type: "array", items: { type: "string" } } } }}
@@ -270,7 +270,7 @@ describe("StepInputBindingsForm", () => {
 
   it("offers workflow source and nested capability target choices while retaining text entry", async () => {
     const user = userEvent.setup();
-    const submissions: ReadonlyArray<InputBinding>[] = [];
+    const submissions: ReadonlyArray<StepInputBinding>[] = [];
     render(
       <StepInputBindingsForm
         inputSchema={{
@@ -313,7 +313,7 @@ describe("StepInputBindingsForm", () => {
 
   it("rejects exact duplicate targets across path and literal rows with errors on both rows", async () => {
     const user = userEvent.setup();
-    const submissions: ReadonlyArray<InputBinding>[] = [];
+    const submissions: ReadonlyArray<StepInputBinding>[] = [];
     render(
       <StepInputBindingsForm
         inputSchema={schema}
@@ -350,5 +350,104 @@ describe("StepInputBindingsForm", () => {
     );
 
     expect(screen.getByRole("alert")).toHaveTextContent("Target does not exist.");
+  });
+
+  it("constructs an ordered concat expression from path and literal items", async () => {
+    const user = userEvent.setup();
+    const submissions: ReadonlyArray<StepInputBinding>[] = [];
+    render(
+      <StepInputBindingsForm
+        inputSchema={{
+          type: "object",
+          properties: {
+            items: { type: "array", minItems: 2, items: { type: "string" } },
+            separator: { type: "string" },
+          },
+          required: ["items", "separator"],
+        }}
+        onSubmit={(value) => { submissions.push(value); }}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Add input row" }));
+    await user.type(screen.getByRole("combobox", { name: "Target for row 1" }), "items");
+    await user.click(screen.getByRole("radio", { name: "Construct value for input row 1" }));
+    await user.click(screen.getByRole("button", { name: "Add item to items" }));
+    await user.click(screen.getByRole("button", { name: "Add item to items" }));
+
+    await user.selectOptions(screen.getByRole("combobox", { name: "Value source for items item 1" }), "path");
+    const itemPath = screen.getByRole("combobox", { name: "Path for items item 1" });
+    await user.clear(itemPath);
+    await user.type(itemPath, "state.foo");
+    await user.selectOptions(screen.getByRole("combobox", { name: "Value source for items item 2" }), "literal");
+    const itemValue = screen.getByRole("textbox", { name: "Items item" });
+    await user.clear(itemValue);
+    await user.type(itemValue, "wowcool");
+
+    await user.click(screen.getByRole("button", { name: "Add input row" }));
+    await user.type(screen.getByRole("combobox", { name: "Target for row 2" }), "separator");
+    await user.click(screen.getByRole("radio", { name: "Literal value for input row 2" }));
+    await user.clear(screen.getByRole("textbox", { name: "Separator" }));
+    await user.type(screen.getByRole("textbox", { name: "Separator" }), " ");
+    await user.click(screen.getByRole("button", { name: "Save inputs" }));
+
+    expect(submissions).toEqual([[
+      {
+        target: "items",
+        expression: {
+          kind: "array",
+          items: [
+            { kind: "path", path: "state.foo" },
+            { kind: "literal", value: "wowcool" },
+          ],
+        },
+      },
+      { target: "separator", value: " " },
+    ]]);
+  });
+
+  it("blocks saving a constructed array below its minimum cardinality", () => {
+    render(
+      <StepInputBindingsForm
+        inputSchema={{
+          type: "object",
+          properties: { items: { type: "array", minItems: 2, items: { type: "string" } } },
+        }}
+        initialRows={[{
+          kind: "canonical",
+          index: 0,
+          value: {
+            target: "items",
+            expression: { kind: "array", items: [{ kind: "literal", value: "only" }] },
+          },
+        }]}
+        onSubmit={() => undefined}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Save inputs" })).toBeDisabled();
+  });
+
+  it.each([
+    {
+      name: "above its maximum cardinality",
+      field: { type: "array", maxItems: 1, items: { type: "string" } },
+      expression: { kind: "array", items: [{ kind: "literal", value: "one" }, { kind: "literal", value: "two" }] },
+    },
+    {
+      name: "when a required object field is missing",
+      field: { type: "object", properties: { name: { type: "string" } }, required: ["name"] },
+      expression: { kind: "object", fields: {} },
+    },
+  ] as const)("blocks saving a constructed expression $name", ({ field, expression }) => {
+    render(
+      <StepInputBindingsForm
+        inputSchema={{ type: "object", properties: { value: field } }}
+        initialRows={[{ kind: "canonical", index: 0, value: { target: "value", expression } }]}
+        onSubmit={() => undefined}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Save inputs" })).toBeDisabled();
   });
 });

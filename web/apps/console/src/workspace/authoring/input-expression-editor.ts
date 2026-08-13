@@ -39,12 +39,20 @@ type JsonRecord = Record<string, unknown>;
 const isRecord = (value: unknown): value is JsonRecord =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
+const isNormalizedSchemaField = (value: unknown): value is SchemaField =>
+  isRecord(value) &&
+  Array.isArray(value.path) &&
+  typeof value.kind === "string" &&
+  Array.isArray(value.children) &&
+  Object.prototype.hasOwnProperty.call(value, "fallbackReason");
+
 const hasOwn = (value: JsonRecord, key: string): boolean =>
   Object.prototype.hasOwnProperty.call(value, key);
 
 const hasExactKeys = (value: JsonRecord, keys: ReadonlyArray<string>): boolean => {
   const actual = Reflect.ownKeys(value);
-  return actual.length === keys.length && keys.every((key) => actual.includes(key));
+  const expected = new Set(keys);
+  return actual.length === expected.size && actual.every((key) => typeof key === "string" && expected.has(key));
 };
 
 /** Keep editor literals within the same finite JSON subset as canonical bindings. */
@@ -160,7 +168,7 @@ export const projectExpressionEditorState = (
 ): ExpressionProjection => {
   const parsed = parseInputExpression(expression);
   if (parsed === null) return unsupported(expression, "The stored expression is malformed or exceeds editor limits.");
-  return project(parsed, normalizeSchema(schema));
+  return project(parsed, isNormalizedSchemaField(schema) ? schema : normalizeSchema(schema));
 };
 
 const copyStateToExpression = (state: ExpressionEditorState): InputExpression | null => {
@@ -230,7 +238,8 @@ const literalIssues = (
   if (field.kind === "object") {
     if (!isRecord(value)) return [issue(path, "Expected an object literal.")];
     const issues: ExpressionValidationIssue[] = [];
-    const required = new Set(field.children.filter((child) => child.required).map((child) => child.key));
+    const required = new Set<string>();
+    for (const child of field.children) if (child.required) required.add(child.key);
     for (const name of required) if (!hasOwn(value, name)) issues.push(issue([...path, name], "Required property is missing."));
     for (const [name, item] of Object.entries(value)) {
       const child = fieldForObjectName(field, name);
@@ -274,7 +283,8 @@ const validateState = (
         if (entry.name.length === 0) issues.push(issue(path, "Object field name is required."));
       }
       if (field?.kind === "object") {
-        const required = field.children.filter((child) => child.required).map((child) => child.key);
+        const required = new Set<string>();
+        for (const child of field.children) if (child.required) required.add(child.key);
         for (const name of required) if (!seen.has(name)) issues.push(issue([...path, name], "Required property is missing."));
       }
       for (const entry of state.fields) {
@@ -294,7 +304,8 @@ export const validateExpressionEditorState = (
   state: ExpressionEditorState,
   schema: unknown,
 ): ExpressionValidation => {
-  const issues = [...validateState(state, normalizeSchema(schema), [])];
+  const field = isNormalizedSchemaField(schema) ? schema : normalizeSchema(schema);
+  const issues = [...validateState(state, field, [])];
   if (issues.length === 0) {
     const expression = copyStateToExpression(state);
     if (expression === null || !hasBoundedInputExpressionNodeBudget(expression)) {

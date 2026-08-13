@@ -1,8 +1,15 @@
 import { useId, useRef, useState, type FormEvent } from "react";
 import type {
   DraftDiagnostic,
-  InputBinding,
+  StepInputBinding,
 } from "../domain/draft-workspace-models.js";
+import { InputExpressionControl, defaultExpressionEditorState } from "./InputExpressionControl.js";
+import {
+  projectExpressionEditorState,
+  serializeExpressionEditorState,
+  validateExpressionEditorState,
+  type ExpressionEditorState,
+} from "./input-expression-editor.js";
 import { SchemaFieldControl } from "../schema-form/SchemaFieldControl.js";
 import { formatTOMLPath, parseGraphSourcePath, parseTOMLPath } from "../schema-form/schema-paths.js";
 import {
@@ -15,11 +22,12 @@ import { formatBoundedJson } from "../domain/format-bounded-json.js";
 import { displayGraphInputPath, displayLocalInputPath } from "./input-binding-paths.js";
 import {
   capabilityLocalPathSuggestions,
-  inputBindingRows,
   isJsonValue,
   serializeInputBindingRow,
+  serializeStepInputBindingRow,
+  stepInputBindingRows,
   workflowSourceSuggestions,
-  type InputBindingRow,
+  type StepInputBindingRow,
 } from "./selected-step-dataflow.js";
 
 type EditableRow = {
@@ -27,13 +35,14 @@ type EditableRow = {
   readonly id: string;
   readonly rawIndex: number;
   readonly target: string;
-  readonly mode: "path" | "literal";
+  readonly mode: "path" | "literal" | "expression";
   readonly sourcePath: string;
   readonly value: unknown;
   readonly jsonText: string | null;
+  readonly expression: ExpressionEditorState | null;
 };
 
-type UnsupportedRow = Extract<InputBindingRow, { readonly kind: "unsupported" }> & {
+type UnsupportedRow = Extract<StepInputBindingRow, { readonly kind: "unsupported" }> & {
   readonly id: string;
 };
 
@@ -43,15 +52,15 @@ export type StepInputBindingsFormProps = {
   readonly inputSchema: unknown;
   readonly workflowInputSchema?: unknown;
   readonly workflowStateSchema?: unknown;
-  readonly initialRows?: ReadonlyArray<InputBindingRow>;
-  readonly initialBindings?: ReadonlyArray<InputBinding>;
+  readonly initialRows?: ReadonlyArray<StepInputBindingRow>;
+  readonly initialBindings?: ReadonlyArray<StepInputBinding>;
   readonly rowDiagnostics?: Readonly<Record<number, ReadonlyArray<DraftDiagnostic>>>;
-  readonly onSubmit: (bindings: ReadonlyArray<InputBinding>) => void | Promise<void>;
+  readonly onSubmit: (bindings: ReadonlyArray<StepInputBinding>) => void | Promise<void>;
   readonly onDirtyChange?: (dirty: boolean) => void;
   readonly submitLabel?: string;
 };
 
-const EMPTY_ROWS: ReadonlyArray<InputBindingRow> = [];
+const EMPTY_ROWS: ReadonlyArray<StepInputBindingRow> = [];
 const EMPTY_DIAGNOSTICS: Readonly<Record<number, ReadonlyArray<DraftDiagnostic>>> = {};
 
 const jsonText = (value: unknown): string => {
@@ -60,10 +69,39 @@ const jsonText = (value: unknown): string => {
 };
 
 const rowsFrom = (
-  rows: ReadonlyArray<InputBindingRow>,
+  rows: ReadonlyArray<StepInputBindingRow>,
   formId: string,
+  root: SchemaField,
 ): ReadonlyArray<FormRow> => rows.map((row, index) => {
   if (row.kind === "unsupported") return { ...row, id: `${formId}-input-row-${index}` };
+  if ("expression" in row.value) {
+    const target = displayLocalInputPath(row.value.target);
+    const projection = projectExpressionEditorState(
+      row.value.expression,
+      schemaFieldForTarget(root, target) ?? {},
+    );
+    if (projection.kind === "unsupported") {
+      return {
+        kind: "unsupported",
+        field: "input",
+        index: row.index,
+        raw: row.value,
+        reason: projection.reason,
+        id: `${formId}-input-row-${index}`,
+      };
+    }
+    return {
+      kind: "canonical",
+      id: `${formId}-input-row-${index}`,
+      rawIndex: row.index,
+      target,
+      mode: "expression",
+      sourcePath: "input.",
+      value: null,
+      jsonText: null,
+      expression: projection.state,
+    };
+  }
   if ("path" in row.value) {
     return {
       kind: "canonical",
@@ -74,6 +112,7 @@ const rowsFrom = (
       sourcePath: displayGraphInputPath(row.value.path),
       value: null,
       jsonText: null,
+      expression: null,
     };
   }
   return {
@@ -85,15 +124,16 @@ const rowsFrom = (
     sourcePath: "input.",
     value: row.value.value,
     jsonText: null,
+    expression: null,
   };
 });
 
 const inputRows = (
-  initialRows: ReadonlyArray<InputBindingRow> | undefined,
-  initialBindings: ReadonlyArray<InputBinding> | undefined,
-): ReadonlyArray<InputBindingRow> => {
+  initialRows: ReadonlyArray<StepInputBindingRow> | undefined,
+  initialBindings: ReadonlyArray<StepInputBinding> | undefined,
+): ReadonlyArray<StepInputBindingRow> => {
   if (initialRows !== undefined) return initialRows;
-  return initialBindings === undefined ? EMPTY_ROWS : inputBindingRows(initialBindings);
+  return initialBindings === undefined ? EMPTY_ROWS : stepInputBindingRows(initialBindings);
 };
 
 const updateRow = (
@@ -193,7 +233,7 @@ const literalValueFor = (
 const bindingForRow = (
   root: SchemaField,
   row: EditableRow,
-): { readonly binding: InputBinding | null; readonly issues: ReadonlyArray<string> } => {
+): { readonly binding: StepInputBinding | null; readonly issues: ReadonlyArray<string> } => {
   const target = row.target.trim();
   if (target === "") return { binding: null, issues: ["Target is required."] };
   if (row.mode === "path") {
@@ -203,6 +243,19 @@ const bindingForRow = (
     const binding = serializeInputBindingRow({ target, path: row.sourcePath });
     return binding === null
       ? { binding: null, issues: ["Enter a valid target and source path."] }
+      : { binding, issues: [] };
+  }
+  if (row.mode === "expression") {
+    if (row.expression === null) return { binding: null, issues: ["Construct an expression before saving."] };
+    const field = schemaFieldForTarget(root, target);
+    const validation = validateExpressionEditorState(row.expression, field ?? {});
+    const expression = serializeExpressionEditorState(row.expression);
+    const issues = validation.issues.map((item) => item.message);
+    if (expression === null) issues.push("Expression must be valid finite JSON.");
+    if (issues.length > 0 || expression === null) return { binding: null, issues };
+    const binding = serializeStepInputBindingRow({ target, expression });
+    return binding === null
+      ? { binding: null, issues: ["Enter a valid expression target."] }
       : { binding, issues: [] };
   }
   const field = schemaFieldForTarget(root, target);
@@ -232,7 +285,7 @@ export const StepInputBindingsForm = ({
   const sourceListId = `${formId}-workflow-sources`;
   const targetListId = `${formId}-capability-targets`;
   const [rows, setRows] = useState<ReadonlyArray<FormRow>>(() =>
-    rowsFrom(inputRows(initialRows, initialBindings), formId),
+    rowsFrom(inputRows(initialRows, initialBindings), formId, root),
   );
   const [localIssues, setLocalIssues] = useState<Readonly<Record<string, ReadonlyArray<string>>>>({});
   const [formIssue, setFormIssue] = useState<string | null>(null);
@@ -285,17 +338,23 @@ export const StepInputBindingsForm = ({
         sourcePath: "input.",
         value: null,
         jsonText: null,
+        expression: null,
       },
     ]);
     markDirty();
   };
 
   const unsupportedRows = rows.filter((row): row is UnsupportedRow => row.kind === "unsupported");
+  const hasBlockingIssues = rows.some((row) => {
+    if (row.kind === "unsupported") return true;
+    return rowIssueMessages(row, rowDiagnostics, localIssues).length > 0 ||
+      bindingForRow(root, row).issues.length > 0;
+  });
 
   const submit = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
     const nextIssues: Record<string, ReadonlyArray<string>> = {};
-    const completed: Array<{ readonly id: string; readonly binding: InputBinding }> = [];
+    const completed: Array<{ readonly id: string; readonly binding: StepInputBinding }> = [];
     for (const row of rows) {
       if (row.kind === "unsupported") {
         nextIssues[row.id] = ["Remove or repair this unsupported input row before saving."];
@@ -389,13 +448,18 @@ export const StepInputBindingsForm = ({
             );
           }
           const field = schemaFieldForTarget(root, row.target.trim());
-          const issues = rowIssueMessages(row, rowDiagnostics, localIssues);
+          const issues = [...new Set([
+            ...rowIssueMessages(row, rowDiagnostics, localIssues),
+            ...bindingForRow(root, row).issues,
+          ])];
           const targetId = `${row.id}-target`;
           const errorId = `${row.id}-errors`;
           const pathId = `${row.id}-source-path`;
           const literalId = `${row.id}-literal`;
           const pathModeId = `${row.id}-path-mode`;
           const literalModeId = `${row.id}-literal-mode`;
+          const expressionModeId = `${row.id}-expression-mode`;
+          const canConstruct = field?.kind === "array" || field?.kind === "object";
           const hasIssues = issues.length > 0;
           const literalSources: FieldSources = field === null
             ? {}
@@ -439,6 +503,23 @@ export const StepInputBindingsForm = ({
                     />
                     Literal value
                   </label>
+                  {canConstruct && (
+                    <label htmlFor={expressionModeId}>
+                      <input
+                        aria-label={`Construct value for input row ${rowNumber}`}
+                        checked={row.mode === "expression"}
+                        id={expressionModeId}
+                        name={`${row.id}-mode`}
+                        onChange={() => editRow(row.id, (current) => ({
+                          ...current,
+                          mode: "expression",
+                          expression: current.expression ?? defaultExpressionEditorState(field),
+                        }))}
+                        type="radio"
+                      />
+                      Construct
+                    </label>
+                  )}
                 </div>
               </fieldset>
               {row.mode === "path" ? (
@@ -455,6 +536,18 @@ export const StepInputBindingsForm = ({
                     value={row.sourcePath}
                   />
                 </label>
+              ) : row.mode === "expression" ? (
+                <InputExpressionControl
+                  field={field}
+                  label={row.target.trim() || `input row ${rowNumber}`}
+                  onChange={(next) => editRow(row.id, (current) => ({
+                    ...current,
+                    expression: next,
+                  }))}
+                  sourceSuggestions={sourceSuggestions}
+                  state={row.expression ?? defaultExpressionEditorState(field)}
+                  showModeControl={false}
+                />
               ) : field !== null ? (
                 <SchemaFieldControl
                   diagnostics={[]}
@@ -531,7 +624,7 @@ export const StepInputBindingsForm = ({
         </button>
       </div>
       <div className="schema-form__source-options">
-        <button type="submit">{submitLabel}</button>
+        <button disabled={hasBlockingIssues} type="submit">{submitLabel}</button>
         <button
           aria-describedby={formIssue !== null ? formErrorId : undefined}
           onClick={clear}

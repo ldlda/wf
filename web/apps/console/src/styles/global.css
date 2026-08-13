@@ -990,6 +990,86 @@ tbody tr:hover {
   font-size: 0.82rem;
 }
 
+/* Composite expressions stay visually lighter than the row that owns them;
+   the left rule makes nesting legible without stacking full cards. */
+.input-expression-control {
+  display: grid;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.input-expression-control__mode {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(7rem, 0.7fr);
+  align-items: center;
+  gap: 0.55rem;
+  margin: 0;
+  color: var(--color-slate);
+  font-size: 0.78rem;
+}
+
+.input-expression-control__construct,
+.input-expression-control__item,
+.input-expression-control__field {
+  min-width: 0;
+  margin: 0;
+  border: 0;
+}
+
+.input-expression-control__construct {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.6rem 0.7rem;
+  border-left: 2px solid var(--color-signal-green);
+  background: rgba(255, 255, 255, 0.48);
+}
+
+.input-expression-control__construct > legend,
+.input-expression-control__field > legend,
+.input-expression-control__item > legend {
+  padding: 0 0.3rem 0 0;
+  color: var(--color-ink);
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.input-expression-control__item,
+.input-expression-control__field {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.45rem 0 0.45rem 0.65rem;
+  border-left: 1px solid var(--color-border);
+}
+
+.input-expression-control__item-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.input-expression-control__additional {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 0.55rem;
+  padding-top: 0.35rem;
+}
+
+.input-expression-control__leaf {
+  min-width: 0;
+}
+
+.input-expression-control__leaf .schema-form__field {
+  margin: 0;
+}
+
+.input-expression-control input[type="text"],
+.input-expression-control textarea,
+.input-expression-control select {
+  min-width: 0;
+}
+
 /* Capability discovery keeps the result list compact while reserving a readable
    contract pane for the selected capability. */
 .capability-discovery {
@@ -2050,6 +2130,19 @@ tbody tr:nth-child(10) { animation-delay: 270ms; }
   .capability-discovery__filters > div,
   .capability-discovery__filters button {
     width: 100%;
+  }
+
+  .input-expression-control__mode {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .input-expression-control__additional {
+    grid-template-columns: 1fr;
+  }
+
+  .input-expression-control__item-actions button {
+    min-height: 2.5rem;
   }
 
   .draft-workbench {

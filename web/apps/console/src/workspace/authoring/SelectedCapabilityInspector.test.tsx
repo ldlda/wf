@@ -21,6 +21,19 @@ const detail: CapabilityDetail = {
   acceptsContext: false,
 };
 
+const compositeDetail: CapabilityDetail = {
+  ...detail,
+  name: "demo.concat",
+  description: "Concatenate report values",
+  inputSchema: {
+    type: "object",
+    properties: {
+      items: { type: "array", minItems: 2, items: { type: "string" } },
+    },
+    required: ["items"],
+  },
+};
+
 const draft = (stepId: string, input: unknown, output: unknown): DraftWorkspace => ({
   workspaceId: "draft-report",
   revision: 3,
@@ -112,11 +125,8 @@ describe("SelectedCapabilityInspector", () => {
 
     await user.click(screen.getByRole("tab", { name: "Inputs" }));
     expect(screen.getByRole("region", { name: "Raw unsupported input row 2" })).toHaveTextContent("broken");
-    await user.click(screen.getByRole("button", { name: "Save inputs" }));
+    expect(screen.getByRole("button", { name: "Save inputs" })).toBeDisabled();
     expect(controller.setStepInputs).not.toHaveBeenCalled();
-    expect(screen.getAllByRole("alert").some((alert) =>
-      alert.textContent?.includes("Remove or repair every unsupported input row before saving.") ?? false,
-    )).toBe(true);
 
     await user.click(screen.getByRole("button", { name: "Remove unsupported input row 2" }));
     await user.click(screen.getByRole("button", { name: "Save inputs" }));
@@ -207,6 +217,58 @@ describe("SelectedCapabilityInspector", () => {
     expect(screen.getAllByRole("alert").some((alert) =>
       alert.textContent?.includes("unsupported input row") ?? false,
     )).toBe(true);
+  });
+
+  it("rehydrates and saves a valid composite input through the mounted inspector", async () => {
+    const user = userEvent.setup();
+    const originalWidth = window.innerWidth;
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: 390 });
+    const workspace = draft("read", [{
+      target: "items",
+      expression: {
+        kind: "array",
+        items: [
+          { kind: "path", path: "state.foo" },
+          { kind: "literal", value: "wowcool" },
+        ],
+      },
+    }], []);
+    const controller = controllerFor(workspace);
+
+    try {
+      render(
+        <SelectedCapabilityInspector
+          capabilityDetail={compositeDetail}
+          capabilityDetailMessage={null}
+          capabilityDetailPhase="ready"
+          controller={controller}
+          draft={workspace}
+          nodeKind="use"
+          nodeRef="demo.concat"
+          stepId="read"
+        />,
+      );
+
+      await user.click(screen.getByRole("tab", { name: "Inputs" }));
+      expect(screen.getByRole("group", { name: "items" })).toBeInTheDocument();
+      expect(screen.getByRole("combobox", { name: "Value source for items item 1" })).toHaveValue("path");
+      expect(screen.getByRole("combobox", { name: "Path for items item 1" })).toHaveValue("state.foo");
+      expect(screen.getByRole("textbox", { name: "Items item" })).toHaveValue("wowcool");
+
+      await user.click(screen.getByRole("button", { name: "Save inputs" }));
+      expect(controller.setStepInputs).toHaveBeenCalledWith([{
+        target: "items",
+        expression: {
+          kind: "array",
+          items: [
+            { kind: "path", path: "state.foo" },
+            { kind: "literal", value: "wowcool" },
+          ],
+        },
+      }]);
+    } finally {
+      Object.defineProperty(window, "innerWidth", { configurable: true, value: originalWidth });
+    }
   });
 
   it("keeps diagnostic ids unique across failing setup and hidden binding forms", async () => {

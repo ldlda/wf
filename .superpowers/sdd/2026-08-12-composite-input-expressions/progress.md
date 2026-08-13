@@ -10,6 +10,6 @@ Task 4: complete (`144152a0`, fix `c259ba73`, approved)
 
 Task 5: complete (`1bb684bf`, fixes `cca1be89`, `0a7996da`, approved)
 
-Task 6: complete (pure projection/model integration; focused and full console verification passed)
+Task 6: complete (`b8a16a0`, fixes `29d7a11d`, `18c9ef12`, approved)
 
-Current task: Task 7 not started
+Task 7: complete (pending commit; React Doctor 98/100, one maintainability warning deferred)

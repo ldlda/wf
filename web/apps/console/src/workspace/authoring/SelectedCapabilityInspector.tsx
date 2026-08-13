@@ -6,9 +6,9 @@ import { StepInputBindingsForm } from "./StepInputBindingsForm.js";
 import { StepOutputBindingsForm } from "./StepOutputBindingsForm.js";
 import {
   bindingDiagnosticsForStep,
-  inputBindingRows,
   outputBindingRows,
   projectSelectedStepDataflow,
+  stepInputBindingRows,
 } from "./selected-step-dataflow.js";
 import type { DraftAuthoringController } from "./useDraftAuthoring.js";
 
@@ -126,7 +126,7 @@ export const SelectedCapabilityInspector = ({
     ? controller.preservedCapabilityForm.input
     : null;
   // Forms receive raw-row projections so malformed persisted entries stay in order.
-  const inputRows = inputBindingRows(
+  const inputRows = stepInputBindingRows(
     rawStep?.input !== undefined ? rawStep.input : preservedForm?.inputBindings,
   );
   const outputRows = outputBindingRows(rawStep?.output);
