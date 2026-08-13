@@ -12,6 +12,7 @@ export {
 export { normalizeLoopbackTarget } from "./target-policy.js";
 
 export {
+  hasBoundedInputExpressionLiteralValue,
   hasBoundedInputExpressionNodeBudget,
   MAX_INPUT_EXPRESSION_DEPTH,
   MAX_INPUT_EXPRESSION_NODES,

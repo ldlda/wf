@@ -5,6 +5,7 @@
   "scripts": {
     "predev": "pnpm --filter @lda/workflow-rpc build && pnpm --filter @lda/presentation-sync build",
     "dev": "vite --host 127.0.0.1 --port 5173 --strictPort",
+    "pretest": "pnpm --filter @lda/workflow-rpc build && pnpm --filter @lda/presentation-sync build",
     "prebuild": "pnpm --filter @lda/workflow-rpc build && pnpm --filter @lda/presentation-sync build",
     "build": "tsc -b && vite build",
     "test": "vitest run",

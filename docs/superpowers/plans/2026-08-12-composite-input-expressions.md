@@ -556,7 +556,7 @@ export type ExpressionEditorState =
   | { readonly kind: "object"; readonly fields: ReadonlyArray<{ readonly name: string; readonly value: ExpressionEditorState }> };
 ```
 
-Assert canonical expression -> editor state -> canonical expression equality for nested arrays/objects, field order, explicit null, structural paths, empty arrays allowed by schema, `minItems`, `maxItems`, required fields, schema-valued `additionalProperties`, and boolean additional properties.
+Assert canonical expression -> editor state -> canonical expression semantic equality for nested arrays/objects, field order, explicit null, structural paths, empty arrays allowed by schema, `minItems`, `maxItems`, required fields, schema-valued `additionalProperties`, and boolean additional properties. The mandated editor union stores `path` as a string, so structural path objects normalize through the canonical formatter at projection and serialize deterministically as strings, including after immutable state copies. Representation-lossless copying of canonical expressions remains the responsibility of the Task 5 copy helpers outside this editor state.
 
 Assert cyclic/unresolved/remote refs and unsupported compositions produce an `unsupported` result carrying the original canonical record, never an empty literal.
 

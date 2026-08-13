@@ -271,6 +271,11 @@ Projection from canonical bindings to editor state and serialization back are
 pure functions with round-trip tests. An expression the current editor cannot
 represent remains visible as an unsupported canonical record and blocks
 replacement; it is never replaced with an empty literal or raw-JSON fallback.
+Because this mandated editor union stores path values as strings, projection
+normalizes structural path objects through the canonical path formatter. The
+editor round-trip contract is therefore semantic path equality plus deterministic
+string serialization; the Task 5 canonical copy helpers remain representation-
+lossless outside the editor.
 
 Core models and transports round-trip expressions for capability, subgraph, and
 interrupt-request inputs in this slice. The first console editor is deliberately

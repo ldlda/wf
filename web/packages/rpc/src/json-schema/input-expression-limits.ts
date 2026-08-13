@@ -6,39 +6,89 @@ export const MAX_INPUT_EXPRESSION_DEPTH = 64;
 
 const expressionKinds = new Set(["literal", "path", "array", "object"]);
 
+type Budget = {
+  nodes: number;
+  readonly active: WeakSet<object>;
+};
+
+const newBudget = (nodes = 0): Budget => ({ nodes, active: new WeakSet<object>() });
+
+const visitJsonValue = (
+  value: unknown,
+  depth: number,
+  budget: Budget,
+  maxNodes: number,
+): boolean => {
+  if (value === null || typeof value === "boolean" || typeof value === "string") return true;
+  if (typeof value === "number") return Number.isFinite(value);
+  if (typeof value !== "object") return false;
+  if (depth > MAX_INPUT_EXPRESSION_DEPTH || budget.active.has(value)) return false;
+  if (Array.isArray(value)) {
+    if (Object.getOwnPropertySymbols(value).length > 0) return false;
+    if (!Object.keys(value).every((key) => /^(0|[1-9]\d*)$/.test(key))) return false;
+  } else if (
+    (Object.getPrototypeOf(value) !== Object.prototype && Object.getPrototypeOf(value) !== null) ||
+    Object.getOwnPropertySymbols(value).length > 0
+  ) {
+    return false;
+  }
+
+  budget.active.add(value);
+  budget.nodes += 1;
+  if (budget.nodes > maxNodes) {
+    budget.active.delete(value);
+    return false;
+  }
+
+  let valid = true;
+  if (Array.isArray(value)) {
+    for (let index = 0; index < value.length; index += 1) {
+      if (!Object.prototype.hasOwnProperty.call(value, index) || !visitJsonValue(value[index], depth + 1, budget, maxNodes)) {
+        valid = false;
+        break;
+      }
+    }
+  } else {
+    for (const item of Object.values(value)) {
+      if (!visitJsonValue(item, depth + 1, budget, maxNodes)) {
+        valid = false;
+        break;
+      }
+    }
+  }
+  budget.active.delete(value);
+  return valid;
+};
+
+/**
+ * Validate a JSON literal as the value of a depth-one literal expression.
+ * The expression node consumes one budget slot, so containers begin at depth
+ * two and the same node/depth rules apply as the Python/RPC boundary.
+ */
+export const hasBoundedInputExpressionLiteralValue = (
+  value: unknown,
+  maxNodes: number = MAX_INPUT_EXPRESSION_NODES,
+): boolean => {
+  if (maxNodes < 1) return false;
+  return visitJsonValue(value, 2, newBudget(1), maxNodes);
+};
+
 /** Count expression nodes and containers nested inside literal values. */
 export const hasBoundedInputExpressionNodeBudget = (
   input: unknown,
   maxNodes: number = MAX_INPUT_EXPRESSION_NODES,
 ): boolean => {
-  let nodes = 0;
-  const active = new WeakSet<object>();
+  const budget = newBudget();
 
   const visitNode = (value: object): boolean => {
-    if (active.has(value)) return false;
-    active.add(value);
-    nodes += 1;
-    if (nodes > maxNodes) {
-      active.delete(value);
+    if (budget.active.has(value)) return false;
+    budget.active.add(value);
+    budget.nodes += 1;
+    if (budget.nodes > maxNodes) {
+      budget.active.delete(value);
       return false;
     }
     return true;
-  };
-
-  const visitJson = (value: unknown, depth: number): boolean => {
-    if (typeof value !== "object" || value === null) return true;
-    if (depth > MAX_INPUT_EXPRESSION_DEPTH) return false;
-    if (!visitNode(value)) return false;
-    if (Array.isArray(value)) {
-      for (let index = 0; index < value.length; index += 1) {
-        if (!Object.prototype.hasOwnProperty.call(value, index) || !visitJson(value[index], depth + 1)) return false;
-      }
-      active.delete(value);
-      return true;
-    }
-    const valid = Object.values(value).every((item) => visitJson(item, depth + 1));
-    active.delete(value);
-    return valid;
   };
 
   const visitExpression = (value: unknown, depth: number): boolean => {
@@ -49,7 +99,9 @@ export const hasBoundedInputExpressionNodeBudget = (
     let valid = true;
     switch (value.kind) {
       case "literal":
-        valid = visitJson(value.value, depth + 1);
+        // The literal branch shares the strict JSON traversal used by simple
+        // bindings while continuing the expression node budget.
+        valid = visitJsonValue(value.value, depth + 1, budget, maxNodes);
         break;
       case "path":
         break;
@@ -84,7 +136,7 @@ export const hasBoundedInputExpressionNodeBudget = (
         }
         break;
     }
-    active.delete(value);
+    budget.active.delete(value);
     return valid;
   };
 

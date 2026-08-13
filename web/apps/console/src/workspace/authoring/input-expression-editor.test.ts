@@ -99,7 +99,7 @@ describe("input expression editor projection", () => {
     });
   });
 
-  it("projects structural paths through the canonical path formatter", () => {
+  it("normalizes structural paths through the canonical path formatter", () => {
     const canonical: InputExpression = {
       kind: "array",
       items: [{ kind: "path", path: { root: "context", parts: ["request", "display name"] } }],
@@ -113,8 +113,16 @@ describe("input expression editor projection", () => {
     if (projected.kind !== "editable") throw new Error("expected editable expression");
     expect(serializeExpressionEditorState(projected.state)).toEqual({
       kind: "array",
-      items: [{ kind: "path", path: { root: "context", parts: ["request", "display name"] } }],
+      items: [{ kind: "path", path: 'context.request."display name"' }],
     });
+    expect(serializeExpressionEditorState({ ...projected.state })).toEqual({
+      kind: "array",
+      items: [{ kind: "path", path: 'context.request."display name"' }],
+    });
+    expect(projectExpressionEditorState({
+      kind: "array",
+      items: [{ kind: "path", path: 'context.request."display name"' }],
+    }, { type: "array", items: {} })).toEqual(projected);
   });
 
   it("serializes an edited structural path from its current string", () => {
@@ -269,6 +277,29 @@ describe("input expression editor projection", () => {
     expect(serializeExpressionEditorState({ kind: "literal", value: sparse, touched: true })).toBeNull();
   });
 
+  it("accepts every browser literal within the canonical literal-expression budget", () => {
+    const nestedLiteralValue = (containerDepth: number): unknown => {
+      let value: unknown = "leaf";
+      for (let depth = 0; depth < containerDepth; depth += 1) value = { nested: value };
+      return value;
+    };
+
+    const values: ReadonlyArray<unknown> = [
+      null,
+      false,
+      "text",
+      3.14,
+      ["item"],
+      { key: "value" },
+      nestedLiteralValue(63),
+    ];
+    for (const value of values) {
+      expect(isJsonValue(value)).toBe(true);
+      expect(parseInputExpression({ kind: "literal", value })).not.toBeNull();
+    }
+    expect(isJsonValue(nestedLiteralValue(64))).toBe(false);
+  });
+
   it("uses the shared budget for parsing, projection, validation, and serialization", () => {
     const oversized = {
       kind: "literal",
@@ -283,7 +314,7 @@ describe("input expression editor projection", () => {
     expect(serializeExpressionEditorState({ kind: "literal", value: oversized.value, touched: true })).toBeNull();
     expect(validateExpressionEditorState({ kind: "literal", value: oversized.value, touched: true }, {})).toMatchObject({
       valid: false,
-      issues: [expect.objectContaining({ message: expect.stringMatching(/budget/i) })],
+      issues: [expect.objectContaining({ message: expect.stringMatching(/finite JSON|budget/i) })],
     });
   });
 });

@@ -8,8 +8,8 @@ import type {
   PathExpression,
 } from "../domain/draft-workspace-models.js";
 import {
+  hasBoundedInputExpressionLiteralValue,
   hasBoundedInputExpressionNodeBudget,
-  MAX_INPUT_EXPRESSION_DEPTH,
 } from "@lda/workflow-rpc/input-expression-limits";
 import { normalizeSchema, type SchemaField } from "../schema-form/schema-field.js";
 import { formatTOMLPath, parseGraphSourcePath, parseTOMLPath } from "../schema-form/schema-paths.js";
@@ -48,26 +48,8 @@ const hasExactKeys = (value: JsonRecord, keys: ReadonlyArray<string>): boolean =
 };
 
 /** Keep editor literals within the same finite JSON subset as canonical bindings. */
-export const isJsonValue = (value: unknown): value is JsonValue => {
-  const visit = (current: unknown, depth: number): boolean => {
-    if (depth > MAX_INPUT_EXPRESSION_DEPTH) return false;
-    if (current === null || typeof current === "boolean" || typeof current === "string") return true;
-    if (typeof current === "number") return Number.isFinite(current);
-    if (Array.isArray(current)) {
-      if (Object.getOwnPropertySymbols(current).length > 0) return false;
-      if (!Object.keys(current).every((key) => /^(0|[1-9]\d*)$/.test(key))) return false;
-      for (let index = 0; index < current.length; index += 1) {
-        if (!Object.prototype.hasOwnProperty.call(current, index) || !visit(current[index], depth + 1)) return false;
-      }
-      return true;
-    }
-    if (!isRecord(current)) return false;
-    if (Object.getPrototypeOf(current) !== Object.prototype && Object.getPrototypeOf(current) !== null) return false;
-    if (Object.getOwnPropertySymbols(current).length > 0) return false;
-    return Object.values(current).every((item) => visit(item, depth + 1));
-  };
-  return visit(value, 0);
-};
+export const isJsonValue = (value: unknown): value is JsonValue =>
+  hasBoundedInputExpressionLiteralValue(value);
 
 const inputPath = (value: unknown): InputPath | null => {
   if (typeof value === "string") return parseGraphSourcePath(value) === null ? null : value;
@@ -115,11 +97,6 @@ export const parseInputExpression = (value: unknown): InputExpression | null =>
 const pathText = (path: InputPath): string =>
   typeof path === "string" ? path : formatTOMLPath([path.root, ...path.parts]);
 
-// The public editor union intentionally stores paths as strings. Keep the wire
-// representation only for untouched projected states so structural paths do
-// not get normalized unless an editor actually recreates them.
-const structuralPathByState = new WeakMap<object, InputPath>();
-
 const unsupported = (raw: InputExpression, reason: string): ExpressionProjection => ({
   kind: "unsupported",
   raw,
@@ -149,11 +126,7 @@ const project = (
     case "literal":
       return { kind: "editable", state: { kind: "literal", value: raw.value, touched: false } };
     case "path":
-      {
-        const state = { kind: "path", path: pathText(raw.path), touched: false } as const;
-        if (typeof raw.path !== "string") structuralPathByState.set(state, raw.path);
-        return { kind: "editable", state };
-      }
+      return { kind: "editable", state: { kind: "path", path: pathText(raw.path), touched: false } };
     case "array": {
       if (field !== null && !unconstrained(field) && field.kind !== "array") return unsupported(raw, "The expression is an array but the target schema is not an array.");
       const itemField = field?.item ?? null;
@@ -196,7 +169,7 @@ const copyStateToExpression = (state: ExpressionEditorState): InputExpression | 
       return isJsonValue(state.value) ? { kind: "literal", value: state.value } : null;
     case "path":
       if (parseGraphSourcePath(state.path) === null) return null;
-      return { kind: "path", path: state.touched ? state.path : structuralPathByState.get(state) ?? state.path };
+      return { kind: "path", path: state.path };
     case "array": {
       const items: InputExpression[] = [];
       for (const item of state.items) {

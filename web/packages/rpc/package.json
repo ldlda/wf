@@ -13,7 +13,7 @@
     }
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -b tsconfig.json --force",
     "contract:check": "tsx scripts/workflow-contract.ts check",
     "contract:write": "tsx scripts/workflow-contract.ts write",
     "test": "vitest run",
