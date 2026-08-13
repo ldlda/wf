@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useConsoleWorkspace } from "../context.js";
 import {
   createDraftAuthoringClient,
+  copyStepInputBinding,
   type DraftAuthoringClient,
 } from "../domain/draft-authoring-client.js";
 import {
@@ -10,8 +11,8 @@ import {
 } from "../domain/draft-workspace-client.js";
 import type {
   DraftWorkspace,
-  InputBinding,
   OutputBinding,
+  StepInputBinding,
 } from "../domain/draft-workspace-models.js";
 import type { CapabilityNodeFormValue } from "./CapabilityNodeForm.js";
 import type { RouteFormValue } from "./RouteForm.js";
@@ -35,7 +36,7 @@ export interface DraftAuthoringController {
   readonly preservedCapabilityForm: PreservedCapabilityForm;
   readonly addCapability: (input: CapabilityNodeFormValue) => Promise<void>;
   readonly updateCapability: (input: CapabilityNodeFormValue) => Promise<void>;
-  readonly setStepInputs: (bindings: ReadonlyArray<InputBinding>) => Promise<void>;
+  readonly setStepInputs: (bindings: ReadonlyArray<StepInputBinding>) => Promise<void>;
   readonly setStepOutputs: (bindings: ReadonlyArray<OutputBinding>) => Promise<void>;
   readonly updateSetup: (patch: CapabilitySetupPatch) => Promise<void>;
   readonly setRoute: (input: RouteFormValue) => Promise<void>;
@@ -100,7 +101,7 @@ type LastSubmission =
   | {
       readonly kind: "inputs";
       readonly targetStepId: string;
-      readonly bindings: ReadonlyArray<InputBinding>;
+      readonly bindings: ReadonlyArray<StepInputBinding>;
     }
   | {
       readonly kind: "outputs";
@@ -160,38 +161,6 @@ const mutationKey = (kind: string, input: unknown, revision: number): string => 
   return `${kind}:${revision}:${encoded ?? "undefined"}`;
 };
 
-const copyJsonValue = (value: unknown): unknown => {
-  if (Array.isArray(value)) return value.map(copyJsonValue);
-  if (value !== null && typeof value === "object") {
-    return Object.fromEntries(
-      Object.entries(value).map(([key, nestedValue]) => [key, copyJsonValue(nestedValue)]),
-    );
-  }
-  return value;
-};
-
-const copyInputBinding = (binding: InputBinding): InputBinding => {
-  if ("path" in binding) {
-    return {
-      path:
-        typeof binding.path === "string"
-          ? binding.path
-          : { root: binding.path.root, parts: [...binding.path.parts] },
-      target:
-        typeof binding.target === "string"
-          ? binding.target
-          : { root: binding.target.root, parts: [...binding.target.parts] },
-    };
-  }
-  return {
-    target:
-      typeof binding.target === "string"
-        ? binding.target
-        : { root: binding.target.root, parts: [...binding.target.parts] },
-    value: copyJsonValue(binding.value),
-  };
-};
-
 const copyOutputBinding = (binding: OutputBinding): OutputBinding => ({
   source:
     typeof binding.source === "string"
@@ -204,8 +173,8 @@ const copyOutputBinding = (binding: OutputBinding): OutputBinding => ({
 });
 
 const copyInputBindings = (
-  bindings: ReadonlyArray<InputBinding>,
-): ReadonlyArray<InputBinding> => bindings.map(copyInputBinding);
+  bindings: ReadonlyArray<StepInputBinding>,
+): ReadonlyArray<StepInputBinding> => bindings.map(copyStepInputBinding);
 
 const copyOutputBindings = (
   bindings: ReadonlyArray<OutputBinding>,
@@ -567,7 +536,7 @@ export const useDraftAuthoring = ({
   const submitStepInputs = useCallback(
     (
       targetStepId: string,
-      bindings: ReadonlyArray<InputBinding>,
+      bindings: ReadonlyArray<StepInputBinding>,
       allowTargetSelectionChange = false,
     ): Promise<void> => {
       const submittedBindings = copyInputBindings(bindings);
@@ -629,7 +598,7 @@ export const useDraftAuthoring = ({
   );
 
   const setStepInputs = useCallback(
-    (bindings: ReadonlyArray<InputBinding>): Promise<void> => {
+    (bindings: ReadonlyArray<StepInputBinding>): Promise<void> => {
       const targetStepId = selectedStepId();
       return targetStepId === null
         ? missingSelectedStep()

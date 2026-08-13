@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
-import type { InputBinding } from "../domain/draft-workspace-models.js";
+import type { StepInputBinding } from "../domain/draft-workspace-models.js";
 import { SchemaForm } from "../schema-form/SchemaForm.js";
 import { normalizeSchema } from "../schema-form/schema-field.js";
 import {
@@ -15,7 +15,7 @@ export type CapabilityNodeFormValue = {
   readonly description?: string | null;
   readonly retry?: number | null;
   readonly timeoutSeconds?: number | null;
-  readonly inputBindings: ReadonlyArray<InputBinding> | null;
+  readonly inputBindings: ReadonlyArray<StepInputBinding> | null;
   readonly inputMap?: Record<string, string> | null;
   readonly routes?: Record<string, string> | null;
   readonly bindOutputs?: Record<string, string>;

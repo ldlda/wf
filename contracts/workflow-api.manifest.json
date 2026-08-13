@@ -122,6 +122,27 @@
         ],
         "type": "object"
       },
+      "ArrayExpression": {
+        "additionalProperties": false,
+        "description": "Resolve ordered child expressions into one JSON array.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/InputExpression"
+            },
+            "type": "array"
+          },
+          "kind": {
+            "const": "array",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "items"
+        ],
+        "type": "object"
+      },
       "ArtifactCatalogEntryPayload": {
         "description": "Compact artifact row returned by discovery operations.",
         "properties": {
@@ -376,9 +397,11 @@
                     },
                     {
                       "$ref": "#/components/schemas/InputValueBinding"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InputExpressionBinding"
                     }
-                  ],
-                  "description": "Canonical node input binding. Use either a path binding with `path`, or a literal binding with `value`; do not provide both."
+                  ]
                 },
                 "type": "array"
               },
@@ -1023,9 +1046,11 @@
                 },
                 {
                   "$ref": "#/components/schemas/InputValueBinding"
+                },
+                {
+                  "$ref": "#/components/schemas/InputExpressionBinding"
                 }
-              ],
-              "description": "Canonical node input binding. Use either a path binding with `path`, or a literal binding with `value`; do not provide both."
+              ]
             },
             "type": "array"
           },
@@ -1163,9 +1188,11 @@
                 },
                 {
                   "$ref": "#/components/schemas/InputValueBinding"
+                },
+                {
+                  "$ref": "#/components/schemas/InputExpressionBinding"
                 }
-              ],
-              "description": "Canonical node input binding. Use either a path binding with `path`, or a literal binding with `value`; do not provide both."
+              ]
             },
             "type": "array"
           },
@@ -1234,9 +1261,11 @@
                 },
                 {
                   "$ref": "#/components/schemas/InputValueBinding"
+                },
+                {
+                  "$ref": "#/components/schemas/InputExpressionBinding"
                 }
-              ],
-              "description": "Canonical node input binding. Use either a path binding with `path`, or a literal binding with `value`; do not provide both."
+              ]
             },
             "type": "array"
           },
@@ -1579,6 +1608,77 @@
         "required": [
           "status",
           "store_root"
+        ],
+        "type": "object"
+      },
+      "InputExpression": {
+        "discriminator": {
+          "mapping": {
+            "array": "#/components/schemas/ArrayExpression",
+            "literal": "#/components/schemas/LiteralExpression",
+            "object": "#/components/schemas/ObjectExpression",
+            "path": "#/components/schemas/PathExpression"
+          },
+          "propertyName": "kind"
+        },
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/LiteralExpression"
+          },
+          {
+            "$ref": "#/components/schemas/PathExpression"
+          },
+          {
+            "$ref": "#/components/schemas/ArrayExpression"
+          },
+          {
+            "$ref": "#/components/schemas/ObjectExpression"
+          }
+        ]
+      },
+      "InputExpressionBinding": {
+        "additionalProperties": false,
+        "description": "Assign one recursively composed expression to a node-local target.",
+        "properties": {
+          "expression": {
+            "$ref": "#/components/schemas/InputExpression"
+          },
+          "target": {
+            "description": "Node-local path. Use the root marker `.` for the whole payload.",
+            "oneOf": [
+              {
+                "description": "Canonical TOML-key path string.",
+                "type": "string"
+              },
+              {
+                "additionalProperties": false,
+                "description": "Structural path object accepted as input.",
+                "properties": {
+                  "parts": {
+                    "items": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "minItems": 0,
+                    "type": "array"
+                  },
+                  "root": {
+                    "const": "local",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "root",
+                  "parts"
+                ],
+                "type": "object"
+              }
+            ]
+          }
+        },
+        "required": [
+          "target",
+          "expression"
         ],
         "type": "object"
       },
@@ -2266,6 +2366,24 @@
         ],
         "type": "object"
       },
+      "LiteralExpression": {
+        "additionalProperties": false,
+        "description": "A strict JSON literal embedded in a node-local input expression.",
+        "properties": {
+          "kind": {
+            "const": "literal",
+            "type": "string"
+          },
+          "value": {
+            "$ref": "#/components/schemas/JsonValue"
+          }
+        },
+        "required": [
+          "kind",
+          "value"
+        ],
+        "type": "object"
+      },
       "LiteralOperand": {
         "description": "Condition operand that carries a literal value.",
         "properties": {
@@ -2555,6 +2673,27 @@
         ],
         "type": "object"
       },
+      "ObjectExpression": {
+        "additionalProperties": false,
+        "description": "Resolve named child expressions into one JSON object.",
+        "properties": {
+          "fields": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/InputExpression"
+            },
+            "type": "object"
+          },
+          "kind": {
+            "const": "object",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "fields"
+        ],
+        "type": "object"
+      },
       "OutputBinding": {
         "additionalProperties": false,
         "description": "Map one node-local output path into one workflow state path.",
@@ -2688,6 +2827,57 @@
           "diagnostics",
           "compiled_plan",
           "draft"
+        ],
+        "type": "object"
+      },
+      "PathExpression": {
+        "additionalProperties": false,
+        "description": "Read one graph source path while resolving a composite input.",
+        "properties": {
+          "kind": {
+            "const": "path",
+            "type": "string"
+          },
+          "path": {
+            "description": "Readable graph path rooted at input, state, or context.",
+            "oneOf": [
+              {
+                "description": "Canonical TOML-key path string.",
+                "type": "string"
+              },
+              {
+                "additionalProperties": false,
+                "description": "Structural path object accepted as input.",
+                "properties": {
+                  "parts": {
+                    "items": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "minItems": 0,
+                    "type": "array"
+                  },
+                  "root": {
+                    "enum": [
+                      "input",
+                      "state",
+                      "context"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "root",
+                  "parts"
+                ],
+                "type": "object"
+              }
+            ]
+          }
+        },
+        "required": [
+          "kind",
+          "path"
         ],
         "type": "object"
       },
@@ -5882,9 +6072,11 @@
                     },
                     {
                       "$ref": "#/components/schemas/InputValueBinding"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InputExpressionBinding"
                     }
-                  ],
-                  "description": "Canonical node input binding. Use either a path binding with `path`, or a literal binding with `value`; do not provide both."
+                  ]
                 },
                 "type": "array"
               },
@@ -6465,7 +6657,19 @@
           "schema": {
             "anyOf": [
               {
-                "items": {},
+                "items": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/InputPathBinding"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InputValueBinding"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InputExpressionBinding"
+                    }
+                  ]
+                },
                 "type": "array"
               },
               {
@@ -6481,7 +6685,9 @@
           "schema": {
             "anyOf": [
               {
-                "items": {},
+                "items": {
+                  "$ref": "#/components/schemas/OutputBinding"
+                },
                 "type": "array"
               },
               {
@@ -7362,9 +7568,11 @@
                 },
                 {
                   "$ref": "#/components/schemas/InputValueBinding"
+                },
+                {
+                  "$ref": "#/components/schemas/InputExpressionBinding"
                 }
-              ],
-              "description": "Canonical node input binding. Use either a path binding with `path`, or a literal binding with `value`; do not provide both."
+              ]
             },
             "type": "array"
           }
@@ -7596,7 +7804,7 @@
                   "$ref": "#/components/schemas/InputValueBinding"
                 }
               ],
-              "description": "Canonical node input binding. Use either a path binding with `path`, or a literal binding with `value`; do not provide both."
+              "description": "Simple canonical binding for node inputs or workflow outputs. Use either a path binding with `path`, or a literal binding with `value`; composite `expression` bindings are node-local only."
             },
             "type": "array"
           }
@@ -7854,7 +8062,19 @@
           "schema": {
             "anyOf": [
               {
-                "items": {},
+                "items": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/InputPathBinding"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InputValueBinding"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InputExpressionBinding"
+                    }
+                  ]
+                },
                 "type": "array"
               },
               {
@@ -7870,7 +8090,9 @@
           "schema": {
             "anyOf": [
               {
-                "items": {},
+                "items": {
+                  "$ref": "#/components/schemas/OutputBinding"
+                },
                 "type": "array"
               },
               {

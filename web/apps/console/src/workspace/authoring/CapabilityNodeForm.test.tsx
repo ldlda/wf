@@ -1,11 +1,33 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
-import { CapabilityNodeForm } from "./CapabilityNodeForm.js";
+import { CapabilityNodeForm, type CapabilityNodeFormValue } from "./CapabilityNodeForm.js";
 
 afterEach(() => cleanup());
 
 describe("CapabilityNodeForm", () => {
+  it("accepts expression bindings in its callback value without authoring them", () => {
+    const value = {
+      stepId: "concat",
+      capabilityName: "wf.std.concat",
+      inputBindings: [
+        {
+          target: "request",
+          expression: {
+            kind: "array",
+            items: [
+              { kind: "path", path: "state.foo" },
+              { kind: "literal", value: "wowcool" },
+            ],
+          },
+        },
+      ],
+    } satisfies CapabilityNodeFormValue;
+
+    expect(value.inputBindings).toHaveLength(1);
+    expect(value.inputBindings[0]).toHaveProperty("expression.kind", "array");
+  });
+
   it("submits explicit node metadata and serialized schema bindings", async () => {
     const user = userEvent.setup();
     const submissions: unknown[] = [];

@@ -5,8 +5,12 @@ import {
   type CreateEmptyDraftInput,
   type CreateFromCapabilityInput,
   type DraftWorkspace,
-  type InputBinding,
+  type JsonValue,
+  type InputExpression,
+  type InputPath,
+  type LocalInputPath,
   type OutputBinding,
+  type StepInputBinding,
   type SetDraftRouteInput,
   type SetStepInputBindingsInput,
   type SetStepOutputBindingsInput,
@@ -56,7 +60,9 @@ const ifDefined = <T>(
   if (value !== undefined) target[key] = value;
 };
 
-const copyJsonValue = (value: unknown): unknown => {
+function copyJsonValue(value: JsonValue): JsonValue;
+function copyJsonValue(value: unknown): unknown;
+function copyJsonValue(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(copyJsonValue);
   if (value !== null && typeof value === "object") {
     return Object.fromEntries(
@@ -67,27 +73,57 @@ const copyJsonValue = (value: unknown): unknown => {
     );
   }
   return value;
+}
+
+const copyInputPath = (path: InputPath): InputPath =>
+  typeof path === "string" ? path : { root: path.root, parts: [...path.parts] };
+
+const copyLocalInputPath = (path: LocalInputPath): LocalInputPath =>
+  typeof path === "string" ? path : { root: path.root, parts: [...path.parts] };
+
+// Keep this copy explicit so adding a canonical expression variant is a type error
+// instead of silently dropping data during a mutation or reapply.
+export const copyInputExpression = (
+  expression: InputExpression,
+): InputExpression => {
+  switch (expression.kind) {
+    case "literal":
+      return { kind: "literal", value: copyJsonValue(expression.value) };
+    case "path":
+      return { kind: "path", path: copyInputPath(expression.path) };
+    case "array":
+      return { kind: "array", items: expression.items.map(copyInputExpression) };
+    case "object":
+      return {
+        kind: "object",
+        fields: Object.fromEntries(
+          Object.entries(expression.fields).map(([key, value]) => [
+            key,
+            copyInputExpression(value),
+          ]),
+        ),
+      };
+  }
 };
 
-const copyInputBinding = (binding: InputBinding): InputBinding => {
+export const copyStepInputBinding = (
+  binding: StepInputBinding,
+): StepInputBinding => {
   if ("path" in binding) {
     return {
-      path:
-        typeof binding.path === "string"
-          ? binding.path
-          : { root: binding.path.root, parts: [...binding.path.parts] },
-      target:
-        typeof binding.target === "string"
-          ? binding.target
-          : { root: binding.target.root, parts: [...binding.target.parts] },
+      path: copyInputPath(binding.path),
+      target: copyLocalInputPath(binding.target),
+    };
+  }
+  if ("value" in binding) {
+    return {
+      target: copyLocalInputPath(binding.target),
+      value: copyJsonValue(binding.value),
     };
   }
   return {
-    target:
-      typeof binding.target === "string"
-        ? binding.target
-        : { root: binding.target.root, parts: [...binding.target.parts] },
-    value: copyJsonValue(binding.value),
+    target: copyLocalInputPath(binding.target),
+    expression: copyInputExpression(binding.expression),
   };
 };
 
@@ -103,11 +139,11 @@ const copyOutputBinding = (binding: OutputBinding): OutputBinding => ({
 });
 
 const copyInputBindings = (
-  bindings: ReadonlyArray<InputBinding> | null | undefined,
-): InputBinding[] | null | undefined =>
+  bindings: ReadonlyArray<StepInputBinding> | null | undefined,
+): StepInputBinding[] | null | undefined =>
   bindings === undefined || bindings === null
     ? bindings
-    : bindings.map(copyInputBinding);
+    : bindings.map(copyStepInputBinding);
 
 const copyOutputBindings = (
   bindings: ReadonlyArray<OutputBinding> | null | undefined,

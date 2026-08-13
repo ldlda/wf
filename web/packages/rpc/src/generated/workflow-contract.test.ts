@@ -6,6 +6,10 @@ import {
   workflowRpcOperationNames,
   workflowOperationNames,
   type OperationName,
+  type InputExpression,
+  type InputExpressionBinding,
+  type InputPathBinding,
+  type InputValueBinding,
   type WorkflowOperationParams,
   type WorkflowOperationResult,
 } from "../index.js";
@@ -73,6 +77,32 @@ describe("generated workflow contract", () => {
     expectTypeOf<WorkflowOperationResult<"workflow.health">>().toMatchTypeOf<{
       status: "ok";
       store_root: string;
+    }>();
+  });
+
+  it("exposes recursive node-local inputs without widening workflow outputs", () => {
+    const expressionBinding = {
+      target: "request",
+      expression: {
+        kind: "object",
+        fields: {
+          value: { kind: "path", path: "state.foo" },
+          label: { kind: "literal", value: "wowcool" },
+        },
+      },
+    } satisfies InputExpressionBinding;
+    const expression: InputExpression = expressionBinding.expression;
+
+    expect(expression.kind).toBe("object");
+    expectTypeOf<
+      WorkflowOperationParams<"workflow.draft_workspaces.set_step_input_bindings">
+    >().toMatchTypeOf<{
+      bindings: Array<InputPathBinding | InputValueBinding | InputExpressionBinding>;
+    }>();
+    expectTypeOf<
+      WorkflowOperationParams<"workflow.draft_workspaces.set_step_output_bindings">
+    >().toMatchTypeOf<{
+      bindings: Array<{ source: string; target: string }>;
     }>();
   });
 });

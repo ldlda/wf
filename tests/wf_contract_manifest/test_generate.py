@@ -91,7 +91,7 @@ def test_generates_the_complete_real_workflow_contract() -> None:
 
     assert len(manifest["operations"]) == 70
     assert len({operation["method"] for operation in manifest["operations"]}) == 70
-    assert len(schemas) == 127
+    assert len(schemas) == 133
     assert len(manifest["components"]["errors"]) == 1
     assert all(
         set(operation["result"]["schema"]) == {"$ref"}
@@ -121,6 +121,43 @@ def test_manifest_preserves_recursive_json_value_binding_contract() -> None:
     assert json_value_schema["anyOf"][5]["additionalProperties"] == {
         "$ref": "#/components/schemas/JsonValue"
     }
+
+
+def test_manifest_separates_recursive_step_inputs_from_workflow_outputs() -> None:
+    manifest = generate_manifest()
+    schemas = manifest["components"]["schemas"]
+
+    assert {
+        "ArrayExpression",
+        "InputExpression",
+        "InputExpressionBinding",
+        "LiteralExpression",
+        "ObjectExpression",
+        "PathExpression",
+    } <= schemas.keys()
+
+    input_binding_schema = schemas["InputExpressionBinding"]
+    assert input_binding_schema["properties"]["expression"] == {
+        "$ref": "#/components/schemas/InputExpression"
+    }
+    expression_schema = schemas["InputExpression"]
+    assert expression_schema["discriminator"] == {
+        "mapping": {
+            "array": "#/components/schemas/ArrayExpression",
+            "literal": "#/components/schemas/LiteralExpression",
+            "object": "#/components/schemas/ObjectExpression",
+            "path": "#/components/schemas/PathExpression",
+        },
+        "propertyName": "kind",
+    }
+
+    def operation(method: str) -> dict[str, Any]:
+        return next(item for item in manifest["operations"] if item["method"] == method)
+
+    step_input = operation("workflow.draft_workspaces.set_step_input_bindings")
+    step_output = operation("workflow.draft_workspaces.set_step_output_bindings")
+    assert "InputExpressionBinding" in str(step_input["params"])
+    assert "InputExpressionBinding" not in str(step_output["params"])
 
 
 def test_manifest_contains_the_two_focused_step_binding_operations() -> None:

@@ -165,6 +165,87 @@ describe("translateJsonSchema", () => {
     );
   });
 
+  it("translates a recursive discriminated oneOf contract", () => {
+    const components = {
+      InputExpression: {
+        discriminator: {
+          mapping: {
+            array: "#/components/schemas/ArrayExpression",
+            literal: "#/components/schemas/LiteralExpression",
+            object: "#/components/schemas/ObjectExpression",
+            path: "#/components/schemas/PathExpression",
+          },
+          propertyName: "kind",
+        },
+        oneOf: [
+          { $ref: "#/components/schemas/LiteralExpression" },
+          { $ref: "#/components/schemas/PathExpression" },
+          { $ref: "#/components/schemas/ArrayExpression" },
+          { $ref: "#/components/schemas/ObjectExpression" },
+        ],
+      },
+      LiteralExpression: {
+        additionalProperties: false,
+        properties: {
+          kind: { const: "literal", type: "string" },
+          value: { type: "string" },
+        },
+        required: ["kind", "value"],
+        type: "object",
+      },
+      PathExpression: {
+        additionalProperties: false,
+        properties: {
+          kind: { const: "path", type: "string" },
+          path: { type: "string" },
+        },
+        required: ["kind", "path"],
+        type: "object",
+      },
+      ArrayExpression: {
+        additionalProperties: false,
+        properties: {
+          kind: { const: "array", type: "string" },
+          items: {
+            items: { $ref: "#/components/schemas/InputExpression" },
+            type: "array",
+          },
+        },
+        required: ["kind", "items"],
+        type: "object",
+      },
+      ObjectExpression: {
+        additionalProperties: false,
+        properties: {
+          fields: {
+            additionalProperties: { $ref: "#/components/schemas/InputExpression" },
+            type: "object",
+          },
+          kind: { const: "object", type: "string" },
+        },
+        required: ["kind", "fields"],
+        type: "object",
+      },
+    };
+    const schema = translatedSchema(
+      { $ref: "#/components/schemas/InputExpression" },
+      components,
+    );
+
+    expect(accepts(schema, { kind: "literal", value: "hello" })).toBe(true);
+    expect(
+      accepts(schema, {
+        kind: "object",
+        fields: {
+          nested: { kind: "array", items: [{ kind: "path", path: "state.foo" }] },
+        },
+      }),
+    ).toBe(true);
+    expect(accepts(schema, { kind: "literal", value: "hello", extra: true })).toBe(
+      false,
+    );
+  });
+
   it("rejects unproductive component reference cycles", () => {
     const components = {
       Loop: { $ref: "#/components/schemas/Loop" },

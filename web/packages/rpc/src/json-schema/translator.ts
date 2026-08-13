@@ -270,7 +270,7 @@ class Translator {
       return failure(path, "JSON Schema must be a boolean or object");
     }
 
-    for (const keyword of ["allOf", "if", "not", "oneOf", "then", "else"]) {
+    for (const keyword of ["allOf", "if", "not", "then", "else"]) {
       if (keyword in value) {
         return failure(
           path,
@@ -282,6 +282,9 @@ class Translator {
 
     if ("$ref" in value) {
       return this.#translateRef(value, path, structuralDepth);
+    }
+    if ("oneOf" in value) {
+      return this.#translateDiscriminatedOneOf(value, path, structuralDepth);
     }
     if ("anyOf" in value) {
       return this.#translateAnyOf(value, path, structuralDepth);
@@ -395,6 +398,62 @@ class Translator {
       if (Either.isLeft(translated)) return translated;
       members.push(translated.right);
     }
+    return Either.right(Schema.Union(...members));
+  }
+
+  #translateDiscriminatedOneOf(
+    value: Readonly<Record<string, unknown>>,
+    path: string,
+    structuralDepth: number,
+  ): Either.Either<Schema.Schema.AnyNoContext, JsonSchemaTranslationError> {
+    const unsupported = unsupportedKeyword(
+      value,
+      new Set(["discriminator", "oneOf"]),
+      path,
+    );
+    if (unsupported !== null) return Either.left(unsupported);
+    if (!Array.isArray(value.oneOf) || value.oneOf.length === 0) {
+      return failure(path, "oneOf must be a non-empty array", "oneOf");
+    }
+    if (!isRecord(value.discriminator)) {
+      return failure(
+        path,
+        "oneOf is supported only with a discriminator",
+        "oneOf",
+      );
+    }
+    if (
+      typeof value.discriminator.propertyName !== "string" ||
+      value.discriminator.propertyName.length === 0
+    ) {
+      return failure(
+        path,
+        "discriminator.propertyName must be a non-empty string",
+        "discriminator",
+      );
+    }
+    const mapping = value.discriminator.mapping;
+    if (!isRecord(mapping) || Object.values(mapping).some((ref) => typeof ref !== "string")) {
+      return failure(
+        path,
+        "discriminator.mapping must map tags to local references",
+        "discriminator",
+      );
+    }
+
+    const members: Schema.Schema.AnyNoContext[] = [];
+    for (const [index, member] of value.oneOf.entries()) {
+      const translated = this.translate(
+        member,
+        `${path}.oneOf[${index}]`,
+        structuralDepth,
+      );
+      if (Either.isLeft(translated)) return translated;
+      members.push(translated.right);
+    }
+    // The generated InputExpression branches are disjoint by their tag, so a
+    // runtime union preserves the discriminated contract without weakening
+    // arbitrary oneOf schemas into an overlapping union.
     return Either.right(Schema.Union(...members));
   }
 

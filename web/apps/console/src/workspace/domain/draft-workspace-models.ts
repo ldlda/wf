@@ -2,6 +2,14 @@ import * as v from "valibot";
 
 export type JsonObject = Record<string, unknown>;
 
+export type JsonValue =
+  | null
+  | boolean
+  | number
+  | string
+  | ReadonlyArray<JsonValue>
+  | { readonly [key: string]: JsonValue };
+
 export type InputPath =
   | string
   | {
@@ -28,6 +36,39 @@ export type InputValueBinding = {
 
 export type InputBinding = InputPathBinding | InputValueBinding;
 
+export type LiteralExpression = {
+  readonly kind: "literal";
+  readonly value: JsonValue;
+};
+
+export type PathExpression = {
+  readonly kind: "path";
+  readonly path: InputPath;
+};
+
+export type ArrayExpression = {
+  readonly kind: "array";
+  readonly items: ReadonlyArray<InputExpression>;
+};
+
+export type ObjectExpression = {
+  readonly kind: "object";
+  readonly fields: Readonly<Record<string, InputExpression>>;
+};
+
+export type InputExpression =
+  | LiteralExpression
+  | PathExpression
+  | ArrayExpression
+  | ObjectExpression;
+
+export type InputExpressionBinding = {
+  readonly target: LocalInputPath;
+  readonly expression: InputExpression;
+};
+
+export type StepInputBinding = InputBinding | InputExpressionBinding;
+
 export type StatePath =
   | string
   | { readonly root: "state"; readonly parts: string[] };
@@ -41,7 +82,7 @@ export type SetStepInputBindingsInput = {
   readonly workspaceId: string;
   readonly revision: number;
   readonly stepId: string;
-  readonly bindings: ReadonlyArray<InputBinding>;
+  readonly bindings: ReadonlyArray<StepInputBinding>;
 };
 
 export type SetStepOutputBindingsInput = {
@@ -85,7 +126,7 @@ export type AddCapabilityStepInput = {
   readonly routeFromOutcome?: string;
   readonly routes?: Record<string, string> | null;
   readonly inputMap?: Record<string, string> | null;
-  readonly inputBindings?: ReadonlyArray<InputBinding> | null;
+  readonly inputBindings?: ReadonlyArray<StepInputBinding> | null;
   readonly bindOutputs?: Record<string, string>;
   readonly description?: string | null;
   readonly retry?: number | null;
@@ -98,7 +139,7 @@ export type UpdateCapabilityStepInput = {
   readonly stepId: string;
   readonly update: {
     readonly description?: string | null;
-    readonly input?: ReadonlyArray<InputBinding> | null;
+    readonly input?: ReadonlyArray<StepInputBinding> | null;
     readonly retry?: number | null;
     readonly timeoutSeconds?: number | null;
   };

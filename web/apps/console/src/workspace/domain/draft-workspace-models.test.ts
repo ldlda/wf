@@ -5,6 +5,8 @@ import {
   type AddCapabilityStepInput,
   type CreateEmptyDraftInput,
   type InputBinding,
+  type InputExpression,
+  type StepInputBinding,
 } from "./draft-workspace-models.js";
 
 const summary = {
@@ -33,6 +35,28 @@ describe("draft workspace models", () => {
 
     expect(canonicalBinding).toEqual({ target: "text", path: "input.text" });
     expect(invalidInput).toBeDefined();
+  });
+
+  it("models a recursive node-local expression without widening workflow outputs", () => {
+    const expression = {
+      kind: "object",
+      fields: {
+        items: {
+          kind: "array",
+          items: [
+            { kind: "path", path: "state.foo" },
+            { kind: "literal", value: "wowcool" },
+          ],
+        },
+      },
+    } satisfies InputExpression;
+    const binding = {
+      target: "request",
+      expression,
+    } satisfies StepInputBinding;
+
+    expect(binding.expression.kind).toBe("object");
+    expect(binding.expression.fields.items.kind).toBe("array");
   });
 
   it("exposes camelCase inputs for draft authoring", () => {

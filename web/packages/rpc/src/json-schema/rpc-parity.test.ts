@@ -492,8 +492,8 @@ const parityCases: ReadonlyArray<ParityCase> = [
       input_schema: { type: "object" },
       state_schema: { type: "object" },
       output_schema: { type: "object" },
-      input: [{ text: "hello" }],
-      output: [{ text: "state.text" }],
+      input: [{ path: "input.text", target: "text" }],
+      output: [{ source: "text", target: "state.text" }],
       input_map: { "input.text": "text" },
       output_map: { text: "state.text" },
       error_message_source: "state.error_message",
@@ -1096,6 +1096,58 @@ describe("authored RPC and manifest schema parity", () => {
     })).toBe(false);
   });
 
+  it("accepts nested authored expressions and rejects over-specified variants", () => {
+    const basePayload = {
+      workspace_id: "console.demo",
+      revision: 3,
+      step_id: "concat",
+    };
+    const expression = {
+      kind: "object",
+      fields: {
+        items: {
+          kind: "array",
+          items: [
+            { kind: "path", path: "state.foo" },
+            { kind: "literal", value: "wowcool" },
+          ],
+        },
+        separator: { kind: "literal", value: " " },
+      },
+    };
+
+    expect(
+      accepts(WorkflowDraftWorkspacesSetStepInputBindingsPayloadSchema, {
+        ...basePayload,
+        bindings: [{ target: "request", expression }],
+      }),
+    ).toBe(true);
+    expect(
+      accepts(authoredRpcSchemas["workflow.draft_workspaces.set_step_input_bindings"].payload, {
+        ...basePayload,
+        bindings: [{ target: "request", expression }],
+      }),
+    ).toBe(true);
+    expect(
+      accepts(WorkflowDraftWorkspacesSetStepInputBindingsPayloadSchema, {
+        ...basePayload,
+        bindings: [{ target: "request", expression: { ...expression, extra: true } }],
+      }),
+    ).toBe(false);
+    expect(
+      accepts(authoredRpcSchemas["workflow.draft_workspaces.set_step_input_bindings"].payload, {
+        ...basePayload,
+        bindings: [{ target: "request", expression: { ...expression, extra: true } }],
+      }),
+    ).toBe(false);
+    expect(
+      accepts(authoredRpcSchemas["workflow.draft_workspaces.set_step_output_bindings"].payload, {
+        ...basePayload,
+        bindings: [{ target: "state.output", expression }],
+      }),
+    ).toBe(false);
+  });
+
   it("catalogs every authored RPC exactly once", () => {
     const expectedMethods = [
       "workflow.health",
@@ -1143,6 +1195,7 @@ describe("authored RPC and manifest schema parity", () => {
 
   it("reports the exact remaining translator blockers", () => {
     expect(parityReport().blockers).toEqual([
+      "workflow.draft_workspaces.create_from_capability:payload:oneOf@#/components/schemas/InputPathBinding.properties.path",
       "workflow.draft_workspaces.add_step_from_capability:payload:oneOf@#/components/schemas/InputPathBinding.properties.path",
       "workflow.draft_workspaces.update_capability_step:payload:oneOf@#/components/schemas/InputPathBinding.properties.path",
       "workflow.draft_workspaces.set_step_input_bindings:payload:oneOf@#/components/schemas/InputPathBinding.properties.path",

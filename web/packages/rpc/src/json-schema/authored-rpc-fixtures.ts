@@ -295,9 +295,83 @@ const InputValueBindingSchema = Schema.Struct({
   value: JsonValueSchema,
 });
 
+type GraphSourcePath =
+  | string
+  | {
+      readonly root: "input" | "state" | "context";
+      readonly parts: ReadonlyArray<string>;
+    };
+
+type InputExpression =
+  | { readonly kind: "literal"; readonly value: JsonValue }
+  | { readonly kind: "path"; readonly path: GraphSourcePath }
+  | { readonly kind: "array"; readonly items: ReadonlyArray<InputExpression> }
+  | { readonly kind: "object"; readonly fields: Readonly<Record<string, InputExpression>> };
+
+const GraphSourcePathSchema = Schema.Union(
+  Schema.String,
+  Schema.Struct({
+    parts: StructuralPathPartsSchema,
+    root: Schema.Literal("input", "state", "context"),
+  }),
+);
+
+const LiteralExpressionSchema = Schema.Struct({
+  kind: Schema.Literal("literal"),
+  value: JsonValueSchema,
+});
+const PathExpressionSchema = Schema.Struct({
+  kind: Schema.Literal("path"),
+  path: GraphSourcePathSchema,
+});
+const ArrayExpressionSchema = Schema.Struct({
+  kind: Schema.Literal("array"),
+  items: Schema.Array(
+    Schema.suspend(
+      (): Schema.Schema<InputExpression, unknown, never> => InputExpressionSchema,
+    ),
+  ),
+});
+const ObjectExpressionSchema = Schema.Struct({
+  kind: Schema.Literal("object"),
+  fields: Schema.Record({
+    key: Schema.String,
+    value: Schema.suspend(
+      (): Schema.Schema<InputExpression, unknown, never> => InputExpressionSchema,
+    ),
+  }),
+});
+// Keep the recursive authored decoder separate from the generated contract so
+// parity tests can catch drift in either direction.
+const InputExpressionSchema: Schema.Schema<InputExpression, unknown, never> =
+  Schema.suspend(
+    (): Schema.Schema<InputExpression, unknown, never> =>
+      Schema.Union(
+        LiteralExpressionSchema,
+        PathExpressionSchema,
+        ArrayExpressionSchema,
+        ObjectExpressionSchema,
+      ),
+  );
+const InputExpressionBindingSchema = Schema.Struct({
+  target: Schema.Union(
+    Schema.String,
+    Schema.Struct({
+      parts: StructuralPathPartsSchema,
+      root: Schema.Literal("local"),
+    }),
+  ),
+  expression: InputExpressionSchema,
+});
+
 const InputBindingSchema = Schema.Union(
   InputPathBindingSchema,
   InputValueBindingSchema,
+);
+const StepInputBindingSchema = Schema.Union(
+  InputPathBindingSchema,
+  InputValueBindingSchema,
+  InputExpressionBindingSchema,
 );
 
 const OutputBindingSchema = Schema.Struct({
@@ -319,7 +393,7 @@ const OutputBindingSchema = Schema.Struct({
 
 const CapabilityStepUpdateSchema = Schema.Struct({
   desc: Schema.optional(Schema.NullOr(Schema.String.pipe(Schema.minLength(1)))),
-  input: Schema.optional(Schema.NullOr(Schema.Array(InputBindingSchema))),
+  input: Schema.optional(Schema.NullOr(Schema.Array(StepInputBindingSchema))),
   retry: Schema.optional(Schema.NullOr(NonNegativeIntegerSchema)),
   timeout_seconds: Schema.optional(Schema.NullOr(PositiveIntegerSchema)),
 });
@@ -446,7 +520,7 @@ export const authoredRpcSchemas = {
         Schema.NullOr(Schema.Record({ key: Schema.String, value: Schema.String })),
       ),
       input_bindings: Schema.optional(
-        Schema.NullOr(Schema.Array(InputBindingSchema)),
+        Schema.NullOr(Schema.Array(StepInputBindingSchema)),
       ),
       bind_outputs: Schema.optional(
         Schema.Record({ key: Schema.String, value: Schema.String }),
@@ -481,7 +555,7 @@ export const authoredRpcSchemas = {
       workspace_id: Schema.String.pipe(Schema.minLength(1)),
       revision: PositiveIntegerSchema,
       step_id: Schema.String.pipe(Schema.minLength(1)),
-      bindings: Schema.Array(InputBindingSchema),
+      bindings: Schema.Array(StepInputBindingSchema),
     }),
     success: DraftWorkspaceSchema,
   },

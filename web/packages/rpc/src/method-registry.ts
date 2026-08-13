@@ -1,6 +1,9 @@
 import { Schema } from "effect";
 import type {
   NodeSpecCapabilitySummary,
+  InputExpressionBinding,
+  InputPathBinding,
+  InputValueBinding,
   WorkflowOperationName,
   WrapperArtifactCapabilitySummary,
 } from "./generated/workflow-contract.js";
@@ -53,6 +56,11 @@ import {
   WorkflowRunsTracePayloadSchema,
   WorkflowRunsTraceResultSchema,
 } from "./rpcs.js";
+
+type StepInputBinding =
+  | InputPathBinding
+  | InputValueBinding
+  | InputExpressionBinding;
 
 export type OperationMeta = {
   readonly method: WorkflowOperationName;
@@ -174,17 +182,21 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
 const inputBindingCliArgs = (
-  bindings: readonly unknown[],
+  bindings: readonly StepInputBinding[],
   pathFlag: "--input" | "--map" = "--input",
 ): { readonly args: readonly string[]; readonly unavailable: readonly string[] } => {
   const args: string[] = [];
   const unavailable: string[] = [];
   for (const binding of bindings) {
-    if (!isRecord(binding) || typeof binding.target !== "string") {
+    if (typeof binding.target !== "string") {
       unavailable.push("input_bindings (use --bindings-file)");
       continue;
     }
-    if (typeof binding.path === "string") {
+    if ("path" in binding) {
+      if (typeof binding.path !== "string") {
+        unavailable.push("input_bindings (use --bindings-file)");
+        continue;
+      }
       args.push(pathFlag, shellArg(`${binding.path}=${binding.target}`));
       continue;
     }
@@ -192,9 +204,18 @@ const inputBindingCliArgs = (
       const serialized = JSON.stringify(binding.value);
       if (serialized !== undefined) {
         args.push("--value", shellArg(`${binding.target}=${serialized}`));
-        continue;
+      } else {
+        unavailable.push("input_bindings (use --bindings-file)");
       }
+      continue;
     }
+    if ("expression" in binding) {
+      // Composite expressions have no lossless inline CLI equivalent.
+      unavailable.push("input_bindings (use --bindings-file)");
+      continue;
+    }
+    const exhaustive: never = binding;
+    void exhaustive;
     unavailable.push("input_bindings (use --bindings-file)");
   }
   return { args, unavailable };

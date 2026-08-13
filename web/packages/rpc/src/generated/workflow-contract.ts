@@ -175,6 +175,11 @@ export type JsonValue =
   | null;
 /**
  * This interface was referenced by `WorkflowContractMap`'s JSON-Schema
+ * via the `definition` "InputExpression".
+ */
+export type InputExpression = LiteralExpression | PathExpression | ArrayExpression | ObjectExpression;
+/**
+ * This interface was referenced by `WorkflowContractMap`'s JSON-Schema
  * via the `definition` "CompileDraftWorkspaceResult".
  */
 export type CompileDraftWorkspaceResult = CompileDraftWorkspaceSuccess | InvalidDraftResult;
@@ -444,7 +449,7 @@ export interface WorkflowContractMap {
       input_map?: {
         [k: string]: string;
       } | null;
-      input_bindings?: (InputPathBinding | InputValueBinding)[] | null;
+      input_bindings?: (InputPathBinding | InputValueBinding | InputExpressionBinding)[] | null;
       bind_outputs?: {
         [k: string]: string;
       };
@@ -535,8 +540,8 @@ export interface WorkflowContractMap {
       output_schema?: {
         [k: string]: unknown;
       } | null;
-      input?: unknown[] | null;
-      output?: unknown[] | null;
+      input?: (InputPathBinding | InputValueBinding | InputExpressionBinding)[] | null;
+      output?: OutputBinding[] | null;
       input_map?: {
         [k: string]: string;
       } | null;
@@ -688,7 +693,7 @@ export interface WorkflowContractMap {
       workspace_id: string;
       revision: number;
       step_id: string;
-      bindings: (InputPathBinding | InputValueBinding)[];
+      bindings: (InputPathBinding | InputValueBinding | InputExpressionBinding)[];
     };
     result: DraftWorkspaceResult;
   };
@@ -774,8 +779,8 @@ export interface WorkflowContractMap {
       output_schema?: {
         [k: string]: unknown;
       } | null;
-      input?: unknown[] | null;
-      output?: unknown[] | null;
+      input?: (InputPathBinding | InputValueBinding | InputExpressionBinding)[] | null;
+      output?: OutputBinding[] | null;
       input_map?: {
         [k: string]: string;
       } | null;
@@ -1493,7 +1498,7 @@ export interface DraftUseStep {
   /**
    * Canonical input bindings for this capability. Use path bindings for graph-to-local input and value bindings for literals.
    */
-  input?: (InputPathBinding | InputValueBinding)[];
+  input?: (InputPathBinding | InputValueBinding | InputExpressionBinding)[];
   /**
    * Canonical output bindings from node-local output paths to workflow state destinations.
    */
@@ -1565,6 +1570,80 @@ export interface InputValueBinding {
         [k: string]: JsonValue;
       }
     | null;
+}
+/**
+ * Assign one recursively composed expression to a node-local target.
+ *
+ * This interface was referenced by `WorkflowContractMap`'s JSON-Schema
+ * via the `definition` "InputExpressionBinding".
+ */
+export interface InputExpressionBinding {
+  expression: InputExpression;
+  /**
+   * Node-local path. Use the root marker `.` for the whole payload.
+   */
+  target:
+    | string
+    | {
+        /**
+         * @minItems 0
+         */
+        parts: string[];
+        root: "local";
+      };
+}
+/**
+ * A strict JSON literal embedded in a node-local input expression.
+ *
+ * This interface was referenced by `WorkflowContractMap`'s JSON-Schema
+ * via the `definition` "LiteralExpression".
+ */
+export interface LiteralExpression {
+  kind: "literal";
+  value: JsonValue;
+}
+/**
+ * Read one graph source path while resolving a composite input.
+ *
+ * This interface was referenced by `WorkflowContractMap`'s JSON-Schema
+ * via the `definition` "PathExpression".
+ */
+export interface PathExpression {
+  kind: "path";
+  /**
+   * Readable graph path rooted at input, state, or context.
+   */
+  path:
+    | string
+    | {
+        /**
+         * @minItems 0
+         */
+        parts: string[];
+        root: "input" | "state" | "context";
+      };
+}
+/**
+ * Resolve ordered child expressions into one JSON array.
+ *
+ * This interface was referenced by `WorkflowContractMap`'s JSON-Schema
+ * via the `definition` "ArrayExpression".
+ */
+export interface ArrayExpression {
+  items: InputExpression[];
+  kind: "array";
+}
+/**
+ * Resolve named child expressions into one JSON object.
+ *
+ * This interface was referenced by `WorkflowContractMap`'s JSON-Schema
+ * via the `definition` "ObjectExpression".
+ */
+export interface ObjectExpression {
+  fields: {
+    [k: string]: InputExpression;
+  };
+  kind: "object";
 }
 /**
  * Map one node-local output path into one workflow state path.
@@ -1689,7 +1768,7 @@ export interface DraftInterruptStep {
 export interface DraftInterruptPayload {
   kind: string;
   outcomes?: string[];
-  request?: (InputPathBinding | InputValueBinding)[];
+  request?: (InputPathBinding | InputValueBinding | InputExpressionBinding)[];
   request_schema?: SchemaRef | null;
   resume?: OutputBinding[];
   resume_schema?: SchemaRef | null;
@@ -1936,7 +2015,7 @@ export interface DraftSubgraphStep {
  */
 export interface DraftSubgraphPayload {
   desc?: string | null;
-  input?: (InputPathBinding | InputValueBinding)[];
+  input?: (InputPathBinding | InputValueBinding | InputExpressionBinding)[];
   input_schema?: SchemaRef;
   /**
    * @minItems 1
@@ -2135,7 +2214,7 @@ export interface ListDraftWorkspacesResult {
  */
 export interface CapabilityStepUpdate {
   desc?: string | null;
-  input?: (InputPathBinding | InputValueBinding)[] | null;
+  input?: (InputPathBinding | InputValueBinding | InputExpressionBinding)[] | null;
   retry?: number | null;
   timeout_seconds?: number | null;
 }
@@ -2592,6 +2671,27 @@ export type WorkflowOperationResult<Name extends WorkflowOperationName> =
 // Runtime JSON Schema is limited to parity-verified authored RPCs.
 export const workflowRuntimeContract = {
   "components": {
+    "ArrayExpression": {
+      "additionalProperties": false,
+      "description": "Resolve ordered child expressions into one JSON array.",
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/components/schemas/InputExpression"
+          },
+          "type": "array"
+        },
+        "kind": {
+          "const": "array",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "items"
+      ],
+      "type": "object"
+    },
     "ArtifactCatalogEntryPayload": {
       "description": "Compact artifact row returned by discovery operations.",
       "properties": {
@@ -2776,9 +2876,11 @@ export const workflowRuntimeContract = {
                   },
                   {
                     "$ref": "#/components/schemas/InputValueBinding"
+                  },
+                  {
+                    "$ref": "#/components/schemas/InputExpressionBinding"
                   }
-                ],
-                "description": "Canonical node input binding. Use either a path binding with `path`, or a literal binding with `value`; do not provide both."
+                ]
               },
               "type": "array"
             },
@@ -3082,6 +3184,77 @@ export const workflowRuntimeContract = {
       "required": [
         "status",
         "store_root"
+      ],
+      "type": "object"
+    },
+    "InputExpression": {
+      "discriminator": {
+        "mapping": {
+          "array": "#/components/schemas/ArrayExpression",
+          "literal": "#/components/schemas/LiteralExpression",
+          "object": "#/components/schemas/ObjectExpression",
+          "path": "#/components/schemas/PathExpression"
+        },
+        "propertyName": "kind"
+      },
+      "oneOf": [
+        {
+          "$ref": "#/components/schemas/LiteralExpression"
+        },
+        {
+          "$ref": "#/components/schemas/PathExpression"
+        },
+        {
+          "$ref": "#/components/schemas/ArrayExpression"
+        },
+        {
+          "$ref": "#/components/schemas/ObjectExpression"
+        }
+      ]
+    },
+    "InputExpressionBinding": {
+      "additionalProperties": false,
+      "description": "Assign one recursively composed expression to a node-local target.",
+      "properties": {
+        "expression": {
+          "$ref": "#/components/schemas/InputExpression"
+        },
+        "target": {
+          "description": "Node-local path. Use the root marker `.` for the whole payload.",
+          "anyOf": [
+            {
+              "description": "Canonical TOML-key path string.",
+              "type": "string"
+            },
+            {
+              "additionalProperties": false,
+              "description": "Structural path object accepted as input.",
+              "properties": {
+                "parts": {
+                  "items": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "minItems": 0,
+                  "type": "array"
+                },
+                "root": {
+                  "const": "local",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "root",
+                "parts"
+              ],
+              "type": "object"
+            }
+          ]
+        }
+      },
+      "required": [
+        "target",
+        "expression"
       ],
       "type": "object"
     },
@@ -3522,6 +3695,24 @@ export const workflowRuntimeContract = {
       ],
       "type": "object"
     },
+    "LiteralExpression": {
+      "additionalProperties": false,
+      "description": "A strict JSON literal embedded in a node-local input expression.",
+      "properties": {
+        "kind": {
+          "const": "literal",
+          "type": "string"
+        },
+        "value": {
+          "$ref": "#/components/schemas/JsonValue"
+        }
+      },
+      "required": [
+        "kind",
+        "value"
+      ],
+      "type": "object"
+    },
     "NextActionPatchExamplePayload": {
       "description": "Concrete follow-up operation suggested to an API caller.",
       "properties": {
@@ -3710,6 +3901,27 @@ export const workflowRuntimeContract = {
       ],
       "type": "object"
     },
+    "ObjectExpression": {
+      "additionalProperties": false,
+      "description": "Resolve named child expressions into one JSON object.",
+      "properties": {
+        "fields": {
+          "additionalProperties": {
+            "$ref": "#/components/schemas/InputExpression"
+          },
+          "type": "object"
+        },
+        "kind": {
+          "const": "object",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "fields"
+      ],
+      "type": "object"
+    },
     "OutputBinding": {
       "additionalProperties": false,
       "description": "Map one node-local output path into one workflow state path.",
@@ -3782,6 +3994,57 @@ export const workflowRuntimeContract = {
       "required": [
         "source",
         "target"
+      ],
+      "type": "object"
+    },
+    "PathExpression": {
+      "additionalProperties": false,
+      "description": "Read one graph source path while resolving a composite input.",
+      "properties": {
+        "kind": {
+          "const": "path",
+          "type": "string"
+        },
+        "path": {
+          "description": "Readable graph path rooted at input, state, or context.",
+          "anyOf": [
+            {
+              "description": "Canonical TOML-key path string.",
+              "type": "string"
+            },
+            {
+              "additionalProperties": false,
+              "description": "Structural path object accepted as input.",
+              "properties": {
+                "parts": {
+                  "items": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "minItems": 0,
+                  "type": "array"
+                },
+                "root": {
+                  "enum": [
+                    "input",
+                    "state",
+                    "context"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "root",
+                "parts"
+              ],
+              "type": "object"
+            }
+          ]
+        }
+      },
+      "required": [
+        "kind",
+        "path"
       ],
       "type": "object"
     },
@@ -5206,9 +5469,11 @@ export const workflowRuntimeContract = {
                     },
                     {
                       "$ref": "#/components/schemas/InputValueBinding"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InputExpressionBinding"
                     }
-                  ],
-                  "description": "Canonical node input binding. Use either a path binding with `path`, or a literal binding with `value`; do not provide both."
+                  ]
                 },
                 "type": "array"
               },
@@ -5422,7 +5687,19 @@ export const workflowRuntimeContract = {
           "input": {
             "anyOf": [
               {
-                "items": {},
+                "items": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/InputPathBinding"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InputValueBinding"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InputExpressionBinding"
+                    }
+                  ]
+                },
                 "type": "array"
               },
               {
@@ -5434,7 +5711,9 @@ export const workflowRuntimeContract = {
           "output": {
             "anyOf": [
               {
-                "items": {},
+                "items": {
+                  "$ref": "#/components/schemas/OutputBinding"
+                },
                 "type": "array"
               },
               {
@@ -5586,9 +5865,11 @@ export const workflowRuntimeContract = {
                 },
                 {
                   "$ref": "#/components/schemas/InputValueBinding"
+                },
+                {
+                  "$ref": "#/components/schemas/InputExpressionBinding"
                 }
-              ],
-              "description": "Canonical node input binding. Use either a path binding with `path`, or a literal binding with `value`; do not provide both."
+              ]
             },
             "type": "array"
           }

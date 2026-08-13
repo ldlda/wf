@@ -522,6 +522,43 @@ describe("run operation registry", () => {
     );
   });
 
+  it("does not flatten composite bindings into a fake inline CLI value", async () => {
+    const { getOperationMeta } = await import("./method-registry.js");
+    const operation = getOperationMeta(
+      "workflow.draft_workspaces.set_step_input_bindings",
+    );
+    if (operation === undefined) throw new Error("missing set-input operation");
+
+    const cli = operation.equivalentCli({
+      workspace_id: "console.demo",
+      revision: 3,
+      step_id: "concat",
+      bindings: [
+        {
+          target: "request",
+          expression: {
+            kind: "object",
+            fields: {
+              items: {
+                kind: "array",
+                items: [
+                  { kind: "path", path: "state.foo" },
+                  { kind: "literal", value: "wowcool" },
+                ],
+              },
+              separator: { kind: "literal", value: " " },
+            },
+          },
+        },
+      ],
+    });
+
+    expect(cli).toContain(
+      "[non-equivalent: unavailable CLI representation for input_bindings (use --bindings-file)]",
+    );
+    expect(cli).not.toContain("--value");
+  });
+
   it("explains unavailable inline schema and capability fields", async () => {
     const { getOperationMeta } = await import("./method-registry.js");
     const createEmpty = getOperationMeta(

@@ -55,4 +55,25 @@ describe("canonical capability form projection", () => {
 
     expect(projected?.initialInputValue).toEqual({ items: [] });
   });
+
+  it("preserves a valid expression binding while projecting the legacy form", () => {
+    const expression = {
+      kind: "object",
+      fields: {
+        value: { kind: "path", path: "state.foo" },
+        label: { kind: "literal", value: "wowcool" },
+      },
+    } as const;
+    const projected = canonicalCapabilityFormData(
+      draft({
+        use: "wf.std.concat",
+        input: [{ target: "request", expression }],
+      }),
+      "render",
+    );
+
+    expect(projected?.initialValue.inputBindings).toEqual([
+      { target: "request", expression },
+    ]);
+  });
 });

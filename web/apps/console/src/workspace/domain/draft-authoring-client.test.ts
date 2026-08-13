@@ -6,6 +6,7 @@ import {
   type CreateEmptyDraftInput,
   type CreateFromCapabilityInput,
   type InputBinding,
+  type StepInputBinding,
   type InputPathBinding,
   type InputValueBinding,
   type OutputBinding,
@@ -475,5 +476,60 @@ describe("DraftAuthoringClient", () => {
       },
       decodeDraftWorkspace,
     );
+  });
+
+  it("preserves recursive expression bindings when sending node-local inputs", async () => {
+    const { executor: writeExecutor, run } = createExecutor();
+    const client = createDraftAuthoringClient(writeExecutor);
+    const bindings = [
+      {
+        target: "request",
+        expression: {
+          kind: "object",
+          fields: {
+            items: {
+              kind: "array",
+              items: [
+                { kind: "path", path: "state.foo" },
+                { kind: "literal", value: "wowcool" },
+              ],
+            },
+            separator: { kind: "literal", value: " " },
+          },
+        },
+      },
+    ] satisfies ReadonlyArray<StepInputBinding>;
+
+    await client.setStepInputBindings({
+      workspaceId: "report",
+      revision: 7,
+      stepId: "concat",
+      bindings,
+    });
+
+    expect(run).toHaveBeenCalledWith(
+      "workflow.draft_workspaces.set_step_input_bindings",
+      {
+        workspace_id: "report",
+        revision: 7,
+        step_id: "concat",
+        bindings,
+      },
+      decodeDraftWorkspace,
+    );
+    const sentParams = run.mock.calls[0]?.[1] as {
+      readonly bindings: ReadonlyArray<StepInputBinding>;
+    };
+    const sourceBinding = bindings[0];
+    const sentBinding = sentParams.bindings[0];
+    if (sourceBinding === undefined || sentBinding === undefined) {
+      throw new Error("expected the recursive binding to be sent");
+    }
+    expect(sentParams.bindings).not.toBe(bindings);
+    expect(sentBinding).not.toBe(sourceBinding);
+    if (!("expression" in sourceBinding) || !("expression" in sentBinding)) {
+      throw new Error("expected an expression binding");
+    }
+    expect(sentBinding.expression).not.toBe(sourceBinding.expression);
   });
 });

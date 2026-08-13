@@ -5,6 +5,7 @@ import type {
   DraftWorkspace,
   InputBinding,
   OutputBinding,
+  StepInputBinding,
 } from "../domain/draft-workspace-models.js";
 import type { DraftAuthoringClient } from "../domain/draft-authoring-client.js";
 import type { DraftWorkspaceClient } from "../domain/draft-workspace-client.js";
@@ -18,9 +19,10 @@ import type { CapabilitySetupPatch } from "./selected-step-dataflow.js";
 import { useDraftAuthoring } from "./useDraftAuthoring.js";
 
 vi.mock("../context.js", () => ({ useConsoleWorkspace: vi.fn() }));
-vi.mock("../domain/draft-authoring-client.js", () => ({
-  createDraftAuthoringClient: vi.fn(),
-}));
+vi.mock("../domain/draft-authoring-client.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../domain/draft-authoring-client.js")>();
+  return { ...actual, createDraftAuthoringClient: vi.fn() };
+});
 vi.mock("../domain/draft-workspace-client.js", () => ({
   createDraftWorkspaceClient: vi.fn(),
 }));
@@ -596,6 +598,37 @@ describe("useDraftAuthoring", () => {
       { path: "input.title", target: "title" },
       { target: "separator", value: null },
     ] satisfies ReadonlyArray<InputBinding>;
+    setStepInputBindings.mockResolvedValue(canonical);
+    const { result } = renderHook(() => useDraftAuthoring({
+      draft: initial,
+      initialSelection: { kind: "node", nodeId: "render" },
+    }));
+
+    await act(async () => result.current.setStepInputs(bindings));
+
+    expect(setStepInputBindings).toHaveBeenCalledWith({
+      workspaceId: "draft-report",
+      revision: 7,
+      stepId: "render",
+      bindings,
+    });
+    expect(result.current.draft).toBe(canonical);
+  });
+
+  it("submits a recursive expression through the selected-step controller", async () => {
+    const initial = workspace({ revision: 7 });
+    const canonical = workspace({ revision: 8 });
+    const bindings = [
+      {
+        target: "request",
+        expression: {
+          kind: "object",
+          fields: {
+            value: { kind: "path", path: "state.foo" },
+          },
+        },
+      },
+    ] satisfies ReadonlyArray<StepInputBinding>;
     setStepInputBindings.mockResolvedValue(canonical);
     const { result } = renderHook(() => useDraftAuthoring({
       draft: initial,
