@@ -12,4 +12,4 @@ Task 5: complete (`1bb684bf`, fixes `cca1be89`, `0a7996da`, approved)
 
 Task 6: complete (`b8a16a0`, fixes `29d7a11d`, `18c9ef12`, approved)
 
-Task 7: complete (pending commit; React Doctor 98/100, one maintainability warning deferred)
+Task 7: complete (`c062680c`, React Doctor 98/100, one maintainability warning deferred)
