@@ -25,6 +25,34 @@ def test_workflow_draft_uses_keyed_steps() -> None:
     assert draft.steps["echo"].use == "demo.echo"
 
 
+def test_workflow_draft_preserves_composite_use_input() -> None:
+    binding = {
+        "target": "request",
+        "expression": {
+            "kind": "object",
+            "fields": {
+                "items": {
+                    "kind": "array",
+                    "items": [
+                        {"kind": "path", "path": "state.foo"},
+                        {"kind": "literal", "value": "wowcool"},
+                    ],
+                },
+                "separator": {"kind": "literal", "value": " "},
+            },
+        },
+    }
+
+    draft = WorkflowDraft.model_validate(
+        {
+            **_keyed_echo_draft(),
+            "steps": {"echo": {"use": "demo.echo", "input": [binding]}},
+        }
+    )
+
+    assert draft.model_dump(mode="json")["steps"]["echo"]["input"] == [binding]
+
+
 def test_workflow_draft_accepts_legacy_use_maps_but_dumps_canonical_bindings() -> None:
     draft = WorkflowDraft.model_validate(
         {

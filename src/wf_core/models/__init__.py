@@ -8,6 +8,18 @@ from wf_core.models.conditions import (
     PathOperand,
     VariadicCondition,
 )
+from wf_core.models.input_bindings import (
+    ArrayExpression,
+    InputExpression,
+    InputExpressionBinding,
+    InputPathBinding,
+    InputValueBinding,
+    LiteralExpression,
+    ObjectExpression,
+    PathExpression,
+    StepInputBinding,
+)
+from wf_core.models.json_values import JsonValue, validate_strict_json_value
 from wf_core.models.reducers import ReducerRef, ReducerSpec, SiblingWritePolicy
 from wf_core.models.results import NodeResult
 from wf_core.models.schemas import NodeDef, SchemaRef, StateField, StateSchema
@@ -27,6 +39,7 @@ from wf_core.models.workflow import Edge, Workflow
 from wf_core.models.workflow_refs import WorkflowRef, workflow_ref_from
 
 __all__ = [
+    "ArrayExpression",
     "BinaryCondition",
     "Condition",
     "ConditionNode",
@@ -37,24 +50,34 @@ __all__ = [
     "ForeachItemErrorPolicy",
     "ForeachNode",
     "InterruptNode",
+    "InputExpression",
+    "InputExpressionBinding",
+    "InputPathBinding",
+    "InputValueBinding",
     "JoinNode",
+    "JsonValue",
+    "LiteralExpression",
     "LiteralOperand",
     "NodeDef",
     "NodeResult",
     "NodeUse",
     "NotCondition",
+    "ObjectExpression",
     "Operand",
     "PathOperand",
+    "PathExpression",
     "ReducerRef",
     "ReducerSpec",
     "SchemaRef",
     "SiblingWritePolicy",
     "StateField",
     "StateSchema",
+    "StepInputBinding",
     "Step",
     "SubgraphNode",
     "VariadicCondition",
     "Workflow",
     "WorkflowRef",
     "workflow_ref_from",
+    "validate_strict_json_value",
 ]

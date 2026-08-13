@@ -1,8 +1,10 @@
 from __future__ import annotations
 
-from typing import Any
+from collections.abc import Sequence
+from typing import Any, cast
 
 from wf_authoring import WorkflowBuilder
+from wf_authoring.builder.mapping import InputBindingArg
 from wf_authoring.dsl import PathExpr
 from wf_core import JoinNode, SubgraphNode, Workflow
 from wf_core.paths import GraphSourcePath
@@ -52,7 +54,9 @@ def _add_step(builder: WorkflowBuilder, step_id: str, step: DraftStep):
         return builder.use_ref(
             step.use,
             id=step_id,
-            input=step.input,
+            # Task 1 persists composite inputs; the builder input union is
+            # widened in the later Python API carry-through task.
+            input=cast(Sequence[InputBindingArg], step.input),
             output=step.output,
             desc=step.desc,
         )

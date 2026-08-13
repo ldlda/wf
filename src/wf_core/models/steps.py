@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from math import isfinite
 from typing import Annotated, Literal, Self
 
 from jsonschema import Draft202012Validator, SchemaError, validators
@@ -9,100 +8,23 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
-    FiniteFloat,
     field_validator,
     model_validator,
 )
 
+from wf_core.models import input_bindings as _input_bindings
+from wf_core.models import json_values as _json_values
 from wf_core.models.conditions import Condition
 from wf_core.models.schemas import SchemaRef
 from wf_core.models.workflow_refs import WorkflowRef
 from wf_core.paths import GraphSourcePath, LocalPath, StatePath
 
-# Keep literals recursive at the canonical model seam so every downstream
-# contract generator sees the same JSON scalar/container union.
-type JsonValue = (
-    None | bool | int | FiniteFloat | str | list[JsonValue] | dict[str, JsonValue]
-)
-
-
-def _validate_strict_json_value(value: object) -> JsonValue:
-    """Reject Python containers and scalar types that JSON would coerce."""
-
-    if value is None or isinstance(value, bool) or isinstance(value, int):
-        return value
-    if isinstance(value, float):
-        if not isfinite(value):
-            raise ValueError("JSON numbers must be finite")
-        return value
-    if isinstance(value, str):
-        return value
-    if isinstance(value, list):
-        return [_validate_strict_json_value(item) for item in value]
-    if isinstance(value, dict):
-        if not all(isinstance(key, str) for key in value):
-            raise ValueError("JSON object keys must be strings")
-        return {key: _validate_strict_json_value(item) for key, item in value.items()}
-    raise ValueError("value must be a finite JSON value")
-
-
-class InputPathBinding(BaseModel):
-    """Map one workflow graph source path into one node-local input path."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    target: LocalPath = Field(
-        description=(
-            "Node-local input path to populate. Prefer canonical strings such "
-            "as `field` or `.` for the whole node input payload. Structural "
-            "objects such as {'root': 'local', 'parts': ['field']} are also "
-            "accepted as input."
-        )
-    )
-    path: GraphSourcePath = Field(
-        description=(
-            "Workflow source path to read from input, state, or context. "
-            "Prefer canonical strings such as `input.text` or `state.report`. "
-            "Structural objects such as {'root': 'input', 'parts': ['text']} "
-            "are also accepted as input."
-        )
-    )
-
-
-class InputValueBinding(BaseModel):
-    """Map one static value into one node-local input path."""
-
-    # Strict mode prevents Pydantic from silently turning Python-only values
-    # such as tuples, sets, and Decimal instances into JSON-shaped values.
-    model_config = ConfigDict(extra="forbid", strict=True)
-
-    target: LocalPath = Field(
-        description="Node-local input path that receives this literal JSON value."
-    )
-    value: JsonValue = Field(
-        description=(
-            "Literal JSON-compatible value to pass to the node. Use this for "
-            "constants, not for values read from workflow input or state."
-        )
-    )
-
-    @field_validator("value", mode="before")
-    @classmethod
-    def validate_value(cls, value: object) -> JsonValue:
-        return _validate_strict_json_value(value)
-
-
-InputBinding = Annotated[
-    InputPathBinding | InputValueBinding,
-    Field(
-        union_mode="left_to_right",
-        description=(
-            "Canonical node input binding. Use either a path binding with "
-            "`path`, or a literal binding with `value`; do not provide both."
-        ),
-    ),
-]
-"""Canonical node input binding, distinguished by `path` vs `value` shape."""
+InputBinding = _input_bindings.InputBinding
+InputExpressionBinding = _input_bindings.InputExpressionBinding
+InputPathBinding = _input_bindings.InputPathBinding
+InputValueBinding = _input_bindings.InputValueBinding
+JsonValue = _json_values.JsonValue
+StepInputBinding = _input_bindings.StepInputBinding
 
 
 class OutputBinding(BaseModel):
@@ -134,7 +56,7 @@ class NodeUse(BaseModel):
     type: Literal["node"]
     node: str
     desc: str | None = None
-    input: list[InputBinding] = Field(
+    input: list[StepInputBinding] = Field(
         default_factory=list,
         description=(
             "Bindings that build the node-local input payload from workflow "
@@ -231,7 +153,7 @@ class SubgraphNode(BaseModel):
         default_factory=lambda: SchemaRef(type="object"),
         description="Declared child workflow output contract used to validate output bindings.",
     )
-    input: list[InputBinding] = Field(
+    input: list[StepInputBinding] = Field(
         default_factory=list,
         description="Bindings that build the child workflow input payload.",
     )
@@ -405,7 +327,7 @@ class InterruptNode(BaseModel):
     id: str
     type: Literal["interrupt"]
     kind: str
-    request: list[InputBinding] = Field(
+    request: list[StepInputBinding] = Field(
         default_factory=list,
         description=(
             "Bindings that build the interrupt request payload sent to the client."

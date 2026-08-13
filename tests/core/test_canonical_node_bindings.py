@@ -5,6 +5,7 @@ from pydantic import ValidationError
 
 from wf_core.models.steps import (
     ForeachNode,
+    InputExpressionBinding,
     InputPathBinding,
     InputValueBinding,
     InterruptNode,
@@ -39,6 +40,32 @@ def test_node_use_accepts_canonical_input_and_output_bindings():
 
     assert node.output[0].source == LocalPath.of("echoed")
     assert node.output[0].target == StatePath.of("echoed")
+
+
+def test_node_use_accepts_composite_input_binding_without_flattening():
+    binding = {
+        "target": "request",
+        "expression": {
+            "kind": "object",
+            "fields": {
+                "items": {
+                    "kind": "array",
+                    "items": [
+                        {"kind": "path", "path": "state.foo"},
+                        {"kind": "literal", "value": "wowcool"},
+                    ],
+                },
+                "separator": {"kind": "literal", "value": " "},
+            },
+        },
+    }
+
+    node = NodeUse.model_validate(
+        {"id": "join", "type": "node", "node": "join", "input": [binding]}
+    )
+
+    assert isinstance(node.input[0], InputExpressionBinding)
+    assert node.model_dump(mode="json")["input"] == [binding]
 
 
 def test_node_use_converts_old_maps_to_canonical_bindings():

@@ -11,6 +11,7 @@ from wf_core.models.steps import (
     ForeachItemErrorPolicy,
     InputBinding,
     OutputBinding,
+    StepInputBinding,
 )
 from wf_core.models.workflow_refs import WorkflowRef
 from wf_core.paths import GraphSourcePath
@@ -41,7 +42,7 @@ class DraftUseStep(BaseModel):
     model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
     use: str
-    input: list[InputBinding] = Field(
+    input: list[StepInputBinding] = Field(
         default_factory=list,
         description=(
             "Canonical input bindings for this capability. Use path bindings "
@@ -154,7 +155,7 @@ class DraftInterruptPayload(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     kind: str
-    request: list[InputBinding] = Field(default_factory=list)
+    request: list[StepInputBinding] = Field(default_factory=list)
     resume: list[OutputBinding] = Field(default_factory=list)
     request_schema: SchemaRef | None = None
     resume_schema: SchemaRef | None = None
@@ -206,7 +207,7 @@ class DraftSubgraphPayload(BaseModel):
     desc: str | None = None
     input_schema: SchemaRef = Field(default_factory=lambda: SchemaRef(type="object"))
     output_schema: SchemaRef = Field(default_factory=lambda: SchemaRef(type="object"))
-    input: list[InputBinding] = Field(default_factory=list)
+    input: list[StepInputBinding] = Field(default_factory=list)
     output: list[OutputBinding] = Field(default_factory=list)
     outcomes: list[str] = Field(default_factory=lambda: ["ok"], min_length=1)
 
