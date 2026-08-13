@@ -5598,6 +5598,133 @@ async def test_set_step_input_bindings_uses_additional_property_source_schema(
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "additional_schema",
+    [
+        {"$ref": "https://example.com/schema.json"},
+        {"$ref": "#/$defs/Missing"},
+        {"$ref": "#/$defs/Node"},
+    ],
+)
+async def test_set_step_input_bindings_rejects_unresolvable_additional_source_refs(
+    tmp_path: Path,
+    additional_schema: dict[str, object],
+) -> None:
+    draft_api, service, authoring = _draft_api(
+        FileWorkflowArtifactStore(tmp_path / "composite_concat_bad_additional_source"),
+        register_echo=True,
+    )
+    service.register_specs(
+        "demo.personal",
+        replace(
+            echo_tool,
+            input_schema_contract={
+                "type": "object",
+                "properties": {"items": {"type": "array", "items": {"type": "string"}}},
+            },
+        ),
+    )
+    draft = _composite_concat_draft()
+    draft["steps"]["concat"]["use"] = "demo.personal.echo_tool"
+    state_schema: dict[str, object] = {
+        "type": "object",
+        "additionalProperties": additional_schema,
+    }
+    if additional_schema == {"$ref": "#/$defs/Node"}:
+        state_schema["$defs"] = {
+            "Node": {
+                "type": "object",
+                "properties": {"next": {"$ref": "#/$defs/Node"}},
+            }
+        }
+    draft["state_schema"] = state_schema
+    await draft_api.create_draft_workspace(workspace_id="concat", draft=draft)
+    before = await draft_api.get_draft_workspace(
+        workspace_id="concat", include_draft=True
+    )
+
+    with pytest.raises(ValueError, match="reference|unsupported|cyclic|unresolved"):
+        await authoring.set_step_input_bindings(
+            workspace_id="concat",
+            revision=1,
+            step_id="concat",
+            bindings=[
+                InputExpressionBinding.model_validate(
+                    {
+                        "target": "items",
+                        "expression": {
+                            "kind": "array",
+                            "items": [{"kind": "path", "path": "state.foo"}],
+                        },
+                    }
+                )
+            ],
+        )
+
+    after = await draft_api.get_draft_workspace(
+        workspace_id="concat", include_draft=True
+    )
+    assert after == before
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "additional_schema",
+    [
+        {"$ref": "https://example.com/schema.json"},
+        {"$ref": "#/$defs/Missing"},
+        {"$ref": "#/$defs/Node"},
+    ],
+)
+async def test_set_step_input_bindings_rejects_unresolvable_additional_path_refs(
+    tmp_path: Path,
+    additional_schema: dict[str, object],
+) -> None:
+    draft_api, service, authoring = _draft_api(
+        FileWorkflowArtifactStore(tmp_path / "composite_concat_bad_additional_path"),
+        register_echo=True,
+    )
+    service.register_specs(
+        "demo.personal",
+        replace(
+            echo_tool,
+            input_schema_contract={
+                "type": "object",
+                "properties": {"items": {"type": "array", "items": {"type": "string"}}},
+            },
+        ),
+    )
+    draft = _composite_concat_draft()
+    draft["steps"]["concat"]["use"] = "demo.personal.echo_tool"
+    state_schema: dict[str, object] = {
+        "type": "object",
+        "additionalProperties": additional_schema,
+    }
+    if additional_schema == {"$ref": "#/$defs/Node"}:
+        state_schema["$defs"] = {
+            "Node": {
+                "type": "object",
+                "properties": {"next": {"$ref": "#/$defs/Node"}},
+            }
+        }
+    draft["state_schema"] = state_schema
+    await draft_api.create_draft_workspace(workspace_id="concat", draft=draft)
+
+    with pytest.raises(ValueError, match="reference|unsupported|cyclic|unresolved"):
+        await authoring.set_step_input_bindings(
+            workspace_id="concat",
+            revision=1,
+            step_id="concat",
+            bindings=[
+                InputPathBinding(
+                    path=GraphSourcePath.state("foo"),
+                    target=LocalPath.of("items"),
+                )
+            ],
+        )
+
+
+@pytest.mark.asyncio
 async def test_set_step_input_bindings_accepts_additional_property_target(
     tmp_path: Path,
 ) -> None:

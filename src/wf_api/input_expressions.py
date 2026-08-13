@@ -145,19 +145,19 @@ def validate_and_project_input_expression(
             else:
                 source_document = projected_state
 
-            try:
+            if schema_location_is_explicit(
+                source_document,
+                source_path.parts,
+                label=f"{source_path.root} source schema",
+            ):
                 source_fragment = schema_fragment_at_location(
                     source_document,
                     source_path.parts,
                     label=f"{source_path.root} source schema",
                 )
-            except ValueError:
+            else:
                 source_fragment = None
-            if source_fragment is not None and schema_location_is_explicit(
-                source_document,
-                source_path.parts,
-                label=f"{source_path.root} source schema",
-            ):
+            if source_fragment is not None:
                 compatibility = _schema_assignability(
                     source_fragment,
                     fragment,
@@ -586,6 +586,11 @@ def _schema_types(schema: Mapping[str, Any]) -> set[str] | None:
 
 def _ensure_supported_schema(schema: Mapping[str, Any], *, label: str) -> None:
     _canonical_schema(schema, label=label)
+
+
+def validate_supported_input_schema(schema: Mapping[str, Any], *, label: str) -> None:
+    """Reject schema fragments outside the bounded input-schema subset."""
+    _ensure_supported_schema(schema, label=label)
 
 
 def _resolved_schema(

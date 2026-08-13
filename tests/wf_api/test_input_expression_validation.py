@@ -126,6 +126,49 @@ def test_object_additional_properties_are_compared_in_both_directions() -> None:
         )
 
 
+@pytest.mark.parametrize(
+    "source_additional",
+    [
+        {"$ref": "https://example.com/schema.json"},
+        {"$ref": "#/$defs/Missing"},
+        {
+            "$ref": "#/$defs/Node",
+        },
+    ],
+)
+def test_unresolvable_additional_property_refs_do_not_fall_back_to_target_schema(
+    source_additional: dict[str, object],
+) -> None:
+    state_schema: dict[str, object] = {
+        "type": "object",
+        "additionalProperties": source_additional,
+    }
+    if source_additional == {"$ref": "#/$defs/Node"}:
+        state_schema["$defs"] = {
+            "Node": {
+                "type": "object",
+                "properties": {"next": {"$ref": "#/$defs/Node"}},
+            }
+        }
+
+    with pytest.raises(ValueError, match="reference|unsupported|cyclic|unresolved"):
+        validate_and_project_input_expression(
+            InputExpressionBinding.model_validate(
+                {
+                    "target": "value",
+                    "expression": {"kind": "path", "path": "state.foo"},
+                }
+            ).expression,
+            target_schema={
+                "type": "object",
+                "properties": {"value": {"type": "string"}},
+            },
+            input_schema={"type": "object", "properties": {}},
+            state_schema=state_schema,
+            target_location=("value",),
+        )
+
+
 def test_cyclic_local_schema_normalization_fails_closed() -> None:
     with pytest.raises(ValueError, match="cyclic|depth|unsupported"):
         validate_and_project_input_expression(

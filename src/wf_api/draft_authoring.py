@@ -59,7 +59,10 @@ from .drafts import (
     _draft_input_maps,
     _draft_output_map,
 )
-from .input_expressions import validate_and_project_input_expression
+from .input_expressions import (
+    validate_and_project_input_expression,
+    validate_supported_input_schema,
+)
 from .models import DraftWorkspaceResult, JsonProjector
 from .operation_context import WorkflowOperationContext
 from .schema_projection import (
@@ -671,11 +674,21 @@ class WorkflowDraftAuthoringApi:
                 target_schema = (
                     projected_input if source.root == "input" else projected_state
                 )
-                if not schema_location_is_explicit(
+                if schema_location_is_explicit(
                     target_schema,
                     source.parts,
                     label=f"{source.root} source schema",
                 ):
+                    source_fragment = schema_fragment_at_location(
+                        target_schema,
+                        source.parts,
+                        label=f"{source.root} source schema",
+                    )
+                    validate_supported_input_schema(
+                        source_fragment,
+                        label=f"{source.root} source schema",
+                    )
+                else:
                     target_schema = project_schema_path_to_schema_path(
                         target_schema=target_schema,
                         source_schema=capability_schema,
