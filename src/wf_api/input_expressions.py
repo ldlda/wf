@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from copy import deepcopy
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Literal
 
 from jsonschema import Draft202012Validator, ValidationError
@@ -21,7 +21,7 @@ from .schema_projection import (
     _resolve_local_reference,
     project_schema_path_to_schema_path,
     schema_fragment_at_location,
-    schema_path_exists,
+    schema_location_is_explicit,
 )
 
 Compatibility = Literal["compatible", "incompatible", "unsupported"]
@@ -48,6 +48,10 @@ _STRUCTURAL_KEYWORDS = frozenset(
         "prefixItems",
         "minItems",
         "maxItems",
+        "minimum",
+        "maximum",
+        "exclusiveMinimum",
+        "exclusiveMaximum",
         "const",
         "enum",
         "$ref",
@@ -55,6 +59,26 @@ _STRUCTURAL_KEYWORDS = frozenset(
         "definitions",
     }
 )
+
+_NUMERIC_CONSTRAINT_KEYWORDS = frozenset(
+    {"minimum", "maximum", "exclusiveMinimum", "exclusiveMaximum"}
+)
+_MAX_SCHEMA_NORMALIZATION_NODES = 2048
+
+
+@dataclass
+class _SchemaNormalizationContext:
+    """Bound recursive local-schema expansion independently of call depth."""
+
+    nodes: int = 0
+    active_refs: set[str] = field(default_factory=set)
+
+    def visit(self, label: str) -> None:
+        self.nodes += 1
+        if self.nodes > _MAX_SCHEMA_NORMALIZATION_NODES:
+            raise ValueError(
+                f"schema normalization exceeds the global node budget at {label}"
+            )
 
 
 @dataclass(frozen=True)
@@ -121,12 +145,19 @@ def validate_and_project_input_expression(
             else:
                 source_document = projected_state
 
-            if schema_path_exists(source_document, source_path.parts):
+            try:
                 source_fragment = schema_fragment_at_location(
                     source_document,
                     source_path.parts,
                     label=f"{source_path.root} source schema",
                 )
+            except ValueError:
+                source_fragment = None
+            if source_fragment is not None and schema_location_is_explicit(
+                source_document,
+                source_path.parts,
+                label=f"{source_path.root} source schema",
+            ):
                 compatibility = _schema_assignability(
                     source_fragment,
                     fragment,
@@ -270,6 +301,13 @@ def _schema_assignability(
     source_label: str,
     target_label: str,
 ) -> Compatibility:
+    """Classify whether every value allowed by ``source`` fits ``target``.
+
+    This is deliberately a conservative three-state relation: ``compatible``
+    proves the subset relation, ``incompatible`` proves a counterexample, and
+    ``unsupported`` means the supported subset of JSON Schema cannot decide.
+    The caller must reject the last state rather than treating it as success.
+    """
     try:
         source_normalized = _canonical_schema(source, label=source_label)
         target_normalized = _canonical_schema(target, label=target_label)
@@ -278,16 +316,22 @@ def _schema_assignability(
     if source_normalized == target_normalized:
         return "compatible"
 
+    source_values = _finite_schema_values(source_normalized)
+    target_values = _finite_schema_values(target_normalized)
+    if source_values is not None:
+        validator = Draft202012Validator(target_normalized)
+        if all(validator.is_valid(value) for value in source_values):
+            return "compatible"
+        return "incompatible"
+    if target_values is not None:
+        return "unsupported"
+
     source_types = _schema_types(source_normalized)
     target_types = _schema_types(target_normalized)
     if source_types is None or target_types is None:
-        if source_types is None and target_types is not None:
-            # An unconstrained source is not proven to satisfy a typed target.
-            # Enum/const sources are handled separately because their finite
-            # values can still be checked against the target constraint.
-            if "const" not in source_normalized and "enum" not in source_normalized:
-                return "unsupported"
-        return _enum_assignability(source_normalized, target_normalized)
+        if not target_normalized:
+            return "compatible"
+        return "unsupported"
     if not _types_assignable(source_types, target_types):
         return "incompatible"
 
@@ -305,9 +349,10 @@ def _schema_assignability(
         "const",
         "enum",
     }
-    if constraint_keys:
+    unsupported_constraints = constraint_keys - _NUMERIC_CONSTRAINT_KEYWORDS
+    if unsupported_constraints:
         return "unsupported"
-    return _enum_assignability(source_normalized, target_normalized)
+    return _numeric_constraint_assignability(source_normalized, target_normalized)
 
 
 def _object_assignability(
@@ -342,21 +387,45 @@ def _object_assignability(
                 return status
         elif target.get("additionalProperties") is False:
             return "incompatible"
+        elif isinstance(target.get("additionalProperties"), Mapping):
+            status = _schema_assignability(
+                source_child,
+                target["additionalProperties"],
+                source_label=f"{source_label}.{name}",
+                target_label=f"{target_label}.additionalProperties",
+            )
+            if status != "compatible":
+                return status
     source_additional = source.get("additionalProperties", True)
     target_additional = target.get("additionalProperties", True)
     if target_additional is False and source_additional is not False:
         return "incompatible"
-    if isinstance(source_additional, Mapping) and isinstance(
-        target_additional, Mapping
-    ):
-        return _schema_assignability(
-            source_additional,
-            target_additional,
-            source_label=f"{source_label}.additionalProperties",
-            target_label=f"{target_label}.additionalProperties",
-        )
-    if isinstance(target_additional, Mapping) and source_additional is True:
-        return "unsupported"
+    for name, target_child in target_properties.items():
+        if name in source_properties:
+            continue
+        if source_additional is False:
+            continue
+        if isinstance(source_additional, Mapping):
+            status = _schema_assignability(
+                source_additional,
+                target_child,
+                source_label=f"{source_label}.additionalProperties",
+                target_label=f"{target_label}.{name}",
+            )
+            if status != "compatible":
+                return status
+        else:
+            return "unsupported"
+    if isinstance(target_additional, Mapping):
+        if isinstance(source_additional, Mapping):
+            return _schema_assignability(
+                source_additional,
+                target_additional,
+                source_label=f"{source_label}.additionalProperties",
+                target_label=f"{target_label}.additionalProperties",
+            )
+        if source_additional is True:
+            return "unsupported"
     return "compatible"
 
 
@@ -366,6 +435,21 @@ def _array_assignability(
     source_label: str,
     target_label: str,
 ) -> Compatibility:
+    source_min = source.get("minItems")
+    target_min = target.get("minItems")
+    if isinstance(target_min, int) and (
+        (not isinstance(source_min, int) and target_min > 0)
+        or isinstance(source_min, int)
+        and source_min < target_min
+    ):
+        return "incompatible"
+    source_max = source.get("maxItems")
+    target_max = target.get("maxItems")
+    if isinstance(target_max, int) and (
+        not isinstance(source_max, int) or source_max > target_max
+    ):
+        return "incompatible"
+
     source_prefix = source.get("prefixItems")
     target_prefix = target.get("prefixItems")
     if source_prefix is not None or target_prefix is not None:
@@ -389,8 +473,16 @@ def _array_assignability(
             if status != "compatible":
                 return status
 
-    source_items = source.get("items")
-    target_items = target.get("items")
+    source_items = source.get("items", True)
+    target_items = target.get("items", True)
+    if source_items is False:
+        return "compatible"
+    if target_items is False:
+        return "incompatible"
+    if target_items is True:
+        return "compatible"
+    if source_items is True:
+        return "unsupported"
     if isinstance(source_items, Mapping) and isinstance(target_items, Mapping):
         return _schema_assignability(
             source_items,
@@ -398,48 +490,89 @@ def _array_assignability(
             source_label=f"{source_label}.items",
             target_label=f"{target_label}.items",
         )
-    if source_items == target_items:
-        return "compatible"
-    if target_items is None or source_items is None:
-        return "unsupported"
-    return "incompatible"
-
-
-def _enum_assignability(
-    source: Mapping[str, Any],
-    target: Mapping[str, Any],
-) -> Compatibility:
-    if "const" in target:
-        if "const" in source:
-            return (
-                "compatible" if source["const"] == target["const"] else "incompatible"
-            )
-        if "enum" in source:
-            values = source["enum"]
-            return (
-                "compatible"
-                if isinstance(values, list) and values == [target["const"]]
-                else "incompatible"
-            )
-        return "unsupported"
-    if "enum" in target:
-        accepted = target["enum"]
-        if not isinstance(accepted, list):
-            return "unsupported"
-        if "const" in source:
-            return "compatible" if source["const"] in accepted else "incompatible"
-        if "enum" in source and isinstance(source["enum"], list):
-            return (
-                "compatible"
-                if set(source["enum"]).issubset(accepted)
-                else "incompatible"
-            )
-    return "compatible"
+    return "unsupported"
 
 
 def _types_assignable(source: set[str], target: set[str]) -> bool:
-    normalized_source = {"number" if item == "integer" else item for item in source}
-    return normalized_source.issubset(target)
+    return all(
+        any(
+            source_type == target_type
+            or source_type == "integer"
+            and target_type == "number"
+            for target_type in target
+        )
+        for source_type in source
+    )
+
+
+def _finite_schema_values(schema: Mapping[str, Any]) -> list[Any] | None:
+    """Return the finite value set represented by a const or enum constraint."""
+    if "const" in schema:
+        value = schema["const"]
+        accepted = schema.get("enum")
+        if isinstance(accepted, list) and value not in accepted:
+            return []
+        return [value]
+    values = schema.get("enum")
+    if isinstance(values, list):
+        return values
+    return None
+
+
+def _numeric_constraint_assignability(
+    source: Mapping[str, Any], target: Mapping[str, Any]
+) -> Compatibility:
+    """Compare the supported numeric interval constraints conservatively."""
+    source_lower = _numeric_bound(source, lower=True)
+    target_lower = _numeric_bound(target, lower=True)
+    if target_lower is not None and (
+        source_lower is None or not _lower_bound_contains(source_lower, target_lower)
+    ):
+        return "incompatible"
+    source_upper = _numeric_bound(source, lower=False)
+    target_upper = _numeric_bound(target, lower=False)
+    if target_upper is not None and (
+        source_upper is None or not _upper_bound_contains(source_upper, target_upper)
+    ):
+        return "incompatible"
+    return "compatible"
+
+
+def _numeric_bound(
+    schema: Mapping[str, Any], *, lower: bool
+) -> tuple[int | float, bool] | None:
+    names = (
+        ("minimum", "exclusiveMinimum") if lower else ("maximum", "exclusiveMaximum")
+    )
+    candidates = [
+        (schema[name], name.startswith("exclusive"))
+        for name in names
+        if isinstance(schema.get(name), (int, float))
+        and not isinstance(schema.get(name), bool)
+    ]
+    if not candidates:
+        return None
+    return (
+        max(candidates, key=lambda item: (item[0], item[1]))
+        if lower
+        else min(candidates, key=lambda item: (item[0], not item[1]))
+    )
+
+
+def _lower_bound_contains(
+    source: tuple[int | float, bool], target: tuple[int | float, bool]
+) -> bool:
+    if source[0] != target[0]:
+        return source[0] > target[0]
+    return source[1] or not target[1]
+
+
+def _upper_bound_contains(
+    source: tuple[int | float, bool], target: tuple[int | float, bool]
+) -> bool:
+    if source[0] != target[0]:
+        return source[0] < target[0]
+    return source[1] or not target[1]
 
 
 def _schema_types(schema: Mapping[str, Any]) -> set[str] | None:
@@ -476,8 +609,25 @@ def _canonical_schema(
     *,
     label: str,
     root_schema: Mapping[str, Any] | None = None,
+    context: _SchemaNormalizationContext | None = None,
 ) -> dict[str, Any]:
+    normalization = context or _SchemaNormalizationContext()
+    normalization.visit(label)
     canonical_root = root_schema if root_schema is not None else schema
+    reference = schema.get("$ref")
+    if isinstance(reference, str):
+        if reference in normalization.active_refs:
+            raise ValueError(f"cyclic local schema reference {reference!r} at {label}")
+        normalization.active_refs.add(reference)
+        try:
+            return _canonical_schema(
+                _resolved_schema(schema, label=label, root_schema=canonical_root),
+                label=label,
+                root_schema=canonical_root,
+                context=normalization,
+            )
+        finally:
+            normalization.active_refs.remove(reference)
     resolved = _resolved_schema(schema, label=label, root_schema=canonical_root)
     if any(keyword in resolved for keyword in _COMPOSITION_KEYWORDS):
         raise ValueError(f"unsupported schema composition at {label}")
@@ -496,6 +646,7 @@ def _canonical_schema(
                     child,
                     label=f"{label}.{name}",
                     root_schema=canonical_root,
+                    context=normalization,
                 )
                 for name, child in value.items()
                 if isinstance(name, str) and isinstance(child, Mapping)
@@ -505,6 +656,7 @@ def _canonical_schema(
                 value,
                 label=f"{label}.{key}",
                 root_schema=canonical_root,
+                context=normalization,
             )
         elif key == "prefixItems" and isinstance(value, list):
             canonical[key] = [
@@ -512,6 +664,7 @@ def _canonical_schema(
                     child,
                     label=f"{label}.prefixItems[{index}]",
                     root_schema=canonical_root,
+                    context=normalization,
                 )
                 for index, child in enumerate(value)
                 if isinstance(child, Mapping)

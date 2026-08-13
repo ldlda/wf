@@ -65,9 +65,9 @@ from .operation_context import WorkflowOperationContext
 from .schema_projection import (
     project_output_property_to_state_schema,
     project_schema_path_to_schema_path,
-    schema_fragment_at_path,
-    schema_path_exists,
-    validate_json_value_at_schema_path,
+    schema_fragment_at_location,
+    schema_location_is_explicit,
+    validate_json_value_at_schema_location,
 )
 
 _PROJECT_DRAFT_WORKSPACE = JsonProjector(DraftWorkspaceResult)
@@ -618,11 +618,20 @@ class WorkflowDraftAuthoringApi:
         for index, binding in enumerate(bindings):
             target_parts = binding.target.parts
             try:
-                schema_fragment_at_path(
+                schema_fragment_at_location(
                     capability_schema,
                     target_parts,
                     label="capability input schema",
                 )
+                if not schema_location_is_explicit(
+                    capability_schema,
+                    target_parts,
+                    label="capability input schema",
+                ):
+                    raise ValueError(
+                        f"capability input schema path {'.'.join(target_parts)!r} "
+                        "is not declared"
+                    )
             except ValueError as exc:
                 raise ValueError(
                     f"bindings[{index}].target {str(binding.target)!r} "
@@ -647,9 +656,9 @@ class WorkflowDraftAuthoringApi:
                     raise ValueError(
                         f"bindings[{index}].value for target '.' must be a JSON object"
                     )
-                validate_json_value_at_schema_path(
+                validate_json_value_at_schema_location(
                     schema=capability_schema,
-                    parts=target_parts,
+                    location=target_parts,
                     value=binding.value,
                     label=f"bindings[{index}].value",
                 )
@@ -662,13 +671,18 @@ class WorkflowDraftAuthoringApi:
                 target_schema = (
                     projected_input if source.root == "input" else projected_state
                 )
-                if not schema_path_exists(target_schema, source.parts):
+                if not schema_location_is_explicit(
+                    target_schema,
+                    source.parts,
+                    label=f"{source.root} source schema",
+                ):
                     target_schema = project_schema_path_to_schema_path(
                         target_schema=target_schema,
                         source_schema=capability_schema,
                         source_parts=target_parts,
                         target_parts=source.parts,
                         allow_existing_equivalent=True,
+                        allow_additional_properties=True,
                     )
                 if source.root == "input":
                     projected_input = target_schema
@@ -802,11 +816,20 @@ class WorkflowDraftAuthoringApi:
                 continue
             try:
                 source_schemas[index] = source_schema
-                source_fragments[index] = schema_fragment_at_path(
+                source_fragments[index] = schema_fragment_at_location(
                     source_schema,
                     binding.path.parts,
                     label=f"workflow {binding.path.root} schema",
                 )
+                if not schema_location_is_explicit(
+                    source_schema,
+                    binding.path.parts,
+                    label=f"workflow {binding.path.root} schema",
+                ):
+                    raise ValueError(
+                        f"workflow {binding.path.root} schema path "
+                        f"{'.'.join(binding.path.parts)!r} is not declared"
+                    )
             except ValueError as exc:
                 raise ValueError(
                     f"bindings[{index}].path {str(binding.path)!r} "
@@ -827,7 +850,11 @@ class WorkflowDraftAuthoringApi:
                     )
                 source_schema = source_schemas.get(index)
                 if source_schema is None:
-                    if not schema_path_exists(projected, target_parts):
+                    if not schema_location_is_explicit(
+                        projected,
+                        target_parts,
+                        label="workflow output schema",
+                    ):
                         raise ValueError(
                             f"bindings[{index}].path {str(binding.path)!r} "
                             "requires a declared output target"
@@ -851,6 +878,7 @@ class WorkflowDraftAuthoringApi:
                         source_parts=binding.path.parts,
                         target_parts=target_parts,
                         allow_existing_equivalent=True,
+                        allow_additional_properties=True,
                     )
                 except ValueError as exc:
                     raise ValueError(
@@ -865,13 +893,17 @@ class WorkflowDraftAuthoringApi:
                 raise ValueError(
                     f"bindings[{index}].value for root target must be an object"
                 )
-            if not schema_path_exists(projected, target_parts):
+            if not schema_location_is_explicit(
+                projected,
+                target_parts,
+                label="workflow output schema",
+            ):
                 raise ValueError(
                     f"bindings[{index}].target {str(binding.target)!r} is not declared"
                 )
-            validate_json_value_at_schema_path(
+            validate_json_value_at_schema_location(
                 schema=projected,
-                parts=target_parts,
+                location=target_parts,
                 value=binding.value,
                 label=f"bindings[{index}].value",
                 schema_label="workflow output schema",
@@ -928,11 +960,20 @@ class WorkflowDraftAuthoringApi:
 
         for index, binding in enumerate(bindings):
             try:
-                schema_fragment_at_path(
+                schema_fragment_at_location(
                     capability_schema,
                     binding.source.parts,
                     label="capability output schema",
                 )
+                if not schema_location_is_explicit(
+                    capability_schema,
+                    binding.source.parts,
+                    label="capability output schema",
+                ):
+                    raise ValueError(
+                        f"capability output schema path "
+                        f"{'.'.join(binding.source.parts)!r} is not declared"
+                    )
             except ValueError as exc:
                 raise ValueError(
                     f"bindings[{index}].source {str(binding.source)!r} "
@@ -954,6 +995,7 @@ class WorkflowDraftAuthoringApi:
                     source_parts=source_parts,
                     target_parts=target_parts,
                     allow_existing_equivalent=True,
+                    allow_additional_properties=True,
                 )
             except ValueError as exc:
                 raise ValueError(
@@ -1033,7 +1075,11 @@ class WorkflowDraftAuthoringApi:
             target_schema = workspace.draft.get(schema_key, {})
             if not isinstance(target_schema, dict):
                 raise ValueError(f"draft {schema_key} must be an object")
-            if schema_path_exists(target_schema, source_parts):
+            if schema_location_is_explicit(
+                target_schema,
+                source_parts,
+                label=f"{source_root} source schema",
+            ):
                 projected = target_schema
             else:
                 projected = project_schema_path_to_schema_path(
@@ -1041,6 +1087,7 @@ class WorkflowDraftAuthoringApi:
                     source_schema=input_schema,
                     source_parts=target_parts,
                     target_parts=source_parts,
+                    allow_additional_properties=True,
                 )
             input_bindings = _upsert_input_path_binding(
                 step.get("input", []),
@@ -1068,6 +1115,14 @@ class WorkflowDraftAuthoringApi:
             output_schema_source = (
                 spec.output_schema_contract or spec.output_model.model_json_schema()
             )
+            if not schema_location_is_explicit(
+                output_schema_source,
+                source_parts,
+                label="output schema",
+            ):
+                raise ValueError(
+                    f"source schema path {'.'.join(source_parts)!r} is not declared"
+                )
             state_path_str = format_toml_path_segments(("state", *target_parts))
             output_target_str = format_toml_path_segments(target_parts)
 
@@ -1080,6 +1135,7 @@ class WorkflowDraftAuthoringApi:
                 source_parts=source_parts,
                 target_parts=target_parts,
                 allow_existing_equivalent=True,
+                allow_additional_properties=True,
             )
 
             output_schema = workspace.draft.get("output_schema", {})
@@ -1091,6 +1147,7 @@ class WorkflowDraftAuthoringApi:
                 source_parts=source_parts,
                 target_parts=target_parts,
                 allow_existing_equivalent=True,
+                allow_additional_properties=True,
             )
 
             step_output_bindings, previous_state_path = _upsert_step_output_binding(
@@ -1135,6 +1192,14 @@ class WorkflowDraftAuthoringApi:
             output_schema = (
                 spec.output_schema_contract or spec.output_model.model_json_schema()
             )
+            if not schema_location_is_explicit(
+                output_schema,
+                source_parts,
+                label="output schema",
+            ):
+                raise ValueError(
+                    f"source schema path {'.'.join(source_parts)!r} is not declared"
+                )
             target_schema = workspace.draft.get("state_schema", {})
             if not isinstance(target_schema, dict):
                 raise ValueError("draft state_schema must be an object")
@@ -1144,6 +1209,7 @@ class WorkflowDraftAuthoringApi:
                 source_parts=source_parts,
                 target_parts=target_parts,
                 allow_existing_equivalent=True,
+                allow_additional_properties=True,
             )
             output_bindings, _previous_state_path = _upsert_step_output_binding(
                 step.get("output", []),

@@ -131,6 +131,57 @@ def schema_fragment_at_location(
     return fragment
 
 
+def schema_location_is_explicit(
+    schema: JsonObject,
+    location: Sequence[SchemaLocationPart],
+    *,
+    label: str = "schema",
+) -> bool:
+    """Return whether a location has a declared or schema-valued path.
+
+    JSON Schema treats ``additionalProperties: true`` as an open-ended,
+    unconstrained object.  That is different from a schema-valued
+    ``additionalProperties`` entry, which gives authoring a concrete fragment
+    to validate against.  Callers use this distinction to preserve deferred
+    projection for genuinely unknown source paths.
+    """
+    _check_schema(label, schema)
+    current: Mapping[str, Any] = schema
+    traversed: list[SchemaLocationPart] = []
+    for part in location:
+        current = _resolve_local_reference(
+            schema,
+            current,
+            label=_format_schema_location(traversed) or label,
+        )
+        if isinstance(part, int):
+            if current.get("items") is True and not (
+                isinstance(current.get("prefixItems"), list)
+                and part < len(current["prefixItems"])
+            ):
+                return False
+            child = _array_item_schema(
+                current,
+                part,
+                label=label,
+                location=(*traversed, part),
+            )
+        else:
+            properties = current.get("properties")
+            if isinstance(properties, Mapping) and part in properties:
+                child = properties[part]
+            else:
+                additional = current.get("additionalProperties", True)
+                if not isinstance(additional, Mapping):
+                    return False
+                child = additional
+        if not isinstance(child, Mapping):
+            return False
+        current = child
+        traversed.append(part)
+    return True
+
+
 def validate_json_value_at_schema_path(
     *,
     schema: JsonObject,
@@ -154,6 +205,25 @@ def validate_json_value_at_schema_path(
         ) from exc
 
 
+def validate_json_value_at_schema_location(
+    *,
+    schema: JsonObject,
+    location: Sequence[SchemaLocationPart],
+    value: object,
+    label: str,
+    schema_label: str = "capability input schema",
+) -> None:
+    """Validate one JSON-compatible literal at an object/array schema location."""
+    fragment = schema_fragment_at_location(schema, location, label=schema_label)
+    path = _format_schema_location(location) or "."
+    try:
+        Draft202012Validator(fragment).validate(value)
+    except ValidationError as exc:
+        raise ValueError(
+            f"{label} does not satisfy schema at {path!r}: {exc.message}"
+        ) from exc
+
+
 def project_schema_path_to_schema_path(
     *,
     target_schema: JsonObject,
@@ -161,6 +231,7 @@ def project_schema_path_to_schema_path(
     source_parts: tuple[str, ...],
     target_parts: tuple[str, ...],
     allow_existing_equivalent: bool = False,
+    allow_additional_properties: bool = False,
 ) -> JsonObject:
     """Copy one nested source subschema into a target object-property path."""
     if not target_parts:
@@ -172,10 +243,10 @@ def project_schema_path_to_schema_path(
     source_value = (
         source_schema
         if not source_parts
-        else _schema_at_path(
-            source_schema,
-            source_parts,
-            label="source schema",
+        else (
+            _schema_at_location(source_schema, source_parts, label="source schema")
+            if allow_additional_properties
+            else _schema_at_path(source_schema, source_parts, label="source schema")
         )
     )
 
@@ -316,6 +387,52 @@ def _check_schema(name: str, schema: JsonObject) -> None:
         Draft202012Validator.check_schema(schema)
     except SchemaError as exc:
         raise ValueError(f"{name} is not valid JSON Schema: {exc.message}") from exc
+
+
+def _schema_at_location(
+    root_schema: Mapping[str, Any],
+    location: Sequence[SchemaLocationPart],
+    *,
+    label: str,
+) -> Mapping[str, Any]:
+    """Select a raw fragment while allowing schema-valued additional properties."""
+    current: Mapping[str, Any] = root_schema
+    traversed: list[SchemaLocationPart] = []
+    for part in location:
+        current = _resolve_local_reference(
+            root_schema,
+            current,
+            label=_format_schema_location(traversed) or label,
+        )
+        if isinstance(part, int):
+            child = _array_item_schema(
+                current,
+                part,
+                label=label,
+                location=(*traversed, part),
+            )
+        else:
+            properties = current.get("properties")
+            if isinstance(properties, Mapping) and part in properties:
+                child = properties[part]
+            else:
+                additional = current.get("additionalProperties", True)
+                if not isinstance(additional, Mapping):
+                    raise ValueError(
+                        f"{label} location "
+                        f"{_format_schema_location((*traversed, part))!r} "
+                        "is not declared"
+                    )
+                child = additional
+        if not isinstance(child, Mapping):
+            raise ValueError(
+                f"{label} location "
+                f"{_format_schema_location((*traversed, part))!r} "
+                "is not a JSON Schema object"
+            )
+        current = child
+        traversed.append(part)
+    return current
 
 
 def _schema_at_path(

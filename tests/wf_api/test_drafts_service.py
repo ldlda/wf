@@ -5553,6 +5553,91 @@ async def test_set_step_input_bindings_rejects_overlapping_expression_targets_at
 
 
 @pytest.mark.asyncio
+async def test_set_step_input_bindings_uses_additional_property_source_schema(
+    tmp_path: Path,
+) -> None:
+    draft_api, service, authoring = _draft_api(
+        FileWorkflowArtifactStore(tmp_path / "composite_concat_additional_source"),
+        register_echo=True,
+    )
+    service.register_specs(
+        "demo.personal",
+        replace(
+            echo_tool,
+            input_schema_contract={
+                "type": "object",
+                "properties": {"items": {"type": "array", "items": {"type": "string"}}},
+            },
+        ),
+    )
+    draft = _composite_concat_draft()
+    draft["steps"]["concat"]["use"] = "demo.personal.echo_tool"
+    draft["state_schema"] = {
+        "type": "object",
+        "additionalProperties": {"type": "integer"},
+    }
+    await draft_api.create_draft_workspace(workspace_id="concat", draft=draft)
+
+    with pytest.raises(ValueError, match="incompatible"):
+        await authoring.set_step_input_bindings(
+            workspace_id="concat",
+            revision=1,
+            step_id="concat",
+            bindings=[
+                InputExpressionBinding.model_validate(
+                    {
+                        "target": "items",
+                        "expression": {
+                            "kind": "array",
+                            "items": [{"kind": "path", "path": "state.foo"}],
+                        },
+                    }
+                )
+            ],
+        )
+
+
+@pytest.mark.asyncio
+async def test_set_step_input_bindings_accepts_additional_property_target(
+    tmp_path: Path,
+) -> None:
+    draft_api, service, authoring = _draft_api(
+        FileWorkflowArtifactStore(tmp_path / "composite_concat_additional_target"),
+        register_echo=True,
+    )
+    service.register_specs(
+        "demo.personal",
+        replace(
+            echo_tool,
+            input_schema_contract={
+                "type": "object",
+                "additionalProperties": {"type": "string"},
+            },
+        ),
+    )
+    draft = _composite_concat_draft()
+    draft["steps"]["concat"]["use"] = "demo.personal.echo_tool"
+    await draft_api.create_draft_workspace(workspace_id="concat", draft=draft)
+
+    result = await authoring.set_step_input_bindings(
+        workspace_id="concat",
+        revision=1,
+        step_id="concat",
+        bindings=[
+            InputExpressionBinding.model_validate(
+                {
+                    "target": "dynamic",
+                    "expression": {"kind": "literal", "value": "hello"},
+                }
+            )
+        ],
+    )
+
+    assert result["revision"] == 2
+    assert result["draft"]["steps"]["concat"]["input"][0]["target"] == "dynamic"
+
+
+@pytest.mark.asyncio
 async def test_set_step_input_map_merge_rejects_existing_expression_without_mutation(
     tmp_path: Path,
 ) -> None:

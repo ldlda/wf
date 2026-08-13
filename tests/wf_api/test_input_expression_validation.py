@@ -23,6 +23,134 @@ def _expression(payload: dict[str, object]) -> InputExpressionBinding:
     )
 
 
+def _path_expression_projection(
+    source_schema: dict[str, object],
+    target_fragment: dict[str, object],
+):
+    return validate_and_project_input_expression(
+        InputExpressionBinding.model_validate(
+            {"target": "value", "expression": {"kind": "path", "path": "state.foo"}}
+        ).expression,
+        target_schema={
+            "type": "object",
+            "properties": {"value": target_fragment},
+        },
+        input_schema={"type": "object", "properties": {}},
+        state_schema={
+            "type": "object",
+            "properties": {"foo": source_schema},
+        },
+        target_location=("value",),
+    )
+
+
+@pytest.mark.parametrize(
+    ("source_schema", "target_schema", "expected_message"),
+    [
+        ({"const": 1}, {"type": "string"}, "incompatible"),
+        ({"enum": [1]}, {"type": "string"}, "incompatible"),
+        ({"type": "string"}, {"enum": ["ok"]}, "unsupported"),
+    ],
+)
+def test_finite_constraints_and_types_are_not_overaccepted(
+    source_schema: dict[str, object],
+    target_schema: dict[str, object],
+    expected_message: str,
+) -> None:
+    with pytest.raises(ValueError, match=expected_message):
+        _path_expression_projection(source_schema, target_schema)
+
+
+@pytest.mark.parametrize(
+    "target_schema",
+    [{"type": "integer"}, {"type": "number"}],
+)
+def test_integer_source_is_assignable_to_integer_and_number_targets(
+    target_schema: dict[str, object],
+) -> None:
+    _path_expression_projection({"type": "integer"}, target_schema)
+
+
+def test_constrained_integer_source_remains_assignable_to_unconstrained_integer() -> (
+    None
+):
+    _path_expression_projection(
+        {"type": "integer", "minimum": 1},
+        {"type": "integer"},
+    )
+
+
+def test_array_bounds_are_checked_during_source_assignability() -> None:
+    with pytest.raises(ValueError, match="incompatible"):
+        _path_expression_projection(
+            {"type": "array", "items": {"type": "string"}, "minItems": 0},
+            {
+                "type": "array",
+                "items": {"type": "string"},
+                "minItems": 1,
+            },
+        )
+    with pytest.raises(ValueError, match="incompatible"):
+        _path_expression_projection(
+            {"type": "array", "items": {"type": "string"}, "maxItems": 4},
+            {
+                "type": "array",
+                "items": {"type": "string"},
+                "maxItems": 3,
+            },
+        )
+
+
+def test_object_additional_properties_are_compared_in_both_directions() -> None:
+    with pytest.raises(ValueError, match="incompatible"):
+        _path_expression_projection(
+            {
+                "type": "object",
+                "properties": {"extra": {"type": "integer"}},
+            },
+            {
+                "type": "object",
+                "additionalProperties": {"type": "string"},
+            },
+        )
+    with pytest.raises(ValueError, match="incompatible"):
+        _path_expression_projection(
+            {
+                "type": "object",
+                "additionalProperties": {"type": "integer"},
+            },
+            {
+                "type": "object",
+                "properties": {"extra": {"type": "string"}},
+            },
+        )
+
+
+def test_cyclic_local_schema_normalization_fails_closed() -> None:
+    with pytest.raises(ValueError, match="cyclic|depth|unsupported"):
+        validate_and_project_input_expression(
+            InputExpressionBinding.model_validate(
+                {
+                    "target": "value",
+                    "expression": {"kind": "object", "fields": {}},
+                }
+            ).expression,
+            target_schema={
+                "type": "object",
+                "properties": {"value": {"$ref": "#/$defs/Node"}},
+                "$defs": {
+                    "Node": {
+                        "type": "object",
+                        "properties": {"next": {"$ref": "#/$defs/Node"}},
+                    }
+                },
+            },
+            input_schema={"type": "object", "properties": {}},
+            state_schema={"type": "object", "properties": {}},
+            target_location=("value",),
+        )
+
+
 def test_literal_expression_validates_against_exact_array_position() -> None:
     projection = validate_and_project_input_expression(
         _expression(
