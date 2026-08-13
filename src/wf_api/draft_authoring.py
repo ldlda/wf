@@ -576,10 +576,8 @@ class WorkflowDraftAuthoringApi:
             state_schema=projected.state_schema,
         )
         if any(isinstance(binding, InputExpressionBinding) for binding in bindings):
-            # The artifact adapter intentionally learns to lower expressions in
-            # the later Python API carry-through task.  Persist this focused,
-            # schema-validated edit through the structural path so authoring
-            # does not reject a canonical expression before that task lands.
+            # Compact input maps cannot represent recursive expressions. Persist
+            # the validated canonical bindings structurally to avoid lossy lowering.
             next_draft = deepcopy(workspace.draft)
             next_steps = next_draft.get("steps")
             if not isinstance(next_steps, dict):
