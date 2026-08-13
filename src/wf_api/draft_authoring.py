@@ -61,7 +61,7 @@ from .drafts import (
 )
 from .input_expressions import (
     validate_and_project_input_expression,
-    validate_supported_input_schema,
+    validate_schema_references,
 )
 from .models import DraftWorkspaceResult, JsonProjector
 from .operation_context import WorkflowOperationContext
@@ -684,7 +684,7 @@ class WorkflowDraftAuthoringApi:
                         source.parts,
                         label=f"{source.root} source schema",
                     )
-                    validate_supported_input_schema(
+                    validate_schema_references(
                         source_fragment,
                         label=f"{source.root} source schema",
                     )

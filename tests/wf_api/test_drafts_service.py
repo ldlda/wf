@@ -5725,6 +5725,47 @@ async def test_set_step_input_bindings_rejects_unresolvable_additional_path_refs
 
 
 @pytest.mark.asyncio
+async def test_set_step_input_bindings_accepts_simple_source_with_min_length_schema(
+    tmp_path: Path,
+) -> None:
+    draft_api, service, authoring = _draft_api(
+        FileWorkflowArtifactStore(tmp_path / "composite_concat_min_length_source"),
+        register_echo=True,
+    )
+    service.register_specs(
+        "demo.personal",
+        replace(
+            echo_tool,
+            input_schema_contract={
+                "type": "object",
+                "properties": {"separator": {"type": "string"}},
+            },
+        ),
+    )
+    draft = _composite_concat_draft()
+    draft["steps"]["concat"]["use"] = "demo.personal.echo_tool"
+    draft["state_schema"] = {
+        "type": "object",
+        "properties": {"foo": {"type": "string", "minLength": 1}},
+    }
+    await draft_api.create_draft_workspace(workspace_id="concat", draft=draft)
+
+    result = await authoring.set_step_input_bindings(
+        workspace_id="concat",
+        revision=1,
+        step_id="concat",
+        bindings=[
+            InputPathBinding(
+                path=GraphSourcePath.state("foo"),
+                target=LocalPath.of("separator"),
+            )
+        ],
+    )
+
+    assert result["revision"] == 2
+
+
+@pytest.mark.asyncio
 async def test_set_step_input_bindings_accepts_additional_property_target(
     tmp_path: Path,
 ) -> None:

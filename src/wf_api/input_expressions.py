@@ -588,9 +588,81 @@ def _ensure_supported_schema(schema: Mapping[str, Any], *, label: str) -> None:
     _canonical_schema(schema, label=label)
 
 
-def validate_supported_input_schema(schema: Mapping[str, Any], *, label: str) -> None:
-    """Reject schema fragments outside the bounded input-schema subset."""
-    _ensure_supported_schema(schema, label=label)
+def validate_schema_references(schema: Mapping[str, Any], *, label: str) -> None:
+    """Resolve schema references without imposing expression-keyword limits."""
+    _validate_schema_references(
+        schema,
+        root_schema=schema,
+        label=label,
+        context=_SchemaNormalizationContext(),
+    )
+
+
+def _validate_schema_references(
+    schema: Mapping[str, Any],
+    *,
+    root_schema: Mapping[str, Any],
+    label: str,
+    context: _SchemaNormalizationContext,
+) -> None:
+    context.visit(label)
+    reference = schema.get("$ref")
+    if isinstance(reference, str):
+        if reference in context.active_refs:
+            raise ValueError(f"cyclic local schema reference {reference!r} at {label}")
+        context.active_refs.add(reference)
+        try:
+            resolved = _resolved_schema(schema, label=label, root_schema=root_schema)
+            _validate_schema_references(
+                resolved,
+                root_schema=root_schema,
+                label=label,
+                context=context,
+            )
+        finally:
+            context.active_refs.remove(reference)
+        return
+
+    properties = schema.get("properties")
+    if isinstance(properties, Mapping):
+        for name, child in properties.items():
+            if isinstance(name, str) and isinstance(child, Mapping):
+                _validate_schema_references(
+                    child,
+                    root_schema=root_schema,
+                    label=f"{label}.{name}",
+                    context=context,
+                )
+    for key in ("items", "additionalProperties"):
+        child = schema.get(key)
+        if isinstance(child, Mapping):
+            _validate_schema_references(
+                child,
+                root_schema=root_schema,
+                label=f"{label}.{key}",
+                context=context,
+            )
+    prefix_items = schema.get("prefixItems")
+    if isinstance(prefix_items, list):
+        for index, child in enumerate(prefix_items):
+            if isinstance(child, Mapping):
+                _validate_schema_references(
+                    child,
+                    root_schema=root_schema,
+                    label=f"{label}.prefixItems[{index}]",
+                    context=context,
+                )
+    for key in ("$defs", "definitions"):
+        definitions = schema.get(key)
+        if isinstance(definitions, Mapping):
+            for name, child in definitions.items():
+                if isinstance(name, str) and isinstance(child, Mapping):
+                    _validate_schema_references(
+                        child,
+                        root_schema=root_schema,
+                        label=f"{label}.{key}.{name}",
+                        context=context,
+                    )
 
 
 def _resolved_schema(
