@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import UserDict
 from math import inf, nan
 
 import pytest
@@ -11,6 +12,7 @@ from wf_artifacts.drafts.models import (
     DraftUseStep,
 )
 from wf_core import Workflow
+from wf_core.models.input_bindings import ArrayExpression, LiteralExpression
 from wf_core.models.steps import (
     InputExpressionBinding,
     InputPathBinding,
@@ -197,5 +199,41 @@ def test_expression_node_limit_rejects_1_025_expression_nodes() -> None:
             {
                 "target": "request",
                 "expression": {"kind": "array", "items": items},
+            }
+        )
+
+
+def test_prebuilt_expression_models_cannot_bypass_node_limit() -> None:
+    expression = ArrayExpression(
+        kind="array",
+        items=[
+            LiteralExpression(kind="literal", value=index) for index in range(1_024)
+        ],
+    )
+
+    with pytest.raises(ValidationError, match="node"):
+        InputExpressionBinding.model_validate(
+            {"target": "request", "expression": expression}
+        )
+
+
+def test_prebuilt_expression_models_cannot_bypass_literal_depth_limit() -> None:
+    expression = LiteralExpression(kind="literal", value=_nested_json_list(64))
+
+    with pytest.raises(ValidationError, match="depth"):
+        InputExpressionBinding.model_validate(
+            {"target": "request", "expression": expression}
+        )
+
+
+def test_strict_json_rejects_python_mapping_containers() -> None:
+    with pytest.raises((TypeError, ValueError, ValidationError)):
+        InputExpressionBinding.model_validate(
+            {
+                "target": "request",
+                "expression": {
+                    "kind": "literal",
+                    "value": UserDict({"key": "value"}),
+                },
             }
         )

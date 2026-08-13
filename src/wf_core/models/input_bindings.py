@@ -176,7 +176,10 @@ class InputExpressionBinding(BaseModel):
     @field_validator("expression", mode="before")
     @classmethod
     def check_limits(cls, value: object) -> object:
-        validate_input_expression_limits(value)
+        raw_value = (
+            value.model_dump(mode="python") if isinstance(value, BaseModel) else value
+        )
+        validate_input_expression_limits(raw_value)
         return value
 
 

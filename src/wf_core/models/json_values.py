@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
 from math import isfinite
 
 from pydantic import FiniteFloat
@@ -25,7 +24,7 @@ def validate_strict_json_value(value: object) -> JsonValue:
         return value
     if isinstance(value, list):
         return [validate_strict_json_value(item) for item in value]
-    if isinstance(value, Mapping):
+    if isinstance(value, dict):
         if not all(isinstance(key, str) for key in value):
             raise ValueError("JSON object keys must be strings")
         return {key: validate_strict_json_value(item) for key, item in value.items()}
