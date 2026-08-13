@@ -6,6 +6,7 @@ from wf_api.schema_projection import (
     project_output_property_to_state_schema,
     project_property_to_schema_path,
     project_schema_path_to_schema_path,
+    schema_fragment_at_location,
     schema_fragment_at_path,
     schema_path_exists,
     validate_json_value_at_schema_path,
@@ -261,6 +262,98 @@ def test_schema_fragment_accepts_whole_schema() -> None:
     schema = {"type": "object", "properties": {"title": {"type": "string"}}}
 
     assert schema_fragment_at_path(schema, ()) == schema
+
+
+def test_schema_fragment_navigates_object_properties_and_additional_properties() -> (
+    None
+):
+    schema = {
+        "type": "object",
+        "properties": {
+            "request": {
+                "type": "object",
+                "properties": {"format": {"type": "string"}},
+                "additionalProperties": {"type": "integer"},
+            }
+        },
+    }
+
+    assert schema_fragment_at_location(schema, ("request", "format")) == {
+        "type": "string"
+    }
+    assert schema_fragment_at_location(schema, ("request", "retries")) == {
+        "type": "integer"
+    }
+
+
+def test_schema_fragment_navigates_homogeneous_array_items() -> None:
+    schema = {
+        "type": "object",
+        "properties": {"items": {"type": "array", "items": {"type": "string"}}},
+    }
+
+    assert schema_fragment_at_location(schema, ("items", 4)) == {"type": "string"}
+
+
+def test_schema_fragment_navigates_tuple_prefix_items_and_rejects_out_of_range() -> (
+    None
+):
+    schema = {
+        "type": "object",
+        "properties": {
+            "pair": {
+                "type": "array",
+                "prefixItems": [{"type": "string"}, {"type": "integer"}],
+                "items": False,
+            }
+        },
+    }
+
+    assert schema_fragment_at_location(schema, ("pair", 0)) == {"type": "string"}
+    assert schema_fragment_at_location(schema, ("pair", 1)) == {"type": "integer"}
+    with pytest.raises(ValueError, match="array position 2"):
+        schema_fragment_at_location(schema, ("pair", 2))
+
+
+@pytest.mark.parametrize("reference_key", ["$defs", "definitions"])
+def test_schema_fragment_navigates_local_definition_references(
+    reference_key: str,
+) -> None:
+    definition_name = "Request"
+    schema = {
+        "type": "object",
+        "properties": {"request": {"$ref": f"#/{reference_key}/{definition_name}"}},
+        reference_key: {
+            definition_name: {
+                "type": "object",
+                "properties": {"title": {"type": "string"}},
+            }
+        },
+    }
+
+    assert schema_fragment_at_location(schema, ("request", "title"))["type"] == "string"
+
+
+@pytest.mark.parametrize(
+    ("reference", "message"),
+    [
+        ("#/$defs/Loop", "cyclic reference"),
+        ("#/$defs/Missing", "unresolved reference"),
+        ("https://example.com/schema.json", "unsupported reference"),
+    ],
+)
+def test_schema_fragment_rejects_unusable_local_or_remote_references(
+    reference: str,
+    message: str,
+) -> None:
+    schema = {
+        "type": "object",
+        "properties": {"value": {"$ref": reference}},
+        "$defs": {"Loop": {"$ref": "#/$defs/Loop"}},
+    }
+
+    with pytest.raises(ValueError, match=message):
+        schema_fragment_at_location(schema, ("value",))
 
 
 def test_schema_fragment_rejects_remote_selected_reference() -> None:

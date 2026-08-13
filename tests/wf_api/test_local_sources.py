@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from wf_api.local_sources import (
     BUILTIN_SOURCE_ID,
     RECIPE_SOURCE_ID,
@@ -27,6 +29,35 @@ def test_get_qualified_spec_resolves_planner_visible_spec() -> None:
 
     assert spec.name == "wf.std.constant"
     assert spec.outcomes == ("ok",)
+
+
+@pytest.mark.parametrize("name", ["wf.std.first_item", "wf.std.last_item"])
+def test_non_empty_sequence_catalog_contracts_publish_min_items(name: str) -> None:
+    spec = get_qualified_spec(builtin_sources(), name)
+
+    items_schema = (spec.input_schema_contract or spec.input_model.model_json_schema())[
+        "properties"
+    ]["items"]
+    assert items_schema["minItems"] == 1
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "wf.std.first_item_maybe",
+        "wf.std.first_item_or_none",
+        "wf.std.last_item_or_none",
+        "wf.std.length",
+        "wf.std.is_empty",
+    ],
+)
+def test_empty_aware_sequence_catalog_contracts_allow_empty_arrays(name: str) -> None:
+    spec = get_qualified_spec(builtin_sources(), name)
+
+    items_schema = (spec.input_schema_contract or spec.input_model.model_json_schema())[
+        "properties"
+    ]["items"]
+    assert "minItems" not in items_schema
 
 
 def test_qualify_spec_scopes_authoring_node_name() -> None:

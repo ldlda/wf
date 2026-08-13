@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+from pydantic import ValidationError
 
 from wf_authoring import (
     WorkflowBuilder,
@@ -35,6 +36,7 @@ from wf_core import (
     RuntimeContext,
     SchemaRef,
     StateSchema,
+    WorkflowExecutionError,
     execute_workflow,
 )
 
@@ -113,7 +115,10 @@ def test_first_item_selects_first_value_through_workflow() -> None:
 def test_first_item_fails_on_empty_sequence() -> None:
     workflow, registry = _build_first_workflow()
 
-    with pytest.raises(ValueError, match="first_item requires at least one item"):
+    with pytest.raises(
+        WorkflowExecutionError,
+        match=r"node input for pick_first\['items'\]: \[\] should be non-empty",
+    ):
         execute_workflow(workflow, {"items": []}, registry)
 
 
@@ -160,7 +165,7 @@ def test_last_item_selects_last_value() -> None:
 def test_last_item_fails_on_empty_sequence() -> None:
     registry = build_registry(last_item)
 
-    with pytest.raises(ValueError, match="last_item requires at least one item"):
+    with pytest.raises(ValidationError, match="List should have at least 1 item"):
         registry["authoring.last_item"](
             {"items": []},
             RuntimeContext(current_node_id="last"),
@@ -380,6 +385,31 @@ def test_concat_joins_strings_with_separator() -> None:
 
     assert result["outcome"] == "ok"
     assert result["output"]["text"] == "a\nb\nc"
+
+
+def test_non_empty_sequence_models_publish_min_items_without_changing_empty_aware_ops() -> (
+    None
+):
+    assert (
+        first_item.input_model.model_json_schema()["properties"]["items"]["minItems"]
+        == 1
+    )
+    assert (
+        last_item.input_model.model_json_schema()["properties"]["items"]["minItems"]
+        == 1
+    )
+    assert (
+        "minItems"
+        not in first_item_maybe.input_model.model_json_schema()["properties"]["items"]
+    )
+    assert (
+        "minItems"
+        not in first_item_or_none.input_model.model_json_schema()["properties"]["items"]
+    )
+    assert (
+        "minItems"
+        not in last_item_or_none.input_model.model_json_schema()["properties"]["items"]
+    )
 
 
 def test_extract_text_content_recipe_filters_extracts_and_joins_text_blocks() -> None:

@@ -18,6 +18,7 @@ from wf_artifacts.drafts.models import DraftStep
 from wf_authoring import node
 from wf_core.models.steps import (
     InputBinding,
+    InputExpressionBinding,
     InputPathBinding,
     InputValueBinding,
     OutputBinding,
@@ -5396,6 +5397,201 @@ async def test_workflow_output_map_merge_preserves_unrequested_fan_out_and_liter
         {"value": "markdown", "target": "kind"},
         {"path": "state.other", "target": "other"},
     ]
+
+
+def _composite_concat_draft() -> dict[str, Any]:
+    return {
+        "name": "composite_concat",
+        "input_schema": {"type": "object", "properties": {}},
+        "state_schema": {"type": "object", "properties": {}},
+        "output_schema": {"type": "object", "properties": {}},
+        "start": "concat",
+        "steps": {
+            "concat": {
+                "use": "wf.std.concat",
+                "input": [],
+                "output": [],
+            }
+        },
+        "routes": {"concat": {"ok": "__end__"}},
+    }
+
+
+@pytest.mark.asyncio
+async def test_set_step_input_bindings_projects_composite_source_schema_and_order(
+    tmp_path: Path,
+) -> None:
+    draft_api, _service, authoring = _draft_api(
+        FileWorkflowArtifactStore(tmp_path / "composite_concat"),
+    )
+    await draft_api.create_draft_workspace(
+        workspace_id="concat",
+        draft=_composite_concat_draft(),
+    )
+
+    result = await authoring.set_step_input_bindings(
+        workspace_id="concat",
+        revision=1,
+        step_id="concat",
+        bindings=[
+            InputExpressionBinding.model_validate(
+                {
+                    "target": "items",
+                    "expression": {
+                        "kind": "array",
+                        "items": [
+                            {"kind": "path", "path": "state.foo"},
+                            {"kind": "literal", "value": "wowcool"},
+                        ],
+                    },
+                }
+            ),
+            InputValueBinding(target="separator", value=" "),
+        ],
+    )
+
+    assert result["revision"] == 2
+    assert result["draft"]["steps"]["concat"]["input"] == [
+        {
+            "target": "items",
+            "expression": {
+                "kind": "array",
+                "items": [
+                    {"kind": "path", "path": "state.foo"},
+                    {"kind": "literal", "value": "wowcool"},
+                ],
+            },
+        },
+        {"target": "separator", "value": " "},
+    ]
+    assert result["draft"]["state_schema"]["properties"]["foo"] == {"type": "string"}
+
+
+@pytest.mark.asyncio
+async def test_set_step_input_bindings_rejects_incompatible_expression_atomically(
+    tmp_path: Path,
+) -> None:
+    draft_api, _service, authoring = _draft_api(
+        FileWorkflowArtifactStore(tmp_path / "composite_concat_incompatible"),
+    )
+    await draft_api.create_draft_workspace(
+        workspace_id="concat",
+        draft={
+            **_composite_concat_draft(),
+            "state_schema": {
+                "type": "object",
+                "properties": {"foo": {"type": "integer"}},
+            },
+        },
+    )
+    before = await draft_api.get_draft_workspace(
+        workspace_id="concat", include_draft=True
+    )
+
+    with pytest.raises(ValueError, match="state.foo"):
+        await authoring.set_step_input_bindings(
+            workspace_id="concat",
+            revision=1,
+            step_id="concat",
+            bindings=[
+                InputExpressionBinding.model_validate(
+                    {
+                        "target": "items",
+                        "expression": {
+                            "kind": "array",
+                            "items": [{"kind": "path", "path": "state.foo"}],
+                        },
+                    }
+                )
+            ],
+        )
+
+    after = await draft_api.get_draft_workspace(
+        workspace_id="concat", include_draft=True
+    )
+    assert after == before
+
+
+@pytest.mark.asyncio
+async def test_set_step_input_bindings_rejects_overlapping_expression_targets_atomically(
+    tmp_path: Path,
+) -> None:
+    draft_api, _service, authoring = _draft_api(
+        FileWorkflowArtifactStore(tmp_path / "composite_concat_overlap"),
+    )
+    await draft_api.create_draft_workspace(
+        workspace_id="concat",
+        draft=_composite_concat_draft(),
+    )
+    before = await draft_api.get_draft_workspace(
+        workspace_id="concat", include_draft=True
+    )
+
+    with pytest.raises(ValueError, match="overlaps"):
+        await authoring.set_step_input_bindings(
+            workspace_id="concat",
+            revision=1,
+            step_id="concat",
+            bindings=[
+                InputExpressionBinding.model_validate(
+                    {
+                        "target": "items",
+                        "expression": {
+                            "kind": "array",
+                            "items": [{"kind": "literal", "value": "hello"}],
+                        },
+                    }
+                ),
+                InputValueBinding(target="items.0", value="shadowed"),
+            ],
+        )
+
+    after = await draft_api.get_draft_workspace(
+        workspace_id="concat", include_draft=True
+    )
+    assert after == before
+
+
+@pytest.mark.asyncio
+async def test_set_step_input_map_merge_rejects_existing_expression_without_mutation(
+    tmp_path: Path,
+) -> None:
+    draft_api, _service, _authoring = _draft_api(
+        FileWorkflowArtifactStore(tmp_path / "composite_concat_merge"),
+    )
+    draft = _composite_concat_draft()
+    await draft_api.create_draft_workspace(workspace_id="concat", draft=draft)
+    draft["steps"]["concat"]["input"] = [
+        {
+            "target": "items",
+            "expression": {
+                "kind": "array",
+                "items": [{"kind": "literal", "value": "hello"}],
+            },
+        }
+    ]
+    await draft_api.replace_validated_draft_document(
+        workspace_id="concat",
+        revision=1,
+        draft=draft,
+    )
+    before = await draft_api.get_draft_workspace(
+        workspace_id="concat", include_draft=True
+    )
+
+    with pytest.raises(ValueError, match="cannot be safely merged"):
+        await draft_api.set_step_input_map(
+            workspace_id="concat",
+            revision=2,
+            step_id="concat",
+            input_map={"separator": "separator"},
+            merge=True,
+        )
+
+    after = await draft_api.get_draft_workspace(
+        workspace_id="concat", include_draft=True
+    )
+    assert after == before
 
 
 @pytest.mark.asyncio

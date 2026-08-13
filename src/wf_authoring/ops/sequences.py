@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from wf_authoring.nodes import NodeReturn, node
 
@@ -11,6 +11,12 @@ class SequenceInput(BaseModel):
     """Input model for ops that consume an ordered sequence."""
 
     items: list[Any]
+
+
+class NonEmptySequenceInput(BaseModel):
+    """Input model for operations that require at least one item."""
+
+    items: list[Any] = Field(min_length=1)
 
 
 class ItemOutput(BaseModel):
@@ -73,11 +79,11 @@ class ValuesOutput(BaseModel):
 
 @node(
     name="authoring.first_item",
-    input_model=SequenceInput,
+    input_model=NonEmptySequenceInput,
     output_model=ItemOutput,
     description="Select the first item from a non-empty sequence.",
 )
-def first_item(input: SequenceInput) -> ItemOutput:
+def first_item(input: NonEmptySequenceInput) -> ItemOutput:
     """Select the first item from a non-empty sequence."""
     if not input.items:
         raise ValueError("first_item requires at least one item")
@@ -111,11 +117,11 @@ def first_item_maybe(input: SequenceInput) -> NodeReturn[MaybeItemOutput]:
 
 @node(
     name="authoring.last_item",
-    input_model=SequenceInput,
+    input_model=NonEmptySequenceInput,
     output_model=ItemOutput,
     description="Select the last item from a non-empty sequence.",
 )
-def last_item(input: SequenceInput) -> ItemOutput:
+def last_item(input: NonEmptySequenceInput) -> ItemOutput:
     """Select the last item from a non-empty sequence."""
     if not input.items:
         raise ValueError("last_item requires at least one item")

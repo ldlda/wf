@@ -7,6 +7,9 @@ from typing import Any
 from jsonschema import Draft202012Validator, SchemaError, ValidationError
 
 JsonObject = dict[str, Any]
+SchemaLocationPart = str | int
+
+_MAX_LOCAL_SCHEMA_REFERENCE_DEPTH = 32
 
 
 def schema_path_exists(
@@ -27,9 +30,89 @@ def schema_fragment_at_path(
     *,
     label: str = "schema",
 ) -> JsonObject:
-    """Return a self-contained selected schema fragment with local definitions."""
+    """Return a self-contained selected object-property fragment.
+
+    This compatibility wrapper intentionally keeps the historical object-only
+    path semantics: undeclared properties are errors even when JSON Schema's
+    default ``additionalProperties`` behavior would allow them.
+    """
     _check_schema(label, schema)
     fragment = deepcopy(dict(_schema_at_path(schema, parts, label=label)))
+    _merge_definition_block(
+        fragment,
+        schema,
+        "$defs",
+        target_label=f"{label} fragment",
+        source_label=label,
+    )
+    _merge_definition_block(
+        fragment,
+        schema,
+        "definitions",
+        target_label=f"{label} fragment",
+        source_label=label,
+    )
+    _check_schema(f"{label} fragment", fragment)
+    return fragment
+
+
+def schema_fragment_at_location(
+    schema: JsonObject,
+    location: Sequence[SchemaLocationPart],
+    *,
+    label: str = "schema",
+) -> JsonObject:
+    """Return a self-contained schema fragment at an object/array location.
+
+    The navigator deliberately supports only the structural JSON Schema forms
+    needed by workflow input contracts: object properties and schema-valued
+    ``additionalProperties``, homogeneous ``items``, tuple ``prefixItems``,
+    and bounded local ``$defs``/``definitions`` references. Composition and
+    advanced validation keywords remain visible to the caller so the
+    expression validator can fail closed instead of guessing their meaning.
+    """
+    _check_schema(label, schema)
+    current: Mapping[str, Any] = schema
+    traversed: list[SchemaLocationPart] = []
+    for part in location:
+        current = _resolve_local_reference(
+            schema,
+            current,
+            label=_format_schema_location(traversed) or label,
+        )
+        if isinstance(part, int):
+            if part < 0:
+                raise ValueError(
+                    f"{label} array position {part} is negative at "
+                    f"{_format_schema_location(traversed) or label!r}"
+                )
+            child = _array_item_schema(
+                current,
+                part,
+                label=label,
+                location=(*traversed, part),
+            )
+        else:
+            child = _object_property_schema(
+                current,
+                part,
+                label=label,
+                location=(*traversed, part),
+            )
+        if not isinstance(child, Mapping):
+            raise ValueError(
+                f"{label} location {_format_schema_location((*traversed, part))!r} "
+                "does not select a JSON Schema object"
+            )
+        current = child
+        traversed.append(part)
+
+    _resolve_local_reference(
+        schema,
+        current,
+        label=_format_schema_location(traversed) or label,
+    )
+    fragment = deepcopy(dict(current))
     _merge_definition_block(
         fragment,
         schema,
@@ -289,6 +372,11 @@ def _resolve_local_reference(
             raise ValueError(f"schema path {label!r} has a non-string reference")
         if reference in seen:
             raise ValueError(f"cyclic reference {reference!r} at schema path {label!r}")
+        if len(seen) >= _MAX_LOCAL_SCHEMA_REFERENCE_DEPTH:
+            raise ValueError(
+                f"local reference depth exceeds {_MAX_LOCAL_SCHEMA_REFERENCE_DEPTH} "
+                f"at schema path {label!r}"
+            )
         seen.add(reference)
 
         if reference.startswith("#/$defs/") or reference.startswith("#/definitions/"):
@@ -313,6 +401,82 @@ def _resolve_local_reference(
             )
         current = resolved
     return current
+
+
+def _format_schema_location(location: Sequence[SchemaLocationPart]) -> str:
+    """Format mixed object/array schema locations for stable diagnostics."""
+    result = ""
+    for part in location:
+        if isinstance(part, int):
+            result += f"[{part}]"
+        elif not result:
+            result = part
+        else:
+            result += f".{part}"
+    return result
+
+
+def _object_property_schema(
+    schema: Mapping[str, Any],
+    part: str,
+    *,
+    label: str,
+    location: Sequence[SchemaLocationPart],
+) -> object:
+    schema_type = schema.get("type")
+    if schema_type is not None and schema_type != "object":
+        raise ValueError(
+            f"{label} location {_format_schema_location(location[:-1])!r} "
+            "is not an object"
+        )
+    properties = schema.get("properties")
+    if isinstance(properties, Mapping) and part in properties:
+        return properties[part]
+    additional = schema.get("additionalProperties", True)
+    if additional is False:
+        raise ValueError(
+            f"{label} location {_format_schema_location(location)!r} is not declared"
+        )
+    if additional is True:
+        return {}
+    if isinstance(additional, Mapping):
+        return additional
+    raise ValueError(
+        f"{label} additionalProperties at "
+        f"{_format_schema_location(location[:-1]) or label!r} is invalid"
+    )
+
+
+def _array_item_schema(
+    schema: Mapping[str, Any],
+    index: int,
+    *,
+    label: str,
+    location: Sequence[SchemaLocationPart],
+) -> object:
+    schema_type = schema.get("type")
+    if schema_type is not None and schema_type != "array":
+        raise ValueError(
+            f"{label} location {_format_schema_location(location[:-1])!r} "
+            "is not an array"
+        )
+    prefix_items = schema.get("prefixItems")
+    if isinstance(prefix_items, list) and index < len(prefix_items):
+        return prefix_items[index]
+    items = schema.get("items")
+    if items is None:
+        raise ValueError(
+            f"{label} array position {index} is out of range at "
+            f"{_format_schema_location(location[:-1]) or label!r}"
+        )
+    if isinstance(items, bool):
+        if items:
+            return {}
+        raise ValueError(
+            f"{label} array position {index} is out of range at "
+            f"{_format_schema_location(location[:-1]) or label!r}"
+        )
+    return items
 
 
 def _ensure_object_schema(schema: JsonObject, label: str) -> None:

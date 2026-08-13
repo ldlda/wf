@@ -26,6 +26,7 @@ from wf_artifacts.drafts.models import (
 from wf_core.local_paths import has_overlapping_paths, paths_overlap
 from wf_core.models.steps import (
     InputBinding,
+    InputExpressionBinding,
     InputPathBinding,
     InputValueBinding,
     OutputBinding,
@@ -58,6 +59,7 @@ from .drafts import (
     _draft_input_maps,
     _draft_output_map,
 )
+from .input_expressions import validate_and_project_input_expression
 from .models import DraftWorkspaceResult, JsonProjector
 from .operation_context import WorkflowOperationContext
 from .schema_projection import (
@@ -570,6 +572,24 @@ class WorkflowDraftAuthoringApi:
             input_schema=projected.input_schema,
             state_schema=projected.state_schema,
         )
+        if any(isinstance(binding, InputExpressionBinding) for binding in bindings):
+            # The artifact adapter intentionally learns to lower expressions in
+            # the later Python API carry-through task.  Persist this focused,
+            # schema-validated edit through the structural path so authoring
+            # does not reject a canonical expression before that task lands.
+            next_draft = deepcopy(workspace.draft)
+            next_steps = next_draft.get("steps")
+            if not isinstance(next_steps, dict):
+                raise ValueError("draft steps must be an object")
+            next_steps[step_id] = dict(next_steps[step_id])
+            next_steps[step_id]["input"] = projected.payload
+            next_draft["input_schema"] = projected.input_schema
+            next_draft["state_schema"] = projected.state_schema
+            return await self.drafts.replace_validated_draft_document(
+                workspace_id=workspace_id,
+                revision=revision,
+                draft=next_draft,
+            )
         return await self.drafts.patch_draft_workspace(
             workspace_id=workspace_id,
             revision=revision,
@@ -608,6 +628,19 @@ class WorkflowDraftAuthoringApi:
                     f"bindings[{index}].target {str(binding.target)!r} "
                     f"is not declared by capability {capability_name!r}: {exc}"
                 ) from exc
+
+            if isinstance(binding, InputExpressionBinding):
+                projection = validate_and_project_input_expression(
+                    binding.expression,
+                    target_schema=capability_schema,
+                    input_schema=projected_input,
+                    state_schema=projected_state,
+                    target_location=target_parts,
+                    label=f"bindings[{index}].expression",
+                )
+                projected_input = projection.input_schema
+                projected_state = projection.state_schema
+                continue
 
             if isinstance(binding, InputValueBinding):
                 if not target_parts and not isinstance(binding.value, Mapping):
