@@ -85,6 +85,53 @@ def test_adapter_lowers_use_steps_to_canonical_bindings() -> None:
     assert dumped["output"][0]["target"] == "state.echoed"
 
 
+def test_adapter_preserves_composite_node_input_bindings() -> None:
+    draft = WorkflowDraft.model_validate(
+        {
+            "name": "composite",
+            "input_schema": {},
+            "state_schema": {"type": "object"},
+            "output_schema": {},
+            "start": "echo",
+            "steps": {
+                "echo": {
+                    "use": "demo.echo",
+                    "input": [
+                        {
+                            "target": "items",
+                            "expression": {
+                                "kind": "array",
+                                "items": [
+                                    {"kind": "path", "path": "state.value"},
+                                    {"kind": "literal", "value": "!"},
+                                ],
+                            },
+                        }
+                    ],
+                }
+            },
+            "routes": {"echo": {"ok": "__end__"}},
+        }
+    )
+
+    workflow = build_workflow_from_draft(draft)
+    node = workflow.nodes[0]
+
+    assert isinstance(node, NodeUse)
+    assert node.model_dump(mode="json")["input"] == [
+        {
+            "target": "items",
+            "expression": {
+                "kind": "array",
+                "items": [
+                    {"kind": "path", "path": "state.value"},
+                    {"kind": "literal", "value": "!"},
+                ],
+            },
+        }
+    ]
+
+
 def test_adapter_lowers_root_workflow_output_bindings() -> None:
     draft = WorkflowDraft.model_validate(
         {

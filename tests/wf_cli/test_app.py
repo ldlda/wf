@@ -1131,6 +1131,16 @@ def test_wf_draft_update_capability_loads_exact_bindings_file(
             [
                 {"value": "markdown", "target": "request.format"},
                 {"path": "state.title", "target": "request.title"},
+                {
+                    "target": "request.items",
+                    "expression": {
+                        "kind": "array",
+                        "items": [
+                            {"kind": "path", "path": "state.value"},
+                            {"kind": "literal", "value": "!"},
+                        ],
+                    },
+                },
             ]
         ),
         encoding="utf-8",
@@ -1168,6 +1178,16 @@ def test_wf_draft_update_capability_loads_exact_bindings_file(
     assert [binding.model_dump(mode="json") for binding in update.input] == [
         {"value": "markdown", "target": "request.format"},
         {"path": "state.title", "target": "request.title"},
+        {
+            "target": "request.items",
+            "expression": {
+                "kind": "array",
+                "items": [
+                    {"kind": "path", "path": "state.value"},
+                    {"kind": "literal", "value": "!"},
+                ],
+            },
+        },
     ]
 
 
@@ -1234,6 +1254,16 @@ def test_wf_draft_add_capability_preserves_bindings_file_order(
             [
                 {"value": 1, "target": "request.first"},
                 {"path": "state.second", "target": "request.second"},
+                {
+                    "target": "request.items",
+                    "expression": {
+                        "kind": "array",
+                        "items": [
+                            {"kind": "path", "path": "state.value"},
+                            {"kind": "literal", "value": "!"},
+                        ],
+                    },
+                },
             ]
         ),
         encoding="utf-8",
@@ -1273,6 +1303,16 @@ def test_wf_draft_add_capability_preserves_bindings_file_order(
     ] == [
         {"value": 1, "target": "request.first"},
         {"path": "state.second", "target": "request.second"},
+        {
+            "target": "request.items",
+            "expression": {
+                "kind": "array",
+                "items": [
+                    {"kind": "path", "path": "state.value"},
+                    {"kind": "literal", "value": "!"},
+                ],
+            },
+        },
     ]
 
 
@@ -2333,6 +2373,16 @@ def test_wf_draft_set_input_replaces_from_bindings_file_in_order(
             [
                 {"value": "markdown", "target": "request.format"},
                 {"path": "state.title", "target": "request.title"},
+                {
+                    "target": "request.items",
+                    "expression": {
+                        "kind": "array",
+                        "items": [
+                            {"kind": "path", "path": "state.value"},
+                            {"kind": "literal", "value": "!"},
+                        ],
+                    },
+                },
             ]
         ),
         encoding="utf-8",
@@ -2359,6 +2409,16 @@ def test_wf_draft_set_input_replaces_from_bindings_file_in_order(
     assert [binding.model_dump(mode="json") for binding in calls[0]["bindings"]] == [
         {"target": "request.format", "value": "markdown"},
         {"target": "request.title", "path": "state.title"},
+        {
+            "target": "request.items",
+            "expression": {
+                "kind": "array",
+                "items": [
+                    {"kind": "path", "path": "state.value"},
+                    {"kind": "literal", "value": "!"},
+                ],
+            },
+        },
     ]
 
 
@@ -2845,6 +2905,43 @@ def test_wf_draft_set_workflow_output_replaces_from_bindings_file(
         {"value": "markdown", "target": "format"},
         {"path": "state.title", "target": "report.title"},
     ]
+
+
+def test_wf_draft_set_workflow_output_rejects_composite_bindings_file_before_context(
+    monkeypatch, tmp_path
+) -> None:
+    path = tmp_path / "workflow-output-expression.json"
+    path.write_text(
+        json.dumps(
+            [
+                {
+                    "target": "report.title",
+                    "expression": {"kind": "literal", "value": "nope"},
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        "wf_cli.commands.drafts.load_cli_context",
+        lambda _ctx: (_ for _ in ()).throw(AssertionError("context loaded")),
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "draft",
+            "set-workflow-output",
+            "report_ws",
+            "--revision",
+            "1",
+            "--bindings-file",
+            str(path),
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert "context loaded" not in result.output
 
 
 def test_wf_draft_set_workflow_output_clear_restores_fallback(monkeypatch) -> None:

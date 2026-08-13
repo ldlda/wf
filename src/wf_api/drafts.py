@@ -29,10 +29,10 @@ from wf_artifacts import (
 )
 from wf_core.models.schemas import NodeDef
 from wf_core.models.steps import (
-    InputBinding,
     InputPathBinding,
     InputValueBinding,
     OutputBinding,
+    StepInputBinding,
 )
 from wf_core.paths import GraphSourcePath, parse_toml_path_segments
 
@@ -775,7 +775,7 @@ def _workflow_source_schema(
 
 def _draft_input_maps(
     *,
-    input: Sequence[InputBinding] | None,
+    input: Sequence[StepInputBinding] | None,
     input_map: dict[str, str] | None,
 ) -> tuple[dict[str, str], dict[str, Any]]:
     """Convert canonical MCP input bindings into draft `in` and `with` maps.

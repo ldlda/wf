@@ -31,8 +31,11 @@ binding surfaces remain simple-only.
 Required focused command:
 
 ```text
-589 passed, 3 failed, 180 warnings
+368 passed, 3 failed, 180 warnings
 ```
+
+This is the count from the original Task 4 verification command, corrected to
+match the command and collection reviewed after the task was committed.
 
 The three failures are pre-existing admin-event fixture failures caused by
 `AdminEventPayload.timestamp_epoch_ms` being required while the fixture emitted
@@ -42,7 +45,7 @@ composite input bindings.
 The same focused command excluding only those three tests:
 
 ```text
-589 passed, 164 warnings
+368 passed, 164 warnings
 ```
 
 Additional checks:

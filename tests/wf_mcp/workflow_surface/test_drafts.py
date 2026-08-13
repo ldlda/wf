@@ -598,6 +598,64 @@ def test_workflow_surface_sets_ordered_canonical_step_input_bindings(
     ]
 
 
+def test_workflow_surface_persists_composite_step_input_binding(
+    tmp_path: Path,
+) -> None:
+    service = WfMcpService(
+        store=FileStore(tmp_path / "surface_composite_input_mcp"),
+        artifact_store=FileWorkflowArtifactStore(tmp_path / "surface_composite_input"),
+        draft_workspace_store=FileDraftWorkspaceStore(
+            tmp_path / "surface_composite_input_mcp"
+        ),
+    )
+    h = WorkflowSurfaceHandlers(service)
+    created = asyncio.run(
+        h.create_draft_workspace_from_capability(
+            workspace_id="concat_draft",
+            capability_name="wf.std.concat",
+            name="concat_draft",
+        )
+    )
+    expression = InputExpressionBinding.model_validate(
+        {
+            "target": "items",
+            "expression": {
+                "kind": "array",
+                "items": [
+                    {"kind": "path", "path": "state.value"},
+                    {"kind": "literal", "value": "!"},
+                ],
+            },
+        }
+    )
+
+    result = asyncio.run(
+        h.set_step_input_bindings(
+            workspace_id="concat_draft",
+            revision=created["revision"],
+            step_id="call",
+            bindings=[expression],
+        )
+    )
+    inspected = asyncio.run(
+        h.get_draft_workspace(workspace_id="concat_draft", include_draft=True)
+    )
+
+    assert result["revision"] == created["revision"] + 1
+    assert inspected["draft"]["steps"]["call"]["input"] == [
+        {
+            "target": "items",
+            "expression": {
+                "kind": "array",
+                "items": [
+                    {"kind": "path", "path": "state.value"},
+                    {"kind": "literal", "value": "!"},
+                ],
+            },
+        }
+    ]
+
+
 def test_workflow_surface_accepts_canonical_bindings_for_minimal_workspace(
     tmp_path: Path,
 ) -> None:
