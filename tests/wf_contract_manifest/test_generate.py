@@ -91,7 +91,7 @@ def test_generates_the_complete_real_workflow_contract() -> None:
 
     assert len(manifest["operations"]) == 70
     assert len({operation["method"] for operation in manifest["operations"]}) == 70
-    assert len(schemas) == 133
+    assert len(schemas) == 134
     assert len(manifest["components"]["errors"]) == 1
     assert all(
         set(operation["result"]["schema"]) == {"$ref"}
@@ -134,6 +134,7 @@ def test_manifest_separates_recursive_step_inputs_from_workflow_outputs() -> Non
         "LiteralExpression",
         "ObjectExpression",
         "PathExpression",
+        "StepInputBinding",
     } <= schemas.keys()
 
     input_binding_schema = schemas["InputExpressionBinding"]
@@ -156,7 +157,12 @@ def test_manifest_separates_recursive_step_inputs_from_workflow_outputs() -> Non
 
     step_input = operation("workflow.draft_workspaces.set_step_input_bindings")
     step_output = operation("workflow.draft_workspaces.set_step_output_bindings")
-    assert "InputExpressionBinding" in str(step_input["params"])
+    bindings_param = next(
+        param for param in step_input["params"] if param["name"] == "bindings"
+    )
+    assert bindings_param["schema"]["items"] == {
+        "$ref": "#/components/schemas/StepInputBinding"
+    }
     assert "InputExpressionBinding" not in str(step_output["params"])
 
 

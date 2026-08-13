@@ -105,9 +105,13 @@ export const CapabilityNodeForm = ({
           : {}),
       ...(retry === undefined ? {} : { retry }),
       ...(timeoutSeconds === undefined ? {} : { timeoutSeconds }),
+      // The legacy schema editor cannot deserialize expression rows. Keep the
+      // rehydrated rows alongside its fresh simple bindings until Task 6 owns
+      // expression editing, rather than silently deleting them on save.
       inputBindings: [
         ...result.bindings,
         ...result.literalBindings,
+        ...(initialValue?.inputBindings?.filter((binding) => "expression" in binding) ?? []),
       ],
       ...(routeOutcomes.length > 0
         ? {

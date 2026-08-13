@@ -162,6 +162,11 @@ export type CapabilityKindPayload = "tool" | "resource" | "prompt" | "node_spec"
 export type InspectCapabilityResult = NodeSpecCapabilityDetail | WrapperArtifactCapabilityDetail;
 /**
  * This interface was referenced by `WorkflowContractMap`'s JSON-Schema
+ * via the `definition` "StepInputBinding".
+ */
+export type StepInputBinding = InputPathBinding | InputValueBinding | InputExpressionBinding;
+/**
+ * This interface was referenced by `WorkflowContractMap`'s JSON-Schema
  * via the `definition` "JsonValue".
  */
 export type JsonValue =
@@ -449,7 +454,7 @@ export interface WorkflowContractMap {
       input_map?: {
         [k: string]: string;
       } | null;
-      input_bindings?: (InputPathBinding | InputValueBinding | InputExpressionBinding)[] | null;
+      input_bindings?: StepInputBinding[] | null;
       bind_outputs?: {
         [k: string]: string;
       };
@@ -540,7 +545,7 @@ export interface WorkflowContractMap {
       output_schema?: {
         [k: string]: unknown;
       } | null;
-      input?: (InputPathBinding | InputValueBinding | InputExpressionBinding)[] | null;
+      input?: StepInputBinding[] | null;
       output?: OutputBinding[] | null;
       input_map?: {
         [k: string]: string;
@@ -693,7 +698,7 @@ export interface WorkflowContractMap {
       workspace_id: string;
       revision: number;
       step_id: string;
-      bindings: (InputPathBinding | InputValueBinding | InputExpressionBinding)[];
+      bindings: StepInputBinding[];
     };
     result: DraftWorkspaceResult;
   };
@@ -779,7 +784,7 @@ export interface WorkflowContractMap {
       output_schema?: {
         [k: string]: unknown;
       } | null;
-      input?: (InputPathBinding | InputValueBinding | InputExpressionBinding)[] | null;
+      input?: StepInputBinding[] | null;
       output?: OutputBinding[] | null;
       input_map?: {
         [k: string]: string;
@@ -1498,7 +1503,7 @@ export interface DraftUseStep {
   /**
    * Canonical input bindings for this capability. Use path bindings for graph-to-local input and value bindings for literals.
    */
-  input?: (InputPathBinding | InputValueBinding | InputExpressionBinding)[];
+  input?: StepInputBinding[];
   /**
    * Canonical output bindings from node-local output paths to workflow state destinations.
    */
@@ -1768,7 +1773,7 @@ export interface DraftInterruptStep {
 export interface DraftInterruptPayload {
   kind: string;
   outcomes?: string[];
-  request?: (InputPathBinding | InputValueBinding | InputExpressionBinding)[];
+  request?: StepInputBinding[];
   request_schema?: SchemaRef | null;
   resume?: OutputBinding[];
   resume_schema?: SchemaRef | null;
@@ -2015,7 +2020,7 @@ export interface DraftSubgraphStep {
  */
 export interface DraftSubgraphPayload {
   desc?: string | null;
-  input?: (InputPathBinding | InputValueBinding | InputExpressionBinding)[];
+  input?: StepInputBinding[];
   input_schema?: SchemaRef;
   /**
    * @minItems 1
@@ -2214,7 +2219,7 @@ export interface ListDraftWorkspacesResult {
  */
 export interface CapabilityStepUpdate {
   desc?: string | null;
-  input?: (InputPathBinding | InputValueBinding | InputExpressionBinding)[] | null;
+  input?: StepInputBinding[] | null;
   retry?: number | null;
   timeout_seconds?: number | null;
 }
@@ -2870,17 +2875,7 @@ export const workflowRuntimeContract = {
           "anyOf": [
             {
               "items": {
-                "anyOf": [
-                  {
-                    "$ref": "#/components/schemas/InputPathBinding"
-                  },
-                  {
-                    "$ref": "#/components/schemas/InputValueBinding"
-                  },
-                  {
-                    "$ref": "#/components/schemas/InputExpressionBinding"
-                  }
-                ]
+                "$ref": "#/components/schemas/StepInputBinding"
               },
               "type": "array"
             },
@@ -4646,6 +4641,19 @@ export const workflowRuntimeContract = {
       ],
       "type": "object"
     },
+    "StepInputBinding": {
+      "anyOf": [
+        {
+          "$ref": "#/components/schemas/InputPathBinding"
+        },
+        {
+          "$ref": "#/components/schemas/InputValueBinding"
+        },
+        {
+          "$ref": "#/components/schemas/InputExpressionBinding"
+        }
+      ]
+    },
     "TraceEntryPayload": {
       "properties": {
         "frame_id": {
@@ -5463,17 +5471,7 @@ export const workflowRuntimeContract = {
             "anyOf": [
               {
                 "items": {
-                  "anyOf": [
-                    {
-                      "$ref": "#/components/schemas/InputPathBinding"
-                    },
-                    {
-                      "$ref": "#/components/schemas/InputValueBinding"
-                    },
-                    {
-                      "$ref": "#/components/schemas/InputExpressionBinding"
-                    }
-                  ]
+                  "$ref": "#/components/schemas/StepInputBinding"
                 },
                 "type": "array"
               },
@@ -5688,17 +5686,7 @@ export const workflowRuntimeContract = {
             "anyOf": [
               {
                 "items": {
-                  "anyOf": [
-                    {
-                      "$ref": "#/components/schemas/InputPathBinding"
-                    },
-                    {
-                      "$ref": "#/components/schemas/InputValueBinding"
-                    },
-                    {
-                      "$ref": "#/components/schemas/InputExpressionBinding"
-                    }
-                  ]
+                  "$ref": "#/components/schemas/StepInputBinding"
                 },
                 "type": "array"
               },
@@ -5859,17 +5847,7 @@ export const workflowRuntimeContract = {
           },
           "bindings": {
             "items": {
-              "anyOf": [
-                {
-                  "$ref": "#/components/schemas/InputPathBinding"
-                },
-                {
-                  "$ref": "#/components/schemas/InputValueBinding"
-                },
-                {
-                  "$ref": "#/components/schemas/InputExpressionBinding"
-                }
-              ]
+              "$ref": "#/components/schemas/StepInputBinding"
             },
             "type": "array"
           }

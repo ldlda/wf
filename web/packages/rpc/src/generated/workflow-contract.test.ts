@@ -8,8 +8,7 @@ import {
   type OperationName,
   type InputExpression,
   type InputExpressionBinding,
-  type InputPathBinding,
-  type InputValueBinding,
+  type StepInputBinding,
   type WorkflowOperationParams,
   type WorkflowOperationResult,
 } from "../index.js";
@@ -97,7 +96,7 @@ describe("generated workflow contract", () => {
     expectTypeOf<
       WorkflowOperationParams<"workflow.draft_workspaces.set_step_input_bindings">
     >().toMatchTypeOf<{
-      bindings: Array<InputPathBinding | InputValueBinding | InputExpressionBinding>;
+      bindings: Array<StepInputBinding>;
     }>();
     expectTypeOf<
       WorkflowOperationParams<"workflow.draft_workspaces.set_step_output_bindings">

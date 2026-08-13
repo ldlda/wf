@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Annotated, Literal
+from typing import Annotated, Literal, TypeAliasType
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -197,11 +197,13 @@ InputBinding = Annotated[
 """Canonical simple node input binding, distinguished by `path` vs `value`."""
 
 
-StepInputBinding = Annotated[
-    InputPathBinding | InputValueBinding | InputExpressionBinding,
-    Field(union_mode="left_to_right"),
-]
-"""Node-local binding union, including recursively composed expressions."""
+StepInputBinding = TypeAliasType(
+    "StepInputBinding",
+    Annotated[
+        InputPathBinding | InputValueBinding | InputExpressionBinding,
+        Field(union_mode="left_to_right"),
+    ],
+)
 
 
 for _model in (ArrayExpression, ObjectExpression, InputExpressionBinding):

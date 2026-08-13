@@ -6,6 +6,7 @@ import {
   type WorkflowOperationResult,
 } from "../generated/workflow-contract.js";
 import { translateJsonSchema } from "./translator.js";
+import { hasBoundedInputExpressionPayload } from "./input-expression-limits.js";
 
 type RuntimeOperationName = keyof typeof workflowRuntimeContract.operations;
 const MAX_RUNTIME_VALUE_DEPTH = 64;
@@ -46,6 +47,10 @@ const BoundedRuntimeValueSchema = Schema.Unknown.pipe(
   Schema.filter(hasBoundedRuntimeValueDepth, {
     message: () =>
       `runtime value exceeds ${MAX_RUNTIME_VALUE_DEPTH} nested containers`,
+  }),
+  Schema.filter((value) => hasBoundedInputExpressionPayload(value), {
+    message: () =>
+      "runtime value contains an input expression over the 1024-node budget",
   }),
 );
 

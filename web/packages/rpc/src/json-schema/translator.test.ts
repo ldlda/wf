@@ -246,6 +246,54 @@ describe("translateJsonSchema", () => {
     );
   });
 
+  it("rejects a decorative discriminator on inline overlapping oneOf branches", () => {
+    const error = rejected({
+      discriminator: {
+        mapping: { text: "#/components/schemas/Text", short: "#/components/schemas/Short" },
+        propertyName: "kind",
+      },
+      oneOf: [{ type: "string" }, { minLength: 1, type: "string" }],
+    }, {
+      Short: { minLength: 1, type: "string" },
+      Text: { type: "string" },
+    });
+
+    expect(error.keyword).toBe("oneOf");
+    expect(error.message).toMatch(/generated tagged object union/i);
+  });
+
+  it("rejects discriminated branches without distinct discriminator constants", () => {
+    const error = rejected({
+      discriminator: {
+        mapping: {
+          first: "#/components/schemas/First",
+          second: "#/components/schemas/Second",
+        },
+        propertyName: "kind",
+      },
+      oneOf: [
+        { $ref: "#/components/schemas/First" },
+        { $ref: "#/components/schemas/Second" },
+      ],
+    }, {
+      First: {
+        additionalProperties: false,
+        properties: { kind: { type: "string" }, value: { type: "string" } },
+        required: ["kind", "value"],
+        type: "object",
+      },
+      Second: {
+        additionalProperties: false,
+        properties: { kind: { type: "string" }, value: { type: "string" } },
+        required: ["kind", "value"],
+        type: "object",
+      },
+    });
+
+    expect(error.keyword).toBe("oneOf");
+    expect(error.message).toMatch(/generated tagged object union/i);
+  });
+
   it("rejects unproductive component reference cycles", () => {
     const components = {
       Loop: { $ref: "#/components/schemas/Loop" },

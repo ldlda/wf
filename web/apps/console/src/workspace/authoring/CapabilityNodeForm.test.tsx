@@ -28,6 +28,38 @@ describe("CapabilityNodeForm", () => {
     expect(value.inputBindings[0]).toHaveProperty("expression.kind", "array");
   });
 
+  it("preserves rehydrated expression bindings when the legacy form is submitted", async () => {
+    const user = userEvent.setup();
+    const submissions: CapabilityNodeFormValue[] = [];
+    const expressionBinding = {
+      target: "request",
+      expression: {
+        kind: "array",
+        items: [
+          { kind: "path", path: "state.foo" },
+          { kind: "literal", value: "wowcool" },
+        ],
+      },
+    } as const;
+
+    render(
+      <CapabilityNodeForm
+        capabilityName="wf.std.concat"
+        initialValue={{ stepId: "concat", inputBindings: [expressionBinding] }}
+        inputSchema={{ type: "object", properties: {} }}
+        onSubmit={(value) => { submissions.push(value); }}
+        submitLabel="Save node"
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Save node" }));
+
+    expect(submissions).toHaveLength(1);
+    expect(
+      submissions[0]?.inputBindings?.filter((binding) => "expression" in binding),
+    ).toEqual([expressionBinding]);
+  });
+
   it("submits explicit node metadata and serialized schema bindings", async () => {
     const user = userEvent.setup();
     const submissions: unknown[] = [];

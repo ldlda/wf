@@ -506,18 +506,15 @@ def test_openrpc_separates_step_input_and_workflow_output_binding_unions(
         "workflow.draft_workspaces.set_workflow_output_bindings",
     )
 
-    step_items = step_method["params"][3]["schema"]["items"]["anyOf"]
+    step_items = step_method["params"][3]["schema"]["items"]
     output_items = output_method["params"][2]["schema"]["items"]["anyOf"]
 
-    assert {item["$ref"] for item in step_items} == {
-        "#/components/schemas/InputPathBinding",
-        "#/components/schemas/InputValueBinding",
-        "#/components/schemas/InputExpressionBinding",
-    }
+    assert step_items == {"$ref": "#/components/schemas/StepInputBinding"}
     assert {item["$ref"] for item in output_items} == {
         "#/components/schemas/InputPathBinding",
         "#/components/schemas/InputValueBinding",
     }
+    assert "StepInputBinding" in schemas
     assert "InputExpressionBinding" in schemas
 
 

@@ -441,6 +441,14 @@ class Translator {
       );
     }
 
+    if (!this.#isGeneratedDiscriminatedUnion(value.oneOf, value.discriminator.propertyName, mapping)) {
+      return failure(
+        path,
+        "discriminated oneOf is supported only for generated tagged object unions",
+        "oneOf",
+      );
+    }
+
     const members: Schema.Schema.AnyNoContext[] = [];
     for (const [index, member] of value.oneOf.entries()) {
       const translated = this.translate(
@@ -455,6 +463,55 @@ class Translator {
     // runtime union preserves the discriminated contract without weakening
     // arbitrary oneOf schemas into an overlapping union.
     return Either.right(Schema.Union(...members));
+  }
+
+  #isGeneratedDiscriminatedUnion(
+    branches: readonly unknown[],
+    propertyName: string,
+    mapping: Record<string, unknown>,
+  ): boolean {
+    const mappedReferences = Object.entries(mapping);
+    if (mappedReferences.length !== branches.length) return false;
+
+    const references = new Set<string>();
+    for (const branch of branches) {
+      if (!isRecord(branch) || typeof branch.$ref !== "string") return false;
+      if (references.has(branch.$ref)) return false;
+      references.add(branch.$ref);
+    }
+
+    const mappedReferenceSet = new Set<string>();
+    for (const [tag, reference] of mappedReferences) {
+      if (typeof reference !== "string") return false;
+      if (mappedReferenceSet.has(reference) || !references.has(reference)) return false;
+      mappedReferenceSet.add(reference);
+      const prefix = "#/components/schemas/";
+      if (!reference.startsWith(prefix)) return false;
+      const component = this.#components[reference.slice(prefix.length)];
+      if (!isRecord(component)) return false;
+      if (component.type !== "object" || component.additionalProperties !== false) {
+        return false;
+      }
+      const required = component.required;
+      const properties = component.properties;
+      if (
+        !Array.isArray(required) ||
+        !required.includes(propertyName) ||
+        !isRecord(properties) ||
+        !isRecord(properties[propertyName])
+      ) {
+        return false;
+      }
+      const discriminator = properties[propertyName];
+      if (
+        discriminator.type !== "string" ||
+        discriminator.const !== tag
+      ) {
+        return false;
+      }
+    }
+
+    return mappedReferenceSet.size === references.size;
   }
 
   #translateConst(

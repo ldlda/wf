@@ -1,9 +1,7 @@
 import { Schema } from "effect";
 import type {
   NodeSpecCapabilitySummary,
-  InputExpressionBinding,
-  InputPathBinding,
-  InputValueBinding,
+  StepInputBinding,
   WorkflowOperationName,
   WrapperArtifactCapabilitySummary,
 } from "./generated/workflow-contract.js";
@@ -56,11 +54,6 @@ import {
   WorkflowRunsTracePayloadSchema,
   WorkflowRunsTraceResultSchema,
 } from "./rpcs.js";
-
-type StepInputBinding =
-  | InputPathBinding
-  | InputValueBinding
-  | InputExpressionBinding;
 
 export type OperationMeta = {
   readonly method: WorkflowOperationName;

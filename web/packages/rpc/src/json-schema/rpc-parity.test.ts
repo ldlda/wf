@@ -1148,6 +1148,25 @@ describe("authored RPC and manifest schema parity", () => {
     ).toBe(false);
   });
 
+  it("rejects authored expressions over 1024 nodes including literal containers", () => {
+    const basePayload = {
+      workspace_id: "console.demo",
+      revision: 3,
+      step_id: "concat",
+    };
+    const expression = {
+      kind: "literal",
+      value: Array.from({ length: 1023 }, () => ({})),
+    };
+
+    expect(
+      accepts(authoredRpcSchemas["workflow.draft_workspaces.set_step_input_bindings"].payload, {
+        ...basePayload,
+        bindings: [{ target: "request", expression }],
+      }),
+    ).toBe(false);
+  });
+
   it("catalogs every authored RPC exactly once", () => {
     const expectedMethods = [
       "workflow.health",

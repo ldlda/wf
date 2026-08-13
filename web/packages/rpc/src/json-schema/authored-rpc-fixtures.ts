@@ -1,4 +1,5 @@
 import { Schema } from "effect";
+import { hasBoundedInputExpressionNodeBudget } from "./input-expression-limits.js";
 
 type JsonValue = string | number | boolean | null | JsonValue[] | { readonly [key: string]: JsonValue };
 
@@ -353,6 +354,11 @@ const InputExpressionSchema: Schema.Schema<InputExpression, unknown, never> =
         ObjectExpressionSchema,
       ),
   );
+const BoundedInputExpressionSchema = InputExpressionSchema.pipe(
+  Schema.filter((value) => hasBoundedInputExpressionNodeBudget(value), {
+    message: () => "input expression exceeds the 1024-node budget",
+  }),
+);
 const InputExpressionBindingSchema = Schema.Struct({
   target: Schema.Union(
     Schema.String,
@@ -361,7 +367,7 @@ const InputExpressionBindingSchema = Schema.Struct({
       root: Schema.Literal("local"),
     }),
   ),
-  expression: InputExpressionSchema,
+  expression: BoundedInputExpressionSchema,
 });
 
 const InputBindingSchema = Schema.Union(

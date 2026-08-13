@@ -391,17 +391,7 @@
             "anyOf": [
               {
                 "items": {
-                  "anyOf": [
-                    {
-                      "$ref": "#/components/schemas/InputPathBinding"
-                    },
-                    {
-                      "$ref": "#/components/schemas/InputValueBinding"
-                    },
-                    {
-                      "$ref": "#/components/schemas/InputExpressionBinding"
-                    }
-                  ]
+                  "$ref": "#/components/schemas/StepInputBinding"
                 },
                 "type": "array"
               },
@@ -1040,17 +1030,7 @@
           },
           "request": {
             "items": {
-              "anyOf": [
-                {
-                  "$ref": "#/components/schemas/InputPathBinding"
-                },
-                {
-                  "$ref": "#/components/schemas/InputValueBinding"
-                },
-                {
-                  "$ref": "#/components/schemas/InputExpressionBinding"
-                }
-              ]
+              "$ref": "#/components/schemas/StepInputBinding"
             },
             "type": "array"
           },
@@ -1182,17 +1162,7 @@
           },
           "input": {
             "items": {
-              "anyOf": [
-                {
-                  "$ref": "#/components/schemas/InputPathBinding"
-                },
-                {
-                  "$ref": "#/components/schemas/InputValueBinding"
-                },
-                {
-                  "$ref": "#/components/schemas/InputExpressionBinding"
-                }
-              ]
+              "$ref": "#/components/schemas/StepInputBinding"
             },
             "type": "array"
           },
@@ -1255,17 +1225,7 @@
           "input": {
             "description": "Canonical input bindings for this capability. Use path bindings for graph-to-local input and value bindings for literals.",
             "items": {
-              "anyOf": [
-                {
-                  "$ref": "#/components/schemas/InputPathBinding"
-                },
-                {
-                  "$ref": "#/components/schemas/InputValueBinding"
-                },
-                {
-                  "$ref": "#/components/schemas/InputExpressionBinding"
-                }
-              ]
+              "$ref": "#/components/schemas/StepInputBinding"
             },
             "type": "array"
           },
@@ -4107,6 +4067,19 @@
         ],
         "type": "object"
       },
+      "StepInputBinding": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/InputPathBinding"
+          },
+          {
+            "$ref": "#/components/schemas/InputValueBinding"
+          },
+          {
+            "$ref": "#/components/schemas/InputExpressionBinding"
+          }
+        ]
+      },
       "TraceEntryPayload": {
         "properties": {
           "frame_id": {
@@ -6066,17 +6039,7 @@
             "anyOf": [
               {
                 "items": {
-                  "anyOf": [
-                    {
-                      "$ref": "#/components/schemas/InputPathBinding"
-                    },
-                    {
-                      "$ref": "#/components/schemas/InputValueBinding"
-                    },
-                    {
-                      "$ref": "#/components/schemas/InputExpressionBinding"
-                    }
-                  ]
+                  "$ref": "#/components/schemas/StepInputBinding"
                 },
                 "type": "array"
               },
@@ -6658,17 +6621,7 @@
             "anyOf": [
               {
                 "items": {
-                  "anyOf": [
-                    {
-                      "$ref": "#/components/schemas/InputPathBinding"
-                    },
-                    {
-                      "$ref": "#/components/schemas/InputValueBinding"
-                    },
-                    {
-                      "$ref": "#/components/schemas/InputExpressionBinding"
-                    }
-                  ]
+                  "$ref": "#/components/schemas/StepInputBinding"
                 },
                 "type": "array"
               },
@@ -7562,17 +7515,7 @@
           "required": true,
           "schema": {
             "items": {
-              "anyOf": [
-                {
-                  "$ref": "#/components/schemas/InputPathBinding"
-                },
-                {
-                  "$ref": "#/components/schemas/InputValueBinding"
-                },
-                {
-                  "$ref": "#/components/schemas/InputExpressionBinding"
-                }
-              ]
+              "$ref": "#/components/schemas/StepInputBinding"
             },
             "type": "array"
           }
@@ -8063,17 +8006,7 @@
             "anyOf": [
               {
                 "items": {
-                  "anyOf": [
-                    {
-                      "$ref": "#/components/schemas/InputPathBinding"
-                    },
-                    {
-                      "$ref": "#/components/schemas/InputValueBinding"
-                    },
-                    {
-                      "$ref": "#/components/schemas/InputExpressionBinding"
-                    }
-                  ]
+                  "$ref": "#/components/schemas/StepInputBinding"
                 },
                 "type": "array"
               },

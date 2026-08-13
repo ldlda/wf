@@ -56,6 +56,12 @@ const fixture = {
         required: ["target", "value"],
         type: "object",
       },
+      StepInputBinding: {
+        anyOf: [
+          { $ref: "#/components/schemas/InputPathBinding" },
+          { $ref: "#/components/schemas/InputValueBinding" },
+        ],
+      },
       OutputBinding: {
         additionalProperties: false,
         properties: {
@@ -178,12 +184,7 @@ const completeRuntimeFixture = {
                 name: "bindings",
                 required: true,
                 schema: {
-                  items: {
-                    anyOf: [
-                      { $ref: "#/components/schemas/InputPathBinding" },
-                      { $ref: "#/components/schemas/InputValueBinding" },
-                    ],
-                  },
+                  items: { $ref: "#/components/schemas/StepInputBinding" },
                   type: "array",
                 },
               },
@@ -353,6 +354,7 @@ describe("workflow contract generator", () => {
     );
     expect(runtimeSource).toContain('"InputPathBinding"');
     expect(runtimeSource).toContain('"InputValueBinding"');
+    expect(runtimeSource).toContain('"StepInputBinding"');
     expect(runtimeSource).toContain('"OutputBinding"');
   });
 

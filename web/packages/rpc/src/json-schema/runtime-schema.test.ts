@@ -88,6 +88,47 @@ describe("runtimeSchemasFor", () => {
     }
   });
 
+  it("rejects an input expression over the canonical 1024-node budget", () => {
+    const schemas = runtimeSchemasFor(
+      "workflow.draft_workspaces.set_step_input_bindings",
+    );
+    const expression = {
+      kind: "array",
+      items: Array.from({ length: 1025 }, () => ({
+        kind: "literal",
+        value: "child",
+      })),
+    };
+
+    expect(
+      accepts(schemas.payload, {
+        workspace_id: "console.demo",
+        revision: 3,
+        step_id: "render",
+        bindings: [{ target: "request", expression }],
+      }),
+    ).toBe(false);
+  });
+
+  it("counts nested literal array and object containers in the input budget", () => {
+    const schemas = runtimeSchemasFor(
+      "workflow.draft_workspaces.set_step_input_bindings",
+    );
+    const expression = {
+      kind: "literal",
+      value: Array.from({ length: 1023 }, () => ({})),
+    };
+
+    expect(
+      accepts(schemas.payload, {
+        workspace_id: "console.demo",
+        revision: 3,
+        step_id: "render",
+        bindings: [{ target: "request", expression }],
+      }),
+    ).toBe(false);
+  });
+
   it("returns typed payload and result schemas for a generated operation", () => {
     const schemas = runtimeSchemasFor("workflow.health");
     const payload: WorkflowOperationParams<"workflow.health"> =
