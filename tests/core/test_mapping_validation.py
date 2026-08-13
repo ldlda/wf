@@ -62,6 +62,47 @@ def test_validation_rejects_invalid_canonical_input_source_path() -> None:
     )
 
 
+def test_validation_rejects_invalid_nested_expression_source_path() -> None:
+    report = _workflow(
+        input=[
+            {
+                "target": "request",
+                "expression": {
+                    "kind": "object",
+                    "fields": {"name": {"kind": "path", "path": "state.unknown"}},
+                },
+            }
+        ],
+        output=[],
+    ).validate_structure()
+
+    assert any(
+        issue.code == ValidationIssueCode.INVALID_SOURCE_PATH
+        and issue.path == "nodes[0].input[0].expression.fields.name.path"
+        for issue in report.errors
+    )
+
+
+def test_validation_treats_expression_target_as_one_atomic_input_assignment() -> None:
+    report = _workflow(
+        input=[
+            {"target": "request", "value": {"title": "Ada"}},
+            {
+                "target": "request.title",
+                "expression": {"kind": "literal", "value": "Grace"},
+            },
+        ],
+        output=[],
+    ).validate_structure()
+
+    assert any(
+        issue.code == ValidationIssueCode.INVALID_NODE_INPUT_FIELD
+        and issue.path == "nodes[0].input"
+        and "overlapping node-local input paths" in issue.message
+        for issue in report.errors
+    )
+
+
 def test_validation_allows_canonical_input_source_under_declared_state_field_root() -> (
     None
 ):
@@ -194,7 +235,10 @@ def _workflow(
                 input_schema=SchemaRef.model_validate(
                     {
                         "type": "object",
-                        "properties": {"user": {"type": "object"}},
+                        "properties": {
+                            "user": {"type": "object"},
+                            "request": {"type": "object"},
+                        },
                     }
                 ),
                 output_schema=SchemaRef.model_validate(

@@ -4,12 +4,10 @@ from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass
 from typing import Any, cast
 
-from wf_core.conditions import safe_resolve_path
 from wf_core.errors import WorkflowExecutionError
-from wf_core.local_paths import LocalPathError, set_local_value
 from wf_core.models.results import NodeResult
 from wf_core.models.schemas import NodeDef
-from wf_core.models.steps import InputPathBinding, InputValueBinding, NodeUse
+from wf_core.models.steps import NodeUse
 from wf_core.models.workflow import Workflow
 from wf_core.run_state import (
     ExecutionFrame,
@@ -18,6 +16,7 @@ from wf_core.run_state import (
     StepExecutionResult,
 )
 from wf_core.runtime.foreach_state import ForeachBarrierState, item_frame_owner
+from wf_core.runtime.input_bindings import resolve_step_input_bindings
 from wf_core.runtime.lineage import (
     append_lineage_writes,
     commit_patch_for_frame,
@@ -59,25 +58,13 @@ def _resolve_node_execution(
 ) -> tuple[dict[str, Any], RuntimeContext, dict[str, Any]]:
     context_values = frame_context_values(frame)
     state_view = state_view_for_frame(run, frame)
-    resolved_input: dict[str, Any] = {}
-    for binding in node.input:
-        if isinstance(binding, InputValueBinding):
-            value = binding.value
-        elif isinstance(binding, InputPathBinding):
-            value = safe_resolve_path(
-                str(binding.path),
-                state=state_view,
-                workflow_input=scope_input_for_frame(run, frame),
-                context=context_values,
-            )
-        else:
-            raise WorkflowExecutionError(
-                f"unsupported input binding for node {node.id!r}"
-            )
-        try:
-            set_local_value(resolved_input, binding.target, value)
-        except LocalPathError as exc:
-            raise WorkflowExecutionError(str(exc)) from exc
+    resolved_input = resolve_step_input_bindings(
+        node.input,
+        state=state_view,
+        workflow_input=scope_input_for_frame(run, frame),
+        context=context_values,
+        label=f"node {node.id!r} input",
+    )
     validate_payload_against_schema(
         node_def.input_schema, resolved_input, f"node input for {node.id}"
     )

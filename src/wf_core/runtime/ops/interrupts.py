@@ -3,10 +3,8 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from wf_core.conditions import safe_resolve_path
 from wf_core.errors import WorkflowExecutionError
-from wf_core.local_paths import LocalPathError, set_local_value
-from wf_core.models.steps import InputPathBinding, InputValueBinding, InterruptNode
+from wf_core.models.steps import InterruptNode
 from wf_core.models.workflow import Workflow
 from wf_core.run_state import (
     FrameStatus,
@@ -15,6 +13,7 @@ from wf_core.run_state import (
     RunState,
     StepExecutionResult,
 )
+from wf_core.runtime.input_bindings import resolve_step_input_bindings
 from wf_core.runtime.lineage import commit_patch_for_frame
 from wf_core.runtime.ops.flow import advance_frame, append_step_result_trace
 from wf_core.runtime.ops.index import WorkflowIndex
@@ -35,25 +34,13 @@ def build_interrupt_request(
     public_node_id: str | None = None,
     route: InterruptRoute | None = None,
 ) -> InterruptRequest:
-    payload: dict[str, Any] = {}
-    for binding in node.request:
-        if isinstance(binding, InputValueBinding):
-            value = binding.value
-        elif isinstance(binding, InputPathBinding):
-            value = safe_resolve_path(
-                str(binding.path),
-                state=state,
-                workflow_input=workflow_input,
-                context=context,
-            )
-        else:
-            raise WorkflowExecutionError(
-                f"unsupported request binding for interrupt {node.id!r}"
-            )
-        try:
-            set_local_value(payload, binding.target, value)
-        except LocalPathError as exc:
-            raise WorkflowExecutionError(str(exc)) from exc
+    payload = resolve_step_input_bindings(
+        node.request,
+        state=state,
+        workflow_input=workflow_input,
+        context=context,
+        label=f"interrupt {node.id!r} request",
+    )
     validate_payload_against_schema(
         node.request_schema,
         payload,

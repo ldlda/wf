@@ -1,18 +1,11 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from typing import Any, Generic, TypeVar
 
-from wf_core.conditions import safe_resolve_path
 from wf_core.errors import WorkflowExecutionError
-from wf_core.local_paths import LocalPathError, set_local_value
-from wf_core.models.steps import (
-    InputBinding,
-    InputPathBinding,
-    InputValueBinding,
-    SubgraphNode,
-)
+from wf_core.models.steps import SubgraphNode
 from wf_core.models.workflow import Workflow
 from wf_core.models.workflow_refs import WorkflowRef
 from wf_core.run_state import (
@@ -23,6 +16,7 @@ from wf_core.run_state import (
     RuntimeScope,
     StepExecutionResult,
 )
+from wf_core.runtime.input_bindings import resolve_step_input_bindings
 from wf_core.runtime.lineage import commit_patch_for_frame
 from wf_core.runtime.ops.frames import frame_context_values
 from wf_core.runtime.ops.merges import ReducerDefinition
@@ -111,35 +105,6 @@ def resolve_prepared_subgraph(
     return prepared
 
 
-def resolve_input_bindings(
-    bindings: Sequence[InputBinding],
-    *,
-    state: Mapping[str, Any],
-    workflow_input: Mapping[str, Any],
-    context: Mapping[str, Any],
-    label: str,
-) -> dict[str, Any]:
-    """Build a local input payload from canonical value/path bindings."""
-    payload: dict[str, Any] = {}
-    for binding in bindings:
-        if isinstance(binding, InputValueBinding):
-            value = binding.value
-        elif isinstance(binding, InputPathBinding):
-            value = safe_resolve_path(
-                str(binding.path),
-                state=state,
-                workflow_input=workflow_input,
-                context=context,
-            )
-        else:
-            raise WorkflowExecutionError(f"unsupported input binding for {label}")
-        try:
-            set_local_value(payload, binding.target, value)
-        except LocalPathError as exc:
-            raise WorkflowExecutionError(str(exc)) from exc
-    return payload
-
-
 def step_subgraph(
     workflow: Workflow,
     run: RunState,
@@ -171,7 +136,7 @@ def _start_subgraph(
 ) -> None:
     prepared.workflow.validate_structure().raise_for_errors()
     parent_scope = run.scopes[frame.scope_id]
-    child_input = resolve_input_bindings(
+    child_input = resolve_step_input_bindings(
         step.input,
         state=state_view_for_frame(run, frame),
         workflow_input=parent_scope.workflow_input,

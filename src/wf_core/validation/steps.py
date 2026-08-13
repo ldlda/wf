@@ -10,6 +10,13 @@ from wf_core.models.conditions import (
     PathOperand,
     VariadicCondition,
 )
+from wf_core.models.input_bindings import (
+    ArrayExpression,
+    InputExpression,
+    InputExpressionBinding,
+    ObjectExpression,
+    PathExpression,
+)
 from wf_core.models.schemas import NodeDef
 from wf_core.models.steps import (
     ConditionNode,
@@ -20,10 +27,12 @@ from wf_core.models.steps import (
     InterruptNode,
     NodeUse,
     OutputBinding,
+    StepInputBinding,
     SubgraphNode,
 )
 from wf_core.models.workflow import Workflow
 from wf_core.paths import (
+    GraphSourcePath,
     LocalPath,
     PathResolutionError,
     StatePath,
@@ -86,7 +95,7 @@ def validate_subgraph_node(
 
 def _validate_boundary_bindings(
     *,
-    input_bindings: list[InputBinding],
+    input_bindings: list[StepInputBinding],
     output_bindings: list[OutputBinding],
     input_fields: set[str],
     output_fields: set[str],
@@ -111,13 +120,22 @@ def _validate_boundary_bindings(
                 f"destination field {str(binding.target)!r} is not declared in node input schema",
             )
 
-        if isinstance(binding, InputPathBinding) and not is_valid_source_path(
-            binding.path, state_root_fields, input_root_fields, allow_context=True
-        ):
-            report.add(
-                ValidationIssueCode.INVALID_SOURCE_PATH,
-                f"{path_prefix}.input[{input_index}].path",
-                "source path must start with input., state., or context. and reference a declared root field when applicable",
+        input_path = f"{path_prefix}.input[{input_index}]"
+        if isinstance(binding, InputPathBinding):
+            _validate_source_path(
+                binding.path,
+                f"{input_path}.path",
+                report,
+                state_root_fields,
+                input_root_fields,
+            )
+        elif isinstance(binding, InputExpressionBinding):
+            _validate_expression_sources(
+                binding.expression,
+                input_path=f"{input_path}.expression",
+                report=report,
+                state_root_fields=state_root_fields,
+                input_root_fields=input_root_fields,
             )
 
     if has_overlapping_paths(input_targets):
@@ -202,6 +220,68 @@ def validate_workflow_output_bindings(
             "output",
             "workflow output has overlapping output payload paths",
         )
+
+
+def _validate_source_path(
+    path: str | GraphSourcePath,
+    issue_path: str,
+    report: ValidationReport,
+    state_root_fields: set[str],
+    input_root_fields: set[str],
+    *,
+    error_code: ValidationIssueCode = ValidationIssueCode.INVALID_SOURCE_PATH,
+    message: str = "source path must start with input., state., or context. and reference a declared root field when applicable",
+) -> None:
+    if is_valid_source_path(
+        path, state_root_fields, input_root_fields, allow_context=True
+    ):
+        return
+    report.add(error_code, issue_path, message)
+
+
+def _validate_expression_sources(
+    expression: InputExpression,
+    *,
+    input_path: str,
+    report: ValidationReport,
+    state_root_fields: set[str],
+    input_root_fields: set[str],
+    error_code: ValidationIssueCode = ValidationIssueCode.INVALID_SOURCE_PATH,
+    message: str = "source path must start with input., state., or context. and reference a declared root field when applicable",
+) -> None:
+    """Validate every graph path leaf while keeping one top-level target atomic."""
+    if isinstance(expression, PathExpression):
+        _validate_source_path(
+            expression.path,
+            f"{input_path}.path",
+            report,
+            state_root_fields,
+            input_root_fields,
+            error_code=error_code,
+            message=message,
+        )
+    elif isinstance(expression, ArrayExpression):
+        for index, item in enumerate(expression.items):
+            _validate_expression_sources(
+                item,
+                input_path=f"{input_path}.items[{index}]",
+                report=report,
+                state_root_fields=state_root_fields,
+                input_root_fields=input_root_fields,
+                error_code=error_code,
+                message=message,
+            )
+    elif isinstance(expression, ObjectExpression):
+        for field, item in expression.fields.items():
+            _validate_expression_sources(
+                item,
+                input_path=f"{input_path}.fields.{field}",
+                report=report,
+                state_root_fields=state_root_fields,
+                input_root_fields=input_root_fields,
+                error_code=error_code,
+                message=message,
+            )
 
 
 def _local_root(path: str | LocalPath) -> str | None:
@@ -298,16 +378,25 @@ def validate_interrupt_node(
                 field_path,
                 "interrupt request payload field must not be empty",
             )
-        if isinstance(binding, InputPathBinding) and not is_valid_source_path(
-            binding.path,
-            state_root_fields,
-            input_root_fields,
-            allow_context=True,
-        ):
-            report.add(
-                ValidationIssueCode.INVALID_INTERRUPT_SOURCE,
-                field_path,
-                "interrupt request source must start with input., state., or context. and reference a declared root field when applicable",
+        if isinstance(binding, InputPathBinding):
+            _validate_source_path(
+                binding.path,
+                f"{field_path}.path",
+                report,
+                state_root_fields,
+                input_root_fields,
+                error_code=ValidationIssueCode.INVALID_INTERRUPT_SOURCE,
+                message="interrupt request source must start with input., state., or context. and reference a declared root field when applicable",
+            )
+        elif isinstance(binding, InputExpressionBinding):
+            _validate_expression_sources(
+                binding.expression,
+                input_path=f"{field_path}.expression",
+                report=report,
+                state_root_fields=state_root_fields,
+                input_root_fields=input_root_fields,
+                error_code=ValidationIssueCode.INVALID_INTERRUPT_SOURCE,
+                message="interrupt request source must start with input., state., or context. and reference a declared root field when applicable",
             )
 
     for binding_index, binding in enumerate(node.resume):
