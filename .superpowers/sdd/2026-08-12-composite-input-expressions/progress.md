@@ -17,3 +17,5 @@ Task 7: complete (`c062680c`, React Doctor 98/100, one maintainability warning d
 Task 7 repair: complete (`01b33c8c`, six review findings fixed, React Doctor 98/100)
 
 Task 7 P2 rereview repair: complete (`5f09765f`, controlled identity reconciliation, React Doctor 100/100)
+
+Task 7 duplicate-reference repair: complete (`7923254f`, occurrence identities, React Doctor 100/100)
