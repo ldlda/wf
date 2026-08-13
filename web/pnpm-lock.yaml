@@ -38,6 +38,9 @@ importers:
       '@lda/presentation-sync':
         specifier: workspace:*
         version: link:../../packages/presentation-sync
+      '@lda/workflow-rpc':
+        specifier: workspace:*
+        version: link:../../packages/rpc
       '@use-gesture/react':
         specifier: ^10.3.1
         version: 10.3.1(react@19.2.7)

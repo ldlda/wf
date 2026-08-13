@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { InputExpression } from "../domain/draft-workspace-models.js";
 import {
+  isJsonValue,
+  parseInputExpression,
   projectExpressionEditorState,
   serializeExpressionEditorState,
   validateExpressionEditorState,
@@ -111,8 +113,36 @@ describe("input expression editor projection", () => {
     if (projected.kind !== "editable") throw new Error("expected editable expression");
     expect(serializeExpressionEditorState(projected.state)).toEqual({
       kind: "array",
-      items: [{ kind: "path", path: 'context.request."display name"' }],
+      items: [{ kind: "path", path: { root: "context", parts: ["request", "display name"] } }],
     });
+  });
+
+  it("serializes an edited structural path from its current string", () => {
+    const projected = projectExpressionEditorState(
+      { kind: "path", path: { root: "state", parts: ["foo"] } },
+      {},
+    );
+
+    if (projected.kind !== "editable" || projected.state.kind !== "path") {
+      throw new Error("expected editable path expression");
+    }
+    expect(serializeExpressionEditorState({ ...projected.state, path: "state.bar", touched: true })).toEqual({
+      kind: "path",
+      path: "state.bar",
+    });
+  });
+
+  it("allows empty and nonempty arrays when item schema is omitted", () => {
+    expect(projectExpressionEditorState({ kind: "array", items: [] }, { type: "array" })).toEqual(
+      editable({ kind: "array", items: [] }),
+    );
+    expect(projectExpressionEditorState({
+      kind: "array",
+      items: [{ kind: "literal", value: "free-form" }],
+    }, { type: "array" })).toEqual(editable({
+      kind: "array",
+      items: [{ kind: "literal", value: "free-form", touched: false }],
+    }));
   });
 
   it("allows empty arrays when no minimum is declared and validates declared bounds", () => {
@@ -205,6 +235,55 @@ describe("input expression editor projection", () => {
     expect(validateExpressionEditorState({ kind: "path", path: "not-a-source", touched: true }, concatSchema)).toMatchObject({
       valid: false,
       issues: [expect.objectContaining({ message: expect.stringMatching(/input\., state\., or context/i) })],
+    });
+  });
+
+  it("validates nested object leaves under unconstrained schemas", () => {
+    const state: ExpressionEditorState = {
+      kind: "object",
+      fields: [{
+        name: "nested",
+        value: {
+          kind: "object",
+          fields: [
+            { name: "badPath", value: { kind: "path", path: "not-a-source", touched: true } },
+            { name: "badLiteral", value: { kind: "literal", value: undefined, touched: true } },
+          ],
+        },
+      }],
+    };
+
+    expect(validateExpressionEditorState(state, {})).toMatchObject({
+      valid: false,
+      issues: [
+        expect.objectContaining({ path: ["nested", "badPath"] }),
+        expect.objectContaining({ path: ["nested", "badLiteral"] }),
+      ],
+    });
+  });
+
+  it("rejects sparse literal arrays", () => {
+    const sparse = [] as unknown[];
+    sparse.length = 1;
+    expect(isJsonValue(sparse)).toBe(false);
+    expect(serializeExpressionEditorState({ kind: "literal", value: sparse, touched: true })).toBeNull();
+  });
+
+  it("uses the shared budget for parsing, projection, validation, and serialization", () => {
+    const oversized = {
+      kind: "literal",
+      value: { items: Array.from({ length: 1022 }, () => ({})) },
+    } as const;
+
+    expect(parseInputExpression(oversized)).toBeNull();
+    expect(projectExpressionEditorState(oversized as InputExpression, {})).toMatchObject({
+      kind: "unsupported",
+      reason: expect.stringMatching(/limits/i),
+    });
+    expect(serializeExpressionEditorState({ kind: "literal", value: oversized.value, touched: true })).toBeNull();
+    expect(validateExpressionEditorState({ kind: "literal", value: oversized.value, touched: true }, {})).toMatchObject({
+      valid: false,
+      issues: [expect.objectContaining({ message: expect.stringMatching(/budget/i) })],
     });
   });
 });

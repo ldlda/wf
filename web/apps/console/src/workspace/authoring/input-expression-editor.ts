@@ -7,6 +7,10 @@ import type {
   ObjectExpression,
   PathExpression,
 } from "../domain/draft-workspace-models.js";
+import {
+  hasBoundedInputExpressionNodeBudget,
+  MAX_INPUT_EXPRESSION_DEPTH,
+} from "@lda/workflow-rpc/input-expression-limits";
 import { normalizeSchema, type SchemaField } from "../schema-form/schema-field.js";
 import { formatTOMLPath, parseGraphSourcePath, parseTOMLPath } from "../schema-form/schema-paths.js";
 
@@ -32,9 +36,6 @@ export type ExpressionValidation = {
 
 type JsonRecord = Record<string, unknown>;
 
-const MAX_JSON_DEPTH = 64;
-const MAX_EXPRESSION_NODES = 1024;
-
 const isRecord = (value: unknown): value is JsonRecord =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
@@ -49,13 +50,16 @@ const hasExactKeys = (value: JsonRecord, keys: ReadonlyArray<string>): boolean =
 /** Keep editor literals within the same finite JSON subset as canonical bindings. */
 export const isJsonValue = (value: unknown): value is JsonValue => {
   const visit = (current: unknown, depth: number): boolean => {
-    if (depth > MAX_JSON_DEPTH) return false;
+    if (depth > MAX_INPUT_EXPRESSION_DEPTH) return false;
     if (current === null || typeof current === "boolean" || typeof current === "string") return true;
     if (typeof current === "number") return Number.isFinite(current);
     if (Array.isArray(current)) {
       if (Object.getOwnPropertySymbols(current).length > 0) return false;
       if (!Object.keys(current).every((key) => /^(0|[1-9]\d*)$/.test(key))) return false;
-      return current.every((item) => visit(item, depth + 1));
+      for (let index = 0; index < current.length; index += 1) {
+        if (!Object.prototype.hasOwnProperty.call(current, index) || !visit(current[index], depth + 1)) return false;
+      }
+      return true;
     }
     if (!isRecord(current)) return false;
     if (Object.getPrototypeOf(current) !== Object.prototype && Object.getPrototypeOf(current) !== null) return false;
@@ -74,9 +78,8 @@ const inputPath = (value: unknown): InputPath | null => {
   return parseGraphSourcePath(path) === null ? null : { root: value.root, parts: [...value.parts] };
 };
 
-const parseExpression = (value: unknown, depth: number, nodes: { count: number }): InputExpression | null => {
-  if (depth > MAX_JSON_DEPTH || nodes.count >= MAX_EXPRESSION_NODES || !isRecord(value)) return null;
-  nodes.count += 1;
+const parseExpression = (value: unknown): InputExpression | null => {
+  if (!isRecord(value)) return null;
   if (value.kind === "literal" && hasExactKeys(value, ["kind", "value"]) && isJsonValue(value.value)) {
     return { kind: "literal", value: value.value } satisfies LiteralExpression;
   }
@@ -87,7 +90,7 @@ const parseExpression = (value: unknown, depth: number, nodes: { count: number }
   if (value.kind === "array" && hasExactKeys(value, ["kind", "items"]) && Array.isArray(value.items)) {
     const items: InputExpression[] = [];
     for (const item of value.items) {
-      const parsed = parseExpression(item, depth + 1, nodes);
+      const parsed = parseExpression(item);
       if (parsed === null) return null;
       items.push(parsed);
     }
@@ -96,7 +99,7 @@ const parseExpression = (value: unknown, depth: number, nodes: { count: number }
   if (value.kind === "object" && hasExactKeys(value, ["kind", "fields"]) && isRecord(value.fields)) {
     const fields: Record<string, InputExpression> = {};
     for (const [name, item] of Object.entries(value.fields)) {
-      const parsed = parseExpression(item, depth + 1, nodes);
+      const parsed = parseExpression(item);
       if (parsed === null) return null;
       Object.defineProperty(fields, name, { configurable: true, enumerable: true, value: parsed, writable: true });
     }
@@ -107,10 +110,15 @@ const parseExpression = (value: unknown, depth: number, nodes: { count: number }
 
 /** Parse an external expression before projecting it, without inventing defaults. */
 export const parseInputExpression = (value: unknown): InputExpression | null =>
-  parseExpression(value, 0, { count: 0 });
+  hasBoundedInputExpressionNodeBudget(value) ? parseExpression(value) : null;
 
 const pathText = (path: InputPath): string =>
   typeof path === "string" ? path : formatTOMLPath([path.root, ...path.parts]);
+
+// The public editor union intentionally stores paths as strings. Keep the wire
+// representation only for untouched projected states so structural paths do
+// not get normalized unless an editor actually recreates them.
+const structuralPathByState = new WeakMap<object, InputPath>();
 
 const unsupported = (raw: InputExpression, reason: string): ExpressionProjection => ({
   kind: "unsupported",
@@ -141,7 +149,11 @@ const project = (
     case "literal":
       return { kind: "editable", state: { kind: "literal", value: raw.value, touched: false } };
     case "path":
-      return { kind: "editable", state: { kind: "path", path: pathText(raw.path), touched: false } };
+      {
+        const state = { kind: "path", path: pathText(raw.path), touched: false } as const;
+        if (typeof raw.path !== "string") structuralPathByState.set(state, raw.path);
+        return { kind: "editable", state };
+      }
     case "array": {
       if (field !== null && !unconstrained(field) && field.kind !== "array") return unsupported(raw, "The expression is an array but the target schema is not an array.");
       const itemField = field?.item ?? null;
@@ -178,22 +190,17 @@ export const projectExpressionEditorState = (
   return project(parsed, normalizeSchema(schema));
 };
 
-const copyStateToExpression = (
-  state: ExpressionEditorState,
-  depth: number,
-  nodes: { count: number },
-): InputExpression | null => {
-  if (depth > MAX_JSON_DEPTH || nodes.count >= MAX_EXPRESSION_NODES) return null;
-  nodes.count += 1;
+const copyStateToExpression = (state: ExpressionEditorState): InputExpression | null => {
   switch (state.kind) {
     case "literal":
       return isJsonValue(state.value) ? { kind: "literal", value: state.value } : null;
     case "path":
-      return parseGraphSourcePath(state.path) === null ? null : { kind: "path", path: state.path };
+      if (parseGraphSourcePath(state.path) === null) return null;
+      return { kind: "path", path: state.touched ? state.path : structuralPathByState.get(state) ?? state.path };
     case "array": {
       const items: InputExpression[] = [];
       for (const item of state.items) {
-        const expression = copyStateToExpression(item, depth + 1, nodes);
+        const expression = copyStateToExpression(item);
         if (expression === null) return null;
         items.push(expression);
       }
@@ -205,7 +212,7 @@ const copyStateToExpression = (
       for (const field of state.fields) {
         if (names.has(field.name) || field.name.length === 0) return null;
         names.add(field.name);
-        const expression = copyStateToExpression(field.value, depth + 1, nodes);
+        const expression = copyStateToExpression(field.value);
         if (expression === null) return null;
         Object.defineProperty(fields, field.name, { configurable: true, enumerable: true, value: expression, writable: true });
       }
@@ -216,7 +223,10 @@ const copyStateToExpression = (
 
 export const serializeExpressionEditorState = (
   state: ExpressionEditorState,
-): InputExpression | null => copyStateToExpression(state, 0, { count: 0 });
+): InputExpression | null => {
+  const expression = copyStateToExpression(state);
+  return expression !== null && hasBoundedInputExpressionNodeBudget(expression) ? expression : null;
+};
 
 const issue = (path: ReadonlyArray<string | number>, message: string): ExpressionValidationIssue => ({ path, message });
 
@@ -288,14 +298,18 @@ const validateState = (
       for (const entry of state.fields) {
         if (seen.has(entry.name)) issues.push(issue([...path, entry.name], "Duplicate object field name."));
         seen.add(entry.name);
+        if (entry.name.length === 0) issues.push(issue(path, "Object field name is required."));
       }
       if (field?.kind === "object") {
         const required = field.children.filter((child) => child.required).map((child) => child.key);
         for (const name of required) if (!seen.has(name)) issues.push(issue([...path, name], "Required property is missing."));
-        for (const entry of state.fields) {
-          const child = fieldForObjectName(field, entry.name);
-          if (child === null && field.additionalPropertiesKind === "forbidden") issues.push(issue([...path, entry.name], "Additional properties are not allowed."));
-          else issues.push(...validateState(entry.value, child, [...path, entry.name]));
+      }
+      for (const entry of state.fields) {
+        const child = field?.kind === "object" ? fieldForObjectName(field, entry.name) : null;
+        if (field?.kind === "object" && child === null && field.additionalPropertiesKind === "forbidden") {
+          issues.push(issue([...path, entry.name], "Additional properties are not allowed."));
+        } else {
+          issues.push(...validateState(entry.value, child, [...path, entry.name]));
         }
       }
       return issues;
@@ -307,6 +321,12 @@ export const validateExpressionEditorState = (
   state: ExpressionEditorState,
   schema: unknown,
 ): ExpressionValidation => {
-  const issues = validateState(state, normalizeSchema(schema), []);
+  const issues = [...validateState(state, normalizeSchema(schema), [])];
+  if (issues.length === 0) {
+    const expression = copyStateToExpression(state);
+    if (expression === null || !hasBoundedInputExpressionNodeBudget(expression)) {
+      issues.push(issue([], "Expression exceeds the canonical depth or node budget."));
+    }
+  }
   return { valid: issues.length === 0, issues };
 };

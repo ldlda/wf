@@ -285,19 +285,18 @@ const normalizeField = (
 
   if (type === "array") {
     const itemSchema = resolvedSchema.items;
-    if (itemSchema === undefined) {
-      return fallback(resolvedSchema, path, key, required, title, "The array has no item schema; edit JSON directly.");
-    }
-    const item = normalizeField(
-      rootSchema,
-      itemSchema,
-      [...path, 0],
-      "item",
-      true,
-      `${title} item`,
-      resolvedReferenceAncestry,
-      depth + 1,
-    );
+    const item = itemSchema === undefined
+      ? null
+      : normalizeField(
+          rootSchema,
+          itemSchema,
+          [...path, 0],
+          "item",
+          true,
+          `${title} item`,
+          resolvedReferenceAncestry,
+          depth + 1,
+        );
     return {
       path,
       key,

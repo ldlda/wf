@@ -11,6 +11,12 @@ export {
 
 export { normalizeLoopbackTarget } from "./target-policy.js";
 
+export {
+  hasBoundedInputExpressionNodeBudget,
+  MAX_INPUT_EXPRESSION_DEPTH,
+  MAX_INPUT_EXPRESSION_NODES,
+} from "./json-schema/input-expression-limits.js";
+
 // Compile-time wire inventory only; supported operations and browser policy stay authored.
 export * from "./generated/workflow-contract.js";
 

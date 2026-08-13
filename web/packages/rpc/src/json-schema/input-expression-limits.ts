@@ -2,6 +2,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
 export const MAX_INPUT_EXPRESSION_NODES = 1024;
+export const MAX_INPUT_EXPRESSION_DEPTH = 64;
 
 const expressionKinds = new Set(["literal", "path", "array", "object"]);
 
@@ -24,39 +25,70 @@ export const hasBoundedInputExpressionNodeBudget = (
     return true;
   };
 
-  const visitJson = (value: unknown): boolean => {
+  const visitJson = (value: unknown, depth: number): boolean => {
     if (typeof value !== "object" || value === null) return true;
+    if (depth > MAX_INPUT_EXPRESSION_DEPTH) return false;
     if (!visitNode(value)) return false;
-    const valid = Array.isArray(value)
-      ? value.every(visitJson)
-      : Object.values(value).every(visitJson);
+    if (Array.isArray(value)) {
+      for (let index = 0; index < value.length; index += 1) {
+        if (!Object.prototype.hasOwnProperty.call(value, index) || !visitJson(value[index], depth + 1)) return false;
+      }
+      active.delete(value);
+      return true;
+    }
+    const valid = Object.values(value).every((item) => visitJson(item, depth + 1));
     active.delete(value);
     return valid;
   };
 
-  const visitExpression = (value: unknown): boolean => {
+  const visitExpression = (value: unknown, depth: number): boolean => {
+    if (depth > MAX_INPUT_EXPRESSION_DEPTH) return false;
     if (!isRecord(value) || typeof value.kind !== "string") return false;
     if (!expressionKinds.has(value.kind) || !visitNode(value)) return false;
 
     let valid = true;
     switch (value.kind) {
       case "literal":
-        valid = visitJson(value.value);
+        valid = visitJson(value.value, depth + 1);
         break;
       case "path":
         break;
       case "array":
-        valid = Array.isArray(value.items) && value.items.every(visitExpression);
+        {
+          const items = value.items;
+          if (!Array.isArray(items)) {
+            valid = false;
+            break;
+          }
+          for (let index = 0; index < items.length; index += 1) {
+            if (!Object.prototype.hasOwnProperty.call(items, index) || !visitExpression(items[index], depth + 1)) {
+              valid = false;
+              break;
+            }
+          }
+        }
         break;
       case "object":
-        valid = isRecord(value.fields) && Object.values(value.fields).every(visitExpression);
+        {
+          const fields = value.fields;
+          if (!isRecord(fields)) {
+            valid = false;
+            break;
+          }
+          for (const item of Object.values(fields)) {
+            if (!visitExpression(item, depth + 1)) {
+              valid = false;
+              break;
+            }
+          }
+        }
         break;
     }
     active.delete(value);
     return valid;
   };
 
-  return visitExpression(input);
+  return visitExpression(input, 1);
 };
 
 type JsonSchemaRecord = Readonly<Record<string, unknown>>;

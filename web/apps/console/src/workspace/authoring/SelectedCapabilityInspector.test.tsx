@@ -177,6 +177,38 @@ describe("SelectedCapabilityInspector", () => {
     expect(controller.setStepOutputs).not.toHaveBeenCalled();
   });
 
+  it("blocks Save and Clear for a persisted composite input row", async () => {
+    const user = userEvent.setup();
+    const workspace = draft("read", [{
+      target: "title",
+      expression: { kind: "array", items: [{ kind: "literal", value: "composite" }] },
+    }], []);
+    const controller = controllerFor(workspace);
+
+    render(
+      <SelectedCapabilityInspector
+        capabilityDetail={detail}
+        capabilityDetailMessage={null}
+        capabilityDetailPhase="ready"
+        controller={controller}
+        draft={workspace}
+        nodeKind="use"
+        nodeRef="demo.read"
+        stepId="read"
+      />,
+    );
+
+    await user.click(screen.getByRole("tab", { name: "Inputs" }));
+    expect(screen.getByRole("region", { name: "Raw unsupported input row 1" })).toHaveTextContent("composite");
+    await user.click(screen.getByRole("button", { name: "Save inputs" }));
+    await user.click(screen.getByRole("button", { name: "Clear inputs" }));
+
+    expect(controller.setStepInputs).not.toHaveBeenCalled();
+    expect(screen.getAllByRole("alert").some((alert) =>
+      alert.textContent?.includes("unsupported input row") ?? false,
+    )).toBe(true);
+  });
+
   it("keeps diagnostic ids unique across failing setup and hidden binding forms", async () => {
     const user = userEvent.setup();
     const workspace = draft(

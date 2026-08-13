@@ -6,6 +6,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./input-expression-limits": {
+      "types": "./dist/json-schema/input-expression-limits.d.ts",
+      "default": "./dist/json-schema/input-expression-limits.js"
     }
   },
   "scripts": {
