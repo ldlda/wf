@@ -1,7 +1,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { normalizeSchema } from "../schema-form/schema-field.js";
 import type { ExpressionEditorState } from "./input-expression-editor.js";
 import { InputExpressionControl } from "./InputExpressionControl.js";
@@ -263,6 +263,95 @@ describe("InputExpressionControl", () => {
     await user.click(screen.getByRole("button", { name: "External replace with equal value" }));
 
     expect(screen.getByRole("textbox", { name: "Additional property name for items item 1" })).toHaveValue("");
+  });
+
+  it("gives repeated object references distinct keys across external array changes", async () => {
+    const shared = { kind: "object", fields: [] } satisfies ExpressionEditorState;
+    const user = userEvent.setup();
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const Harness = () => {
+      const [state, setState] = useState<ExpressionEditorState>({ kind: "array", items: [shared, shared] });
+      return (
+        <>
+          <button
+            onClick={() => setState({ kind: "array", items: state.kind === "array" ? [...state.items].reverse() : [] })}
+            type="button"
+          >
+            External reorder aliases
+          </button>
+          <button
+            onClick={() => setState({ kind: "array", items: state.kind === "array" ? state.items.slice(1) : [] })}
+            type="button"
+          >
+            External remove alias
+          </button>
+          <button
+            onClick={() => setState({ kind: "array", items: state.kind === "array" ? [...state.items, shared] : [] })}
+            type="button"
+          >
+            External add alias
+          </button>
+          <button
+            onClick={() => setState({ kind: "array", items: [{ kind: "object", fields: [] }, shared] })}
+            type="button"
+          >
+            External replace alias
+          </button>
+          <InputExpressionControl
+            field={normalizeSchema({ type: "array", items: { type: "object", additionalProperties: true } })}
+            label="items"
+            onChange={setState}
+            state={state}
+          />
+        </>
+      );
+    };
+
+    render(<Harness />);
+    await user.click(screen.getByRole("button", { name: "External reorder aliases" }));
+    await user.click(screen.getByRole("button", { name: "External remove alias" }));
+    await user.click(screen.getByRole("button", { name: "External add alias" }));
+    await user.click(screen.getByRole("button", { name: "External replace alias" }));
+
+    expect(consoleError.mock.calls.flat().join(" ")).not.toContain("same key");
+    consoleError.mockRestore();
+  });
+
+  it("transfers the edited occurrence identity when aliased children diverge", async () => {
+    const shared = {
+      kind: "object",
+      fields: [{ name: "value", value: { kind: "literal", value: "", touched: false } }],
+    } satisfies ExpressionEditorState;
+    const user = userEvent.setup();
+    const Harness = () => {
+      const [state, setState] = useState<ExpressionEditorState>({ kind: "array", items: [shared, shared] });
+      return (
+        <>
+          <button
+            onClick={() => setState({ kind: "array", items: state.kind === "array" ? [...state.items].reverse() : [] })}
+            type="button"
+          >
+            External reorder after child edit
+          </button>
+          <InputExpressionControl
+            field={normalizeSchema({
+              type: "array",
+              items: { type: "object", properties: { value: { type: "string" } }, additionalProperties: true },
+            })}
+            label="items"
+            onChange={setState}
+            state={state}
+          />
+        </>
+      );
+    };
+
+    render(<Harness />);
+    await user.type(screen.getByRole("textbox", { name: "Additional property name for items item 2" }), "second-local");
+    await user.type(screen.getAllByRole("textbox", { name: "Value" })[1]!, "changed");
+    await user.click(screen.getByRole("button", { name: "External reorder after child edit" }));
+
+    expect(screen.getByRole("textbox", { name: "Additional property name for items item 1" })).toHaveValue("second-local");
   });
 
   it("gives repeated labels unique datalist and typed-leaf control ids", () => {

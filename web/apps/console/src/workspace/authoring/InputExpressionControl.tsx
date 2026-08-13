@@ -80,6 +80,76 @@ const safeIdSuffix = (value: string): string =>
 
 const EMPTY_FIELD_SOURCES: FieldSources = {};
 
+type ExpressionItemIdentityCache = {
+  readonly byState: WeakMap<ExpressionEditorState, string[]>;
+  previousItems: ReadonlyArray<ExpressionEditorState>;
+  previousIds: ReadonlyArray<string>;
+  nextId: number;
+};
+
+const allocateItemId = (
+  cache: ExpressionItemIdentityCache,
+  item: ExpressionEditorState,
+  controlId: string,
+): string => {
+  const id = `${controlId}-item-${cache.nextId}`;
+  cache.nextId += 1;
+  const knownIds = cache.byState.get(item) ?? [];
+  knownIds.push(id);
+  cache.byState.set(item, knownIds);
+  return id;
+};
+
+/** Reconcile by reference and occurrence, keeping aliased array slots unique. */
+const reconcileArrayItemIds = (
+  cache: ExpressionItemIdentityCache,
+  items: ReadonlyArray<ExpressionEditorState>,
+  controlId: string,
+): ReadonlyArray<string> => {
+  const usedPreviousIndices = new Set<number>();
+  const usedIds = new Set<string>();
+  const ids: string[] = [];
+  for (const [index, item] of items.entries()) {
+    let previousIndex = -1;
+    if (cache.previousItems[index] === item && !usedPreviousIndices.has(index)) {
+      previousIndex = index;
+    } else {
+      let nearestDistance = Number.POSITIVE_INFINITY;
+      for (const [candidateIndex, candidate] of cache.previousItems.entries()) {
+        const distance = Math.abs(candidateIndex - index);
+        if (
+          candidate === item &&
+          !usedPreviousIndices.has(candidateIndex) &&
+          distance < nearestDistance
+        ) {
+          previousIndex = candidateIndex;
+          nearestDistance = distance;
+        }
+      }
+    }
+
+    let id = previousIndex >= 0 ? cache.previousIds[previousIndex] : undefined;
+    if (id !== undefined && usedIds.has(id)) id = undefined;
+    if (id === undefined) {
+      const knownIds = cache.byState.get(item) ?? [];
+      id = knownIds.find((candidate) => !usedIds.has(candidate));
+    }
+    if (id === undefined) id = allocateItemId(cache, item, controlId);
+
+    if (previousIndex >= 0) usedPreviousIndices.add(previousIndex);
+    usedIds.add(id);
+    ids.push(id);
+    const knownIds = cache.byState.get(item) ?? [];
+    if (!knownIds.includes(id)) {
+      knownIds.push(id);
+      cache.byState.set(item, knownIds);
+    }
+  }
+  cache.previousItems = items;
+  cache.previousIds = ids;
+  return ids;
+};
+
 const InputExpressionLeaf = ({
   field,
   label,
@@ -171,23 +241,22 @@ export const InputExpressionControl = ({
 }: InputExpressionControlProps) => {
   const controlId = `input-expression-${safeIdSuffix(useId())}`;
   const [itemIdentity] = useState(() => ({
-    byState: new WeakMap<ExpressionEditorState, string>(),
+    byState: new WeakMap<ExpressionEditorState, string[]>(),
+    previousItems: [],
+    previousIds: [],
     nextId: 0,
-  }));
+  }) satisfies ExpressionItemIdentityCache);
   const [additionalName, setAdditionalName] = useState("");
-  const identityForItem = (item: ExpressionEditorState): string => {
-    const existing = itemIdentity.byState.get(item);
-    if (existing !== undefined) return existing;
-    const id = `${controlId}-item-${itemIdentity.nextId}`;
-    itemIdentity.nextId += 1;
-    itemIdentity.byState.set(item, id);
-    return id;
-  };
   const arrayItemIds = state.kind === "array"
-    ? state.items.map(identityForItem)
+    ? reconcileArrayItemIds(itemIdentity, state.items, controlId)
     : [];
   const rememberItemIdentity = (item: ExpressionEditorState, id: string | undefined): void => {
-    if (id !== undefined) itemIdentity.byState.set(item, id);
+    if (id === undefined) return;
+    const knownIds = itemIdentity.byState.get(item) ?? [];
+    if (!knownIds.includes(id)) {
+      knownIds.unshift(id);
+      itemIdentity.byState.set(item, knownIds);
+    }
   };
   const source = valueSourceFor(state);
   const selectSource = (next: "path" | "literal" | "construct"): void =>
@@ -281,9 +350,7 @@ export const InputExpressionControl = ({
         className="schema-form__secondary-action"
         onClick={() => {
           const item = defaultExpressionEditorState(field?.item ?? null);
-          const itemId = `${controlId}-item-${itemIdentity.nextId}`;
-          itemIdentity.nextId += 1;
-          itemIdentity.byState.set(item, itemId);
+          allocateItemId(itemIdentity, item, controlId);
           onChange({ kind: "array", items: [...state.items, item] });
         }}
         type="button"
