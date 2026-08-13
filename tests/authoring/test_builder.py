@@ -22,7 +22,11 @@ from wf_authoring import (
 )
 from wf_authoring.builder.mapping import normalize_input_mapping
 from wf_core import END, EndNode, RunStatus, WorkflowExecutionError
-from wf_core.models.steps import InputPathBinding, InputValueBinding
+from wf_core.models.steps import (
+    InputExpressionBinding,
+    InputPathBinding,
+    InputValueBinding,
+)
 from wf_core.paths import GraphSourcePath, LocalPath, StatePath
 from wf_platform import CapabilityRef
 
@@ -299,6 +303,30 @@ def test_builder_interrupt_accepts_canonical_request_and_resume_bindings() -> No
     assert interrupt.resume[0].target == StatePath.of("text")
 
 
+def test_builder_interrupt_accepts_composite_request_binding() -> None:
+    builder = WorkflowBuilder(
+        name="interrupt_composite_request",
+        input_schema={"type": "object"},
+        state_schema={"type": "object"},
+        output_schema={"type": "object"},
+    )
+
+    interrupt = builder.interrupt(
+        kind="approval",
+        request=[
+            {
+                "target": "message",
+                "expression": {
+                    "kind": "object",
+                    "fields": {"text": {"kind": "literal", "value": "review"}},
+                },
+            }
+        ],
+    )
+
+    assert isinstance(interrupt.request[0], InputExpressionBinding)
+
+
 def test_builder_interrupt_accepts_request_and_resume_schemas() -> None:
     builder = WorkflowBuilder(
         name="interrupt_contract",
@@ -401,6 +429,62 @@ def test_builder_use_ref_accepts_canonical_binding_dicts() -> None:
     assert isinstance(step.input[0], InputPathBinding)
     assert step.input[0].path == GraphSourcePath.input("text")
     assert step.output[0].target == StatePath.of("echoed")
+
+
+def test_builder_use_accepts_composite_node_input_binding() -> None:
+    builder = WorkflowBuilder(
+        name="composite_node_input",
+        input_schema={"type": "object"},
+        state_schema={"type": "object"},
+        output_schema={"type": "object"},
+    )
+
+    step = builder.use(
+        auto_bind_node,
+        id="concat",
+        input=[
+            {
+                "target": "items",
+                "expression": {
+                    "kind": "array",
+                    "items": [
+                        {"kind": "path", "path": "state.value"},
+                        {"kind": "literal", "value": "!"},
+                    ],
+                },
+            }
+        ],
+    )
+
+    assert isinstance(step.input[0], InputExpressionBinding)
+
+
+def test_builder_use_ref_accepts_composite_node_input_binding() -> None:
+    builder = WorkflowBuilder(
+        name="composite_node_input_ref",
+        input_schema={"type": "object"},
+        state_schema={"type": "object"},
+        output_schema={"type": "object"},
+    )
+
+    step = builder.use_ref(
+        "demo.concat",
+        id="concat",
+        input=[
+            {
+                "target": "items",
+                "expression": {
+                    "kind": "array",
+                    "items": [
+                        {"kind": "path", "path": "state.value"},
+                        {"kind": "literal", "value": "!"},
+                    ],
+                },
+            }
+        ],
+    )
+
+    assert isinstance(step.input[0], InputExpressionBinding)
 
 
 def test_builder_use_ref_accepts_structural_capability_ref() -> None:

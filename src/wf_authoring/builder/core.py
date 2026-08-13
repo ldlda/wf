@@ -31,11 +31,11 @@ from wf_core.errors import WorkflowExecutionError
 from wf_core.models.conditions import BinaryCondition, ExistsCondition, PathOperand
 from wf_core.models.conditions import Condition as CoreCondition
 from wf_core.models.steps import (
-    InputBinding,
     InputPathBinding,
     InputValueBinding,
     OutputBinding,
     Step,
+    StepInputBinding,
 )
 from wf_core.paths import GraphSourcePath, LocalPath, StatePath
 from wf_core.runtime.ops.merges import ReducerDefinition
@@ -50,17 +50,17 @@ from ..schemas import SchemaLike, StateSchemaLike, schema_ref_from, state_schema
 from ..subgraph import subgraph_ref
 from .ids import next_step_id, slug_id
 from .mapping import (
-    InputBindingArg,
     MapArg,
     OutputBindingArg,
+    StepInputBindingArg,
     auto_input_map,
     auto_output_map,
     coerce_path,
-    normalize_input_bindings,
     normalize_input_mapping,
     normalize_input_values,
     normalize_output_bindings,
     normalize_output_mapping,
+    normalize_step_input_bindings,
 )
 from .refs import (
     BranchRef,
@@ -110,7 +110,7 @@ def _capability_ref_name(name: str | CapabilityRef) -> str:
 def _canonical_input_bindings(
     in_map: Mapping[GraphSourcePath, LocalPath],
     input_values: Mapping[LocalPath, Any],
-) -> list[InputBinding]:
+) -> list[StepInputBinding]:
     """Convert typed authoring maps into canonical core input bindings."""
     value_bindings = [
         InputValueBinding(target=target, value=value)
@@ -229,7 +229,7 @@ class WorkflowBuilder:
         spec: NodeSpec[Any, Any],
         *,
         id: str | None = None,
-        input: Sequence[InputBindingArg] | None = None,
+        input: Sequence[StepInputBindingArg] | None = None,
         output: Sequence[OutputBindingArg] | None = None,
         desc: str | None = None,
     ) -> NodeUse: ...
@@ -252,7 +252,7 @@ class WorkflowBuilder:
         spec: NodeSpec[Any, Any],
         *,
         id: str | None = None,
-        input: Sequence[InputBindingArg] | None = None,
+        input: Sequence[StepInputBindingArg] | None = None,
         output: Sequence[OutputBindingArg] | None = None,
         in_map: MapArg | None = None,
         input_values: Mapping[Any, Any] | None = None,
@@ -275,7 +275,7 @@ class WorkflowBuilder:
         normalized_input_schema = cast(SchemaRef, self.input_schema)
         normalized_state_schema = cast(StateSchema, self.state_schema)
         if input is not None:
-            node_input = normalize_input_bindings(input)
+            node_input = normalize_step_input_bindings(input)
         else:
             raw_in_map = (
                 auto_input_map(
@@ -318,7 +318,7 @@ class WorkflowBuilder:
         name: str | CapabilityRef,
         *,
         id: str | None = None,
-        input: Sequence[InputBindingArg] | None = None,
+        input: Sequence[StepInputBindingArg] | None = None,
         output: Sequence[OutputBindingArg] | None = None,
         desc: str | None = None,
     ) -> NodeUse: ...
@@ -341,7 +341,7 @@ class WorkflowBuilder:
         name: str | CapabilityRef,
         *,
         id: str | None = None,
-        input: Sequence[InputBindingArg] | None = None,
+        input: Sequence[StepInputBindingArg] | None = None,
         output: Sequence[OutputBindingArg] | None = None,
         in_map: MapArg | None = None,
         input_values: Mapping[Any, Any] | None = None,
@@ -368,7 +368,7 @@ class WorkflowBuilder:
             out_map=out_map,
         )
         node_input = (
-            normalize_input_bindings(input)
+            normalize_step_input_bindings(input)
             if input is not None
             else _canonical_input_bindings(
                 normalize_input_mapping(in_map),
@@ -397,7 +397,7 @@ class WorkflowBuilder:
         *,
         workflow: Workflow,
         id: str | None = None,
-        input: Sequence[InputBindingArg] | None = None,
+        input: Sequence[StepInputBindingArg] | None = None,
         output: Sequence[OutputBindingArg] | None = None,
         workflow_ref: WorkflowRef | str | Mapping[str, object] | None = None,
         desc: str | None = None,
@@ -412,7 +412,7 @@ class WorkflowBuilder:
         node = subgraph_ref(
             id=id or self._next_step_id(_workflow_ref_base(workflow_ref, workflow)),
             workflow=workflow,
-            input=normalize_input_bindings(input),
+            input=normalize_step_input_bindings(input),
             output=normalize_output_bindings(output),
             workflow_ref=workflow_ref,
             desc=desc,
@@ -600,7 +600,7 @@ class WorkflowBuilder:
         *,
         id: str | None = None,
         kind: str,
-        request: Sequence[InputBindingArg] | None = None,
+        request: Sequence[StepInputBindingArg] | None = None,
         resume: Sequence[OutputBindingArg] | None = None,
         outcomes: list[str] | None = None,
         request_schema: Mapping[str, Any] | None = None,
@@ -626,7 +626,7 @@ class WorkflowBuilder:
         *,
         id: str | None = None,
         kind: str,
-        request: Sequence[InputBindingArg] | None = None,
+        request: Sequence[StepInputBindingArg] | None = None,
         resume: Sequence[OutputBindingArg] | None = None,
         request_map: MapArg | None = None,
         out_map: MapArg | None = None,
@@ -646,7 +646,7 @@ class WorkflowBuilder:
                 stacklevel=2,
             )
         request_bindings = (
-            normalize_input_bindings(request)
+            normalize_step_input_bindings(request)
             if request is not None
             else _canonical_input_bindings(
                 normalize_input_mapping(request_map),

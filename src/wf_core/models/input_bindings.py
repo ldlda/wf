@@ -188,8 +188,9 @@ InputBinding = Annotated[
     Field(
         union_mode="left_to_right",
         description=(
-            "Canonical node input binding. Use either a path binding with "
-            "`path`, or a literal binding with `value`; do not provide both."
+            "Simple canonical binding for node inputs or workflow outputs. Use "
+            "either a path binding with `path`, or a literal binding with `value`; "
+            "composite `expression` bindings are node-local only."
         ),
     ),
 ]

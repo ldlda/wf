@@ -12,7 +12,12 @@ from wf_artifacts import (
     FileWorkflowArtifactStore,
     WorkflowDeployment,
 )
-from wf_core.models.steps import InputPathBinding, InputValueBinding, OutputBinding
+from wf_core.models.steps import (
+    InputExpressionBinding,
+    InputPathBinding,
+    InputValueBinding,
+    OutputBinding,
+)
 from wf_core.paths import GraphSourcePath, LocalPath, StatePath
 from wf_mcp.broker import WfMcpService
 from wf_mcp.models import ConnectionConfig
@@ -406,6 +411,30 @@ def test_set_step_input_bindings_request_accepts_path_value_and_null() -> None:
     assert request.bindings[0].path == GraphSourcePath.input("items")
     assert isinstance(request.bindings[1], InputValueBinding)
     assert request.bindings[1].value is None
+
+
+def test_set_step_input_bindings_request_accepts_composite_expression() -> None:
+    request = SetStepInputBindingsRequest.model_validate(
+        {
+            "workspace_id": "concat_draft",
+            "revision": 1,
+            "step_id": "call",
+            "bindings": [
+                {
+                    "target": "items",
+                    "expression": {
+                        "kind": "array",
+                        "items": [
+                            {"kind": "path", "path": "state.value"},
+                            {"kind": "literal", "value": "!"},
+                        ],
+                    },
+                }
+            ],
+        }
+    )
+
+    assert isinstance(request.bindings[0], InputExpressionBinding)
 
 
 def test_set_step_output_bindings_request_preserves_ordered_source_fan_out() -> None:

@@ -8,7 +8,7 @@ from wf_api import CapabilityStepUpdate
 from wf_api.next_actions import NextActionPatchExample, NextActions
 from wf_artifacts import ArtifactKind
 from wf_artifacts.draft_workspaces.models import WORKSPACE_ID_PATTERN
-from wf_core.models.steps import InputBinding, OutputBinding
+from wf_core.models.steps import InputBinding, OutputBinding, StepInputBinding
 from wf_core.paths import GraphSourcePath
 
 WorkspaceId = Annotated[
@@ -38,13 +38,14 @@ DraftPathMap = Annotated[
 ]
 NonEmptyString = Annotated[str, Field(min_length=1)]
 DraftInputBindings = Annotated[
-    list[InputBinding],
+    list[StepInputBinding],
     Field(
         description=(
             "Canonical node input bindings. Use path bindings such as "
             "{'target': {'root': 'local', 'parts': ['text']}, "
             "'path': {'root': 'input', 'parts': ['text']}} or value bindings "
-            "with {'target': ..., 'value': ...}."
+            "with {'target': ..., 'value': ...}; composite expressions use "
+            "the canonical {'target': ..., 'expression': ...} form."
         )
     ),
 ]

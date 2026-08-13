@@ -88,7 +88,10 @@ def update_capability_step(
         Path | None,
         typer.Option(
             "--bindings-file",
-            help="Ordered canonical JSON input-binding list.",
+            help=(
+                "Ordered canonical JSON node-input binding list; use this file "
+                "for composite expressions."
+            ),
         ),
     ] = None,
     clear_input: Annotated[

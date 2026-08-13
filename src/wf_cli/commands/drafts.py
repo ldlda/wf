@@ -468,7 +468,10 @@ def set_step_input(
         Path | None,
         typer.Option(
             "--bindings-file",
-            help="JSON file containing the complete ordered canonical binding list.",
+            help=(
+                "JSON file containing the complete ordered node-input binding "
+                "list; use this file for composite expressions."
+            ),
         ),
     ] = None,
     clear: Annotated[
@@ -490,7 +493,9 @@ def set_step_input(
     """Replace one step's canonical inputs, or use compatibility map merge.
 
     By default, repeated --map and --value flags replace the complete ordered
-    binding list. --bindings-file replaces from canonical JSON, while --clear
+    binding list. --bindings-file replaces from canonical JSON and is the only
+    way to submit composite expressions; inline --map/--value flags remain
+    simple-only. --clear
     sends an empty list. Use --merge only with map-only compatibility edits;
     it rejects existing bindings that cannot round-trip safely. Canonical
     fan-out or reordered path/literal bindings require complete canonical

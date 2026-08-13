@@ -30,6 +30,7 @@ from wf_core.models.steps import (
     InputPathBinding,
     InputValueBinding,
     OutputBinding,
+    StepInputBinding,
 )
 from wf_core.paths import (
     GraphSourcePath,
@@ -54,11 +55,7 @@ from .draft_payloads import (
     state_root_field,
 )
 from .draft_updates import CapabilityStepUpdate
-from .drafts import (
-    WorkflowDraftApi,
-    _draft_input_maps,
-    _draft_output_map,
-)
+from .drafts import WorkflowDraftApi, _draft_output_map
 from .input_expressions import (
     validate_and_project_input_expression,
     validate_schema_references,
@@ -101,7 +98,7 @@ def _upsert_input_path_binding(
     step_id: str,
 ) -> list[dict[str, Any]]:
     """Update one graph source without lowering unrelated canonical bindings."""
-    bindings = TypeAdapter(list[InputBinding]).validate_python(payload)
+    bindings = TypeAdapter(list[StepInputBinding]).validate_python(payload)
     matching = [
         index
         for index, existing in enumerate(bindings)
@@ -208,7 +205,7 @@ def _rebind_workflow_output(
 
 
 def _overlapping_input_binding_targets_error(
-    bindings: Sequence[InputBinding],
+    bindings: Sequence[StepInputBinding],
 ) -> ValueError:
     """Describe the first overlapping input-shaped target pair."""
     for left_index, left in enumerate(bindings):
@@ -473,7 +470,7 @@ class WorkflowDraftAuthoringApi:
         input_schema: dict[str, Any],
         state_schema: dict[str, Any],
         output_schema: dict[str, Any],
-        input: Sequence[InputBinding] | None = None,
+        input: Sequence[StepInputBinding] | None = None,
         output: Sequence[OutputBinding] | None = None,
         input_map: dict[str, str] | None = None,
         output_map: dict[str, str] | None = None,
@@ -481,9 +478,12 @@ class WorkflowDraftAuthoringApi:
         title: str | None = None,
     ) -> DraftWorkspaceResult:
         """Bootstrap the smallest patchable draft around one workflow capability."""
-        draft_input, draft_with = _draft_input_maps(
-            input=input,
-            input_map=input_map,
+        if input is not None and input_map is not None:
+            raise ValueError("cannot mix canonical input bindings with input_map")
+        input_payload = (
+            [binding.model_dump(mode="json") for binding in input]
+            if input is not None
+            else input_bindings_payload(input_map or {}, {})
         )
         draft_output = _draft_output_map(output=output, output_map=output_map)
         outcomes = self._outcomes_for_capability(capability_name) or (
@@ -492,7 +492,7 @@ class WorkflowDraftAuthoringApi:
         steps: dict[str, Any] = {
             DEFAULT_CALL_STEP_ID: {
                 "use": capability_name,
-                "input": input_bindings_payload(draft_input, draft_with),
+                "input": input_payload,
                 "output": output_bindings_payload(draft_output),
             }
         }
@@ -537,7 +537,7 @@ class WorkflowDraftAuthoringApi:
         workspace_id: str,
         revision: int,
         step_id: str,
-        bindings: Sequence[InputBinding],
+        bindings: Sequence[StepInputBinding],
     ) -> DraftWorkspaceResult:
         """Replace one capability step's canonical input bindings atomically."""
         checked = self._workspace_if_revision_matches(
@@ -604,7 +604,7 @@ class WorkflowDraftAuthoringApi:
         *,
         workspace: WorkflowDraftWorkspace,
         capability_name: str,
-        bindings: Sequence[InputBinding],
+        bindings: Sequence[StepInputBinding],
     ) -> _ProjectedStepInputBindings:
         """Validate canonical inputs and project missing workflow source schemas."""
         spec = self.context.specs.get_qualified_spec(capability_name)
@@ -1259,7 +1259,7 @@ class WorkflowDraftAuthoringApi:
         route_from_outcome: str = DEFAULT_OK_OUTCOME,
         routes: dict[str, str] | None = None,
         input_map: dict[str, str] | None = None,
-        input_bindings: Sequence[InputBinding] | None = None,
+        input_bindings: Sequence[StepInputBinding] | None = None,
         bind_outputs: dict[str, str] | None = None,
         desc: str | None = None,
         retry: int | None = None,
@@ -1349,7 +1349,7 @@ class WorkflowDraftAuthoringApi:
                 )
 
         if input_bindings is None:
-            canonical_inputs = TypeAdapter(list[InputBinding]).validate_python(
+            canonical_inputs = TypeAdapter(list[StepInputBinding]).validate_python(
                 input_bindings_payload(input_map or {}, {})
             )
         else:

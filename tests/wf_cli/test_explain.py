@@ -192,6 +192,16 @@ def test_explain_unknown_edge_destination_mentions_forward_route_repair() -> Non
     assert "target step first" in text.lower()
 
 
+def test_explain_invalid_source_path_points_to_expression_bindings_file() -> None:
+    card = DEFAULT_EXPLAIN_REGISTRY.get("invalid_source_path")
+
+    text = "\n".join(card.how_to_fix)
+
+    assert "--bindings-file" in text
+    assert "composite input expressions" in text
+    assert "simple-only" in text
+
+
 def test_explain_registry_uses_exported_draft_codes() -> None:
     from wf_artifacts.draft_workspaces.api import REVISION_CONFLICT_CODE
     from wf_artifacts.drafts.api import (

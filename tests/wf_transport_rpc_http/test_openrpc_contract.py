@@ -492,6 +492,35 @@ def test_openrpc_exposes_typed_draft_workspace_results(
     )
 
 
+def test_openrpc_separates_step_input_and_workflow_output_binding_unions(
+    openrpc_document: dict[str, Any],
+) -> None:
+    schemas = openrpc_document["components"]["schemas"]
+
+    step_method = _method_by_name(
+        openrpc_document,
+        "workflow.draft_workspaces.set_step_input_bindings",
+    )
+    output_method = _method_by_name(
+        openrpc_document,
+        "workflow.draft_workspaces.set_workflow_output_bindings",
+    )
+
+    step_items = step_method["params"][3]["schema"]["items"]["anyOf"]
+    output_items = output_method["params"][2]["schema"]["items"]["anyOf"]
+
+    assert {item["$ref"] for item in step_items} == {
+        "#/components/schemas/InputPathBinding",
+        "#/components/schemas/InputValueBinding",
+        "#/components/schemas/InputExpressionBinding",
+    }
+    assert {item["$ref"] for item in output_items} == {
+        "#/components/schemas/InputPathBinding",
+        "#/components/schemas/InputValueBinding",
+    }
+    assert "InputExpressionBinding" in schemas
+
+
 def test_openrpc_exposes_typed_draft_workspace_list_result(
     openrpc_document: dict[str, Any],
 ) -> None:

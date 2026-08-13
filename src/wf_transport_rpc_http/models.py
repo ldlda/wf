@@ -7,7 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from wf_api import CapabilityStepUpdate
 from wf_api.models import TraceRange
 from wf_artifacts.drafts.models import DraftStep
-from wf_core.models.steps import InputBinding, OutputBinding
+from wf_core.models.steps import InputBinding, OutputBinding, StepInputBinding
 
 
 class RpcParamsModel(BaseModel):
@@ -75,8 +75,8 @@ class CreateDraftFromCapabilityParams(RpcParamsModel):
     input_schema: dict[str, Any] | None = None
     state_schema: dict[str, Any] | None = None
     output_schema: dict[str, Any] | None = None
-    input: list[Any] | None = None
-    output: list[Any] | None = None
+    input: list[StepInputBinding] | None = None
+    output: list[OutputBinding] | None = None
     input_map: dict[str, str] | None = None
     output_map: dict[str, str] | None = None
     error_message_source: Any | None = None
@@ -220,7 +220,7 @@ class SetStepInputBindingsParams(RpcParamsModel):
     workspace_id: str = Field(min_length=1)
     revision: int = Field(ge=1)
     step_id: str = Field(min_length=1)
-    bindings: list[InputBinding]
+    bindings: list[StepInputBinding]
 
 
 class SetStepOutputBindingsParams(RpcParamsModel):
@@ -275,7 +275,7 @@ class AddStepFromCapabilityParams(RpcParamsModel):
     route_from_outcome: str = Field(default="ok", min_length=1)
     routes: dict[str, str] | None = None
     input_map: dict[str, str] | None = None
-    input_bindings: list[InputBinding] | None = None
+    input_bindings: list[StepInputBinding] | None = None
     bind_outputs: dict[str, str] = Field(default_factory=dict)
     desc: str | None = Field(default=None, min_length=1)
     retry: int | None = Field(default=None, ge=0)

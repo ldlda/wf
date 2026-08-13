@@ -4,7 +4,7 @@ from typing import Self
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from wf_core.models.steps import InputBinding
+from wf_core.models.steps import StepInputBinding
 
 
 class CapabilityStepUpdate(BaseModel):
@@ -15,7 +15,7 @@ class CapabilityStepUpdate(BaseModel):
     desc: str | None = Field(default=None, min_length=1)
     retry: int | None = Field(default=None, ge=0)
     timeout_seconds: int | None = Field(default=None, gt=0)
-    input: list[InputBinding] | None = None
+    input: list[StepInputBinding] | None = None
 
     @model_validator(mode="after")
     def validate_patch_shape(self) -> Self:

@@ -13,10 +13,12 @@ from wf_core.models.steps import (
     InputPathBinding,
     InputValueBinding,
     OutputBinding,
+    StepInputBinding,
 )
 from wf_core.paths import GraphSourcePath, LocalPath, PathResolutionError, StatePath
 
-_INPUT_BINDINGS_ADAPTER = TypeAdapter(list[InputBinding])
+_STEP_INPUT_BINDINGS_ADAPTER = TypeAdapter(list[StepInputBinding])
+_WORKFLOW_OUTPUT_BINDINGS_ADAPTER = TypeAdapter(list[InputBinding])
 _OUTPUT_BINDINGS_ADAPTER = TypeAdapter(list[OutputBinding])
 
 
@@ -209,10 +211,10 @@ def _parse_input_value_binding_flags(
     return bindings
 
 
-def parse_step_input_bindings_file(path: Path) -> list[InputBinding]:
-    """Read and validate an ordered canonical input-binding list."""
+def parse_step_input_bindings_file(path: Path) -> list[StepInputBinding]:
+    """Read node-local bindings, including expressions, from canonical JSON."""
     try:
-        return _INPUT_BINDINGS_ADAPTER.validate_python(
+        return _STEP_INPUT_BINDINGS_ADAPTER.validate_python(
             parse_json_file(path, option_name="--bindings-file")
         )
     except ValidationError as exc:
@@ -240,7 +242,7 @@ def parse_workflow_output_value_flags(
 def parse_workflow_output_bindings_file(path: Path) -> list[InputBinding]:
     """Read an ordered canonical workflow-output binding list."""
     try:
-        return _INPUT_BINDINGS_ADAPTER.validate_python(
+        return _WORKFLOW_OUTPUT_BINDINGS_ADAPTER.validate_python(
             parse_json_file(path, option_name="--bindings-file")
         )
     except ValidationError as exc:

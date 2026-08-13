@@ -11,7 +11,7 @@ from wf_artifacts import (
 )
 from wf_authoring import build_async_registry
 from wf_core import RuntimeContext
-from wf_core.models.steps import InputBinding, OutputBinding
+from wf_core.models.steps import OutputBinding, StepInputBinding
 from wf_core.paths import GraphSourcePath
 from wf_platform import CapabilitySource
 
@@ -389,7 +389,7 @@ class WorkflowCapabilityApi:
         input_schema: dict[str, Any] | None = None,
         state_schema: dict[str, Any] | None = None,
         output_schema: dict[str, Any] | None = None,
-        input: Sequence[InputBinding] | None = None,
+        input: Sequence[StepInputBinding] | None = None,
         output: Sequence[OutputBinding] | None = None,
         input_map: dict[str, str] | None = None,
         output_map: dict[str, str] | None = None,

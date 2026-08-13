@@ -18,6 +18,7 @@ from wf_artifacts.drafts.models import (
 from wf_core import END
 from wf_core.models.steps import (
     InputBinding,
+    InputExpressionBinding,
     InputPathBinding,
     InputValueBinding,
     OutputBinding,
@@ -800,6 +801,49 @@ async def test_rpc_client_serializes_canonical_step_input_bindings() -> None:
             ],
         },
     )
+
+
+async def test_rpc_client_serializes_composite_step_input_bindings() -> None:
+    calls: list[tuple[str, dict[str, object]]] = []
+
+    class Client(RpcDraftClientMixin):
+        async def _call(self, method: str, params: dict[str, object]):
+            calls.append((method, params))
+            return {"revision": 3}
+
+    client = Client()
+    await client.set_step_input_bindings(
+        workspace_id="client_ws",
+        revision=2,
+        step_id="call",
+        bindings=[
+            InputExpressionBinding.model_validate(
+                {
+                    "target": "items",
+                    "expression": {
+                        "kind": "array",
+                        "items": [
+                            {"kind": "path", "path": "state.value"},
+                            {"kind": "literal", "value": "!"},
+                        ],
+                    },
+                }
+            )
+        ],
+    )
+
+    assert calls[-1][1]["bindings"] == [
+        {
+            "target": "items",
+            "expression": {
+                "kind": "array",
+                "items": [
+                    {"kind": "path", "path": "state.value"},
+                    {"kind": "literal", "value": "!"},
+                ],
+            },
+        }
+    ]
 
 
 async def test_rpc_client_set_workflow_output_bindings_preserves_union_order() -> None:

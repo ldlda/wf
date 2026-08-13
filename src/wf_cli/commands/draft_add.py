@@ -137,7 +137,10 @@ def add_step_from_capability(
         Path | None,
         typer.Option(
             "--bindings-file",
-            help="Ordered canonical JSON input-binding list.",
+            help=(
+                "Ordered canonical JSON node-input binding list; use this file "
+                "for composite expressions."
+            ),
         ),
     ] = None,
     output_mapping: Annotated[

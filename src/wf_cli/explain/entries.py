@@ -137,6 +137,7 @@ EXPLAIN_CARDS: tuple[ExplainCard, ...] = (
             "Run `wf schema InputPathBinding` to confirm binding shape.",
             "Inspect the draft input and state schemas.",
             "Use `wf draft set-input --merge` to repair step input bindings.",
+            "Use `wf draft set-input --bindings-file bindings.json` for composite input expressions; inline --map/--value flags remain simple-only.",
             "Patch the draft input_schema/state_schema when the workflow genuinely needs a new path.",
             "Run `wf draft validate <workspace_id>` after the edit.",
         ],

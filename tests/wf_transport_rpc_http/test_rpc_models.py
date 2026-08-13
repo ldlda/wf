@@ -3,10 +3,13 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
+from wf_core.models.steps import InputExpressionBinding
 from wf_transport_rpc_http.models import (
     InspectCapabilityParams,
     ListCapabilitiesParams,
     ReadRunTraceParams,
+    SetStepInputBindingsParams,
+    SetWorkflowOutputBindingsParams,
     StartRunParams,
     TraceRangeParams,
 )
@@ -56,3 +59,46 @@ def test_run_params_are_explicit_models() -> None:
     assert started.trace_range is not None
     assert trace.run_id == "run_demo"
     assert trace.trace_range.limit == 1
+
+
+def test_step_input_params_accept_composite_bindings_but_workflow_output_does_not() -> (
+    None
+):
+    params = SetStepInputBindingsParams.model_validate(
+        {
+            "workspace_id": "concat",
+            "revision": 1,
+            "step_id": "call",
+            "bindings": [
+                {
+                    "target": "items",
+                    "expression": {
+                        "kind": "array",
+                        "items": [
+                            {"kind": "path", "path": "state.value"},
+                            {"kind": "literal", "value": "!"},
+                        ],
+                    },
+                }
+            ],
+        }
+    )
+
+    assert isinstance(params.bindings[0], InputExpressionBinding)
+
+    with pytest.raises(ValidationError):
+        SetWorkflowOutputBindingsParams.model_validate(
+            {
+                "workspace_id": "concat",
+                "revision": 1,
+                "bindings": [
+                    {
+                        "target": "items",
+                        "expression": {
+                            "kind": "literal",
+                            "value": "not-a-workflow-output-binding",
+                        },
+                    }
+                ],
+            }
+        )

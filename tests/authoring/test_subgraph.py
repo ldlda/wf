@@ -29,6 +29,7 @@ from wf_core import (
     Workflow,
     execute_workflow_async,
 )
+from wf_core.models.steps import InputExpressionBinding
 
 
 def test_subgraph_node_wraps_compiled_workflow() -> None:
@@ -211,6 +212,26 @@ def test_subgraph_ref_accepts_structural_saved_workflow_reference() -> None:
     assert dumped["workflow"]["artifact_id"] == "demo_child"
     assert dumped["workflow"]["version"] == 2
     assert "name" not in dumped["workflow"]
+
+
+def test_subgraph_ref_accepts_composite_child_input_binding() -> None:
+    child = build_demo_workflow()
+
+    step = subgraph_ref(
+        id="run_child",
+        workflow=child,
+        input=[
+            {
+                "target": "folder_id",
+                "expression": {
+                    "kind": "literal",
+                    "value": "demo-folder",
+                },
+            }
+        ],
+    )
+
+    assert isinstance(step.input[0], InputExpressionBinding)
 
 
 def test_workflow_builder_subgraph_adds_native_subgraph_node() -> None:

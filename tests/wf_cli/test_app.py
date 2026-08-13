@@ -43,6 +43,51 @@ def test_draft_options_parse_step_output_bindings_preserves_source_fan_out() -> 
     ]
 
 
+def test_step_bindings_file_accepts_composite_expression(tmp_path: Path) -> None:
+    path = tmp_path / "step-bindings.json"
+    path.write_text(
+        json.dumps(
+            [
+                {
+                    "target": "items",
+                    "expression": {
+                        "kind": "array",
+                        "items": [
+                            {"kind": "path", "path": "state.value"},
+                            {"kind": "literal", "value": "!"},
+                        ],
+                    },
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    bindings = parse_step_input_bindings_file(path)
+
+    assert bindings[0].model_dump(mode="json")["expression"]["kind"] == "array"
+
+
+def test_workflow_output_bindings_file_rejects_composite_expression(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "workflow-output-bindings.json"
+    path.write_text(
+        json.dumps(
+            [
+                {
+                    "target": "items",
+                    "expression": {"kind": "literal", "value": "!"},
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(typer.BadParameter):
+        parse_workflow_output_bindings_file(path)
+
+
 def test_draft_options_parse_step_output_bindings_file_preserves_order(
     tmp_path,
 ) -> None:
@@ -813,6 +858,8 @@ def test_wf_draft_map_help_explains_replace_merge_and_validate() -> None:
     assert "input.text=text" in input_help
     assert "input.text=local.text" in input_help
     assert "input.title=report.title" in input_help
+    assert "composite expressions" in input_help
+    assert "simple-only" in input_help
     assert "LOCAL_SOURCE=STATE_TARGET" in output_help
     assert "ordered canonical JSON array" in output_help
     assert "replace with no bindings" in output_help.lower()
@@ -856,6 +903,8 @@ def test_wf_draft_add_capability_help_explains_explicit_wiring() -> None:
     assert "--timeout-seconds" in output
     assert "--value" in output
     assert "--bindings-file" in output
+    assert "composite" in output
+    assert "expressions" in output
     assert "does not guess" in output
     assert "projects its schemas and bindings" in output
     assert "draft validate" in output

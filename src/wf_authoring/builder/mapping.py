@@ -5,10 +5,11 @@ from typing import Any, TypeAlias
 
 from wf_core import SchemaRef, StateSchema
 from wf_core.models.steps import (
-    InputBinding,
+    InputExpressionBinding,
     InputPathBinding,
     InputValueBinding,
     OutputBinding,
+    StepInputBinding,
 )
 from wf_core.paths import GraphSourcePath, LocalPath, StatePath
 
@@ -24,7 +25,7 @@ MapArg: TypeAlias = Mapping[Any, Any]
 InputMap: TypeAlias = dict[GraphSourcePath, LocalPath]
 OutputMap: TypeAlias = dict[LocalPath, StatePath]
 InputValues: TypeAlias = dict[LocalPath, Any]
-InputBindingArg: TypeAlias = InputBinding | Mapping[str, object]
+StepInputBindingArg: TypeAlias = StepInputBinding | Mapping[str, object]
 OutputBindingArg: TypeAlias = OutputBinding | Mapping[str, object]
 
 
@@ -78,20 +79,24 @@ def normalize_input_values(mapping: Mapping[Any, Any] | None) -> InputValues:
     return {coerce_local_path(target): value for target, value in mapping.items()}
 
 
-def normalize_input_bindings(
-    bindings: Sequence[InputBindingArg] | None,
-) -> list[InputBinding]:
-    """Validate canonical input binding structs for WorkflowBuilder.use()."""
+def normalize_step_input_bindings(
+    bindings: Sequence[StepInputBindingArg] | None,
+) -> list[StepInputBinding]:
+    """Normalize canonical node-local bindings, including expression records."""
     if bindings is None:
         return []
-    normalized: list[InputBinding] = []
+    normalized: list[StepInputBinding] = []
     for binding in bindings:
-        if isinstance(binding, InputPathBinding | InputValueBinding):
+        if isinstance(
+            binding, InputPathBinding | InputValueBinding | InputExpressionBinding
+        ):
             normalized.append(binding)
             continue
         if not isinstance(binding, Mapping):
             raise TypeError(f"unsupported input binding {binding!r}")
-        if "path" in binding:
+        if "expression" in binding:
+            normalized.append(InputExpressionBinding.model_validate(binding))
+        elif "path" in binding:
             normalized.append(InputPathBinding.model_validate(binding))
         elif "value" in binding:
             normalized.append(InputValueBinding.model_validate(binding))

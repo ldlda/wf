@@ -5,7 +5,7 @@ from typing import Any, Protocol
 
 from wf_artifacts import ArtifactKind
 from wf_artifacts.drafts.models import DraftStep
-from wf_core.models.steps import InputBinding, OutputBinding
+from wf_core.models.steps import InputBinding, OutputBinding, StepInputBinding
 
 from .draft_authoring import RouteSource
 from .draft_updates import CapabilityStepUpdate
@@ -117,8 +117,8 @@ class WorkflowDraftSurface(Protocol):
         input_schema: dict[str, Any] | None = None,
         state_schema: dict[str, Any] | None = None,
         output_schema: dict[str, Any] | None = None,
-        input: Sequence[Any] | None = None,
-        output: Sequence[Any] | None = None,
+        input: Sequence[StepInputBinding] | None = None,
+        output: Sequence[OutputBinding] | None = None,
         input_map: dict[str, str] | None = None,
         output_map: dict[str, str] | None = None,
         error_message_source: Any | None = None,
@@ -207,7 +207,7 @@ class WorkflowDraftSurface(Protocol):
         workspace_id: str,
         revision: int,
         step_id: str,
-        bindings: Sequence[InputBinding],
+        bindings: Sequence[StepInputBinding],
     ) -> DraftWorkspaceResult: ...
 
     async def set_step_output_bindings(
@@ -276,7 +276,7 @@ class WorkflowDraftSurface(Protocol):
         route_from_outcome: str = "ok",
         routes: dict[str, str] | None = None,
         input_map: dict[str, str] | None = None,
-        input_bindings: Sequence[InputBinding] | None = None,
+        input_bindings: Sequence[StepInputBinding] | None = None,
         bind_outputs: dict[str, str] | None = None,
         desc: str | None = None,
         retry: int | None = None,

@@ -14,7 +14,7 @@ from wf_core import (
     execute_workflow_async,
     workflow_ref_from,
 )
-from wf_core.models.steps import InputBinding, OutputBinding
+from wf_core.models.steps import OutputBinding, StepInputBinding
 
 from .nodes import NodeSpec
 
@@ -26,7 +26,7 @@ def subgraph_ref(
     *,
     id: str,
     workflow: Workflow,
-    input: list[InputBinding] | None = None,
+    input: list[StepInputBinding] | None = None,
     output: list[OutputBinding] | None = None,
     workflow_ref: WorkflowRef | str | Mapping[str, object] | None = None,
     desc: str | None = None,

@@ -5,7 +5,7 @@ from typing import Any
 
 from wf_artifacts import ArtifactKind
 from wf_artifacts.drafts.models import DraftStep
-from wf_core.models.steps import InputBinding, OutputBinding
+from wf_core.models.steps import InputBinding, OutputBinding, StepInputBinding
 
 from .artifacts import WorkflowArtifactApi
 from .capabilities import WorkflowCapabilityApi
@@ -457,7 +457,7 @@ class WorkflowApi:
         workspace_id: str,
         revision: int,
         step_id: str,
-        bindings: Sequence[InputBinding],
+        bindings: Sequence[StepInputBinding],
     ) -> DraftWorkspaceResult:
         return await self.draft_authoring.set_step_input_bindings(
             workspace_id=workspace_id,
@@ -570,7 +570,7 @@ class WorkflowApi:
         route_from_outcome: str = "ok",
         routes: dict[str, str] | None = None,
         input_map: dict[str, str] | None = None,
-        input_bindings: Sequence[InputBinding] | None = None,
+        input_bindings: Sequence[StepInputBinding] | None = None,
         bind_outputs: dict[str, str] | None = None,
         desc: str | None = None,
         retry: int | None = None,
@@ -653,8 +653,8 @@ class WorkflowApi:
         input_schema: dict[str, Any],
         state_schema: dict[str, Any],
         output_schema: dict[str, Any],
-        input: Sequence[Any] | None = None,
-        output: Sequence[Any] | None = None,
+        input: Sequence[StepInputBinding] | None = None,
+        output: Sequence[OutputBinding] | None = None,
         input_map: dict[str, str] | None = None,
         output_map: dict[str, str] | None = None,
         error_message_source: Any | None = None,
@@ -730,8 +730,8 @@ class WorkflowApi:
         input_schema: dict[str, Any] | None = None,
         state_schema: dict[str, Any] | None = None,
         output_schema: dict[str, Any] | None = None,
-        input: Sequence[Any] | None = None,
-        output: Sequence[Any] | None = None,
+        input: Sequence[StepInputBinding] | None = None,
+        output: Sequence[OutputBinding] | None = None,
         input_map: dict[str, str] | None = None,
         output_map: dict[str, str] | None = None,
         error_message_source: Any | None = None,
