@@ -2,7 +2,6 @@ import type {
   CapabilityNodeFormValue,
 } from "./CapabilityNodeForm.js";
 import type {
-  InputExpression,
   InputPath,
   LocalInputPath,
   StepInputBinding,
@@ -10,6 +9,7 @@ import type {
 import type { DraftWorkspace } from "../domain/draft-workspace-models.js";
 import type { FieldSources } from "../schema-form/schema-values.js";
 import { formatTOMLPath, parseTOMLPath } from "../schema-form/schema-paths.js";
+import { parseInputExpression } from "./input-expression-editor.js";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -89,42 +89,12 @@ const inputPath = (value: unknown): value is InputPath =>
     value.parts.every((part): part is string => typeof part === "string")
   );
 
-const jsonValue = (value: unknown): boolean => {
-  if (
-    value === null ||
-    typeof value === "boolean" ||
-    (typeof value === "number" && Number.isFinite(value)) ||
-    typeof value === "string"
-  ) {
-    return true;
-  }
-  if (Array.isArray(value)) return value.every(jsonValue);
-  return isRecord(value) && Object.values(value).every(jsonValue);
-};
-
-const inputExpression = (value: unknown): value is InputExpression => {
-  if (!isRecord(value) || typeof value.kind !== "string") return false;
-  switch (value.kind) {
-    case "literal":
-      return jsonValue(value.value);
-    case "path":
-      return inputPath(value.path);
-    case "array":
-      return Array.isArray(value.items) && value.items.every(inputExpression);
-    case "object":
-      return isRecord(value.fields) && Object.values(value.fields).every(inputExpression);
-    default:
-      return false;
-  }
-};
-
 const inputBinding = (value: JsonRecord): StepInputBinding | null => {
   if (!localInputPath(value.target)) return null;
   if (inputPath(value.path)) return { target: value.target, path: value.path };
   if ("value" in value) return { target: value.target, value: value.value };
-  if (inputExpression(value.expression)) {
-    return { target: value.target, expression: value.expression };
-  }
+  const expression = parseInputExpression(value.expression);
+  if (expression !== null) return { target: value.target, expression };
   return null;
 };
 

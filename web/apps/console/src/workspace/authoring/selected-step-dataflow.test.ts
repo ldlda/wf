@@ -104,6 +104,35 @@ describe("selected-step dataflow projection", () => {
     });
   });
 
+  it("keeps one composite expression as one input binding and preserves its legacy row index", () => {
+    const composite = {
+      target: "items",
+      expression: {
+        kind: "array",
+        items: [
+          { kind: "path", path: "state.foo" },
+          { kind: "literal", value: "wowcool" },
+        ],
+      },
+    };
+    const projected = projectSelectedStepDataflow({
+      ...keyedDraft,
+      draft: {
+        steps: {
+          render: { use: "wf.std.concat", input: [bindings.input[0], composite, bindings.input[1]] },
+        },
+      },
+    }, "render");
+
+    expect(projected?.inputs).toHaveLength(3);
+    expect(projected?.inputs[1]).toEqual(composite);
+    expect(inputBindingRows([bindings.input[0], composite, bindings.input[1]])).toEqual([
+      expect.objectContaining({ kind: "canonical", index: 0 }),
+      expect.objectContaining({ kind: "unsupported", index: 1, raw: composite }),
+      expect.objectContaining({ kind: "canonical", index: 2 }),
+    ]);
+  });
+
   it("accepts structural paths, whole-payload paths, empty lists, and reports malformed rows", () => {
     const draft: DraftWorkspace = {
       ...keyedDraft,

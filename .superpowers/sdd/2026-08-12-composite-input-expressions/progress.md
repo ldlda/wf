@@ -8,6 +8,8 @@ Task 3: complete (`fa22a1a6`, fixes `4120174a`, `03150a5c`, `0eeb6079`, approved
 
 Task 4: complete (`144152a0`, fix `c259ba73`, approved)
 
-Task 5: complete (implementation and verification recorded in `task-5-report.md`)
+Task 5: complete (`1bb684bf`, fixes `cca1be89`, `0a7996da`, approved)
 
-Current task: Task 5 committed; do not begin Task 6 in this session
+Task 6: complete (pure projection/model integration; focused and full console verification passed)
+
+Current task: Task 7 not started

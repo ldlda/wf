@@ -12,6 +12,10 @@ export type SchemaField = {
   readonly enumValues: ReadonlyArray<string | number | boolean | null>;
   readonly children: ReadonlyArray<SchemaField>;
   readonly item: SchemaField | null;
+  readonly minItems: number | null;
+  readonly maxItems: number | null;
+  readonly additionalPropertiesKind: "allowed" | "forbidden" | "schema";
+  readonly additionalProperty: SchemaField | null;
   readonly fallbackReason: string | null;
 };
 
@@ -73,6 +77,9 @@ const isEnumValue = (value: unknown): value is EnumValue =>
   typeof value === "boolean" ||
   (typeof value === "number" && Number.isFinite(value));
 
+const nonNegativeInteger = (value: unknown): number | null =>
+  typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : null;
+
 const fallback = (
   schema: unknown,
   path: ReadonlyArray<string | number>,
@@ -92,6 +99,10 @@ const fallback = (
   enumValues: [],
   children: [],
   item: null,
+  minItems: null,
+  maxItems: null,
+  additionalPropertiesKind: "allowed",
+  additionalProperty: null,
   fallbackReason: reason,
 });
 
@@ -201,6 +212,10 @@ const normalizeField = (
       enumValues: enumValue,
       children: [],
       item: null,
+      minItems: null,
+      maxItems: null,
+      additionalPropertiesKind: "allowed",
+      additionalProperty: null,
       fallbackReason: null,
     };
   }
@@ -230,6 +245,24 @@ const normalizeField = (
           ),
         )
       : [];
+    const additionalProperties = resolvedSchema.additionalProperties;
+    const additionalPropertiesKind = additionalProperties === false
+      ? "forbidden"
+      : isRecord(additionalProperties)
+        ? "schema"
+        : "allowed";
+    const additionalProperty = isRecord(additionalProperties)
+      ? normalizeField(
+          rootSchema,
+          additionalProperties,
+          [...path, "*"],
+          "additional property",
+          false,
+          "Additional property",
+          resolvedReferenceAncestry,
+          depth + 1,
+        )
+      : null;
     return {
       path,
       key,
@@ -242,6 +275,10 @@ const normalizeField = (
       enumValues: [],
       children,
       item: null,
+      minItems: null,
+      maxItems: null,
+      additionalPropertiesKind,
+      additionalProperty,
       fallbackReason: null,
     };
   }
@@ -273,6 +310,10 @@ const normalizeField = (
       enumValues: [],
       children: [],
       item,
+      minItems: nonNegativeInteger(resolvedSchema.minItems),
+      maxItems: nonNegativeInteger(resolvedSchema.maxItems),
+      additionalPropertiesKind: "allowed",
+      additionalProperty: null,
       fallbackReason: null,
     };
   }
@@ -290,6 +331,10 @@ const normalizeField = (
       enumValues: [],
       children: [],
       item: null,
+      minItems: null,
+      maxItems: null,
+      additionalPropertiesKind: "allowed",
+      additionalProperty: null,
       fallbackReason: null,
     };
   }

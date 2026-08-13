@@ -6,19 +6,16 @@ import type {
   LocalInputPath,
   OutputBinding,
   StatePath,
+  StepInputBinding,
 } from "../domain/draft-workspace-models.js";
 import { formatTOMLPath, parseTOMLPath } from "../schema-form/schema-paths.js";
 import { normalizeSchema, type SchemaField } from "../schema-form/schema-field.js";
+import { isJsonValue, parseInputExpression } from "./input-expression-editor.js";
+
+export type { JsonValue } from "../domain/draft-workspace-models.js";
+export { isJsonValue } from "./input-expression-editor.js";
 
 type JsonRecord = Record<string, unknown>;
-
-export type JsonValue =
-  | null
-  | boolean
-  | number
-  | string
-  | ReadonlyArray<JsonValue>
-  | { readonly [key: string]: JsonValue };
 
 const isRecord = (value: unknown): value is JsonRecord =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -31,36 +28,6 @@ const hasExactKeys = (value: JsonRecord, keys: ReadonlyArray<string>): boolean =
   return actual.length === keys.length && keys.every((key) => actual.includes(key));
 };
 
-/** Guard the recursive JSON subset used by literal input bindings. */
-const MAX_JSON_DEPTH = 64;
-
-const isJsonValueAtDepth = (value: unknown, depth: number): boolean => {
-  if (depth > MAX_JSON_DEPTH) return false;
-  if (value === null || typeof value === "boolean" || typeof value === "string")
-    return true;
-  if (typeof value === "number") return Number.isFinite(value);
-  if (Array.isArray(value)) {
-    if (Object.getOwnPropertySymbols(value).length > 0) return false;
-    for (const item of value) {
-      if (!isJsonValueAtDepth(item, depth + 1)) return false;
-    }
-    return Object.keys(value).every((key) => /^(0|[1-9]\d*)$/.test(key));
-  }
-  if (!isRecord(value)) return false;
-  if (
-    Object.getPrototypeOf(value) !== Object.prototype &&
-    Object.getPrototypeOf(value) !== null
-  )
-    return false;
-  if (Object.getOwnPropertySymbols(value).length > 0) return false;
-  return Object.values(value).every((item) =>
-    isJsonValueAtDepth(item, depth + 1),
-  );
-};
-
-/** Guard the recursive JSON subset used by literal input bindings. */
-export const isJsonValue = (value: unknown): value is JsonValue =>
-  isJsonValueAtDepth(value, 0);
 const stringParts = (value: unknown): string[] | null => {
   if (!Array.isArray(value)) return null;
   const parts: string[] = [];
@@ -154,7 +121,7 @@ const canonicalStatePath = (value: unknown): string | null => {
   return parts === null ? null : formatTOMLPath(parts);
 };
 
-const parsedInputBinding = (value: unknown): InputBinding | null => {
+const parsedSimpleInputBinding = (value: unknown): InputBinding | null => {
   if (!isRecord(value)) return null;
   const target = localPath(value.target);
   if (target === null) return null;
@@ -168,6 +135,28 @@ const parsedInputBinding = (value: unknown): InputBinding | null => {
   }
   if (!hasExactKeys(value, ["target", "value"])) return null;
   return !isJsonValue(value.value) ? null : { target, value: value.value };
+};
+
+const parsedStepInputBinding = (value: unknown): StepInputBinding | null => {
+  if (!isRecord(value)) return null;
+  const target = localPath(value.target);
+  if (target === null) return null;
+  const hasPath = hasOwn(value, "path");
+  const hasValue = hasOwn(value, "value");
+  const hasExpression = hasOwn(value, "expression");
+  if (Number(hasPath) + Number(hasValue) + Number(hasExpression) !== 1) return null;
+  if (hasPath) {
+    if (!hasExactKeys(value, ["path", "target"])) return null;
+    const path = inputPath(value.path);
+    return path === null ? null : { path, target };
+  }
+  if (hasValue) {
+    if (!hasExactKeys(value, ["target", "value"])) return null;
+    return !isJsonValue(value.value) ? null : { target, value: value.value };
+  }
+  if (!hasExactKeys(value, ["target", "expression"])) return null;
+  const expression = parseInputExpression(value.expression);
+  return expression === null ? null : { target, expression };
 };
 
 const parsedOutputBinding = (value: unknown): OutputBinding | null => {
@@ -237,7 +226,7 @@ export type SelectedStepDataflow = {
   readonly description: string | null | undefined;
   readonly retry: number | null | undefined;
   readonly timeoutSeconds: number | null | undefined;
-  readonly inputs: ReadonlyArray<InputBinding>;
+  readonly inputs: ReadonlyArray<StepInputBinding>;
   readonly outputs: ReadonlyArray<OutputBinding>;
   readonly unsupported: ReadonlyArray<UnsupportedBindingRow>;
 };
@@ -271,7 +260,7 @@ export const projectSelectedStepDataflow = (
   const { step, compiledNodeIndex } = selected;
   const capabilityName = typeof step.use === "string" ? step.use : step.node;
   if (typeof capabilityName !== "string" || capabilityName.length === 0) return null;
-  const inputs = parseRows("input", step.input, parsedInputBinding);
+  const inputs = parseRows("input", step.input, parsedStepInputBinding);
   const outputs = parseRows("output", step.output, parsedOutputBinding);
   const description = step.desc === null || typeof step.desc === "string" ? step.desc : undefined;
   const retry = step.retry === null || typeof step.retry === "number" ? step.retry : undefined;
@@ -314,7 +303,13 @@ const rowsFor = <T>(
 };
 
 export const inputBindingRows = (raw: unknown): ReadonlyArray<InputBindingRow> =>
-  rowsFor(raw, parsedInputBinding, "input");
+  rowsFor(raw, parsedSimpleInputBinding, "input");
+
+export type StepInputBindingRow = BindingRow<StepInputBinding>;
+
+/** Full node-local rows for graph projections; the legacy form remains simple-only until Task 7. */
+export const stepInputBindingRows = (raw: unknown): ReadonlyArray<StepInputBindingRow> =>
+  rowsFor(raw, parsedStepInputBinding, "input");
 
 export const outputBindingRows = (raw: unknown): ReadonlyArray<OutputBindingRow> =>
   rowsFor(raw, parsedOutputBinding, "output");
@@ -342,6 +337,24 @@ export const serializeInputBindingRows = (
   for (const row of rows) {
     if (row.kind === "unsupported") return null;
     const binding = serializeInputBindingRow(row.value);
+    if (binding === null) return null;
+    bindings.push(binding);
+  }
+  return bindings;
+};
+
+export const serializeStepInputBindingRow = (value: unknown): StepInputBinding | null => {
+  const parsed = parsedStepInputBinding(value);
+  return parsed;
+};
+
+export const serializeStepInputBindingRows = (
+  rows: ReadonlyArray<StepInputBindingRow>,
+): ReadonlyArray<StepInputBinding> | null => {
+  const bindings: StepInputBinding[] = [];
+  for (const row of rows) {
+    if (row.kind === "unsupported") return null;
+    const binding = serializeStepInputBindingRow(row.value);
     if (binding === null) return null;
     bindings.push(binding);
   }

@@ -1,5 +1,5 @@
 import { buildWorkflowGraph, type WorkflowGraphModel } from "../../graph/graph-model.js";
-import { inputBindingRows, outputBindingRows } from "./selected-step-dataflow.js";
+import { outputBindingRows, stepInputBindingRows } from "./selected-step-dataflow.js";
 
 type JsonRecord = Readonly<Record<string, unknown>>;
 
@@ -54,7 +54,7 @@ const stepKind = (step: JsonRecord): string => {
 };
 
 const bindingSummary = (input: unknown, output: unknown): Readonly<Record<string, string>> => {
-  const inputCount = inputBindingRows(input).filter((row) => row.kind === "canonical").length;
+  const inputCount = stepInputBindingRows(input).filter((row) => row.kind === "canonical").length;
   const outputCount = outputBindingRows(output).filter((row) => row.kind === "canonical").length;
   if (inputCount === 0 && outputCount === 0) return {};
   const inputLabel = `${inputCount} input${inputCount === 1 ? "" : "s"}`;

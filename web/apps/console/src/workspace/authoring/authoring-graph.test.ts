@@ -73,6 +73,30 @@ describe("projectAuthoringGraph", () => {
     );
   });
 
+  it("counts a composite expression as one input instead of flattening its leaves", () => {
+    const model = projectAuthoringGraph({
+      ...draft,
+      steps: {
+        collect: {
+          use: "demo.collect",
+          input: [{
+            target: "items",
+            expression: {
+              kind: "array",
+              items: [
+                { kind: "path", path: "state.foo" },
+                { kind: "literal", value: "wowcool" },
+              ],
+            },
+          }],
+        },
+        review: draft.steps.review,
+      },
+    });
+
+    expect(model.nodes.find((node) => node.id === "collect")?.data.summary).toBe("1 input");
+  });
+
   it("uses singular labels and omits empty binding summaries", () => {
     const model = projectAuthoringGraph({
       ...draft,

@@ -76,6 +76,25 @@ describe("normalizeSchema", () => {
     });
   });
 
+  it("keeps array bounds and object additional-property rules for recursive editors", () => {
+    const field = normalizeSchema({
+      type: "object",
+      properties: {
+        items: { type: "array", minItems: 1, maxItems: 4, items: { type: "string" } },
+      },
+      additionalProperties: { type: "number" },
+    });
+
+    expect(field).toMatchObject({
+      additionalPropertiesKind: "schema",
+      additionalProperty: { kind: "number" },
+    });
+    expect(field.children.find((child) => child.key === "items")).toMatchObject({
+      minItems: 1,
+      maxItems: 4,
+    });
+  });
+
   it("uses JSON fallback for unconstrained schemas instead of inventing an object", () => {
     const field = normalizeSchema({});
 
