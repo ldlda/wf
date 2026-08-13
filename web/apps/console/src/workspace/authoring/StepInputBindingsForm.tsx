@@ -3,11 +3,12 @@ import type {
   DraftDiagnostic,
   StepInputBinding,
 } from "../domain/draft-workspace-models.js";
-import { InputExpressionControl, defaultExpressionEditorState } from "./InputExpressionControl.js";
+import { InputExpressionControl } from "./InputExpressionControl.js";
 import {
   projectExpressionEditorState,
   serializeExpressionEditorState,
   validateExpressionEditorState,
+  defaultExpressionEditorState,
   type ExpressionEditorState,
 } from "./input-expression-editor.js";
 import { SchemaFieldControl } from "../schema-form/SchemaFieldControl.js";
@@ -52,6 +53,8 @@ export type StepInputBindingsFormProps = {
   readonly inputSchema: unknown;
   readonly workflowInputSchema?: unknown;
   readonly workflowStateSchema?: unknown;
+  /** Changes only when the parent has accepted a new canonical draft. */
+  readonly canonicalVersion?: string | number | null;
   readonly initialRows?: ReadonlyArray<StepInputBindingRow>;
   readonly initialBindings?: ReadonlyArray<StepInputBinding>;
   readonly rowDiagnostics?: Readonly<Record<number, ReadonlyArray<DraftDiagnostic>>>;
@@ -193,10 +196,11 @@ const relativePath = (
 const rowIssueMessages = (
   row: EditableRow,
   rowDiagnostics: Readonly<Record<number, ReadonlyArray<DraftDiagnostic>>>,
-  localIssues: Readonly<Record<string, ReadonlyArray<string>>>,
+  editedRowIds: ReadonlySet<string>,
 ): ReadonlyArray<string> => [
-  ...(rowDiagnostics[row.rawIndex] ?? []).map((diagnostic) => diagnostic.message),
-  ...(localIssues[row.id] ?? []),
+  ...(editedRowIds.has(row.id)
+    ? []
+    : (rowDiagnostics[row.rawIndex] ?? []).map((diagnostic) => diagnostic.message)),
 ];
 
 const schemaFieldForTarget = (root: SchemaField, target: string): SchemaField | null => {
@@ -267,7 +271,28 @@ const bindingForRow = (
     : { binding, issues: [] };
 };
 
-export const StepInputBindingsForm = ({
+const duplicateIssuesForRows = (
+  rows: ReadonlyArray<FormRow>,
+  root: SchemaField,
+): ReadonlyMap<string, ReadonlyArray<string>> => {
+  const rowsByTarget = new Map<string, string[]>();
+  for (const row of rows) {
+    if (row.kind !== "canonical") continue;
+    const result = bindingForRow(root, row);
+    if (result.binding === null) continue;
+    const target = displayLocalInputPath(result.binding.target);
+    rowsByTarget.set(target, [...(rowsByTarget.get(target) ?? []), row.id]);
+  }
+  const issues = new Map<string, ReadonlyArray<string>>();
+  for (const ids of rowsByTarget.values()) {
+    if (ids.length < 2) continue;
+    for (const id of ids) issues.set(id, ["Target is duplicated in another input row."]);
+  }
+  return issues;
+};
+
+const StepInputBindingsFormContent = ({
+  canonicalVersion = null,
   inputSchema,
   workflowInputSchema,
   workflowStateSchema,
@@ -287,7 +312,7 @@ export const StepInputBindingsForm = ({
   const [rows, setRows] = useState<ReadonlyArray<FormRow>>(() =>
     rowsFrom(inputRows(initialRows, initialBindings), formId, root),
   );
-  const [localIssues, setLocalIssues] = useState<Readonly<Record<string, ReadonlyArray<string>>>>({});
+  const [editedRowIds, setEditedRowIds] = useState<ReadonlySet<string>>(new Set());
   const [formIssue, setFormIssue] = useState<string | null>(null);
   const nextId = useRef(rows.length);
   const formErrorId = `${formId}-form-error`;
@@ -296,6 +321,8 @@ export const StepInputBindingsForm = ({
 
   const editRow = (id: string, update: (row: EditableRow) => EditableRow): void => {
     setRows((current) => updateRow(current, id, update));
+    setEditedRowIds((current) => new Set(current).add(id));
+    setFormIssue(null);
     markDirty();
   };
 
@@ -316,9 +343,9 @@ export const StepInputBindingsForm = ({
 
   const removeRow = (id: string): void => {
     setRows((current) => current.filter((row) => row.id !== id));
-    setLocalIssues((current) => {
-      const next = { ...current };
-      delete next[id];
+    setEditedRowIds((current) => {
+      const next = new Set(current);
+      next.delete(id);
       return next;
     });
     setFormIssue(null);
@@ -345,9 +372,11 @@ export const StepInputBindingsForm = ({
   };
 
   const unsupportedRows = rows.filter((row): row is UnsupportedRow => row.kind === "unsupported");
+  const duplicateIssues = duplicateIssuesForRows(rows, root);
   const hasBlockingIssues = rows.some((row) => {
     if (row.kind === "unsupported") return true;
-    return rowIssueMessages(row, rowDiagnostics, localIssues).length > 0 ||
+    return rowIssueMessages(row, rowDiagnostics, editedRowIds).length > 0 ||
+      (duplicateIssues.get(row.id)?.length ?? 0) > 0 ||
       bindingForRow(root, row).issues.length > 0;
   });
 
@@ -364,21 +393,9 @@ export const StepInputBindingsForm = ({
       if (result.binding === null) nextIssues[row.id] = result.issues;
       else completed.push({ id: row.id, binding: result.binding });
     }
-    const duplicateRows = new Map<string, string[]>();
-    for (const item of completed) {
-      const target = displayLocalInputPath(item.binding.target);
-      duplicateRows.set(target, [...(duplicateRows.get(target) ?? []), item.id]);
+    for (const [id, issues] of duplicateIssuesForRows(rows, root)) {
+      nextIssues[id] = [...(nextIssues[id] ?? []), ...issues];
     }
-    for (const ids of duplicateRows.values()) {
-      if (ids.length < 2) continue;
-      for (const id of ids) {
-        nextIssues[id] = [
-          ...(nextIssues[id] ?? []),
-          "Target is duplicated in another input row.",
-        ];
-      }
-    }
-    setLocalIssues(nextIssues);
     setFormIssue(unsupportedRows.length > 0
       ? "Remove or repair every unsupported input row before saving."
       : null);
@@ -394,7 +411,6 @@ export const StepInputBindingsForm = ({
       markDirty();
       return;
     }
-    setLocalIssues({});
     setFormIssue(null);
     markDirty();
     void Promise.resolve(onSubmit([]))
@@ -417,7 +433,6 @@ export const StepInputBindingsForm = ({
           if (row.kind === "unsupported") {
             const unsupportedIssues = [
               ...(rowDiagnostics[row.index] ?? []).map((diagnostic) => diagnostic.message),
-              ...(localIssues[row.id] ?? []),
             ];
             const errorId = `${row.id}-errors`;
             return (
@@ -448,8 +463,10 @@ export const StepInputBindingsForm = ({
             );
           }
           const field = schemaFieldForTarget(root, row.target.trim());
+          const backendIssues = (rowDiagnostics[row.rawIndex] ?? []).map((diagnostic) => diagnostic.message);
           const issues = [...new Set([
-            ...rowIssueMessages(row, rowDiagnostics, localIssues),
+            ...rowIssueMessages(row, rowDiagnostics, editedRowIds),
+            ...(duplicateIssues.get(row.id) ?? []),
             ...bindingForRow(root, row).issues,
           ])];
           const targetId = `${row.id}-target`;
@@ -539,6 +556,7 @@ export const StepInputBindingsForm = ({
               ) : row.mode === "expression" ? (
                 <InputExpressionControl
                   field={field}
+                  key={`${row.id}:${canonicalVersion ?? "initial"}`}
                   label={row.target.trim() || `input row ${rowNumber}`}
                   onChange={(next) => editRow(row.id, (current) => ({
                     ...current,
@@ -588,6 +606,15 @@ export const StepInputBindingsForm = ({
                   {issues.map((issue) => <p key={issue}>{issue}</p>)}
                 </div>
               )}
+              {editedRowIds.has(row.id) && backendIssues.length > 0 && (
+                <div
+                  aria-label={`Backend diagnostics for input row ${rowNumber}`}
+                  className="schema-form__diagnostics schema-form__diagnostics--provenance"
+                  role="status"
+                >
+                  {backendIssues.map((issue) => <p key={issue}>{issue}</p>)}
+                </div>
+              )}
               <div className="schema-form__source-options">
                 <button
                   aria-label={`Move input row ${rowNumber} up`}
@@ -635,4 +662,15 @@ export const StepInputBindingsForm = ({
       </div>
     </form>
   );
+};
+
+/**
+ * Remount only when the parent publishes a new canonical revision. Ordinary
+ * rerenders keep the editor's dirty rows and local validation state intact.
+ */
+export const StepInputBindingsForm = (props: StepInputBindingsFormProps) => {
+  const version = props.canonicalVersion === null || props.canonicalVersion === undefined
+    ? "initial"
+    : String(props.canonicalVersion);
+  return <StepInputBindingsFormContent key={version} {...props} />;
 };

@@ -20,6 +20,30 @@ export type ExpressionEditorState =
   | { readonly kind: "array"; readonly items: ReadonlyArray<ExpressionEditorState> }
   | { readonly kind: "object"; readonly fields: ReadonlyArray<{ readonly name: string; readonly value: ExpressionEditorState }> };
 
+const defaultLiteralValue = (field: SchemaField | null): unknown => {
+  if (field?.hasDefault) return field.defaultValue;
+  if (field?.kind === "boolean") return false;
+  if (field?.kind === "number" || field?.kind === "integer") return 0;
+  if (field?.kind === "enum") return field.enumValues[0] ?? null;
+  return "";
+};
+
+export const defaultExpressionEditorState = (
+  field: SchemaField | null,
+): ExpressionEditorState => {
+  if (field?.kind === "array") return { kind: "array", items: [] };
+  if (field?.kind === "object") {
+    return {
+      kind: "object",
+      fields: field.children.map((child) => ({
+        name: child.key,
+        value: defaultExpressionEditorState(child),
+      })),
+    };
+  }
+  return { kind: "literal", value: defaultLiteralValue(field), touched: false };
+};
+
 export type ExpressionProjection =
   | { readonly kind: "editable"; readonly state: ExpressionEditorState }
   | { readonly kind: "unsupported"; readonly raw: InputExpression; readonly reason: string };

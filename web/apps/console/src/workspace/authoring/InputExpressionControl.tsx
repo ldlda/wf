@@ -1,8 +1,11 @@
-import { useState } from "react";
+import { useId, useRef, useState } from "react";
 import { SchemaFieldControl } from "../schema-form/SchemaFieldControl.js";
 import { rebaseSchemaField, type SchemaField } from "../schema-form/schema-field.js";
 import type { FieldSources } from "../schema-form/schema-values.js";
-import type { ExpressionEditorState } from "./input-expression-editor.js";
+import {
+  defaultExpressionEditorState,
+  type ExpressionEditorState,
+} from "./input-expression-editor.js";
 
 export type InputExpressionControlProps = {
   readonly field: SchemaField | null;
@@ -15,30 +18,6 @@ export type InputExpressionControlProps = {
 
 const isConstructField = (field: SchemaField | null): boolean =>
   field?.kind === "array" || field?.kind === "object";
-
-const defaultLiteralValue = (field: SchemaField | null): unknown => {
-  if (field?.hasDefault) return field.defaultValue;
-  if (field?.kind === "boolean") return false;
-  if (field?.kind === "number" || field?.kind === "integer") return 0;
-  if (field?.kind === "enum") return field.enumValues[0] ?? null;
-  return "";
-};
-
-export const defaultExpressionEditorState = (
-  field: SchemaField | null,
-): ExpressionEditorState => {
-  if (field?.kind === "array") return { kind: "array", items: [] };
-  if (field?.kind === "object") {
-    return {
-      kind: "object",
-      fields: field.children.map((child) => ({
-        name: child.key,
-        value: defaultExpressionEditorState(child),
-      })),
-    };
-  }
-  return { kind: "literal", value: defaultLiteralValue(field), touched: false };
-};
 
 const valueSourceFor = (state: ExpressionEditorState): "path" | "literal" | "construct" =>
   state.kind === "array" || state.kind === "object" ? "construct" : state.kind;
@@ -56,7 +35,14 @@ const stateForSource = (
   if (source === "literal") {
     return current.kind === "literal"
       ? current
-      : { kind: "literal", value: defaultLiteralValue(field), touched: true };
+      : (() => {
+        const defaultState = defaultExpressionEditorState(field);
+        return {
+          kind: "literal" as const,
+          value: defaultState.kind === "literal" ? defaultState.value : null,
+          touched: true,
+        };
+      })();
   }
   return isConstructField(field) ? defaultExpressionEditorState(field) : current;
 };
@@ -67,6 +53,20 @@ const fieldForName = (field: SchemaField | null, name: string): SchemaField | nu
     (field.additionalPropertiesKind === "schema" ? field.additionalProperty : null);
 };
 
+const missingRequiredProperties = (
+  field: SchemaField | null,
+  fields: ReadonlyArray<{ readonly name: string }>,
+): ReadonlyArray<SchemaField> => {
+  if (field?.kind !== "object") return [];
+  const presentNames = new Set<string>();
+  for (const entry of fields) presentNames.add(entry.name);
+  const missing: SchemaField[] = [];
+  for (const child of field.children) {
+    if (child.required && !presentNames.has(child.key)) missing.push(child);
+  }
+  return missing;
+};
+
 const labelForName = (label: string, name: string): string =>
   `${label} field ${name}`;
 
@@ -75,33 +75,41 @@ const pathNeedsDeferredValidation = (field: SchemaField | null, path: string): b
   field === null ||
   field.fallbackReason === "The schema is unconstrained; edit JSON directly.";
 
+const safeIdSuffix = (value: string): string =>
+  value.replaceAll(/[^a-zA-Z0-9_-]/g, "-");
+
+const EMPTY_FIELD_SOURCES: FieldSources = {};
+
 const InputExpressionLeaf = ({
   field,
   label,
   onChange,
   sourceSuggestions,
   state,
+  idPrefix,
 }: {
   readonly field: SchemaField | null;
+  readonly idPrefix: string;
   readonly label: string;
   readonly onChange: (state: ExpressionEditorState) => void;
   readonly sourceSuggestions: ReadonlyArray<string>;
   readonly state: ExpressionEditorState;
 }) => {
   if (state.kind === "path") {
+    const pathListId = `${idPrefix}-paths`;
     return (
       <div className="input-expression-control__leaf">
         <label>
           Path for {label}
           <input
             aria-label={`Path for ${label}`}
-            list={`${label.replaceAll(/[^a-zA-Z0-9]+/g, "-")}-paths`}
+            list={pathListId}
             onChange={(event) => onChange({ ...state, path: event.target.value, touched: true })}
             type="text"
             value={state.path}
           />
         </label>
-        <datalist id={`${label.replaceAll(/[^a-zA-Z0-9]+/g, "-")}-paths`}>
+        <datalist id={pathListId}>
           {sourceSuggestions.map((suggestion) => <option key={suggestion} value={suggestion} />)}
         </datalist>
         {pathNeedsDeferredValidation(field, state.path) && (
@@ -136,7 +144,6 @@ const InputExpressionLeaf = ({
     );
   }
 
-  const sources: FieldSources = {};
   return (
     <div className="input-expression-control__leaf">
       <SchemaFieldControl
@@ -146,7 +153,8 @@ const InputExpressionLeaf = ({
         onSourceChange={() => undefined}
         onValueChange={(_, value) => onChange({ ...literalState, value, touched: true })}
         showSourceControl={false}
-        sources={sources}
+        idPrefix={`${idPrefix}-leaf`}
+        sources={EMPTY_FIELD_SOURCES}
         value={literalState.value}
       />
     </div>
@@ -161,7 +169,14 @@ export const InputExpressionControl = ({
   state,
   showModeControl = true,
 }: InputExpressionControlProps) => {
+  const controlId = `input-expression-${safeIdSuffix(useId())}`;
+  const nextItemId = useRef(state.kind === "array" ? state.items.length : 0);
   const [additionalName, setAdditionalName] = useState("");
+  const [arrayItemIds, setArrayItemIds] = useState<ReadonlyArray<string>>(() =>
+    state.kind === "array"
+      ? state.items.map((_, index) => `${controlId}-item-${index}`)
+      : [],
+  );
   const source = valueSourceFor(state);
   const selectSource = (next: "path" | "literal" | "construct"): void =>
     onChange(stateForSource(next, field, state));
@@ -175,11 +190,12 @@ export const InputExpressionControl = ({
           ? rebaseSchemaField(field.item, [...field.path, index])
           : null;
         const itemLabel = `${label} item ${index + 1}`;
+        const itemId = arrayItemIds[index]!;
         return (
           <fieldset
             aria-label={itemLabel}
             className="input-expression-control__item"
-            key={`${itemLabel}-${index}`}
+            key={itemId}
           >
             <InputExpressionControl
               field={itemField}
@@ -196,7 +212,15 @@ export const InputExpressionControl = ({
                 aria-label={`Move ${itemLabel} up`}
                 className="schema-form__secondary-action"
                 disabled={index === 0}
-                onClick={() => onChange({
+                onClick={() => {
+                  setArrayItemIds((current) => current.map((candidate, candidateIndex) =>
+                    candidateIndex === index - 1
+                      ? current[index]!
+                      : candidateIndex === index
+                        ? current[index - 1]!
+                        : candidate,
+                  ));
+                  onChange({
                   kind: "array",
                   items: state.items.map((candidate, candidateIndex) =>
                     candidateIndex === index - 1
@@ -205,7 +229,8 @@ export const InputExpressionControl = ({
                         ? state.items[index - 1]!
                         : candidate,
                   ),
-                })}
+                  });
+                }}
                 type="button"
               >
                 Move up
@@ -214,7 +239,15 @@ export const InputExpressionControl = ({
                 aria-label={`Move ${itemLabel} down`}
                 className="schema-form__secondary-action"
                 disabled={index === state.items.length - 1}
-                onClick={() => onChange({
+                onClick={() => {
+                  setArrayItemIds((current) => current.map((candidate, candidateIndex) =>
+                    candidateIndex === index
+                      ? current[index + 1]!
+                      : candidateIndex === index + 1
+                        ? current[index]!
+                        : candidate,
+                  ));
+                  onChange({
                   kind: "array",
                   items: state.items.map((candidate, candidateIndex) =>
                     candidateIndex === index
@@ -223,7 +256,8 @@ export const InputExpressionControl = ({
                         ? state.items[index]!
                         : candidate,
                   ),
-                })}
+                  });
+                }}
                 type="button"
               >
                 Move down
@@ -231,7 +265,10 @@ export const InputExpressionControl = ({
               <button
                 aria-label={`Remove ${itemLabel}`}
                 className="schema-form__secondary-action"
-                onClick={() => onChange({ kind: "array", items: state.items.filter((_, itemIndex) => itemIndex !== index) })}
+                onClick={() => {
+                  setArrayItemIds((current) => current.filter((_, itemIndex) => itemIndex !== index));
+                  onChange({ kind: "array", items: state.items.filter((_, itemIndex) => itemIndex !== index) });
+                }}
                 type="button"
               >
                 Remove
@@ -242,7 +279,12 @@ export const InputExpressionControl = ({
       })}
       <button
         className="schema-form__secondary-action"
-        onClick={() => onChange({ kind: "array", items: [...state.items, defaultExpressionEditorState(field?.item ?? null)] })}
+        onClick={() => {
+          const itemId = `${controlId}-item-${nextItemId.current}`;
+          nextItemId.current += 1;
+          setArrayItemIds((current) => [...current, itemId]);
+          onChange({ kind: "array", items: [...state.items, defaultExpressionEditorState(field?.item ?? null)] });
+        }}
         type="button"
       >
         Add item to {label}
@@ -294,6 +336,23 @@ export const InputExpressionControl = ({
           </fieldset>
         );
       })}
+      {missingRequiredProperties(field, state.fields).map((child) => (
+          <button
+            aria-label={`Add required property ${child.key} to ${label}`}
+            className="schema-form__secondary-action"
+            key={`required-${child.key}`}
+            onClick={() => onChange({
+              kind: "object",
+              fields: [...state.fields, {
+                name: child.key,
+                value: defaultExpressionEditorState(child),
+              }],
+            })}
+            type="button"
+          >
+            Add required property {child.key}
+          </button>
+        ))}
       {(field?.additionalPropertiesKind === "allowed" || field?.additionalPropertiesKind === "schema") && (
         <div className="input-expression-control__additional">
           <label>
@@ -330,6 +389,7 @@ export const InputExpressionControl = ({
   ) : (
     <InputExpressionLeaf
       field={field}
+      idPrefix={`${controlId}-leaf`}
       label={label}
       onChange={onChange}
       sourceSuggestions={sourceSuggestions}

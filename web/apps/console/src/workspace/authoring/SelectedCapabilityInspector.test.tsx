@@ -271,6 +271,61 @@ describe("SelectedCapabilityInspector", () => {
     }
   });
 
+  it("rehydrates the selected inspector from a returned canonical mutation", async () => {
+    const user = userEvent.setup();
+    const initial = draft("read", [{
+      target: "items",
+      expression: {
+        kind: "array",
+        items: [
+          { kind: "path", path: "state.foo" },
+          { kind: "literal", value: "before" },
+        ],
+      },
+    }], []);
+    const returned = draft("read", [{
+      target: "items",
+      expression: {
+        kind: "array",
+        items: [
+          { kind: "path", path: "state.bar" },
+          { kind: "literal", value: "after" },
+        ],
+      },
+    }], []);
+    const controller = { ...controllerFor(initial), resetGeneration: 0 };
+    const { rerender } = render(
+      <SelectedCapabilityInspector
+        capabilityDetail={compositeDetail}
+        capabilityDetailMessage={null}
+        capabilityDetailPhase="ready"
+        controller={controller}
+        draft={initial}
+        nodeKind="use"
+        nodeRef="demo.concat"
+        stepId="read"
+      />,
+    );
+    await user.click(screen.getByRole("tab", { name: "Inputs" }));
+    await user.click(screen.getByRole("button", { name: "Save inputs" }));
+
+    const returnedController = { ...controller, draft: returned, resetGeneration: 1 };
+    rerender(
+      <SelectedCapabilityInspector
+        capabilityDetail={compositeDetail}
+        capabilityDetailMessage={null}
+        capabilityDetailPhase="ready"
+        controller={returnedController}
+        draft={returned}
+        nodeKind="use"
+        nodeRef="demo.concat"
+        stepId="read"
+      />,
+    );
+    expect(screen.getByRole("combobox", { name: "Path for items item 1" })).toHaveValue("state.bar");
+    expect(screen.getByRole("textbox", { name: "Items item" })).toHaveValue("after");
+  });
+
   it("keeps diagnostic ids unique across failing setup and hidden binding forms", async () => {
     const user = userEvent.setup();
     const workspace = draft(

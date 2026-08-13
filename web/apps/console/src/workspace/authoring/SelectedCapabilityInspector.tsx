@@ -199,7 +199,7 @@ export const SelectedCapabilityInspector = ({
               </TabPanel>
               <TabPanel activeTab={activeTab} tab="inputs">
                 <StepInputBindingsForm
-                  key={`inputs:${stepId}:${controller.resetGeneration}`}
+                  canonicalVersion={`${stepId}:${controller.resetGeneration}`}
                   initialRows={inputRows}
                   inputSchema={capabilityDetail.inputSchema}
                   workflowInputSchema={isRecord(draft.draft) ? draft.draft.input_schema : undefined}

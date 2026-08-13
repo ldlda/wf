@@ -337,6 +337,103 @@ describe("StepInputBindingsForm", () => {
     )).toHaveLength(2);
   });
 
+  it("recomputes duplicate-target errors after the edited target is repaired", async () => {
+    const user = userEvent.setup();
+    const submissions: ReadonlyArray<StepInputBinding>[] = [];
+    render(
+      <StepInputBindingsForm
+        inputSchema={schema}
+        initialRows={[
+          { kind: "canonical", index: 0, value: { path: "input.title", target: "title" } },
+          { kind: "canonical", index: 1, value: { path: "input.title", target: "nullable" } },
+        ]}
+        onSubmit={(value) => { submissions.push(value); }}
+      />,
+    );
+
+    const secondTarget = screen.getByRole("combobox", { name: "Target for row 2" });
+    await user.clear(secondTarget);
+    await user.type(secondTarget, "title");
+    await user.click(screen.getByRole("button", { name: "Save inputs" }));
+    expect(submissions).toEqual([]);
+
+    await user.clear(secondTarget);
+    await user.type(secondTarget, "nullable");
+    expect(screen.getByRole("button", { name: "Save inputs" })).not.toBeDisabled();
+    await user.click(screen.getByRole("button", { name: "Save inputs" }));
+    expect(submissions).toHaveLength(1);
+  });
+
+  it("keeps backend diagnostics visible as provenance while allowing a dirty row to be repaired", async () => {
+    const user = userEvent.setup();
+    const submissions: ReadonlyArray<StepInputBinding>[] = [];
+    render(
+      <StepInputBindingsForm
+        inputSchema={schema}
+        initialRows={[{ kind: "canonical", index: 0, value: { path: "input.title", target: "title" } }]}
+        onSubmit={(value) => { submissions.push(value); }}
+        rowDiagnostics={{
+          0: [{ code: "invalid", path: "bindings[0].path", message: "Backend rejected this source path.", stepId: "read", repairHint: null, details: {} }],
+        }}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Save inputs" })).toBeDisabled();
+    const source = screen.getByRole("combobox", { name: "Source path for input row 1" });
+    await user.clear(source);
+    await user.type(source, "context.profile");
+
+    expect(screen.getByText("Backend rejected this source path.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save inputs" })).not.toBeDisabled();
+    await user.click(screen.getByRole("button", { name: "Save inputs" }));
+    expect(submissions).toEqual([[{ path: "context.profile", target: "title" }]]);
+  });
+
+  it("rehydrates only when the canonical version changes, preserving dirty edits otherwise", async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(
+      <StepInputBindingsForm
+        canonicalVersion={1}
+        inputSchema={schema}
+        initialRows={[{ kind: "canonical", index: 0, value: { path: "input.title", target: "title" } }]}
+        onSubmit={() => undefined}
+      />,
+    );
+    const target = screen.getByRole("combobox", { name: "Target for row 1" });
+
+    rerender(
+      <StepInputBindingsForm
+        canonicalVersion={1}
+        inputSchema={schema}
+        initialRows={[{ kind: "canonical", index: 0, value: { path: "input.title", target: "nullable" } }]}
+        onSubmit={() => undefined}
+      />,
+    );
+    expect(target).toHaveValue("title");
+
+    await user.clear(target);
+    await user.type(target, "edited");
+    rerender(
+      <StepInputBindingsForm
+        canonicalVersion={1}
+        inputSchema={schema}
+        initialRows={[{ kind: "canonical", index: 0, value: { path: "input.title", target: "nullable" } }]}
+        onSubmit={() => undefined}
+      />,
+    );
+    expect(screen.getByRole("combobox", { name: "Target for row 1" })).toHaveValue("edited");
+
+    rerender(
+      <StepInputBindingsForm
+        canonicalVersion={2}
+        inputSchema={schema}
+        initialRows={[{ kind: "canonical", index: 0, value: { path: "input.title", target: "nullable" } }]}
+        onSubmit={() => undefined}
+      />,
+    );
+    expect(screen.getByRole("combobox", { name: "Target for row 1" })).toHaveValue("nullable");
+  });
+
   it("shows row diagnostics at the row that owns them", () => {
     render(
       <StepInputBindingsForm
