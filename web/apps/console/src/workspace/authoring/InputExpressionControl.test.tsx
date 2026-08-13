@@ -141,6 +141,130 @@ describe("InputExpressionControl", () => {
     expect(screen.getByRole("textbox", { name: "Additional property name for items item 2" })).toHaveValue("kept");
   });
 
+  it("follows logical item identity across an external remove", async () => {
+    const user = userEvent.setup();
+    const first = { kind: "object", fields: [] } satisfies ExpressionEditorState;
+    const second = { kind: "object", fields: [] } satisfies ExpressionEditorState;
+    const Harness = () => {
+      const [state, setState] = useState<ExpressionEditorState>({ kind: "array", items: [first, second] });
+      return (
+        <>
+          <button onClick={() => setState({ kind: "array", items: state.kind === "array" ? state.items.slice(1) : [] })} type="button">
+            External remove first
+          </button>
+          <InputExpressionControl
+            field={normalizeSchema({ type: "array", items: { type: "object", additionalProperties: true } })}
+            label="items"
+            onChange={setState}
+            state={state}
+          />
+        </>
+      );
+    };
+
+    render(<Harness />);
+    await user.type(screen.getByRole("textbox", { name: "Additional property name for items item 2" }), "second-local");
+    await user.click(screen.getByRole("button", { name: "External remove first" }));
+
+    expect(screen.getByRole("textbox", { name: "Additional property name for items item 1" })).toHaveValue("second-local");
+  });
+
+  it("follows logical item identity across an external reorder", async () => {
+    const user = userEvent.setup();
+    const first = { kind: "object", fields: [] } satisfies ExpressionEditorState;
+    const second = { kind: "object", fields: [] } satisfies ExpressionEditorState;
+    const Harness = () => {
+      const [state, setState] = useState<ExpressionEditorState>({ kind: "array", items: [first, second] });
+      return (
+        <>
+          <button
+            onClick={() => setState({ kind: "array", items: state.kind === "array" ? [...state.items].reverse() : [] })}
+            type="button"
+          >
+            External reorder
+          </button>
+          <InputExpressionControl
+            field={normalizeSchema({ type: "array", items: { type: "object", additionalProperties: true } })}
+            label="items"
+            onChange={setState}
+            state={state}
+          />
+        </>
+      );
+    };
+
+    render(<Harness />);
+    await user.type(screen.getByRole("textbox", { name: "Additional property name for items item 1" }), "first-local");
+    await user.type(screen.getByRole("textbox", { name: "Additional property name for items item 2" }), "second-local");
+    await user.click(screen.getByRole("button", { name: "External reorder" }));
+
+    expect(screen.getByRole("textbox", { name: "Additional property name for items item 1" })).toHaveValue("second-local");
+    expect(screen.getByRole("textbox", { name: "Additional property name for items item 2" })).toHaveValue("first-local");
+  });
+
+  it("allocates an identity for an externally added item without a missing key", async () => {
+    const user = userEvent.setup();
+    const first = { kind: "object", fields: [] } satisfies ExpressionEditorState;
+    const Harness = () => {
+      const [state, setState] = useState<ExpressionEditorState>({ kind: "array", items: [first] });
+      return (
+        <>
+          <button
+            onClick={() => setState({
+              kind: "array",
+              items: state.kind === "array" ? [...state.items, { kind: "object", fields: [] }] : [],
+            })}
+            type="button"
+          >
+            External add
+          </button>
+          <InputExpressionControl
+            field={normalizeSchema({ type: "array", items: { type: "object", additionalProperties: true } })}
+            label="items"
+            onChange={setState}
+            state={state}
+          />
+        </>
+      );
+    };
+
+    render(<Harness />);
+    await user.click(screen.getByRole("button", { name: "External add" }));
+
+    expect(screen.getAllByRole("group", { name: "items item 2" })).not.toHaveLength(0);
+    expect(screen.getAllByRole("textbox", { name: /Additional property name for items item/ })).toHaveLength(2);
+  });
+
+  it("does not carry local state into a reconstructed semantically equal item", async () => {
+    const user = userEvent.setup();
+    const Harness = () => {
+      const [state, setState] = useState<ExpressionEditorState>({ kind: "array", items: [{ kind: "object", fields: [] }] });
+      return (
+        <>
+          <button
+            onClick={() => setState({ kind: "array", items: [{ kind: "object", fields: [] }] })}
+            type="button"
+          >
+            External replace with equal value
+          </button>
+          <InputExpressionControl
+            field={normalizeSchema({ type: "array", items: { type: "object", additionalProperties: true } })}
+            label="items"
+            onChange={setState}
+            state={state}
+          />
+        </>
+      );
+    };
+
+    render(<Harness />);
+    const name = screen.getByRole("textbox", { name: "Additional property name for items item 1" });
+    await user.type(name, "stale-local");
+    await user.click(screen.getByRole("button", { name: "External replace with equal value" }));
+
+    expect(screen.getByRole("textbox", { name: "Additional property name for items item 1" })).toHaveValue("");
+  });
+
   it("gives repeated labels unique datalist and typed-leaf control ids", () => {
     const field = normalizeSchema({ type: "string" });
     render(

@@ -1,4 +1,4 @@
-import { useId, useRef, useState } from "react";
+import { useId, useState } from "react";
 import { SchemaFieldControl } from "../schema-form/SchemaFieldControl.js";
 import { rebaseSchemaField, type SchemaField } from "../schema-form/schema-field.js";
 import type { FieldSources } from "../schema-form/schema-values.js";
@@ -170,13 +170,25 @@ export const InputExpressionControl = ({
   showModeControl = true,
 }: InputExpressionControlProps) => {
   const controlId = `input-expression-${safeIdSuffix(useId())}`;
-  const nextItemId = useRef(state.kind === "array" ? state.items.length : 0);
+  const [itemIdentity] = useState(() => ({
+    byState: new WeakMap<ExpressionEditorState, string>(),
+    nextId: 0,
+  }));
   const [additionalName, setAdditionalName] = useState("");
-  const [arrayItemIds, setArrayItemIds] = useState<ReadonlyArray<string>>(() =>
-    state.kind === "array"
-      ? state.items.map((_, index) => `${controlId}-item-${index}`)
-      : [],
-  );
+  const identityForItem = (item: ExpressionEditorState): string => {
+    const existing = itemIdentity.byState.get(item);
+    if (existing !== undefined) return existing;
+    const id = `${controlId}-item-${itemIdentity.nextId}`;
+    itemIdentity.nextId += 1;
+    itemIdentity.byState.set(item, id);
+    return id;
+  };
+  const arrayItemIds = state.kind === "array"
+    ? state.items.map(identityForItem)
+    : [];
+  const rememberItemIdentity = (item: ExpressionEditorState, id: string | undefined): void => {
+    if (id !== undefined) itemIdentity.byState.set(item, id);
+  };
   const source = valueSourceFor(state);
   const selectSource = (next: "path" | "literal" | "construct"): void =>
     onChange(stateForSource(next, field, state));
@@ -200,10 +212,13 @@ export const InputExpressionControl = ({
             <InputExpressionControl
               field={itemField}
               label={itemLabel}
-              onChange={(next) => onChange({
-                kind: "array",
-                items: state.items.map((candidate, candidateIndex) => candidateIndex === index ? next : candidate),
-              })}
+              onChange={(next) => {
+                rememberItemIdentity(next, itemId);
+                onChange({
+                  kind: "array",
+                  items: state.items.map((candidate, candidateIndex) => candidateIndex === index ? next : candidate),
+                });
+              }}
               sourceSuggestions={sourceSuggestions}
               state={item}
             />
@@ -213,13 +228,6 @@ export const InputExpressionControl = ({
                 className="schema-form__secondary-action"
                 disabled={index === 0}
                 onClick={() => {
-                  setArrayItemIds((current) => current.map((candidate, candidateIndex) =>
-                    candidateIndex === index - 1
-                      ? current[index]!
-                      : candidateIndex === index
-                        ? current[index - 1]!
-                        : candidate,
-                  ));
                   onChange({
                   kind: "array",
                   items: state.items.map((candidate, candidateIndex) =>
@@ -240,13 +248,6 @@ export const InputExpressionControl = ({
                 className="schema-form__secondary-action"
                 disabled={index === state.items.length - 1}
                 onClick={() => {
-                  setArrayItemIds((current) => current.map((candidate, candidateIndex) =>
-                    candidateIndex === index
-                      ? current[index + 1]!
-                      : candidateIndex === index + 1
-                        ? current[index]!
-                        : candidate,
-                  ));
                   onChange({
                   kind: "array",
                   items: state.items.map((candidate, candidateIndex) =>
@@ -266,7 +267,6 @@ export const InputExpressionControl = ({
                 aria-label={`Remove ${itemLabel}`}
                 className="schema-form__secondary-action"
                 onClick={() => {
-                  setArrayItemIds((current) => current.filter((_, itemIndex) => itemIndex !== index));
                   onChange({ kind: "array", items: state.items.filter((_, itemIndex) => itemIndex !== index) });
                 }}
                 type="button"
@@ -280,10 +280,11 @@ export const InputExpressionControl = ({
       <button
         className="schema-form__secondary-action"
         onClick={() => {
-          const itemId = `${controlId}-item-${nextItemId.current}`;
-          nextItemId.current += 1;
-          setArrayItemIds((current) => [...current, itemId]);
-          onChange({ kind: "array", items: [...state.items, defaultExpressionEditorState(field?.item ?? null)] });
+          const item = defaultExpressionEditorState(field?.item ?? null);
+          const itemId = `${controlId}-item-${itemIdentity.nextId}`;
+          itemIdentity.nextId += 1;
+          itemIdentity.byState.set(item, itemId);
+          onChange({ kind: "array", items: [...state.items, item] });
         }}
         type="button"
       >
