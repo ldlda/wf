@@ -38,6 +38,62 @@ export type CapabilityNodeFormProps = {
   readonly hidden?: boolean;
 };
 
+const bindingTargetKey = (binding: StepInputBinding): string => {
+  const target = binding.target;
+  return typeof target === "string"
+    ? target
+    : `${target.root}:${target.parts.join(".")}`;
+};
+
+const bindingKind = (binding: StepInputBinding): "path" | "value" | "expression" => {
+  if ("expression" in binding) return "expression";
+  return "path" in binding ? "path" : "value";
+};
+
+/**
+ * Reconcile the legacy serializer with canonical binding slots.
+ *
+ * Expression rows are read-only in this form. Existing simple rows claim
+ * their original kind/target slot first; unmatched serializer rows are new
+ * rows and are appended rather than silently moving existing rows.
+ */
+const mergeInputBindings = (
+  original: ReadonlyArray<StepInputBinding>,
+  serialized: ReadonlyArray<StepInputBinding>,
+): ReadonlyArray<StepInputBinding> => {
+  const used = new Set<number>();
+  const merged: StepInputBinding[] = [];
+
+  for (const originalBinding of original) {
+    if (bindingKind(originalBinding) === "expression") {
+      merged.push(originalBinding);
+      continue;
+    }
+    const kind = bindingKind(originalBinding);
+    const target = bindingTargetKey(originalBinding);
+    const index = serialized.findIndex(
+      (candidate, candidateIndex) =>
+        !used.has(candidateIndex) &&
+        bindingKind(candidate) === kind &&
+        bindingTargetKey(candidate) === target,
+    );
+    const fallbackIndex = serialized.findIndex(
+      (candidate, candidateIndex) =>
+        !used.has(candidateIndex) && bindingKind(candidate) === kind,
+    );
+    const selectedIndex = index === -1 ? fallbackIndex : index;
+    if (selectedIndex !== -1) {
+      used.add(selectedIndex);
+      merged.push(serialized[selectedIndex]!);
+    }
+  }
+
+  serialized.forEach((binding, index) => {
+    if (!used.has(index)) merged.push(binding);
+  });
+  return merged;
+};
+
 const optionalNumber = (
   ref: RefObject<HTMLInputElement | null>,
   initial: number | null | undefined,
@@ -105,14 +161,10 @@ export const CapabilityNodeForm = ({
           : {}),
       ...(retry === undefined ? {} : { retry }),
       ...(timeoutSeconds === undefined ? {} : { timeoutSeconds }),
-      // The legacy schema editor cannot deserialize expression rows. Keep the
-      // rehydrated rows alongside its fresh simple bindings until Task 6 owns
-      // expression editing, rather than silently deleting them on save.
-      inputBindings: [
+      inputBindings: mergeInputBindings(initialValue?.inputBindings ?? [], [
         ...result.bindings,
         ...result.literalBindings,
-        ...(initialValue?.inputBindings?.filter((binding) => "expression" in binding) ?? []),
-      ],
+      ]),
       ...(routeOutcomes.length > 0
         ? {
             routes: Object.fromEntries(

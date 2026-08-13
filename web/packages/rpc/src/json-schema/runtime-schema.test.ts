@@ -110,6 +110,40 @@ describe("runtimeSchemasFor", () => {
     ).toBe(false);
   });
 
+  it("accepts a large ordinary JSON value shaped like a literal in a simple binding", () => {
+    const schemas = runtimeSchemasFor(
+      "workflow.draft_workspaces.set_step_input_bindings",
+    );
+    const ordinaryValue = {
+      kind: "literal",
+      value: Array.from({ length: 1025 }, () => ({})),
+    };
+
+    expect(
+      accepts(schemas.payload, {
+        workspace_id: "console.demo",
+        revision: 3,
+        step_id: "render",
+        bindings: [{ target: "request", value: ordinaryValue }],
+      }),
+    ).toBe(true);
+  });
+
+  it("accepts a large ordinary JSON value shaped like a literal as workflow input", () => {
+    const schemas = runtimeSchemasFor("workflow.runs.start");
+    const ordinaryValue = {
+      kind: "literal",
+      value: Array.from({ length: 1025 }, () => ({})),
+    };
+
+    expect(
+      accepts(schemas.payload, {
+        deployment_id: "report.default",
+        workflow_input: { request: ordinaryValue },
+      }),
+    ).toBe(true);
+  });
+
   it("counts nested literal array and object containers in the input budget", () => {
     const schemas = runtimeSchemasFor(
       "workflow.draft_workspaces.set_step_input_bindings",

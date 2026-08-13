@@ -60,6 +60,71 @@ describe("CapabilityNodeForm", () => {
     ).toEqual([expressionBinding]);
   });
 
+  it("preserves expression and path interleaving on a no-op save", async () => {
+    const user = userEvent.setup();
+    const submissions: CapabilityNodeFormValue[] = [];
+    const expressionBinding = {
+      target: "request",
+      expression: { kind: "literal", value: "wowcool" },
+    } as const;
+    const pathBinding = { target: "title", path: "state.title" } as const;
+
+    render(
+      <CapabilityNodeForm
+        capabilityName="wf.std.concat"
+        initialValue={{ stepId: "concat", inputBindings: [expressionBinding, pathBinding] }}
+        initialInputSources={{ title: { mode: "bind", sourcePath: "state.title" } }}
+        inputSchema={{ type: "object", properties: { title: { type: "string" } } }}
+        onSubmit={(value) => { submissions.push(value); }}
+        submitLabel="Save node"
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Save node" }));
+
+    expect(submissions[0]?.inputBindings).toEqual([expressionBinding, pathBinding]);
+  });
+
+  it("preserves mixed path, expression, and literal interleaving on a no-op save", async () => {
+    const user = userEvent.setup();
+    const submissions: CapabilityNodeFormValue[] = [];
+    const pathBinding = { target: "title", path: "state.title" } as const;
+    const expressionBinding = {
+      target: "request",
+      expression: { kind: "literal", value: "wowcool" },
+    } as const;
+    const valueBinding = { target: "label", value: "Quarterly report" } as const;
+
+    render(
+      <CapabilityNodeForm
+        capabilityName="wf.std.concat"
+        initialValue={{
+          stepId: "concat",
+          inputBindings: [pathBinding, expressionBinding, valueBinding],
+        }}
+        initialInputValue={{ label: "Quarterly report" }}
+        initialInputSources={{ title: { mode: "bind", sourcePath: "state.title" } }}
+        inputSchema={{
+          type: "object",
+          properties: {
+            title: { type: "string" },
+            label: { type: "string" },
+          },
+        }}
+        onSubmit={(value) => { submissions.push(value); }}
+        submitLabel="Save node"
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Save node" }));
+
+    expect(submissions[0]?.inputBindings).toEqual([
+      pathBinding,
+      expressionBinding,
+      valueBinding,
+    ]);
+  });
+
   it("submits explicit node metadata and serialized schema bindings", async () => {
     const user = userEvent.setup();
     const submissions: unknown[] = [];

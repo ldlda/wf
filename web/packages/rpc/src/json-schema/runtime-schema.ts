@@ -6,7 +6,7 @@ import {
   type WorkflowOperationResult,
 } from "../generated/workflow-contract.js";
 import { translateJsonSchema } from "./translator.js";
-import { hasBoundedInputExpressionPayload } from "./input-expression-limits.js";
+import { hasBoundedInputExpressionsAtSchema } from "./input-expression-limits.js";
 
 type RuntimeOperationName = keyof typeof workflowRuntimeContract.operations;
 const MAX_RUNTIME_VALUE_DEPTH = 64;
@@ -48,10 +48,6 @@ const BoundedRuntimeValueSchema = Schema.Unknown.pipe(
     message: () =>
       `runtime value exceeds ${MAX_RUNTIME_VALUE_DEPTH} nested containers`,
   }),
-  Schema.filter((value) => hasBoundedInputExpressionPayload(value), {
-    message: () =>
-      "runtime value contains an input expression over the 1024-node budget",
-  }),
 );
 
 const translatedAst = (schema: unknown): AST.AST => {
@@ -74,7 +70,20 @@ const payloadSchemaFor = <Name extends RuntimeOperationName>(
   const schema = Schema.make<WorkflowOperationParams<Name>, unknown, never>(
     translatedAst(workflowRuntimeContract.operations[name].payload),
   );
-  return Schema.compose(BoundedRuntimeValueSchema, schema);
+  return Schema.compose(BoundedRuntimeValueSchema, schema).pipe(
+    Schema.filter(
+      (value) =>
+        hasBoundedInputExpressionsAtSchema(
+          value,
+          workflowRuntimeContract.operations[name].payload,
+          workflowRuntimeContract.components,
+        ),
+      {
+        message: () =>
+          "runtime value contains an input expression over the 1024-node budget",
+      },
+    ),
+  );
 };
 
 const successSchemaFor = <Name extends RuntimeOperationName>(
@@ -84,7 +93,20 @@ const successSchemaFor = <Name extends RuntimeOperationName>(
   const schema = Schema.make<WorkflowOperationResult<Name>, unknown, never>(
     translatedAst(workflowRuntimeContract.operations[name].success),
   );
-  return Schema.compose(BoundedRuntimeValueSchema, schema);
+  return Schema.compose(BoundedRuntimeValueSchema, schema).pipe(
+    Schema.filter(
+      (value) =>
+        hasBoundedInputExpressionsAtSchema(
+          value,
+          workflowRuntimeContract.operations[name].success,
+          workflowRuntimeContract.components,
+        ),
+      {
+        message: () =>
+          "runtime value contains an input expression over the 1024-node budget",
+      },
+    ),
+  );
 };
 
 /** Returns fail-fast Effect schemas for one parity-verified authored RPC. */
