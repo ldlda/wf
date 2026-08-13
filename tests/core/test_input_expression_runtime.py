@@ -7,6 +7,7 @@ from wf_core import (
     Edge,
     EndNode,
     InputExpressionBinding,
+    InputPathBinding,
     NodeDef,
     NodeUse,
     PreparedSubgraph,
@@ -100,6 +101,39 @@ def test_resolver_preserves_explicit_null_and_binding_order() -> None:
         context={},
         label="node 'ordered' input",
     ) == {"request": {"first": None, "second": "second"}}
+
+
+def test_simple_path_binding_preserves_legacy_value_identity() -> None:
+    legacy_value = {"opaque": object()}
+
+    resolved = resolve_step_input_bindings(
+        [InputPathBinding(target="request.value", path="state.value")],
+        state={"value": legacy_value},
+        workflow_input={},
+        context={},
+        label="node 'legacy' input",
+    )
+
+    assert resolved["request"]["value"] is legacy_value
+
+
+def test_composite_path_expression_keeps_strict_json_contract() -> None:
+    legacy_value = {"opaque": object()}
+    binding = InputExpressionBinding.model_validate(
+        {
+            "target": "request.value",
+            "expression": {"kind": "path", "path": "state.value"},
+        }
+    )
+
+    with pytest.raises(WorkflowExecutionError, match="node 'composite' input"):
+        resolve_step_input_bindings(
+            [binding],
+            state={"value": legacy_value},
+            workflow_input={},
+            context={},
+            label="node 'composite' input",
+        )
 
 
 def test_resolver_reports_nested_missing_path_location() -> None:

@@ -94,7 +94,6 @@ def resolve_step_input_bindings(
                     workflow_input=workflow_input,
                     context=context,
                 )
-                value = validate_strict_json_value(value)
             except (ValueError, WorkflowExecutionError) as exc:
                 raise WorkflowExecutionError(f"{label} {location}: {exc}") from exc
         elif isinstance(binding, InputExpressionBinding):
