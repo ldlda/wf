@@ -194,6 +194,28 @@ def test_schema_path_options_resolves_local_definition_metadata() -> None:
     ]
 
 
+def test_schema_path_options_stops_expanding_recursive_local_definition() -> None:
+    options = schema_path_options(
+        {
+            "type": "object",
+            "properties": {"node": {"$ref": "#/$defs/Node"}},
+            "$defs": {
+                "Node": {
+                    "type": "object",
+                    "properties": {"child": {"$ref": "#/$defs/Node"}},
+                }
+            },
+        },
+        root="input",
+        uses=["step_input"],
+    )
+
+    assert [option["path"] for option in options] == [
+        "input.node",
+        "input.node.child",
+    ]
+
+
 def test_schema_path_options_returns_empty_schema_for_unconstrained_property() -> None:
     options = schema_path_options(
         {

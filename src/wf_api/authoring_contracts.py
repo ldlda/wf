@@ -54,6 +54,7 @@ def schema_path_options(
         origin=origin,
         uses=normalized_uses,
         options=options,
+        active_references=frozenset(),
     )
     return options
 
@@ -127,6 +128,7 @@ def _append_schema_options(
     origin: AuthoringPathOrigin,
     uses: list[AuthoringPathUse],
     options: list[AuthoringPathOptionPayload],
+    active_references: frozenset[str],
 ) -> None:
     fragment = schema_fragment_at_location(schema, location)
     resolved = _resolve_local_reference(schema, fragment)
@@ -164,6 +166,16 @@ def _append_schema_options(
 
         if _is_array_schema(resolved_child):
             continue
+        reference = _direct_local_reference(child_fragment)
+        next_active_references = active_references
+        if reference is not None:
+            # A repeated definition means this branch is recursive. Keep the
+            # repeated path as a selectable option, but do not expand it again.
+            if reference in active_references:
+                continue
+            next_active_references = active_references | {reference}
+            if len(next_active_references) > _MAX_LOCAL_SCHEMA_REFERENCE_DEPTH:
+                continue
         _append_schema_options(
             schema,
             location=child_location,
@@ -171,6 +183,7 @@ def _append_schema_options(
             origin=origin,
             uses=uses,
             options=options,
+            active_references=next_active_references,
         )
 
 
@@ -229,3 +242,12 @@ def _description_for(
 def _is_array_schema(schema: Mapping[str, Any]) -> bool:
     schema_type = schema.get("type")
     return schema_type == "array"
+
+
+def _direct_local_reference(schema: Mapping[str, Any]) -> str | None:
+    reference = schema.get("$ref")
+    if isinstance(reference, str) and (
+        reference.startswith("#/$defs/") or reference.startswith("#/definitions/")
+    ):
+        return reference
+    return None
