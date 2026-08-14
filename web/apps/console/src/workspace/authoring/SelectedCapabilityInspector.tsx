@@ -70,6 +70,41 @@ const inspectorTabs = Object.keys(tabLabels) as InspectorTab[];
 const tabPanelId = (tab: InspectorTab): string => `selected-step-panel-${tab}`;
 const tabId = (tab: InspectorTab): string => `selected-step-tab-${tab}`;
 
+const InventoryStatus = ({
+  inventoryAvailable,
+  message,
+  phase,
+  refresh,
+}: {
+  readonly inventoryAvailable: boolean;
+  readonly message: string | null;
+  readonly phase: "disconnected" | "idle" | "loading" | "ready" | "error";
+  readonly refresh: () => void;
+}) => {
+  if (phase === "loading") {
+    return <p role="status">
+      {inventoryAvailable
+        ? "Refreshing canonical authoring choices..."
+        : "Loading canonical authoring choices..."}
+    </p>;
+  }
+  if (phase === "error") {
+    return (
+      <div role="alert">
+        <p>{message ?? "Canonical authoring choices failed to load."}</p>
+        <button onClick={refresh} type="button">Retry canonical authoring choices</button>
+      </div>
+    );
+  }
+  if (!inventoryAvailable && phase === "disconnected") {
+    return <p role="status">Canonical authoring choices are unavailable while disconnected.</p>;
+  }
+  if (!inventoryAvailable) {
+    return <p role="status">Waiting for canonical authoring choices...</p>;
+  }
+  return null;
+};
+
 const TabPanel = ({
   activeTab,
   children,
@@ -153,6 +188,7 @@ export const SelectedCapabilityInspector = ({
       };
   const detailReady = capabilityDetailPhase === "ready" && capabilityDetail !== null;
   const isUnsupported = nodeKind !== undefined && nodeKind !== "use";
+  const inventoryAvailable = inventory !== null;
 
   return (
     <section className="selected-capability-inspector" aria-label="Selected step editor">
@@ -198,6 +234,12 @@ export const SelectedCapabilityInspector = ({
           {!detailReady && capabilityDetailPhase === "disconnected" && (
             <p role="status">Connect to inspect the capability schema.</p>
           )}
+          <InventoryStatus
+            inventoryAvailable={inventoryAvailable}
+            message={authoringContract.message}
+            phase={authoringContract.phase}
+            refresh={authoringContract.refresh}
+          />
           {detailReady && (
             <>
               <TabPanel activeTab={activeTab} tab="setup">
@@ -210,29 +252,37 @@ export const SelectedCapabilityInspector = ({
                 />
               </TabPanel>
               <TabPanel activeTab={activeTab} tab="inputs">
-                <StepInputBindingsForm
-                  canonicalVersion={`${stepId}:${controller.resetGeneration}`}
-                  initialRows={inputRows}
-                  inputSchema={capabilityDetail.inputSchema}
-                  sourceOptions={inputSourceOptions}
-                  targetOptions={inputTargetOptions}
-                  onDirtyChange={controller.markDirty}
-                  onSubmit={controller.setStepInputs}
-                  rowDiagnostics={inputDiagnostics.rowIssues}
-                />
+                {inventoryAvailable ? (
+                  <StepInputBindingsForm
+                    canonicalVersion={`${stepId}:${controller.resetGeneration}`}
+                    initialRows={inputRows}
+                    inputSchema={capabilityDetail.inputSchema}
+                    sourceOptions={inputSourceOptions}
+                    targetOptions={inputTargetOptions}
+                    onDirtyChange={controller.markDirty}
+                    onSubmit={controller.setStepInputs}
+                    rowDiagnostics={inputDiagnostics.rowIssues}
+                  />
+                ) : (
+                  <p role="status">Input bindings are unavailable until canonical authoring choices are ready.</p>
+                )}
               </TabPanel>
               <TabPanel activeTab={activeTab} tab="outputs">
-                <StepOutputBindingsForm
-                  key={`outputs:${stepId}:${controller.resetGeneration}`}
-                  initialRows={outputRows}
-                  onDirtyChange={controller.markDirty}
-                  onSubmit={controller.setStepOutputs}
-                  outputSchema={capabilityDetail.outputSchema}
-                  sourceOptions={outputSourceOptions}
-                  targetOptions={outputTargetOptions}
-                  rowDiagnostics={outputDiagnostics.rowIssues}
-                  stateSchema={(isRecord(draft.draft) ? draft.draft.state_schema : null) ?? emptyStateSchema}
-                />
+                {inventoryAvailable ? (
+                  <StepOutputBindingsForm
+                    key={`outputs:${stepId}:${controller.resetGeneration}`}
+                    initialRows={outputRows}
+                    onDirtyChange={controller.markDirty}
+                    onSubmit={controller.setStepOutputs}
+                    outputSchema={capabilityDetail.outputSchema}
+                    sourceOptions={outputSourceOptions}
+                    targetOptions={outputTargetOptions}
+                    rowDiagnostics={outputDiagnostics.rowIssues}
+                    stateSchema={(isRecord(draft.draft) ? draft.draft.state_schema : null) ?? emptyStateSchema}
+                  />
+                ) : (
+                  <p role="status">Output bindings are unavailable until canonical authoring choices are ready.</p>
+                )}
               </TabPanel>
             </>
           )}

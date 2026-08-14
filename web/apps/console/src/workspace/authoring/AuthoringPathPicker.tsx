@@ -5,11 +5,13 @@ import type {
   AuthoringPathUse,
 } from "../domain/authoring-contract-models.js";
 
+export type AuthoringPathSelection = "catalog" | "custom";
+
 export type AuthoringPathPickerProps = {
   readonly options: ReadonlyArray<AuthoringPathOption>;
   readonly uses: AuthoringPathUse | ReadonlyArray<AuthoringPathUse>;
   readonly value: string;
-  readonly onChange: (value: string) => void;
+  readonly onChange: (value: string, selection: AuthoringPathSelection) => void;
   readonly label: string;
   readonly allowCustom?: boolean;
   readonly describedBy?: string | undefined;
@@ -106,7 +108,7 @@ export const AuthoringPathPicker = ({
                       key={option.path}
                       onClick={() => {
                         setCustomValue(option.path);
-                        onChange(option.path);
+                        onChange(option.path, "catalog");
                       }}
                       type="button"
                     >
@@ -138,7 +140,7 @@ export const AuthoringPathPicker = ({
             id={customId}
             onChange={(event) => {
               setCustomValue(event.target.value);
-              onChange(event.target.value);
+              onChange(event.target.value, "custom");
             }}
             type="text"
             value={customValue}

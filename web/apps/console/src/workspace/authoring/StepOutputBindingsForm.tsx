@@ -201,9 +201,11 @@ const OutputRowEditor = ({
           describedBy={hasIssues ? errorId : undefined}
           invalid={hasIssues}
           label={`Source path for output row ${rowNumber}`}
-          onChange={(source) => onEdit(row.id, (current) => ({
+          onChange={(source, selection) => onEdit(row.id, (current) => ({
             ...current,
-            sourcePath: localPathFromPickerValue(source, sourceOptions, "step_output"),
+            sourcePath: selection === "catalog"
+              ? localPathFromPickerValue(source, sourceOptions, "step_output")
+              : source,
           }))}
           options={sourceOptions}
           uses="step_output_source"

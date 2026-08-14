@@ -2,6 +2,7 @@ import { act, cleanup, fireEvent, render, screen, within } from "@testing-librar
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { CapabilityDetail } from "../domain/capability-models.js";
+import type { AuthoringContractInventory } from "../domain/authoring-contract-models.js";
 import type { DraftWorkspace } from "../domain/draft-workspace-models.js";
 import { DraftWorkbench } from "./DraftWorkbench.js";
 
@@ -9,9 +10,27 @@ vi.mock("./useAuthoringCapabilityDetail.js", () => ({
   useAuthoringCapabilityDetail: vi.fn(),
 }));
 
+vi.mock("./useAuthoringContract.js", () => ({ useAuthoringContract: vi.fn() }));
+
 import { useAuthoringCapabilityDetail } from "./useAuthoringCapabilityDetail.js";
+import { useAuthoringContract } from "./useAuthoringContract.js";
 
 const mockedUseAuthoringCapabilityDetail = vi.mocked(useAuthoringCapabilityDetail);
+const mockedUseAuthoringContract = vi.mocked(useAuthoringContract);
+
+const emptyInventory: AuthoringContractInventory = {
+  workspaceId: "draft-review",
+  revision: 2,
+  selectedStepId: "collect",
+  readableSources: [],
+  stepInputTargets: [],
+  stepOutputSources: [],
+  stateTargets: [],
+  workflowOutputTargets: [],
+  entrySteps: [],
+  workflowOutcomes: [],
+  warnings: [],
+};
 
 const workspace: DraftWorkspace = {
   workspaceId: "draft-review",
@@ -85,6 +104,12 @@ beforeEach(() => {
     phase: "disconnected",
     detail: null,
     message: null,
+  });
+  mockedUseAuthoringContract.mockReturnValue({
+    phase: "ready",
+    inventory: emptyInventory,
+    message: null,
+    refresh: vi.fn(),
   });
 });
 

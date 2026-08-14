@@ -134,7 +134,7 @@ describe("AuthoringPathPicker", () => {
     await user.click(screen.getByRole("button", { name: /Title/ }));
 
     expect(onChange).toHaveBeenCalledTimes(1);
-    expect(onChange).toHaveBeenCalledWith("input.title");
+    expect(onChange).toHaveBeenCalledWith("input.title", "catalog");
   });
 
   it("gives a conditional incompatible option one composed description node", () => {
@@ -203,7 +203,7 @@ describe("AuthoringPathPicker", () => {
     const nested = screen.getByRole("button", { name: /Customer name/ });
     nested.focus();
     await user.keyboard("{Enter}");
-    expect(onChange).toHaveBeenCalledWith("input.customer.name");
+    expect(onChange).toHaveBeenCalledWith("input.customer.name", "catalog");
 
     await user.click(screen.getByText("Advanced"));
     expect(screen.getByRole("textbox", { name: "Custom Source path" })).toBeInTheDocument();
@@ -211,6 +211,6 @@ describe("AuthoringPathPicker", () => {
 
     await user.clear(screen.getByRole("textbox", { name: "Custom Source path" }));
     await user.type(screen.getByRole("textbox", { name: "Custom Source path" }), "context.future");
-    expect(onChange).toHaveBeenLastCalledWith("context.future");
+    expect(onChange).toHaveBeenLastCalledWith("context.future", "custom");
   });
 });

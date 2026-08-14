@@ -123,6 +123,28 @@ describe("StepOutputBindingsForm", () => {
     expect(submissions).toEqual([[{ source: "text", target: "state.existing" }]]);
   });
 
+  it("preserves a custom source that collides with the canonical step-output namespace", async () => {
+    const user = userEvent.setup();
+    const submissions: ReadonlyArray<OutputBinding>[] = [];
+    render(
+      <StepOutputBindingsForm
+        outputSchema={outputSchema}
+        stateSchema={stateSchema}
+        sourceOptions={[authoringOption("step_output.text", "Text output", "step_output", ["step_output_source"])]}
+        targetOptions={[authoringOption("state.existing", "Existing state", "workflow_state", ["state_target"])]}
+        initialBindings={[{ source: "step_output.text", target: "state.existing" }]}
+        onSubmit={(value) => { submissions.push(value); }}
+      />,
+    );
+
+    const source = await editableCustomInput(user, "Source path for output row 1");
+    await user.clear(source);
+    await user.type(source, "step_output.text");
+    await user.click(screen.getByRole("button", { name: "Save outputs" }));
+
+    expect(submissions).toEqual([[{ source: "step_output.text", target: "state.existing" }]]);
+  });
+
   it("offers capability output sources and existing state targets", () => {
     render(
       <StepOutputBindingsForm

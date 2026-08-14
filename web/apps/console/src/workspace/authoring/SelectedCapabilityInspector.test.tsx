@@ -60,10 +60,18 @@ const inventory: AuthoringContractInventory = {
   warnings: [],
 };
 
+const emptyInventory: AuthoringContractInventory = {
+  ...inventory,
+  readableSources: [],
+  stepInputTargets: [],
+  stepOutputSources: [],
+  stateTargets: [],
+};
+
 beforeEach(() => {
   mockedUseAuthoringContract.mockReturnValue({
-    phase: "disconnected",
-    inventory: null,
+    phase: "ready",
+    inventory: emptyInventory,
     message: null,
     refresh: vi.fn(),
   });
@@ -147,6 +155,98 @@ const controllerFor = (workspace: DraftWorkspace): DraftAuthoringController => (
 });
 
 describe("SelectedCapabilityInspector", () => {
+  it("shows loading feedback and gates binding editors without current inventory", async () => {
+    const user = userEvent.setup();
+    mockedUseAuthoringContract.mockReturnValue({
+      phase: "loading",
+      inventory: null,
+      message: null,
+      refresh: vi.fn(),
+    });
+    const workspace = draft("read", [], []);
+
+    render(
+      <SelectedCapabilityInspector
+        capabilityDetail={detail}
+        capabilityDetailMessage={null}
+        capabilityDetailPhase="ready"
+        controller={controllerFor(workspace)}
+        draft={workspace}
+        nodeKind="use"
+        nodeRef="demo.read"
+        stepId="read"
+      />,
+    );
+
+    expect(screen.getByRole("status")).toHaveTextContent("Loading canonical authoring choices...");
+    await user.click(screen.getByRole("tab", { name: "Inputs" }));
+    expect(screen.getByText("Input bindings are unavailable until canonical authoring choices are ready.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Save inputs" })).not.toBeInTheDocument();
+  });
+
+  it("shows initial inventory errors with a retry action and gates binding editors", async () => {
+    const user = userEvent.setup();
+    const refresh = vi.fn();
+    mockedUseAuthoringContract.mockReturnValue({
+      phase: "error",
+      inventory: null,
+      message: "Catalog request failed.",
+      refresh,
+    });
+    const workspace = draft("read", [], []);
+
+    render(
+      <SelectedCapabilityInspector
+        capabilityDetail={detail}
+        capabilityDetailMessage={null}
+        capabilityDetailPhase="ready"
+        controller={controllerFor(workspace)}
+        draft={workspace}
+        nodeKind="use"
+        nodeRef="demo.read"
+        stepId="read"
+      />,
+    );
+
+    expect(screen.getByRole("alert")).toHaveTextContent("Catalog request failed.");
+    await user.click(screen.getByRole("button", { name: "Retry canonical authoring choices" }));
+    expect(refresh).toHaveBeenCalledOnce();
+    await user.click(screen.getByRole("tab", { name: "Outputs" }));
+    expect(screen.getByText("Output bindings are unavailable until canonical authoring choices are ready.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Save outputs" })).not.toBeInTheDocument();
+  });
+
+  it("retains binding editors and exposes retry feedback when inventory refresh fails", async () => {
+    const user = userEvent.setup();
+    const refresh = vi.fn();
+    mockedUseAuthoringContract.mockReturnValue({
+      phase: "error",
+      inventory,
+      message: "Refresh failed.",
+      refresh,
+    });
+    const workspace = draft("read", [], []);
+
+    render(
+      <SelectedCapabilityInspector
+        capabilityDetail={detail}
+        capabilityDetailMessage={null}
+        controller={controllerFor(workspace)}
+        draft={workspace}
+        nodeKind="use"
+        nodeRef="demo.read"
+        stepId="read"
+        capabilityDetailPhase="ready"
+      />,
+    );
+
+    expect(screen.getByRole("alert")).toHaveTextContent("Refresh failed.");
+    await user.click(screen.getByRole("button", { name: "Retry canonical authoring choices" }));
+    expect(refresh).toHaveBeenCalledOnce();
+    await user.click(screen.getByRole("tab", { name: "Inputs" }));
+    expect(screen.getByRole("button", { name: "Save inputs" })).toBeInTheDocument();
+  });
+
   it("threads inventory-backed pickers into the selected step editors", async () => {
     const user = userEvent.setup();
     mockedUseAuthoringContract.mockReturnValue({

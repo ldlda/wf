@@ -481,9 +481,11 @@ const StepInputBindingsFormContent = ({
                 describedBy={hasIssues ? errorId : undefined}
                 invalid={hasIssues}
                 label={`Target for row ${rowNumber}`}
-                onChange={(target) => editRow(row.id, (current) => ({
+                onChange={(target, selection) => editRow(row.id, (current) => ({
                   ...current,
-                  target: localPathFromPickerValue(target, targetOptions, "step_input"),
+                  target: selection === "catalog"
+                    ? localPathFromPickerValue(target, targetOptions, "step_input")
+                    : target,
                 }))}
                 options={targetOptions}
                 uses="step_input"

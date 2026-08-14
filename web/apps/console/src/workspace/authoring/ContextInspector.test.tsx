@@ -1,14 +1,44 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { CapabilityDetail } from "../domain/capability-models.js";
+import type { AuthoringContractInventory } from "../domain/authoring-contract-models.js";
 import type { DraftWorkspace } from "../domain/draft-workspace-models.js";
 import type { DraftAuthoringController } from "./useDraftAuthoring.js";
 import { ContextInspector } from "./ContextInspector.js";
 
+vi.mock("./useAuthoringContract.js", () => ({ useAuthoringContract: vi.fn() }));
+
+import { useAuthoringContract } from "./useAuthoringContract.js";
+
+const mockedUseAuthoringContract = vi.mocked(useAuthoringContract);
+
+const emptyInventory: AuthoringContractInventory = {
+  workspaceId: "draft-report",
+  revision: 3,
+  selectedStepId: "read",
+  readableSources: [],
+  stepInputTargets: [],
+  stepOutputSources: [],
+  stateTargets: [],
+  workflowOutputTargets: [],
+  entrySteps: [],
+  workflowOutcomes: [],
+  warnings: [],
+};
+
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+});
+
+beforeEach(() => {
+  mockedUseAuthoringContract.mockReturnValue({
+    phase: "ready",
+    inventory: emptyInventory,
+    message: null,
+    refresh: vi.fn(),
+  });
 });
 
 const draft: DraftWorkspace = {

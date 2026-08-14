@@ -85,6 +85,27 @@ describe("StepInputBindingsForm", () => {
     expect(submissions).toEqual([[{ path: "input.request.id", target: "profile.name" }]]);
   });
 
+  it("preserves a custom target that collides with the canonical step-input namespace", async () => {
+    const user = userEvent.setup();
+    const submissions: ReadonlyArray<StepInputBinding>[] = [];
+    render(
+      <StepInputBindingsForm
+        inputSchema={schema}
+        sourceOptions={[authoringOption("input.title", "Title", "workflow_input", ["step_input"])]}
+        targetOptions={[authoringOption("step_input.text", "Text target", "step_input", ["step_input"])]}
+        initialBindings={[{ path: "input.title", target: "step_input.text" }]}
+        onSubmit={(value) => { submissions.push(value); }}
+      />,
+    );
+
+    const target = await editableCustomInput(user, "Target for row 1");
+    await user.clear(target);
+    await user.type(target, "step_input.text");
+    await user.click(screen.getByRole("button", { name: "Save inputs" }));
+
+    expect(submissions).toEqual([[{ path: "input.title", target: "step_input.text" }]]);
+  });
+
   it("formats local and graph path objects at whole and nested paths", () => {
     expect(displayLocalInputPath({ root: "local", parts: [] })).toBe(".");
     expect(displayLocalInputPath({ root: "local", parts: ["payload", "item"] })).toBe("payload.item");
