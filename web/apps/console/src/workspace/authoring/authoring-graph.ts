@@ -1,5 +1,11 @@
 import { buildWorkflowGraph, type WorkflowGraphModel } from "../../graph/graph-model.js";
-import { outputBindingRows, stepInputBindingRows } from "./selected-step-dataflow.js";
+import type { InputExpression, InputPath, StepInputBinding } from "../domain/draft-workspace-models.js";
+import { parseTOMLPath } from "../schema-form/schema-paths.js";
+import {
+  inputBindingRows,
+  outputBindingRows,
+  stepInputBindingRows,
+} from "./selected-step-dataflow.js";
 
 type JsonRecord = Readonly<Record<string, unknown>>;
 
@@ -7,7 +13,11 @@ export type WorkbenchSelection =
   | { readonly kind: "canvas" }
   | { readonly kind: "capability"; readonly qualifiedName: string }
   | { readonly kind: "node"; readonly nodeId: string }
-  | { readonly kind: "edge"; readonly stepId: string; readonly outcome: string };
+  | { readonly kind: "edge"; readonly stepId: string; readonly outcome: string }
+  | {
+      readonly kind: "contract";
+      readonly contract: "input" | "state" | "output" | "outcomes";
+    };
 
 export type InsertionContext = {
   readonly routeFromStep: string;
@@ -15,6 +25,8 @@ export type InsertionContext = {
 };
 
 const EMPTY_GRAPH: WorkflowGraphModel = { nodes: [], edges: [] };
+
+type ContractKind = Extract<WorkbenchSelection, { readonly kind: "contract" }>["contract"];
 
 const isRecord = (value: unknown): value is JsonRecord =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -190,6 +202,172 @@ const keyedPlan = (draft: JsonRecord): {
   return { nodes, edges };
 };
 
+const fieldCount = (schema: unknown): number => {
+  const record = recordValue(schema);
+  const properties = recordValue(record?.properties) ?? recordValue(record?.fields);
+  return properties === null ? 0 : Object.keys(properties).length;
+};
+
+const stateMetadataCounts = (schema: unknown): { reducers: number; defaults: number } => {
+  const record = recordValue(schema);
+  const fields = recordValue(record?.properties) ?? recordValue(record?.fields);
+  if (fields === null) return { reducers: 0, defaults: 0 };
+  let reducers = 0;
+  let defaults = 0;
+  for (const field of Object.values(fields)) {
+    const definition = recordValue(field);
+    const reducer = definition?.reducer;
+    if (typeof reducer === "string" || recordValue(reducer) !== null) reducers += 1;
+    if (definition !== null && Object.hasOwn(definition, "default")) defaults += 1;
+  }
+  return { reducers, defaults };
+};
+
+const countLabel = (count: number, singular: string): string =>
+  `${count} ${singular}${count === 1 ? "" : "s"}`;
+
+const contractNode = (
+  contract: ContractKind,
+  label: string,
+  summary: string,
+): Record<string, unknown> => ({
+  id: `contract:${contract}`,
+  type: "contract",
+  contract,
+  label,
+  summary,
+});
+
+const contractNodes = (draft: JsonRecord): Array<Record<string, unknown>> => {
+  const start = stringValue(draft.start);
+  const outputBindings = inputBindingRows(draft.output)
+    .filter((row) => row.kind === "canonical").length;
+  const outcomes = stringList(draft.outcomes);
+  const stateMetadata = stateMetadataCounts(draft.state_schema);
+  return [
+    contractNode(
+      "input",
+      "Input",
+      [countLabel(fieldCount(draft.input_schema), "field"), start ? `entry ${start}` : null]
+        .filter((value): value is string => value !== null)
+        .join(" · "),
+    ),
+    contractNode(
+      "state",
+      "State",
+      [
+        countLabel(fieldCount(draft.state_schema), "field"),
+        stateMetadata.reducers > 0 ? countLabel(stateMetadata.reducers, "reducer") : null,
+        stateMetadata.defaults > 0 ? countLabel(stateMetadata.defaults, "default") : null,
+      ]
+        .filter((value): value is string => value !== null)
+        .join(" · "),
+    ),
+    contractNode(
+      "output",
+      "Output",
+      [
+        countLabel(fieldCount(draft.output_schema), "field"),
+        countLabel(outputBindings, "binding"),
+      ].join(" · "),
+    ),
+    contractNode("outcomes", "Outcomes", countLabel(outcomes.length, "outcome")),
+  ];
+};
+
+const inputPathRoot = (path: InputPath): "input" | "state" | "context" | null => {
+  if (typeof path !== "string") return path.root;
+  const parts = parseTOMLPath(path);
+  const root = parts?.[0];
+  return root === "input" || root === "state" || root === "context" ? root : null;
+};
+
+const expressionRoots = (expression: InputExpression, roots: Set<"input" | "state">): void => {
+  if (expression.kind === "path") {
+    const root = inputPathRoot(expression.path);
+    if (root === "input" || root === "state") roots.add(root);
+    return;
+  }
+  if (expression.kind === "array") {
+    for (const item of expression.items) expressionRoots(item, roots);
+    return;
+  }
+  if (expression.kind === "object") {
+    for (const item of Object.values(expression.fields)) expressionRoots(item, roots);
+  }
+};
+
+const bindingRoots = (bindings: unknown): Set<"input" | "state"> => {
+  const roots = new Set<"input" | "state">();
+  for (const row of stepInputBindingRows(bindings)) {
+    if (row.kind !== "canonical") continue;
+    const binding: StepInputBinding = row.value;
+    if ("path" in binding) {
+      const root = inputPathRoot(binding.path);
+      if (root === "input" || root === "state") roots.add(root);
+    } else if ("expression" in binding) {
+      expressionRoots(binding.expression, roots);
+    }
+  }
+  return roots;
+};
+
+type ContractConnector = {
+  readonly from: string;
+  readonly outcome: string;
+  readonly to: string;
+  readonly kind: "contract";
+};
+
+const contractConnectors = (
+  draft: JsonRecord,
+  executableNodes: ReadonlyArray<JsonRecord>,
+): ContractConnector[] => {
+  const nodeIds = nodeIdsFor(executableNodes);
+  const labels = new Map<string, Set<string>>();
+  const add = (from: string, label: string, to: string): void => {
+    const key = `${from}\u0000${to}`;
+    const existing = labels.get(key) ?? new Set<string>();
+    existing.add(label);
+    labels.set(key, existing);
+  };
+
+  const start = stringValue(draft.start);
+  if (start !== null && nodeIds.has(start)) add("contract:input", "starts", start);
+
+  const steps = recordValue(draft.steps);
+  if (steps !== null) {
+    for (const [stepId, step] of sortedRecords(steps)) {
+      for (const root of bindingRoots(step.input)) add(`contract:${root}`, "reads", stepId);
+      if (outputBindingRows(step.output).some((row) => row.kind === "canonical")) {
+        add(stepId, "writes", "contract:state");
+      }
+    }
+  } else {
+    for (const node of executableNodes) {
+      const stepId = stringValue(node.id);
+      if (stepId === null) continue;
+      for (const root of bindingRoots(node.input)) add(`contract:${root}`, "reads", stepId);
+      if (outputBindingRows(node.output).some((row) => row.kind === "canonical")) {
+        add(stepId, "writes", "contract:state");
+      }
+    }
+  }
+
+  for (const row of inputBindingRows(draft.output)) {
+    if (row.kind !== "canonical" || !("path" in row.value)) continue;
+    const root = inputPathRoot(row.value.path);
+    if (root === "input" || root === "state") add(`contract:${root}`, "projects", "contract:output");
+  }
+
+  return [...labels.entries()]
+    .map(([key, values]) => {
+      const [from = "", to = ""] = key.split("\u0000");
+      return { from, to, outcome: [...values].toSorted().join(" · "), kind: "contract" as const };
+    })
+    .toSorted((left, right) => `${left.from}\u0000${left.to}`.localeCompare(`${right.from}\u0000${right.to}`));
+};
+
 /** Project the stored draft into the existing Dagre-backed graph model.
  *
  * Draft workspaces store keyed authoring steps while lifecycle views receive a
@@ -206,7 +384,13 @@ export const projectAuthoringGraph = (draft: JsonRecord | null): WorkflowGraphMo
     const rightKey = `${String(right.from)}\u0000${String(right.outcome)}\u0000${String(right.to)}`;
     return leftKey.localeCompare(rightKey);
   });
-  return buildWorkflowGraph({ nodes: plan.nodes, edges });
+  const nodes = [...plan.nodes, ...contractNodes(draft)];
+  const contractEdges = contractConnectors(draft, plan.nodes);
+  const routeEdges = edges.map((edge) => ({ ...edge, kind: "route" }));
+  return buildWorkflowGraph(
+    { nodes, edges: [...routeEdges, ...contractEdges] },
+    { direction: "LR", nodeWidth: 208, nodeHeight: 68, nodesep: 54, ranksep: 96 },
+  );
 };
 
 export const deriveInsertionContext = (

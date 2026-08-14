@@ -79,6 +79,71 @@ const findNodeById = (container: HTMLElement, nodeId: string): HTMLElement | nul
   container.querySelector(`[data-node-id="${nodeId}"]`);
 
 describe("WorkflowGraph", () => {
+  it("renders contract nodes and non-selectable derived connectors horizontally", () => {
+    const onNodeSelect = vi.fn();
+    const onEdgeSelect = vi.fn();
+    const contractModel: WorkflowGraphModel = {
+      direction: "LR",
+      nodes: [
+        {
+          id: "contract:input",
+          data: {
+            nodeId: "contract:input",
+            kind: "contract",
+            contract: "input",
+            label: "Input",
+            summary: "2 fields · entry collect",
+            nodeRef: null,
+            raw: {},
+          },
+          position: { x: 0, y: 0 },
+        },
+        {
+          id: "collect",
+          data: {
+            nodeId: "collect",
+            kind: "use",
+            label: "Collect",
+            nodeRef: "demo.collect",
+            raw: {},
+          },
+          position: { x: 250, y: 0 },
+        },
+      ],
+      edges: [{
+        id: "contract-edge",
+        source: "contract:input",
+        target: "collect",
+        label: "starts",
+        kind: "contract",
+      }],
+    };
+    const { container } = render(
+      <WorkflowGraph
+        model={contractModel}
+        onEdgeSelect={onEdgeSelect}
+        onNodeSelect={onNodeSelect}
+      />,
+    );
+
+    const node = findNodeById(container, "contract:input");
+    // React Flow keeps unmeasured test nodes hidden; reveal the wrapper so the
+    // accessibility query exercises the same name exposed after browser layout.
+    node?.closest<HTMLElement>(".react-flow__node")?.style.setProperty("visibility", "visible");
+    expect(screen.getByRole("button", { name: /input workflow contract/i })).toBe(node);
+    expect(node).toHaveAttribute("data-contract", "input");
+    expect(node?.querySelector(".react-flow__handle-left")).not.toBeNull();
+    expect(node?.querySelector(".react-flow__handle-right")).not.toBeNull();
+    expect(screen.getByTestId("workflow-graph")).toHaveAttribute(
+      "data-derived-connectors",
+      "true",
+    );
+    fireEvent.click(node!);
+    fireEvent.keyDown(node!, { key: "Enter" });
+    expect(onNodeSelect).toHaveBeenCalledTimes(2);
+    expect(onEdgeSelect).not.toHaveBeenCalled();
+  });
+
   it("renders nodes and edges", () => {
     const { container } = render(<WorkflowGraph model={mockModel} />);
     expect(screen.getByText("Start")).toBeInTheDocument();

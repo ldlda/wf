@@ -192,6 +192,30 @@ describe("useDraftAuthoring", () => {
     );
   });
 
+  it("clears connector insertion context when controlled selection moves to a contract", async () => {
+    const initial = workspace();
+    authoringClient.addCapabilityStep.mockResolvedValue(workspace({ revision: 4 }));
+    const { result, rerender } = renderHook(
+      ({ selection }) => useDraftAuthoring({ draft: initial, initialSelection: selection }),
+      {
+        initialProps: {
+          selection: { kind: "edge", stepId: "read", outcome: "ok" } as WorkbenchSelection,
+        },
+      },
+    );
+
+    rerender({ selection: { kind: "contract", contract: "state" } });
+    expect(result.current.insertionContext).toBeNull();
+    await act(async () => result.current.addCapability(capabilityInput));
+
+    expect(authoringClient.addCapabilityStep).toHaveBeenCalledWith(
+      expect.not.objectContaining({ routeFromStep: expect.anything() }),
+    );
+    expect(authoringClient.addCapabilityStep).toHaveBeenCalledWith(
+      expect.not.objectContaining({ routeFromOutcome: expect.anything() }),
+    );
+  });
+
   it("updates capabilities, replaces routes, and validates against the current revision", async () => {
     const initial = workspace({ revision: 7 });
     authoringClient.updateCapabilityStep.mockResolvedValue(workspace({ revision: 8 }));

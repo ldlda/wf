@@ -40,8 +40,14 @@ const nodeColor = (data: WorkflowGraphNodeData): string => {
   }
 };
 
-const CustomNode = ({ data, selected }: { data: WorkflowGraphNodeData; selected: boolean }) => {
+type RenderedNodeData = WorkflowGraphNodeData & {
+  readonly direction: "TB" | "LR";
+};
+
+const CustomNode = ({ data, selected }: { data: RenderedNodeData; selected: boolean }) => {
   const isActive = data.isActive;
+  const targetPosition = data.direction === "LR" ? Position.Left : Position.Top;
+  const sourcePosition = data.direction === "LR" ? Position.Right : Position.Bottom;
   const handleKeyDown = (event: KeyboardEvent) => {
     if (event.key !== "Enter" && event.key !== " ") return;
     event.preventDefault();
@@ -52,20 +58,24 @@ const CustomNode = ({ data, selected }: { data: WorkflowGraphNodeData; selected:
       role="button"
       tabIndex={0}
       onKeyDown={handleKeyDown}
+      {...(data.contract
+        ? { "aria-label": `${data.label} workflow contract${data.summary ? `, ${data.summary}` : ""}` }
+        : {})}
       aria-pressed={selected}
       data-active={isActive}
+      {...(data.contract ? { "data-contract": data.contract } : {})}
       data-node-id={data.nodeId}
       className={`graph-node graph-node--${data.kind} ${selected ? "graph-node--selected" : ""} ${isActive ? "graph-node--active" : ""}`}
       style={{ borderColor: nodeColor(data) }}
     >
-      <Handle type="target" position={Position.Top} />
+      <Handle type="target" position={targetPosition} />
       <div className="graph-node__label">{data.label}</div>
       {data.nodeRef && (
         <div className="graph-node__ref">{data.nodeRef}</div>
       )}
       {data.detail && <div className="graph-node__detail">{data.detail}</div>}
       {data.summary && <div className="graph-node__summary">{data.summary}</div>}
-      <Handle type="source" position={Position.Bottom} />
+      <Handle type="source" position={sourcePosition} />
     </div>
   );
 };
@@ -89,9 +99,14 @@ export const WorkflowGraph = ({
         type: "custom",
         position: n.position,
         selected: activeNodeId === n.id,
-        data: { ...n.data, isActive: activeNodeId === n.id, onSelect: onNodeSelect },
+        data: {
+          ...n.data,
+          direction: model.direction ?? "TB",
+          isActive: activeNodeId === n.id,
+          onSelect: onNodeSelect,
+        },
       })),
-    [model.nodes, activeNodeId, onNodeSelect],
+    [model.direction, model.nodes, activeNodeId, onNodeSelect],
   );
 
   const edges: Edge[] = useMemo(
@@ -102,8 +117,9 @@ export const WorkflowGraph = ({
         target: e.target,
         label: e.label,
         type: "default",
+        className: `graph-edge--${e.kind ?? "route"}`,
         selected: activeEdgeId === e.id,
-        selectable: Boolean(onEdgeSelect),
+        selectable: e.kind !== "contract" && Boolean(onEdgeSelect),
       })),
     [activeEdgeId, model.edges, onEdgeSelect],
   );
@@ -117,9 +133,10 @@ export const WorkflowGraph = ({
 
   const handleEdgeClick = useCallback(
     (_event: React.MouseEvent, edge: Edge) => {
+      if (model.edges.find((candidate) => candidate.id === edge.id)?.kind === "contract") return;
       onEdgeSelect?.(edge.id);
     },
-    [onEdgeSelect],
+    [model.edges, onEdgeSelect],
   );
 
   if (model.nodes.length === 0) {
@@ -131,7 +148,11 @@ export const WorkflowGraph = ({
   }
 
   return (
-    <div className="workflow-graph" data-testid="workflow-graph">
+    <div
+      className="workflow-graph"
+      data-derived-connectors={model.edges.some((edge) => edge.kind === "contract")}
+      data-testid="workflow-graph"
+    >
       <ReactFlow
         nodes={nodes}
         edges={edges}

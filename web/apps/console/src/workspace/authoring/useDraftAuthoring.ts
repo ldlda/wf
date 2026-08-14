@@ -143,6 +143,9 @@ const sameSelection = (
     return left.qualifiedName === right.qualifiedName;
   }
   if (left.kind === "node" && right.kind === "node") return left.nodeId === right.nodeId;
+  if (left.kind === "contract" && right.kind === "contract") {
+    return left.contract === right.contract;
+  }
   return (
     left.kind === "edge" &&
     right.kind === "edge" &&
@@ -225,8 +228,12 @@ export const useDraftAuthoring = ({
   const adoptsSelectionInput = !sameSelection(state.selectionInput, initialSelection);
   const selection = adoptsSelectionInput ? initialSelection : state.selection;
   const insertionContext =
-    adoptsSelectionInput && initialSelection.kind === "edge"
-      ? deriveInsertionContext(initialSelection)
+    adoptsSelectionInput
+      ? initialSelection.kind === "edge"
+        ? deriveInsertionContext(initialSelection)
+        : initialSelection.kind === "contract"
+          ? null
+          : state.insertionContext
       : state.insertionContext;
   const resetGeneration =
     state.resetGeneration + (adoptsDraftInput || adoptsSelectionInput ? 1 : 0);

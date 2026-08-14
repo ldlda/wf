@@ -15,14 +15,21 @@ export const AuthoringGraph = ({
   onSelectionChange,
 }: AuthoringGraphProps) => {
   const model = useMemo(() => projectAuthoringGraph(draft), [draft]);
+  const routeEdges = model.edges.filter((edge) => edge.kind !== "contract");
+  const activeNodeId =
+    selection.kind === "node"
+      ? selection.nodeId
+      : selection.kind === "contract"
+        ? `contract:${selection.contract}`
+        : null;
   const activeEdgeId =
     selection.kind === "edge"
-      ? model.edges.find(
+      ? routeEdges.find(
           (edge) => edge.source === selection.stepId && edge.label === selection.outcome,
         )?.id ?? null
       : null;
   const selectEdge = (edgeId: string): void => {
-    const edge = model.edges.find((candidate) => candidate.id === edgeId);
+    const edge = routeEdges.find((candidate) => candidate.id === edgeId);
     if (edge) {
       onSelectionChange({
         kind: "edge",
@@ -30,6 +37,14 @@ export const AuthoringGraph = ({
         outcome: edge.label,
       });
     }
+  };
+  const selectNode = (nodeId: string): void => {
+    const node = model.nodes.find((candidate) => candidate.id === nodeId);
+    if (node?.data.contract) {
+      onSelectionChange({ kind: "contract", contract: node.data.contract });
+      return;
+    }
+    onSelectionChange({ kind: "node", nodeId });
   };
 
   return (
@@ -45,17 +60,17 @@ export const AuthoringGraph = ({
       </div>
       <WorkflowGraph
         activeEdgeId={activeEdgeId}
-        activeNodeId={selection.kind === "node" ? selection.nodeId : null}
+        activeNodeId={activeNodeId}
         model={model}
         onCanvasSelect={() => onSelectionChange({ kind: "canvas" })}
         onEdgeSelect={selectEdge}
-        onNodeSelect={(nodeId) => onSelectionChange({ kind: "node", nodeId })}
+        onNodeSelect={selectNode}
       />
       <div aria-label="Route outcomes" className="authoring-graph__routes">
         <h3>Route outcomes</h3>
-        {model.edges.length > 0 ? (
+        {routeEdges.length > 0 ? (
           <ul>
-            {model.edges.map((edge) => (
+            {routeEdges.map((edge) => (
               <li key={edge.id}>
                 <button
                   aria-pressed={activeEdgeId === edge.id}

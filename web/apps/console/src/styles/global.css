@@ -1731,6 +1731,17 @@ tbody tr:hover {
   padding-top: 0.35rem;
 }
 
+.graph-node--contract {
+  border-color: #747b74 !important;
+  border-style: double;
+  background: #f1f0ea;
+  box-shadow: none;
+}
+
+.graph-node--contract .graph-node__label {
+  text-transform: none;
+}
+
 .workflow-graph .react-flow__handle {
   width: 0.55rem;
   height: 0.55rem;
@@ -2021,6 +2032,16 @@ tbody tr:hover {
 
 .selected-capability-inspector__panel {
   min-width: 0;
+}
+
+.workflow-graph .graph-edge--contract .react-flow__edge-path {
+  stroke: #687568;
+  stroke-width: 1.5;
+  stroke-dasharray: 6 5;
+}
+
+.workflow-graph .graph-edge--contract .react-flow__edge-text {
+  fill: #536053;
 }
 
 .authoring-path-picker {

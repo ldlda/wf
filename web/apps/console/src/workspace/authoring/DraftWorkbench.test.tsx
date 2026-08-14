@@ -228,6 +228,27 @@ describe("DraftWorkbench", () => {
     expect(within(inspector as HTMLElement).getByRole("textbox", { name: "Outcome" })).toHaveValue("ok");
   });
 
+  it("keeps workflow contract selection when the mobile inspector closes and reopens", async () => {
+    setViewport(390);
+    const user = userEvent.setup();
+    const { container } = render(<DraftWorkbench draft={workspace} />);
+
+    fireEvent.click(container.querySelector('[data-node-id="contract:state"]')!);
+    const inspector = container.querySelector("#draft-workbench-inspector") as HTMLElement;
+    expect(inspector).toHaveAttribute("open", "");
+    expect(within(inspector).getByRole("heading", { name: "State contract" })).toBeInTheDocument();
+    expect(within(inspector).queryByRole("heading", { name: "Deferred actions" })).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Close context inspector" }));
+    await user.click(screen.getByRole("button", { name: "Open context inspector" }));
+
+    expect(within(inspector).getByRole("heading", { name: "State contract" })).toBeInTheDocument();
+    expect(container.querySelector('[data-node-id="contract:state"]')).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+  });
+
   it("keeps a dirty inspector form mounted and intact across mobile close and reopen", async () => {
     setViewport(390);
     mockedUseAuthoringCapabilityDetail.mockReturnValue({

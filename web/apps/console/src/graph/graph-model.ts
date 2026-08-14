@@ -1,6 +1,7 @@
 import dagre from "@dagrejs/dagre";
 
 export type WorkflowGraphNodeKind =
+  | "contract"
   | "use"
   | "subgraph"
   | "condition"
@@ -18,6 +19,7 @@ export type WorkflowGraphNodeData = {
   readonly summary?: string;
   readonly nodeRef: string | null;
   readonly raw: Readonly<Record<string, unknown>>;
+  readonly contract?: "input" | "state" | "output" | "outcomes";
   readonly onSelect?: (nodeId: string) => void;
   readonly isActive?: boolean;
 };
@@ -33,11 +35,13 @@ export type WorkflowGraphEdge = {
   readonly source: string;
   readonly target: string;
   readonly label: string;
+  readonly kind?: "route" | "contract";
 };
 
 export type WorkflowGraphModel = {
   readonly nodes: ReadonlyArray<WorkflowGraphNode>;
   readonly edges: ReadonlyArray<WorkflowGraphEdge>;
+  readonly direction?: "TB" | "LR";
 };
 
 export type WorkflowGraphLayoutOptions = {
@@ -80,6 +84,8 @@ const mapNodeKind = (type: unknown): WorkflowGraphNodeKind => {
   switch (type) {
     case "node":
       return "use";
+    case "contract":
+      return "contract";
     case "subgraph":
       return "subgraph";
     case "condition":
@@ -104,6 +110,7 @@ const buildLabel = (
   const overriddenLabel = labelOverride?.(node);
   if (overriddenLabel) return overriddenLabel;
   const type = typeof node.type === "string" ? node.type : "";
+  if (type === "contract" && typeof node.label === "string") return node.label;
   if (type === "end") {
     return typeof node.outcome === "string" ? node.outcome : "End";
   }
@@ -179,6 +186,12 @@ export const buildWorkflowGraph = (
         ...(typeof node.summary === "string" ? { summary: node.summary } : {}),
         nodeRef: typeof node.node === "string" ? node.node : null,
         raw: node,
+        ...(node.contract === "input" ||
+        node.contract === "state" ||
+        node.contract === "output" ||
+        node.contract === "outcomes"
+          ? { contract: node.contract }
+          : {}),
       },
       position: {
         x: pos.x - layout.nodeWidth / 2,
@@ -192,8 +205,14 @@ export const buildWorkflowGraph = (
     const target = String(edge.to);
     const label = String(edge.outcome ?? "");
     const id = workflowGraphEdgeId(source, label, target);
-    return { id, source, target, label };
+    return {
+      id,
+      source,
+      target,
+      label,
+      kind: edge.kind === "contract" ? "contract" : "route",
+    };
   });
 
-  return { nodes, edges };
+  return { nodes, edges, direction: layout.direction };
 };

@@ -164,7 +164,12 @@ export const DraftWorkbench = ({
     (nextSelection: WorkbenchSelection): void => {
       controller.select(nextSelection);
       onSelectionChange?.(nextSelection);
-      if (isMobile && (nextSelection.kind === "edge" || nextSelection.kind === "node")) {
+      if (
+        isMobile &&
+        (nextSelection.kind === "edge" ||
+          nextSelection.kind === "node" ||
+          nextSelection.kind === "contract")
+      ) {
         setOpenSheet("inspector");
       }
     },

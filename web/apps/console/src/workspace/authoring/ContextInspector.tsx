@@ -224,6 +224,22 @@ export const ContextInspector = ({
         />
       </>
     );
+  } else if (selection.kind === "contract") {
+    const contractNode = graph.nodes.find(
+      (candidate) => candidate.data.contract === selection.contract,
+    );
+    const title = selection.contract.charAt(0).toUpperCase() + selection.contract.slice(1);
+    content = (
+      <section
+        aria-labelledby="contract-selection-heading"
+        className="authoring-inspector__selection"
+      >
+        <p className="workspace-route-pending__eyebrow">Workflow projection</p>
+        <h2 id="contract-selection-heading">{title} contract</h2>
+        <p>{contractNode?.data.summary ?? "No contract fields are declared."}</p>
+        <p>This read-only projection is derived from the canonical draft.</p>
+      </section>
+    );
   } else {
     const node = graph.nodes.find((candidate) => candidate.id === selection.nodeId);
     content = (
@@ -260,7 +276,7 @@ export const ContextInspector = ({
           <button onClick={() => void controller.reapply()} type="button">Reapply local form</button>
         </section>
       )}
-      <DeferredActions />
+      {selection.kind !== "contract" && <DeferredActions />}
       <RawDraft draft={draft.draft} />
     </aside>
   );

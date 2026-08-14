@@ -31,6 +31,27 @@ const workspace: DraftWorkspace = {
 afterEach(() => cleanup());
 
 describe("AuthoringGraph", () => {
+  it("selects workflow contracts without listing derived connectors as routes", () => {
+    const onSelectionChange = vi.fn<(selection: WorkbenchSelection) => void>();
+    const { container } = render(
+      <AuthoringGraph
+        draft={{
+          ...workspace.draft,
+          input_schema: { type: "object", properties: { query: { type: "string" } } },
+        }}
+        selection={{ kind: "canvas" }}
+        onSelectionChange={onSelectionChange}
+      />,
+    );
+
+    fireEvent.click(container.querySelector('[data-node-id="contract:input"]')!);
+    expect(onSelectionChange).toHaveBeenCalledWith({ kind: "contract", contract: "input" });
+    expect(screen.getByLabelText("Route outcomes")).not.toHaveTextContent("starts");
+
+    fireEvent.click(container.querySelector(".react-flow__pane")!);
+    expect(onSelectionChange).toHaveBeenLastCalledWith({ kind: "canvas" });
+  });
+
   it("renders the projected graph and marks the selected node", () => {
     const selection: WorkbenchSelection = { kind: "node", nodeId: "review" };
     const { container } = render(
