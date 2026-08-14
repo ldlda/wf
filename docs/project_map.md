@@ -52,6 +52,12 @@ The Discover route's capability playground uses the same write executor for
 explicit, acknowledged direct calls. It resolves supported local JSON Schema
 references for generated forms and retains bounded, redacted target-bearing
 evidence; a direct call does not create workflow lifecycle records.
+The selected-step authoring boundary keeps canonical bindings in
+`src/wf_core/models/input_bindings.py`; the console's recursive expression
+projection and controls live in
+`web/apps/console/src/workspace/authoring/input-expression-editor.ts` and
+`InputExpressionControl.tsx`. These editors emit one expression binding for a
+constructed array or object rather than synthetic indexed targets.
 
 ## Important Entry Points
 

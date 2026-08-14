@@ -1286,6 +1286,89 @@ def test_wf_draft_create_reports_optional_inputs_without_binding(
     assert any("path" in note for note in created_payload["wrapper_hints"]["notes"])
 
 
+def test_wf_draft_set_input_bindings_preserves_composite_expression_over_rpc(
+    monkeypatch, tmp_path
+) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    _patch_rpc_client_to_server(monkeypatch, server)
+    rpc_calls: list[tuple[str, dict[str, Any]]] = []
+    original_call = RpcClientTransport._call
+
+    async def recording_call(
+        self: RpcClientTransport, method: str, params: dict[str, Any]
+    ) -> dict[str, Any]:
+        rpc_calls.append((method, params))
+        return await original_call(self, method, params)
+
+    monkeypatch.setattr(RpcClientTransport, "_call", recording_call)
+    config_path = tmp_path / "wf.json"
+    config_path.write_text('{"version": 1}', encoding="utf-8")
+    bindings_path = tmp_path / "bindings.json"
+    bindings_path.write_text(
+        json.dumps(
+            [
+                {
+                    "target": "items",
+                    "expression": {
+                        "kind": "array",
+                        "items": [
+                            {"kind": "path", "path": "state.foo"},
+                            {"kind": "literal", "value": "wowcool"},
+                        ],
+                    },
+                },
+                {"target": "separator", "value": " "},
+            ]
+        ),
+        encoding="utf-8",
+    )
+    runner = CliRunner()
+    base_args = ["--config", str(config_path), "--url", "http://test/rpc"]
+
+    created = runner.invoke(
+        app,
+        [
+            *base_args,
+            "draft",
+            "create",
+            "composite_ws",
+            "--capability",
+            "wf.std.concat",
+            "--name",
+            "composite",
+        ],
+    )
+    assert created.exit_code == 0, created.output
+
+    replaced = runner.invoke(
+        app,
+        [
+            *base_args,
+            "draft",
+            "set-input",
+            "composite_ws",
+            "--revision",
+            "1",
+            "--step",
+            "call",
+            "--bindings-file",
+            str(bindings_path),
+        ],
+    )
+
+    assert replaced.exit_code == 0, replaced.output
+    assert [method for method, _params in rpc_calls].count(
+        "workflow.draft_workspaces.set_step_input_bindings"
+    ) == 1
+    method, params = next(
+        (method, params)
+        for method, params in rpc_calls
+        if method == "workflow.draft_workspaces.set_step_input_bindings"
+    )
+    assert method == "workflow.draft_workspaces.set_step_input_bindings"
+    assert params["bindings"] == json.loads(bindings_path.read_text(encoding="utf-8"))
+
+
 def test_wf_draft_focused_edit_commands_use_rpc_target(monkeypatch, tmp_path) -> None:
     server = build_local_static_workflow_server(tmp_path / "store")
     _patch_rpc_client_to_server(monkeypatch, server)

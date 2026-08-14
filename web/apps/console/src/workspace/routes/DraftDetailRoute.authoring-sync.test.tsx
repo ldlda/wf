@@ -35,9 +35,15 @@ vi.mock("../authoring/DraftWorkbench.js", async () => {
 });
 
 vi.mock("../context.js", () => ({ useConsoleWorkspace: vi.fn() }));
-vi.mock("../domain/draft-authoring-client.js", () => ({
-  createDraftAuthoringClient: vi.fn(),
-}));
+vi.mock("../domain/draft-authoring-client.js", async () => {
+  const actual = await vi.importActual<typeof import("../domain/draft-authoring-client.js")>(
+    "../domain/draft-authoring-client.js",
+  );
+  return {
+    ...actual,
+    createDraftAuthoringClient: vi.fn(),
+  };
+});
 vi.mock("../authoring/useAuthoringCapabilityDetail.js", () => ({
   useAuthoringCapabilityDetail: vi.fn(),
 }));
@@ -62,6 +68,26 @@ const detail: CapabilityDetail = {
   isAsync: false,
   outcomes: ["ok"],
   inputSchema: { type: "object", properties: { title: { type: "string" } } },
+  outputSchema: { type: "object", properties: { text: { type: "string" } } },
+  wrapperHints: {},
+  acceptsContext: false,
+};
+
+const concatDetail: CapabilityDetail = {
+  kind: "node_spec",
+  name: "wf.std.concat",
+  sourceId: "wf.std",
+  description: "Join string items.",
+  isAsync: false,
+  outcomes: ["ok"],
+  inputSchema: {
+    type: "object",
+    properties: {
+      items: { type: "array", minItems: 2, items: { type: "string" } },
+      separator: { type: "string" },
+    },
+    required: ["items", "separator"],
+  },
   outputSchema: { type: "object", properties: { text: { type: "string" } } },
   wrapperHints: {},
   acceptsContext: false,
@@ -255,5 +281,94 @@ describe("DraftDetailRoute authoring freshness", () => {
     const navigationRenderCount = capture.renderCount;
     await act(async () => new Promise((resolve) => setTimeout(resolve, 0)));
     expect(capture.renderCount).toBe(navigationRenderCount);
+  });
+
+  it("submits and rehydrates a composite expression through the route form", async () => {
+    const user = userEvent.setup();
+    const canonical = workspace({
+      revision: 2,
+      status: "valid",
+      draft: {
+        steps: {
+          concat: {
+            use: "wf.std.concat",
+            input: [
+              {
+                target: "items",
+                expression: {
+                  kind: "array",
+                  items: [
+                    { kind: "path", path: "state.foo" },
+                    { kind: "literal", value: "wowcool" },
+                  ],
+                },
+              },
+              { target: "separator", value: " " },
+            ],
+          },
+        },
+        routes: { concat: { ok: "__end__" } },
+      },
+    });
+    loadedReport = workspace({
+      workspaceId: "draft-report",
+      title: "Composite",
+      draft: {
+        input_schema: { type: "object", properties: {} },
+        state_schema: { type: "object", properties: { foo: { type: "string" } } },
+        steps: { concat: { use: "wf.std.concat", input: [], output: [] } },
+        routes: { concat: { ok: "__end__" } },
+      },
+    });
+    mockedUseAuthoringCapabilityDetail.mockReturnValue({
+      phase: "ready",
+      detail: concatDetail,
+      message: null,
+    });
+    vi.mocked(authoringClient.setStepInputBindings).mockResolvedValueOnce(canonical);
+
+    render(routeElement());
+    fireEvent.click(document.querySelector('[data-node-id="concat"]') as HTMLElement);
+    await waitFor(() => expect(screen.getByRole("heading", { name: "concat" })).toBeInTheDocument());
+    await user.click(screen.getByRole("tab", { name: "Inputs" }));
+    await user.click(screen.getByRole("button", { name: "Add input row" }));
+    await user.type(screen.getByRole("combobox", { name: "Target for row 1" }), "items");
+    await user.click(screen.getByRole("radio", { name: "Construct value for input row 1" }));
+    await user.click(screen.getByRole("button", { name: "Add item to items" }));
+    await user.click(screen.getByRole("button", { name: "Add item to items" }));
+    await user.selectOptions(screen.getByRole("combobox", { name: "Value source for items item 1" }), "path");
+    await user.clear(screen.getByRole("combobox", { name: "Path for items item 1" }));
+    await user.type(screen.getByRole("combobox", { name: "Path for items item 1" }), "state.foo");
+    await user.selectOptions(screen.getByRole("combobox", { name: "Value source for items item 2" }), "literal");
+    await user.type(screen.getByRole("textbox", { name: "Items item" }), "wowcool");
+    await user.click(screen.getByRole("button", { name: "Add input row" }));
+    await user.type(screen.getByRole("combobox", { name: "Target for row 2" }), "separator");
+    await user.click(screen.getByRole("radio", { name: "Literal value for input row 2" }));
+    await user.type(screen.getByRole("textbox", { name: "Separator" }), " ");
+    await user.click(screen.getByRole("button", { name: "Save inputs" }));
+
+    await waitFor(() => expect(authoringClient.setStepInputBindings).toHaveBeenCalledTimes(1));
+    expect(authoringClient.setStepInputBindings).toHaveBeenCalledWith({
+      workspaceId: "draft-report",
+      revision: 1,
+      stepId: "concat",
+      bindings: [
+        {
+          target: "items",
+          expression: {
+            kind: "array",
+            items: [
+              { kind: "path", path: "state.foo" },
+              { kind: "literal", value: "wowcool" },
+            ],
+          },
+        },
+        { target: "separator", value: " " },
+      ],
+    });
+    await waitFor(() => expect(screen.getByText("Revision 2")).toBeInTheDocument());
+    expect(screen.getByRole("combobox", { name: "Value source for items item 1" })).toHaveValue("path");
+    expect(screen.getByRole("combobox", { name: "Path for items item 1" })).toHaveValue("state.foo");
+    expect(screen.getByRole("textbox", { name: "Items item" })).toHaveValue("wowcool");
   });
 });

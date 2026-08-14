@@ -82,7 +82,7 @@
 - Produces: `InputExpressionBinding` and `StepInputBinding`.
 - Preserves: imports of `InputBinding`, `InputPathBinding`, and `InputValueBinding` from `wf_core.models.steps` for real existing callers.
 
-- [ ] **Step 1: Write failing model and persistence tests**
+- [x] **Step 1: Write failing model and persistence tests**
 
 Add tests that parse and round-trip this exact binding through `NodeUse`, `SubgraphNode`, `InterruptNode`, `DraftUseStep`, `DraftSubgraphPayload`, and `DraftInterruptPayload`:
 
@@ -107,7 +107,7 @@ COMPOSITE_BINDING = {
 
 Assert that workflow final-output parsing rejects the same record, old path/value bindings dump unchanged, extra fields fail, non-finite/Python-only values fail, depth 65 fails, and expression node 1,025 fails. Include literal JSON containers in both depth and node-budget tests.
 
-- [ ] **Step 2: Run the model tests and verify RED**
+- [x] **Step 2: Run the model tests and verify RED**
 
 Run:
 
@@ -117,7 +117,7 @@ uv run pytest tests/core/test_input_expressions.py tests/core/test_canonical_nod
 
 Expected: failures because expression models and `StepInputBinding` do not exist.
 
-- [ ] **Step 3: Extract strict JSON and implement the recursive models**
+- [x] **Step 3: Extract strict JSON and implement the recursive models**
 
 Move the existing recursive `JsonValue` and strict validator into `json_values.py`. In `input_bindings.py`, define the recursive discriminated union and validate raw expression limits before Pydantic recursively constructs models:
 
@@ -149,13 +149,13 @@ StepInputBinding = Annotated[
 
 The limit walker must inspect the tagged expression structure and nested literal containers without recursively trusting malformed fields. Raise one concise `ValueError` containing the exceeded limit and expression location.
 
-- [ ] **Step 4: Migrate only node-local persisted models**
+- [x] **Step 4: Migrate only node-local persisted models**
 
 Use `list[StepInputBinding]` for `NodeUse.input`, `SubgraphNode.input`, `InterruptNode.request`, `DraftUseStep.input`, `DraftSubgraphPayload.input`, and `DraftInterruptPayload.request`. Keep `Workflow.output` and `WorkflowDraft.output` on `list[InputBinding]`.
 
 Retain the existing deprecated-map normalization order. Canonical expression records pass through untouched; deprecated maps can synthesize only path/value records and still reject mixed canonical/deprecated fields.
 
-- [ ] **Step 5: Verify and commit**
+- [x] **Step 5: Verify and commit**
 
 Run the command from Step 2 plus:
 
@@ -194,7 +194,7 @@ git commit -m "feat: model composite step inputs"
 - Produces: `resolve_input_expression(expression, *, state, workflow_input, context, label, location) -> JsonValue`.
 - Produces: `resolve_step_input_bindings(bindings, *, state, workflow_input, context, label) -> dict[str, Any]`.
 
-- [ ] **Step 1: Write failing shared-resolution tests**
+- [x] **Step 1: Write failing shared-resolution tests**
 
 Cover nested object/array resolution, ordering, explicit null, input/state/context paths, missing paths, and exact locations such as `node 'concat' input request.items[0]`. Add integration cases proving the same expression works in a normal node, a prepared subgraph input, and an interrupt request.
 
@@ -211,7 +211,7 @@ assert resolved == {"request": {"items": ["hello", "wowcool"], "separator": " "}
 
 Add validation tests proving expression path leaves use the same declared-root checks as direct path bindings and that an expression target overlaps `request.title` when another binding owns `request`.
 
-- [ ] **Step 2: Run focused core tests and verify RED**
+- [x] **Step 2: Run focused core tests and verify RED**
 
 ```powershell
 uv run pytest tests/core/test_input_expression_runtime.py tests/core/test_subgraph_step.py tests/core/test_execution_results.py tests/core/test_mapping_validation.py -q
@@ -219,17 +219,17 @@ uv run pytest tests/core/test_input_expression_runtime.py tests/core/test_subgra
 
 Expected: expression bindings hit unsupported-binding branches.
 
-- [ ] **Step 3: Implement one shared resolver**
+- [x] **Step 3: Implement one shared resolver**
 
 Move simple path/value resolution out of `ops/nodes.py` and `subgraphs.py`. Recursively resolve arrays and objects, extend the location with `[index]` and `.field`, and wrap path/local-target failures as `WorkflowExecutionError` without losing the location.
 
 Replace the loops in normal node execution, `_start_subgraph`, and `build_interrupt_request` with `resolve_step_input_bindings`. Do not use this helper in `project_output`; that final-output path intentionally remains simple.
 
-- [ ] **Step 4: Make core structural validation exhaustive**
+- [x] **Step 4: Make core structural validation exhaustive**
 
 Change node-local validation signatures to `list[StepInputBinding]`. Recursively visit every `PathExpression` and report `INVALID_SOURCE_PATH` at `nodes[N].input[M].expression...path`. Continue validating target overlap once per top-level binding because each expression assigns its final value atomically.
 
-- [ ] **Step 5: Verify and commit**
+- [x] **Step 5: Verify and commit**
 
 Run Step 2 plus:
 
@@ -267,7 +267,7 @@ git commit -m "feat: resolve composite step inputs"
 - Produces: `schema_fragment_at_location(schema, location, *, label) -> JsonObject` for object fields, homogeneous arrays, tuples, additional properties, and bounded local references.
 - Produces: `validate_and_project_input_expression(...) -> ExpressionProjection`, where `ExpressionProjection` contains projected input/state schemas and `deferred_paths`.
 
-- [ ] **Step 1: Write failing generalized schema-navigation tests**
+- [x] **Step 1: Write failing generalized schema-navigation tests**
 
 Add exact cases for:
 
@@ -281,13 +281,13 @@ Add exact cases for:
 
 Keep `schema_fragment_at_path` as the object-path compatibility wrapper. Its existing tests must remain unchanged.
 
-- [ ] **Step 2: Write failing authoring mutation tests**
+- [x] **Step 2: Write failing authoring mutation tests**
 
 Use `set_step_input_bindings` with a `wf.std.concat` expression. Assert that literals validate at their exact array positions, missing input/state source schemas are projected from the target fragment, known incompatible source schemas reject without revision change, context paths return as deferred, overlapping targets reject, and the stored draft preserves exact expression order.
 
 Add a compatibility test where `set_step_input_map(..., merge=True)` sees an existing expression and raises a lossless-round-trip error without mutation.
 
-- [ ] **Step 3: Run focused tests and verify RED**
+- [x] **Step 3: Run focused tests and verify RED**
 
 ```powershell
 uv run pytest tests/wf_api/test_schema_projection.py tests/wf_api/test_input_expression_validation.py tests/wf_api/test_drafts_service.py tests/authoring/test_ops.py -q
@@ -295,7 +295,7 @@ uv run pytest tests/wf_api/test_schema_projection.py tests/wf_api/test_input_exp
 
 Expected: schema navigation is object-only and capability authoring rejects expressions.
 
-- [ ] **Step 4: Implement bounded schema navigation and compatibility**
+- [x] **Step 4: Implement bounded schema navigation and compatibility**
 
 Add `schema_fragment_at_location` as the deep primitive and keep existing functions as narrow wrappers. Normalize local references before comparison. Return one of `compatible`, `incompatible`, or `unsupported` from a private schema-assignability helper:
 
@@ -309,13 +309,13 @@ Add `schema_fragment_at_location` as the deep primitive and keep existing functi
 
 Do not add a general JSON Schema subtype engine. Document this conservative supported subset in the helper docstring.
 
-- [ ] **Step 5: Integrate atomic expression projection**
+- [x] **Step 5: Integrate atomic expression projection**
 
 In `_project_step_input_bindings`, validate the top-level target, then recursively validate the expression against that target fragment. Project missing input/state source schemas from the corresponding expression position. Keep context paths in `ExpressionProjection.deferred_paths`; they are accepted because runtime payload validation remains authoritative. Serialize only after all bindings validate so failures cannot advance the draft revision.
 
 Update `_require_lossless_step_input_map_round_trip` tests so expression records cause a clear rejection. Do not teach map helpers to understand expressions.
 
-- [ ] **Step 6: Make sequence contracts truthful**
+- [x] **Step 6: Make sequence contracts truthful**
 
 Add:
 
@@ -330,7 +330,7 @@ Use it only for `first_item` and `last_item`; retain their defensive runtime gua
 
 In `tests/wf_api/test_local_sources.py`, inspect the qualified platform catalog and assert public `wf.std.first_item` and `wf.std.last_item` input schemas contain `minItems: 1`. Assert the public empty-aware variants do not gain that constraint.
 
-- [ ] **Step 7: Verify and commit**
+- [x] **Step 7: Verify and commit**
 
 Run Step 3 plus:
 
@@ -384,7 +384,7 @@ git commit -m "feat: validate composite input schemas"
 - Produces: node-local API parameters typed as `Sequence[StepInputBinding]` / `list[StepInputBinding]`.
 - Preserves: workflow-output operations and CLI parser on `InputBinding`.
 
-- [ ] **Step 1: Write failing surface parity tests**
+- [x] **Step 1: Write failing surface parity tests**
 
 Submit `COMPOSITE_BINDING` through `WorkflowBuilder.use`, `use_ref`, `subgraph`, and `interrupt`, then through local API calls, JSON-RPC params, remote client, MCP requests, `wf draft add capability --bindings-file`, `wf draft set-input --bindings-file`, and `wf draft update capability --bindings-file`. Assert exact nested JSON reaches the resulting model or service.
 
@@ -392,7 +392,7 @@ Add negative tests proving inline `--map`/`--value` do not claim expression synt
 
 Pin `wf draft set-input --help` and explain output so they say composite expressions belong in the canonical bindings file. Do not describe indexed local targets or an inline expression mini-language.
 
-- [ ] **Step 2: Run focused parity tests and verify RED**
+- [x] **Step 2: Run focused parity tests and verify RED**
 
 ```powershell
 uv run pytest tests/authoring/test_builder.py tests/authoring/test_subgraph.py tests/wf_transport_rpc_http/test_rpc_models.py tests/wf_transport_rpc_http/test_client.py tests/wf_transport_rpc_http/test_openrpc_contract.py tests/wf_mcp/workflow_surface/test_drafts.py tests/wf_cli/test_app.py tests/wf_cli/test_remote_target.py tests/wf_cli/test_explain.py -q
@@ -400,7 +400,7 @@ uv run pytest tests/authoring/test_builder.py tests/authoring/test_subgraph.py t
 
 Expected: transport models still parse node-local lists as `InputBinding`.
 
-- [ ] **Step 3: Change only node-local public signatures**
+- [x] **Step 3: Change only node-local public signatures**
 
 Update focused replacement, capability add/update, generic draft step payloads, subgraph inputs, and interrupt requests to `StepInputBinding`. Keep workflow output replacements, wrapper final output, and output bindings narrow.
 
@@ -415,11 +415,11 @@ _WORKFLOW_OUTPUT_BINDINGS_ADAPTER = TypeAdapter(list[InputBinding])
 
 Use the first only in node-local `--bindings-file` commands. Keep command evidence honest: composite payloads render as bindings-file-only, never invented inline flags.
 
-- [ ] **Step 4: Verify OpenRPC distinguishes both unions**
+- [x] **Step 4: Verify OpenRPC distinguishes both unions**
 
 Assert the live OpenRPC document generated from the updated Python models makes the `set_step_input_bindings` component reach `InputExpressionBinding`, while workflow-output operations do not. Assert deprecated map payloads remain map-shaped and cannot carry expressions. Do not inspect or regenerate the checked manifest in this task; Task 5 performs that deterministic artifact update.
 
-- [ ] **Step 5: Verify and commit**
+- [x] **Step 5: Verify and commit**
 
 Run Step 2 plus:
 
@@ -463,11 +463,11 @@ git commit -m "feat: expose composite step inputs"
 - Produces: browser domain types with the same recursive discriminators.
 - Produces: lossless `copyInputExpression` and `copyStepInputBinding` helpers.
 
-- [ ] **Step 1: Write failing manifest and authored-schema tests**
+- [x] **Step 1: Write failing manifest and authored-schema tests**
 
 Assert the generated manifest contains recursive expression definitions, node-local draft fields reference `StepInputBinding`, and workflow output references only `InputBinding`. Add runtime parity fixtures for a nested array/object expression and an over-specified expression that must fail.
 
-- [ ] **Step 2: Regenerate checked contracts**
+- [x] **Step 2: Regenerate checked contracts**
 
 Run in dependency order:
 
@@ -479,7 +479,7 @@ pnpm --dir web --filter @lda/workflow-rpc contract:check
 
 Do not edit either generated file by hand.
 
-- [ ] **Step 3: Add the recursive authored Effect schema**
+- [x] **Step 3: Add the recursive authored Effect schema**
 
 Use `Schema.suspend` so parity has a real runtime decoder:
 
@@ -499,13 +499,13 @@ Keep workflow-output authored fixtures on the simple union.
 
 Make `inputBindingCliArgs` exhaustive over `StepInputBinding`. Path/value records keep their current equivalent CLI rendering. Any expression record marks the operation non-equivalent with `input_bindings (use --bindings-file)`; it must not stringify the expression into a fake `--value` flag.
 
-- [ ] **Step 4: Add browser domain types and lossless copies**
+- [x] **Step 4: Add browser domain types and lossless copies**
 
 Define `InputBinding` as path/value and `StepInputBinding` as `InputBinding | InputExpressionBinding`. Deep-copy arrays, object fields, literal JSON containers, and structural paths. Never use `JSON.parse(JSON.stringify(...))`, because the helper must preserve strict typing and produce useful branch exhaustiveness errors.
 
 Change `SetStepInputBindingsInput`, capability add/update inputs, `DraftAuthoringClient`, and `useDraftAuthoring.setStepInputs` to `ReadonlyArray<StepInputBinding>`. Update every copy helper with an exhaustive `expression` branch. `CapabilityNodeForm` may continue creating simple bindings in this slice, but its callback and controller types must accept the complete node-local union without dropping an expression returned by canonical rehydration.
 
-- [ ] **Step 5: Verify and commit**
+- [x] **Step 5: Verify and commit**
 
 ```powershell
 uv run pytest tests/wf_contract_manifest/test_generate.py tests/wf_contract_manifest/test_committed_manifest.py -q
@@ -544,7 +544,7 @@ git commit -m "feat: decode composite step inputs"
 - Produces: `projectExpressionEditorState(expression, schema)`, `serializeExpressionEditorState(state)`, and `validateExpressionEditorState(state, schema)`.
 - Produces: canonical rows that preserve unsupported records and block replacement.
 
-- [ ] **Step 1: Write failing round-trip tests**
+- [x] **Step 1: Write failing round-trip tests**
 
 Use this exact editor-state union:
 
@@ -560,7 +560,7 @@ Assert canonical expression -> editor state -> canonical expression semantic equ
 
 Assert cyclic/unresolved/remote refs and unsupported compositions produce an `unsupported` result carrying the original canonical record, never an empty literal.
 
-- [ ] **Step 2: Run pure tests and verify RED**
+- [x] **Step 2: Run pure tests and verify RED**
 
 ```powershell
 pnpm --dir web --filter @lda/console test -- src/workspace/authoring/input-expression-editor.test.ts src/workspace/authoring/selected-step-dataflow.test.ts src/workspace/authoring/canonical-capability-form.test.ts src/workspace/authoring/authoring-graph.test.ts src/workspace/schema-form/schema-field.test.ts
@@ -568,7 +568,7 @@ pnpm --dir web --filter @lda/console test -- src/workspace/authoring/input-expre
 
 Expected: the recursive projection module does not exist.
 
-- [ ] **Step 3: Implement parser-first projection and serialization**
+- [x] **Step 3: Implement parser-first projection and serialization**
 
 Reuse `resolveLocalSchemaNodeWithAncestry`, schema path formatting, and existing literal conversion helpers. Preserve object fields as ordered entries in editor state even though canonical JSON serializes them as an object. Reject duplicate field names before serialization.
 
@@ -582,7 +582,7 @@ export type ExpressionProjection =
 
 Do not add a raw JSON editing mode.
 
-- [ ] **Step 4: Integrate selected-step projection**
+- [x] **Step 4: Integrate selected-step projection**
 
 Teach canonical input rows to distinguish simple path/value records from expression records. An unsupported expression stays in its original row index and blocks save/clear until explicitly removed, matching existing malformed-row repair semantics.
 
@@ -590,7 +590,7 @@ Update `canonical-capability-form.ts` to parse the complete `StepInputBinding` u
 
 Add a graph-model regression proving one expression binding contributes one input binding to the existing summary. Do not expand nested expression leaves into fake graph bindings or additional nodes.
 
-- [ ] **Step 5: Verify and commit**
+- [x] **Step 5: Verify and commit**
 
 Run Step 2 and:
 
@@ -625,7 +625,7 @@ git commit -m "feat: project composite input editors"
 - Produces: recursive Path/Literal/Construct controls for capability input rows.
 - Preserves: `onSubmit(bindings: ReadonlyArray<StepInputBinding>)` as complete ordered replacement.
 
-- [ ] **Step 1: Write failing interaction tests**
+- [x] **Step 1: Write failing interaction tests**
 
 For a concat-like schema, exercise the real sequence:
 
@@ -639,7 +639,7 @@ For a concat-like schema, exercise the real sequence:
 
 Add nested object/array construction, reorder, remove, required-property, `minItems`, `maxItems`, additional-property name, duplicate-name, deferred path label, unsupported-record blocking, and mobile mounted-inspector tests.
 
-- [ ] **Step 2: Run focused React tests and verify RED**
+- [x] **Step 2: Run focused React tests and verify RED**
 
 ```powershell
 pnpm --dir web --filter @lda/console test -- src/workspace/authoring/InputExpressionControl.test.tsx src/workspace/authoring/StepInputBindingsForm.test.tsx src/workspace/authoring/SelectedCapabilityInspector.test.tsx src/workspace/authoring/useDraftAuthoring.test.tsx
@@ -647,19 +647,19 @@ pnpm --dir web --filter @lda/console test -- src/workspace/authoring/InputExpres
 
 Expected: Construct controls are absent.
 
-- [ ] **Step 3: Implement the recursive control**
+- [x] **Step 3: Implement the recursive control**
 
 Render a fieldset per expression level with a stable accessible name derived from its schema location. Path and Literal reuse existing controls. Construct appears only for object/array schemas. Arrays expose Add, Remove, Move up, and Move down. Objects show declared properties and named additional fields only when the schema permits them.
 
 Use ordinary React state updates and immutable recursive helpers; do not introduce a second form library or global store. The visual hierarchy should use indentation, a quiet left rule, and compact source toggles rather than nesting full cards at every level.
 
-- [ ] **Step 4: Integrate submit gating and canonical rehydration**
+- [x] **Step 4: Integrate submit gating and canonical rehydration**
 
 Disable Save when cardinality, required fields, duplicate names, invalid paths, invalid literals, or unsupported canonical records remain. After a successful mutation, rehydrate from the returned draft instead of retaining browser-owned state.
 
 Show `Validated when the workflow runs` beside context paths or other schema-less path sources. Known incompatible paths must display the backend diagnostic and remain unsaved.
 
-- [ ] **Step 5: Verify and commit**
+- [x] **Step 5: Verify and commit**
 
 Run Step 2 plus:
 
@@ -694,7 +694,7 @@ git commit -m "feat: author composite step inputs"
 - Consumes: the complete Python and browser vertical slice from Tasks 1-7.
 - Produces: one regression fixture proving `wf.std.concat` receives a state-backed item plus a literal item.
 
-- [ ] **Step 1: Write the end-to-end Python test**
+- [x] **Step 1: Write the end-to-end Python test**
 
 Create a draft with state `foo = "hello"`, a `wf.std.concat` capability step, and:
 
@@ -719,11 +719,11 @@ Create a draft with state `foo = "hello"`, a `wf.std.concat` capability step, an
 
 Save/compile the draft and execute it with the real platform `wf.std` registry. Assert the node receives `{"items": ["hello", "wowcool"], "separator": " "}` and output equals `"hello wowcool"`.
 
-- [ ] **Step 2: Write the browser-to-RPC regression test**
+- [x] **Step 2: Write the browser-to-RPC regression test**
 
 Render a draft route with the concat schema, construct the expression through the form, submit, and assert the exact JSON-RPC payload for `workflow.draft_workspaces.set_step_input_bindings`. Return the canonical draft and assert the editor rehydrates the same two items.
 
-- [ ] **Step 3: Run focused vertical verification**
+- [x] **Step 3: Run focused vertical verification**
 
 ```powershell
 uv run pytest tests/wf_api/test_composite_input_workflow.py tests/wf_cli/test_remote_target.py -q
@@ -732,7 +732,7 @@ pnpm --dir web --filter @lda/console test -- src/workspace/routes/DraftDetailRou
 
 Expected: all pass.
 
-- [ ] **Step 4: Run final regression gates**
+- [x] **Step 4: Run final regression gates**
 
 ```powershell
 uv run pytest tests/core tests/artifacts tests/authoring tests/wf_api tests/wf_transport_rpc_http tests/wf_mcp/workflow_surface tests/wf_cli tests/wf_contract_manifest -q
@@ -747,11 +747,11 @@ git diff --check
 
 If the full Python suite exceeds the available turn, report the exact scoped suites completed and run the repository-wide suite before calling the branch complete.
 
-- [ ] **Step 5: Update live docs and archive the plan**
+- [x] **Step 5: Update live docs and archive the plan**
 
 Mark the composite input issue complete in `ISSUES.md`, mark Slice 5 complete in `docs/current_roadmap.md`, document `input_bindings.py` and the console expression editor in `docs/project_map.md`, and move this plan to the historical mirror path. Keep the design spec live because it describes current behavior after implementation.
 
-- [ ] **Step 6: Review and commit**
+- [x] **Step 6: Review and commit**
 
 Run the repository `/review` task or the `requesting-code-review` skill against the implementation commits. Fix Critical and Important findings, rerun affected tests, then commit:
 
@@ -764,14 +764,14 @@ git commit -m "docs: complete composite input expressions"
 
 ## Final Acceptance Checklist
 
-- [ ] Existing path/value binding JSON remains unchanged.
-- [ ] Node-use, subgraph, and interrupt-request expressions parse, persist, and execute.
-- [ ] Workflow final-output expressions are rejected at model, API, CLI, OpenRPC, and TypeScript boundaries.
-- [ ] Runtime failures identify the binding target and nested expression location.
-- [ ] Known schema mismatches reject atomically; schema-less paths are visibly deferred to runtime.
-- [ ] Compatibility maps reject expression-bearing canonical lists without mutation.
-- [ ] Expression depth/node limits fail as validation errors, not recursion crashes.
-- [ ] `first_item` and `last_item` expose `minItems: 1`; empty-aware sequence operations still accept `[]`.
-- [ ] CLI bindings files, JSON-RPC, MCP, manifest, generated TypeScript, and browser decoders preserve exact expressions.
-- [ ] The console constructs `[path(state.foo), literal("wowcool")]` without indexed local targets or raw JSON editing.
-- [ ] The real `wf.std.concat` vertical test produces `hello wowcool`.
+- [x] Existing path/value binding JSON remains unchanged.
+- [x] Node-use, subgraph, and interrupt-request expressions parse, persist, and execute.
+- [x] Workflow final-output expressions are rejected at model, API, CLI, OpenRPC, and TypeScript boundaries.
+- [x] Runtime failures identify the binding target and nested expression location.
+- [x] Known schema mismatches reject atomically; schema-less paths are visibly deferred to runtime.
+- [x] Compatibility maps reject expression-bearing canonical lists without mutation.
+- [x] Expression depth/node limits fail as validation errors, not recursion crashes.
+- [x] `first_item` and `last_item` expose `minItems: 1`; empty-aware sequence operations still accept `[]`.
+- [x] CLI bindings files, JSON-RPC, MCP, manifest, generated TypeScript, and browser decoders preserve exact expressions.
+- [x] The console constructs `[path(state.foo), literal("wowcool")]` without indexed local targets or raw JSON editing.
+- [x] The real `wf.std.concat` vertical test produces `hello wowcool`.

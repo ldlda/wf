@@ -31,12 +31,11 @@
 - [x] CLI help and agent instructions describe step-input targets as bare local
   fields and do not document the nested composition behavior already supported
   by the canonical runtime model.
-- [ ] Canonical bindings cannot yet construct array values from independently
-  sourced elements. A binding target such as `items.0` is rejected because
-  binding-path validation only traverses object properties. This blocks mixed
-  inputs such as `wf.std.concat` with `items[0]` from state and `items[1]` as a
-  literal; the fix belongs in the canonical binding/schema model before the UI
-  exposes per-item source controls.
+- [x] Canonical bindings construct array values from independently sourced
+  elements through recursive literal/path expressions. Mixed inputs such as
+  `wf.std.concat` with one state-backed item and one literal are covered by the
+  Python runtime, remote CLI, and browser-to-RPC vertical proofs; indexed local
+  targets such as `items.0` remain intentionally unsupported.
 
 ## Console workflow-client gaps
 

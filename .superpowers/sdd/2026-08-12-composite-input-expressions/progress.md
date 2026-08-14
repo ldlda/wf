@@ -1,4 +1,4 @@
-# SDD ledger — plan: docs/superpowers/plans/2026-08-12-composite-input-expressions.md
+# SDD ledger — plan: docs/historical/superpowers/plans/2026-08-12-composite-input-expressions.md
 
 Task 1: complete (`b38cc325`, fix `e661691e`, approved)
 
@@ -14,4 +14,6 @@ Task 6: complete (`b8a16a0`, fixes `29d7a11d`, `18c9ef12`, approved)
 
 Task 7: complete (`c062680c`, fixes `01b33c8c`, `5f09765f`, `7923254f`, approved; React Doctor 100/100)
 
-Current task: Task 8 pending
+Task 8: complete in the shared worktree; focused proofs pass. The scoped Python
+regression retains six pre-existing admin/schema failures, and repository-wide
+format/type gates retain their pre-existing failures; see task-8-report.md.

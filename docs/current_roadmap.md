@@ -94,7 +94,7 @@ Implementation order:
    - The console review remediation gate is complete. The final verified
      dispositions are recorded in
      [`workflow console review remediation`](historical/workflow-console-review-remediation.md).
-   - Slice 5: composite input values. Extend canonical step-input bindings with
+   - Slice 5 is complete: composite input values extend canonical step-input bindings with
      a deliberate recursive literal/path expression model for arrays and
      objects. Start by exposing per-item Literal/Path controls in existing array
      editors, preserving order and schema-validating every element. Do not
@@ -102,7 +102,7 @@ Implementation order:
      current simple path/literal bindings for ordinary fields. Design:
      [`composite input expressions`](superpowers/specs/2026-08-12-composite-input-expressions-design.md).
      Implementation:
-     [`composite input expressions plan`](superpowers/plans/2026-08-12-composite-input-expressions.md).
+     [`composite input expressions plan`](historical/superpowers/plans/2026-08-12-composite-input-expressions.md).
    - Slice 6: workflow contract graph. Add selectable Input, State, and Outcomes
      projections with focused forms for workflow contracts, explicit outcomes,
      entry point, and final workflow output bindings.

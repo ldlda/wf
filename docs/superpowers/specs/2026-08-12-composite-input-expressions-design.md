@@ -2,7 +2,7 @@
 
 Date: 2026-08-12
 
-Status: Approved design for Workflow Console authoring Slice 5.
+Status: Current implementation contract for Workflow Console authoring Slice 5.
 
 Related:
 
