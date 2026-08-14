@@ -221,11 +221,22 @@ const authoringPathOption = {
   uses: ["step_input"],
 };
 
+const conditionalRuntimeContextOption = {
+  ...authoringPathOption,
+  path: "context.viewer_id",
+  label: "Viewer ID",
+  origin: "runtime_context",
+  required: false,
+  availability: "conditional",
+  reason: "available when the selected capability accepts runtime context",
+  uses: ["step_input"],
+};
+
 const authoringContractInventory = {
   workspace_id: "console.demo",
   revision: 7,
   selected_step_id: "render",
-  readable_sources: [authoringPathOption],
+  readable_sources: [authoringPathOption, conditionalRuntimeContextOption],
   step_input_targets: [
     {
       ...authoringPathOption,
@@ -1113,6 +1124,16 @@ const parityReport = (): ParityReport => {
 };
 
 describe("authored RPC and manifest schema parity", () => {
+  it("covers conditional runtime context sources with a reason", () => {
+    expect(authoringContractInventory.readable_sources).toContainEqual(
+      expect.objectContaining({
+        origin: "runtime_context",
+        availability: "conditional",
+        reason: "available when the selected capability accepts runtime context",
+      }),
+    );
+  });
+
   it("rejects empty segments in authored structural binding paths", () => {
     const cases: ReadonlyArray<{
       readonly method: keyof typeof authoredRpcSchemas;

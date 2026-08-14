@@ -240,6 +240,43 @@ def test_rejects_invalid_result_schema_shape() -> None:
     )
 
 
+def test_accepts_composed_result_with_named_component_branches() -> None:
+    document = synthetic_openrpc_document()
+    document["methods"][1]["result"]["schema"] = {
+        "anyOf": [
+            {"$ref": "#/components/schemas/AlphaResult"},
+            {"$ref": "#/components/schemas/ZetaResult"},
+        ]
+    }
+
+    manifest = manifest_from_openrpc(document)
+
+    assert manifest["operations"][0]["result"] == {
+        "schema": {
+            "anyOf": [
+                {"$ref": "#/components/schemas/AlphaResult"},
+                {"$ref": "#/components/schemas/ZetaResult"},
+            ]
+        }
+    }
+
+
+def test_rejects_composed_result_with_an_inline_branch() -> None:
+    document = synthetic_openrpc_document()
+    document["methods"][1]["result"]["schema"] = {
+        "oneOf": [
+            {"$ref": "#/components/schemas/AlphaResult"},
+            {"type": "object"},
+        ]
+    }
+
+    assert_manifest_error(
+        document,
+        "$.methods[1].result.schema",
+        "success result must reference a named schema component",
+    )
+
+
 def test_reports_a_missing_success_result_schema() -> None:
     document = synthetic_openrpc_document()
     del document["methods"][1]["result"]["schema"]

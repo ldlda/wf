@@ -132,6 +132,31 @@ def _schema(value: object, path: str) -> JsonSchema:
     return normalized
 
 
+def _is_named_schema_reference(value: object) -> bool:
+    return (
+        isinstance(value, Mapping)
+        and set(value) == {"$ref"}
+        and isinstance(value.get("$ref"), str)
+        and value["$ref"].startswith("#/components/schemas/")
+    )
+
+
+def _is_composed_named_result_schema(value: object) -> bool:
+    if not isinstance(value, Mapping):
+        return False
+
+    composition_keys = [key for key in ("allOf", "anyOf", "oneOf") if key in value]
+    if len(composition_keys) != 1:
+        return False
+
+    branches = value[composition_keys[0]]
+    return (
+        isinstance(branches, list)
+        and bool(branches)
+        and all(_is_named_schema_reference(branch) for branch in branches)
+    )
+
+
 def _error_component(value: object, path: str) -> JsonValue:
     """Normalize an OpenRPC error object, whose ``data`` member is a schema."""
     if not isinstance(value, Mapping):
@@ -269,22 +294,9 @@ def manifest_from_openrpc(document: Mapping[str, object]) -> ContractManifest:
                 f"{result_path}.schema", "missing success result schema"
             )
         raw_result_schema = result["schema"]
-        if not isinstance(raw_result_schema, Mapping):
-            raise ManifestError(
-                f"{result_path}.schema",
-                "success result must be a schema object",
-            )
-        named_result = (
-            set(raw_result_schema) == {"$ref"}
-            and isinstance(raw_result_schema.get("$ref"), str)
-            and raw_result_schema["$ref"].startswith("#/components/schemas/")
-        )
-        # This inspection RPC returns either its inventory or the standard
-        # revision-conflict workspace payload, so its OpenRPC result is a union.
-        if (
-            not named_result
-            and method_name != "workflow.draft_workspaces.inspect_authoring_contract"
-        ):
+        if not _is_named_schema_reference(
+            raw_result_schema
+        ) and not _is_composed_named_result_schema(raw_result_schema):
             raise ManifestError(
                 f"{result_path}.schema",
                 "success result must reference a named schema component",
