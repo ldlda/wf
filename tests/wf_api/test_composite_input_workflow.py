@@ -17,7 +17,7 @@ def _composite_concat_draft() -> dict[str, object]:
             "type": "object",
             "properties": {
                 "foo": {"type": "string", "default": "hello"},
-                "text": {"type": "string"},
+                "result": {"type": "string"},
             },
         },
         "output_schema": {
@@ -30,10 +30,10 @@ def _composite_concat_draft() -> dict[str, object]:
             "concat": {
                 "use": "wf.std.concat",
                 "input": [],
-                "output": [{"source": "text", "target": "state.text"}],
+                "output": [{"source": "text", "target": "state.result"}],
             }
         },
-        "output": [{"path": "state.text", "target": "result"}],
+        "output": [{"path": "state.result", "target": "result"}],
         "routes": {"concat": {"ok": "__end__"}},
     }
 

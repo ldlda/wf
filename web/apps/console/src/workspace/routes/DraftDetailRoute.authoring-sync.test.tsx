@@ -3,12 +3,12 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ComponentProps } from "react";
 import { MemoryRouter, Route, Routes, useNavigate } from "react-router-dom";
+import type { OperationName, RpcResponse } from "../../connection/contracts.js";
 import type { CapabilityDetail } from "../domain/capability-models.js";
 import type { DraftWorkspace } from "../domain/draft-workspace-models.js";
 import { useConsoleWorkspace } from "../context.js";
 import type { ConsoleWriteExecutor } from "../domain/write-executor.js";
-import type { DraftAuthoringClient } from "../domain/draft-authoring-client.js";
-import { createDraftAuthoringClient } from "../domain/draft-authoring-client.js";
+import { createConsoleWriteExecutor } from "../domain/write-executor.js";
 import { useAuthoringCapabilityDetail } from "../authoring/useAuthoringCapabilityDetail.js";
 import { DraftDetailRoute } from "./DraftDetailRoute.js";
 import { useCapabilityDiscovery } from "./useCapabilityDiscovery.js";
@@ -35,15 +35,6 @@ vi.mock("../authoring/DraftWorkbench.js", async () => {
 });
 
 vi.mock("../context.js", () => ({ useConsoleWorkspace: vi.fn() }));
-vi.mock("../domain/draft-authoring-client.js", async () => {
-  const actual = await vi.importActual<typeof import("../domain/draft-authoring-client.js")>(
-    "../domain/draft-authoring-client.js",
-  );
-  return {
-    ...actual,
-    createDraftAuthoringClient: vi.fn(),
-  };
-});
 vi.mock("../authoring/useAuthoringCapabilityDetail.js", () => ({
   useAuthoringCapabilityDetail: vi.fn(),
 }));
@@ -55,10 +46,27 @@ vi.mock("./useDraftWorkspace.js", () => ({
 }));
 
 const mockedUseConsoleWorkspace = vi.mocked(useConsoleWorkspace);
-const mockedCreateDraftAuthoringClient = vi.mocked(createDraftAuthoringClient);
 const mockedUseAuthoringCapabilityDetail = vi.mocked(useAuthoringCapabilityDetail);
 const mockedUseCapabilityDiscovery = vi.mocked(useCapabilityDiscovery);
 const mockedUseDraftWorkspace = vi.mocked(useDraftWorkspace);
+
+const mockFetch = vi.fn();
+vi.stubGlobal("fetch", mockFetch);
+
+const jsonResponse = (data: unknown): Promise<Response> =>
+  Promise.resolve(
+    new Response(JSON.stringify(data), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    }),
+  );
+
+const requestBodyAt = (index: number): unknown => {
+  const call = mockFetch.mock.calls[index] as
+    | [string, { readonly body?: string }]
+    | undefined;
+  return JSON.parse(call?.[1].body ?? "{}");
+};
 
 const detail: CapabilityDetail = {
   kind: "node_spec",
@@ -149,18 +157,23 @@ const discoveryController = (): CapabilityDiscoveryController => ({
   inspect: vi.fn(),
 });
 
-const authoringClient: DraftAuthoringClient = {
-  createEmpty: vi.fn(),
-  createFromCapability: vi.fn(),
-  addCapabilityStep: vi.fn(),
-  updateCapabilityStep: vi.fn(),
-  setStepInputBindings: vi.fn(),
-  setStepOutputBindings: vi.fn(),
-  setRoute: vi.fn(),
-  validate: vi.fn(),
-};
+const rpcSuccess = (
+  interpreted: unknown,
+  operation: OperationName = "workflow.draft_workspaces.set_step_input_bindings",
+): RpcResponse => ({
+  ok: true,
+  operation,
+  label: "Set step input bindings",
+  interpreted,
+  exchange: { request: {}, response: {} },
+  equivalentCli: "uv run wf draft set-input-bindings",
+  durationMs: 1,
+});
 
-const writeExecutor = { run: vi.fn() } as ConsoleWriteExecutor;
+const writeExecutor: ConsoleWriteExecutor = createConsoleWriteExecutor({
+  target: "server-a",
+  recordEvidence: vi.fn(),
+});
 let loadedReport: DraftWorkspace;
 let loaderPhase: DraftWorkspaceController["detailPhase"];
 
@@ -191,6 +204,7 @@ const routeElement = () => (
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockFetch.mockReset();
   capture.renderCount = 0;
   loadedReport = workspace();
   loaderPhase = "ready";
@@ -210,7 +224,9 @@ beforeEach(() => {
     readExecutor: writeExecutor,
     writeExecutor,
   });
-  mockedCreateDraftAuthoringClient.mockReturnValue(authoringClient);
+  mockFetch.mockReturnValue(
+    jsonResponse(rpcSuccess(workspace({ revision: 2, status: "valid" }))),
+  );
   mockedUseAuthoringCapabilityDetail.mockReturnValue({
     phase: "ready",
     detail,
@@ -232,7 +248,9 @@ describe("DraftDetailRoute authoring freshness", () => {
   it("uses real controller mutations and loader replacement without synchronization loops", async () => {
     const user = userEvent.setup();
     const committed = workspace({ revision: 2, status: "valid" });
-    vi.mocked(authoringClient.updateCapabilityStep).mockResolvedValueOnce(committed);
+    mockFetch.mockReturnValueOnce(
+      jsonResponse(rpcSuccess(committed, "workflow.draft_workspaces.update_capability_step")),
+    );
     const view = render(routeElement());
     const header = (): HTMLElement => document.querySelector(".draft-detail__header") as HTMLElement;
 
@@ -246,9 +264,15 @@ describe("DraftDetailRoute authoring freshness", () => {
     await user.click(screen.getByRole("button", { name: "Save setup" }));
     await waitFor(() => expect(within(header()).getByText("Revision 2")).toBeInTheDocument());
     expect(screen.getByText("Valid")).toBeInTheDocument();
-    expect(authoringClient.updateCapabilityStep).toHaveBeenCalledWith(
-      expect.objectContaining({ workspaceId: "draft-report", revision: 1, stepId: "collect" }),
-    );
+    expect(requestBodyAt(0)).toEqual({
+      operation: "workflow.draft_workspaces.update_capability_step",
+      target: "server-a",
+      params: expect.objectContaining({
+        workspace_id: "draft-report",
+        revision: 1,
+        step_id: "collect",
+      }),
+    });
     const mutationRenderCount = capture.renderCount;
     await act(async () => new Promise((resolve) => setTimeout(resolve, 0)));
     expect(capture.renderCount).toBe(mutationRenderCount);
@@ -285,9 +309,19 @@ describe("DraftDetailRoute authoring freshness", () => {
 
   it("submits and rehydrates a composite expression through the route form", async () => {
     const user = userEvent.setup();
-    const canonical = workspace({
+    const canonicalWire = {
+      workspaceId: "draft-report",
       revision: 2,
-      status: "valid",
+      title: "Composite",
+      status: "valid" as const,
+      diagnostics: [],
+      summary: {
+        name: "composite",
+        start: "concat",
+        stepCount: 1,
+        routeCount: 1,
+        steps: ["concat"],
+      },
       draft: {
         steps: {
           concat: {
@@ -309,7 +343,7 @@ describe("DraftDetailRoute authoring freshness", () => {
         },
         routes: { concat: { ok: "__end__" } },
       },
-    });
+    };
     loadedReport = workspace({
       workspaceId: "draft-report",
       title: "Composite",
@@ -325,7 +359,11 @@ describe("DraftDetailRoute authoring freshness", () => {
       detail: concatDetail,
       message: null,
     });
-    vi.mocked(authoringClient.setStepInputBindings).mockResolvedValueOnce(canonical);
+    mockFetch.mockReturnValueOnce(
+      jsonResponse(
+        rpcSuccess(canonicalWire, "workflow.draft_workspaces.set_step_input_bindings"),
+      ),
+    );
 
     render(routeElement());
     fireEvent.click(document.querySelector('[data-node-id="concat"]') as HTMLElement);
@@ -347,24 +385,28 @@ describe("DraftDetailRoute authoring freshness", () => {
     await user.type(screen.getByRole("textbox", { name: "Separator" }), " ");
     await user.click(screen.getByRole("button", { name: "Save inputs" }));
 
-    await waitFor(() => expect(authoringClient.setStepInputBindings).toHaveBeenCalledTimes(1));
-    expect(authoringClient.setStepInputBindings).toHaveBeenCalledWith({
-      workspaceId: "draft-report",
-      revision: 1,
-      stepId: "concat",
-      bindings: [
-        {
-          target: "items",
-          expression: {
-            kind: "array",
-            items: [
-              { kind: "path", path: "state.foo" },
-              { kind: "literal", value: "wowcool" },
-            ],
+    await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(1));
+    expect(requestBodyAt(0)).toEqual({
+      operation: "workflow.draft_workspaces.set_step_input_bindings",
+      target: "server-a",
+      params: {
+        workspace_id: "draft-report",
+        revision: 1,
+        step_id: "concat",
+        bindings: [
+          {
+            target: "items",
+            expression: {
+              kind: "array",
+              items: [
+                { kind: "path", path: "state.foo" },
+                { kind: "literal", value: "wowcool" },
+              ],
+            },
           },
-        },
-        { target: "separator", value: " " },
-      ],
+          { target: "separator", value: " " },
+        ],
+      },
     });
     await waitFor(() => expect(screen.getByText("Revision 2")).toBeInTheDocument());
     expect(screen.getByRole("combobox", { name: "Value source for items item 1" })).toHaveValue("path");

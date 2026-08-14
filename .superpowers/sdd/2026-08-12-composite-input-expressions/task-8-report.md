@@ -7,9 +7,11 @@
   item, and the final workflow output is `hello wowcool`.
 - Added remote CLI coverage using the existing RPC client/transport seam. The
   bindings file survives `wf draft set-input` as the exact composite payload.
-- Added a browser route regression that constructs the recursive editor state,
-  asserts the exact `set_step_input_bindings` client payload, and verifies the
-  canonical response rehydrates the editor.
+- Added a browser route regression through the real `createDraftAuthoringClient`,
+  write executor, `callOperation`, and mocked `/api/rpc` fetch seam. It asserts
+  the exact JSON-RPC method/target/params body, runs the canonical response
+  through the runtime decoders, and verifies that the recursive editor state
+  rehydrates.
 - Marked the data-shaping issue and Slice 5 complete, documented the Python
   canonical model and console editor, updated the live design-spec status, and
   archived the implementation plan.
@@ -63,11 +65,10 @@ tests or documentation changes. The repository's external review-dispatch
 tool was not available in this session, so no external reviewer result is
 claimed.
 
-One existing behavior remains worth tracking separately: the root expression
-proof uses a declared `state.text` output slot rather than the name `result`,
-because the current validator treats that particular state/output naming shape
-as invalid when combined with a root object binding. This does not affect the
-composite expression path and was not changed in Task 8.
+The root expression proof uses the ordinary `state.result` output slot. The
+capability's `text` result is projected into workflow state and then into the
+public `result` output, so this fixture exercises the normal state/output naming
+path without a validator workaround.
 
 ## Documentation
 
