@@ -3,6 +3,7 @@ from __future__ import annotations
 from wf_api.authoring_contracts import (
     context_path_options,
     project_authoring_contract_inventory,
+    project_authoring_step_contract,
     schema_path_options,
 )
 
@@ -217,6 +218,19 @@ def test_schema_path_options_stops_expanding_recursive_local_definition() -> Non
     ]
 
 
+def test_schema_path_options_bounds_deep_inline_objects() -> None:
+    schema: dict[str, object] = {"type": "object", "properties": {}}
+    current = schema
+    for index in range(60):
+        child: dict[str, object] = {"type": "object", "properties": {}}
+        current["properties"] = {f"level_{index}": child}
+        current = child
+
+    options = schema_path_options(schema, root="input", uses=["step_input"])
+
+    assert len(options) == 32
+
+
 def test_schema_path_options_returns_empty_schema_for_unconstrained_property() -> None:
     options = schema_path_options(
         {
@@ -319,7 +333,7 @@ def test_project_authoring_contract_inventory_composes_pure_inputs() -> None:
             "schema": {"type": "string"},
             "required": False,
             "availability": "available",
-            "uses": ["step_input", "step_output_source", "workflow_output"],
+            "uses": ["step_input", "workflow_output"],
         },
     ]
     assert inventory["step_input_targets"] == [step_input_target]
@@ -329,6 +343,37 @@ def test_project_authoring_contract_inventory_composes_pure_inputs() -> None:
     assert inventory["entry_steps"] == [entry_step]
     assert inventory["workflow_outcomes"] == ["ok", "error"]
     assert inventory["warnings"] == ["selected step has conditional context"]
+
+
+def test_authoring_paths_exclude_incompatible_binding_roles() -> None:
+    inventory = project_authoring_contract_inventory(
+        workspace_id="workspace-1",
+        revision=1,
+        selected_step_id=None,
+        input_schema={"type": "object"},
+        state_schema={
+            "type": "object",
+            "properties": {"answer": {"type": "string"}},
+        },
+        output_schema={"type": "object"},
+    )
+    step_contract = project_authoring_step_contract(
+        step_id="fetch",
+        label="Fetch",
+        description=None,
+        input_schema={"type": "object"},
+        output_schema={
+            "type": "object",
+            "properties": {"answer": {"type": "string"}},
+        },
+        outcomes=["ok"],
+    )
+
+    state_source = inventory["readable_sources"][0]
+    assert state_source["path"] == "state.answer"
+    assert "step_output_source" not in state_source["uses"]
+    assert step_contract["output_sources"][0]["path"] == "step_output.answer"
+    assert "workflow_output" not in step_contract["output_sources"][0]["uses"]
 
 
 def test_context_path_options_are_step_input_only() -> None:

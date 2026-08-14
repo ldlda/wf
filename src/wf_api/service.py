@@ -424,12 +424,24 @@ class WorkflowApi:
             description = raw_step.get("desc")
             if not isinstance(description, str):
                 description = resolved_contract.description
+            input_schema = _authoring_schema(
+                resolved_contract.input_schema,
+                field_name=f"step {raw_step_id!r} input schema",
+                root="step_input",
+                warnings=warnings,
+            )
+            output_schema = _authoring_schema(
+                resolved_contract.output_schema,
+                field_name=f"step {raw_step_id!r} output schema",
+                root="step_output",
+                warnings=warnings,
+            )
             projected_contract = project_authoring_step_contract(
                 step_id=raw_step_id,
                 label=_step_label(raw_step_id),
                 description=description,
-                input_schema=resolved_contract.input_schema,
-                output_schema=resolved_contract.output_schema,
+                input_schema=input_schema,
+                output_schema=output_schema,
                 outcomes=resolved_contract.outcomes,
             )
             entry_steps.append(projected_contract)

@@ -136,6 +136,7 @@ def _analyze(workflow: Workflow) -> _ContextAnalysis:
             foreach_nodes,
             node_id,
             scopes,
+            scopes_by_node,
         )
     return _ContextAnalysis(fields_by_node, tuple(warnings.values))
 
@@ -145,6 +146,7 @@ def _available_fields(
     foreach_nodes: Mapping[str, ForeachNode],
     node_id: str,
     scopes: set[FrameScope],
+    scopes_by_node: Mapping[str, set[FrameScope]],
 ) -> tuple[ContextFieldAvailability, ...]:
     del node_id
     fields_by_name: dict[str, ContextFieldContract] = {}
@@ -158,7 +160,13 @@ def _available_fields(
                     *contracts,
                     *foreach_context_fields(
                         foreach.as_,
-                        _foreach_item_schema(workflow, foreach, scope, foreach_nodes),
+                        _foreach_item_schema(
+                            workflow,
+                            foreach,
+                            scopes_by_node.get(foreach.id, {None}),
+                            foreach_nodes,
+                            scopes_by_node,
+                        ),
                     ),
                 )
         for contract in contracts:
@@ -195,12 +203,26 @@ def _available_fields(
 def _foreach_item_schema(
     workflow: Workflow,
     foreach: ForeachNode,
-    active_scope: FrameScope,
+    source_scopes: set[FrameScope],
     foreach_nodes: Mapping[str, ForeachNode],
+    scopes_by_node: Mapping[str, set[FrameScope]],
 ) -> ContextSchema:
-    source_schema = _schema_at_path(
-        workflow, foreach.over.root, foreach.over.parts, active_scope, foreach_nodes
-    )
+    source_schemas = [
+        _schema_at_path(
+            workflow,
+            foreach.over.root,
+            foreach.over.parts,
+            source_scope,
+            foreach_nodes,
+            scopes_by_node,
+        )
+        for source_scope in sorted(source_scopes, key=lambda value: value or "")
+    ]
+    if not source_schemas or any(
+        schema != source_schemas[0] for schema in source_schemas
+    ):
+        return {}
+    source_schema = source_schemas[0]
     if not isinstance(source_schema, Mapping):
         return {}
     source_type = source_schema.get("type")
@@ -212,7 +234,13 @@ def _foreach_item_schema(
         return {}
     try:
         resolved_items = _resolve_local_reference(
-            _schema_document(workflow, foreach.over.root), items
+            _schema_document(
+                workflow,
+                foreach.over.root,
+                foreach_nodes=foreach_nodes,
+                scopes_by_node=scopes_by_node,
+            ),
+            items,
         )
     except ValueError:
         return {}
@@ -225,6 +253,7 @@ def _schema_at_path(
     parts: tuple[str, ...],
     active_scope: FrameScope,
     foreach_nodes: Mapping[str, ForeachNode],
+    scopes_by_node: Mapping[str, set[FrameScope]],
 ) -> Mapping[str, object] | None:
     try:
         schema_document = _schema_document(
@@ -232,6 +261,7 @@ def _schema_at_path(
             root,
             active_scope=active_scope,
             foreach_nodes=foreach_nodes,
+            scopes_by_node=scopes_by_node,
         )
         current: object = schema_document
         for part in parts:
@@ -255,6 +285,7 @@ def _schema_document(
     *,
     active_scope: FrameScope = None,
     foreach_nodes: Mapping[str, ForeachNode] | None = None,
+    scopes_by_node: Mapping[str, set[FrameScope]] | None = None,
 ) -> Mapping[str, object]:
     if root == "input":
         return workflow.input_schema.model_dump(mode="json", exclude_none=True)
@@ -264,7 +295,11 @@ def _schema_document(
         current: dict[str, object] = {
             field.name: field.schema for field in STANDARD_CONTEXT_FIELDS
         }
-        if active_scope is not None and foreach_nodes is not None:
+        if (
+            active_scope is not None
+            and foreach_nodes is not None
+            and scopes_by_node is not None
+        ):
             foreach = foreach_nodes.get(active_scope)
             if foreach is not None:
                 current.update(
@@ -275,8 +310,9 @@ def _schema_document(
                             _foreach_item_schema(
                                 workflow,
                                 foreach,
-                                None,
+                                scopes_by_node.get(foreach.id, {None}),
                                 foreach_nodes,
+                                scopes_by_node,
                             ),
                         )
                     }

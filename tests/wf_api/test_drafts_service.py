@@ -278,6 +278,56 @@ async def test_inspect_draft_authoring_contract_preserves_empty_capability_schem
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "invalid_property_schema",
+    [
+        {"$ref": "https://example.com/request.json"},
+        {"$ref": 7},
+    ],
+)
+async def test_inspect_draft_authoring_contract_warns_for_invalid_capability_schema(
+    tmp_path: Path,
+    invalid_property_schema: dict[str, object],
+) -> None:
+    draft_api, service, authoring = _draft_api(
+        FileWorkflowArtifactStore(tmp_path / "authoring_contract_bad_capability")
+    )
+    service.register_connection(
+        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    )
+    service.register_specs(
+        "demo.personal",
+        replace(
+            echo_tool,
+            input_schema_contract={
+                "type": "object",
+                "properties": {"text": invalid_property_schema},
+            },
+        ),
+    )
+    await draft_api.create_draft_workspace(
+        workspace_id="authoring",
+        draft=_echo_draft(),
+    )
+    api = WorkflowApi(authoring.context)
+
+    inventory = await api.inspect_draft_authoring_contract(
+        workspace_id="authoring",
+        revision=1,
+        selected_step_id="echo",
+    )
+
+    assert inventory["entry_steps"][0]["input_targets"] == []
+    assert inventory["entry_steps"][0]["output_sources"]
+    assert inventory["step_input_targets"] == []
+    assert inventory["step_output_sources"]
+    assert any(
+        "echo" in warning and "input schema" in warning
+        for warning in inventory["warnings"]
+    )
+
+
+@pytest.mark.asyncio
 async def test_inspect_draft_authoring_contract_rejects_unknown_selected_step(
     tmp_path: Path,
 ) -> None:

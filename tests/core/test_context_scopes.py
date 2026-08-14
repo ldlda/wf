@@ -258,6 +258,49 @@ def test_nested_foreach_replaces_inner_scope_and_restores_outer_scope() -> None:
     assert "inner_item" not in after_inner
 
 
+def test_nested_foreach_preserves_context_backed_item_schema() -> None:
+    workflow = _workflow(
+        start="outer",
+        nodes=[
+            _foreach("outer", alias="outer_item"),
+            _foreach("inner", alias="inner_item", over="context.outer_item"),
+            _node("inner_body"),
+        ],
+        edges=[
+            {"from": "outer", "outcome": "loop", "to": "inner"},
+            {"from": "inner", "outcome": "loop", "to": "inner_body"},
+            {"from": "inner", "outcome": "done", "to": END},
+            {"from": "inner_body", "outcome": "ok", "to": END},
+            {"from": "outer", "outcome": "done", "to": END},
+        ],
+        state_schema={
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {"id": {"type": "string"}},
+                            "required": ["id"],
+                        },
+                    },
+                }
+            },
+        },
+    )
+
+    fields = _field_map(workflow, "inner_body")
+    expected = {
+        "type": "object",
+        "properties": {"id": {"type": "string"}},
+        "required": ["id"],
+    }
+    assert fields["loop_item"].contract.schema == expected
+    assert fields["inner_item"].contract.schema == expected
+
+
 def test_malformed_routes_warn_without_granting_a_scoped_alias() -> None:
     workflow = _workflow(
         start="each",

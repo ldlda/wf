@@ -54,15 +54,21 @@ def schema_path_options(
 
     normalized_uses = list(uses)
     options: list[AuthoringPathOptionPayload] = []
-    _append_schema_options(
-        schema,
-        location=(),
-        prefix=prefix,
-        origin=origin,
-        uses=normalized_uses,
-        options=options,
-        active_references=frozenset(),
-    )
+    try:
+        _append_schema_options(
+            schema,
+            location=(),
+            prefix=prefix,
+            origin=origin,
+            uses=normalized_uses,
+            options=options,
+            active_references=frozenset(),
+            depth=0,
+        )
+    except RecursionError as exc:
+        raise ValueError(
+            "schema nesting exceeds the authoring traversal limit"
+        ) from exc
     return options
 
 
@@ -100,7 +106,7 @@ def project_authoring_contract_inventory(
     state_sources = schema_path_options(
         state_schema,
         root="state",
-        uses=["step_input", "step_output_source", "workflow_output"],
+        uses=["step_input", "workflow_output"],
     )
     state_targets = schema_path_options(
         state_schema,
@@ -153,7 +159,7 @@ def project_authoring_step_contract(
         "output_sources": schema_path_options(
             output_schema,
             root="step_output",
-            uses=["step_output_source", "workflow_output"],
+            uses=["step_output_source"],
         ),
         "outcomes": list(outcomes),
     }
@@ -241,7 +247,10 @@ def _append_schema_options(
     uses: list[AuthoringPathUse],
     options: list[AuthoringPathOptionPayload],
     active_references: frozenset[str],
+    depth: int,
 ) -> None:
+    if depth >= _MAX_LOCAL_SCHEMA_REFERENCE_DEPTH:
+        return
     fragment = schema_fragment_at_location(schema, location)
     resolved = _resolve_local_reference(schema, fragment)
     properties = resolved.get("properties")
@@ -296,6 +305,7 @@ def _append_schema_options(
             uses=uses,
             options=options,
             active_references=next_active_references,
+            depth=depth + 1,
         )
 
 
