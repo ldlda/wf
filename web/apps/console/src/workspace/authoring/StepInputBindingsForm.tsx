@@ -470,6 +470,7 @@ const StepInputBindingsFormContent = ({
           const expressionModeId = `${row.id}-expression-mode`;
           const canConstruct = field?.kind === "array" || field?.kind === "object";
           const hasIssues = issues.length > 0;
+          const targetPickerValue = pickerValueForLocalPath(row.target, targetOptions, "step_input");
           const literalSources: FieldSources = field === null
             ? {}
             : { [formatTOMLPath(field.path)]: { mode: "literal", value: row.value } };
@@ -481,15 +482,24 @@ const StepInputBindingsFormContent = ({
                 describedBy={hasIssues ? errorId : undefined}
                 invalid={hasIssues}
                 label={`Target for row ${rowNumber}`}
-                onChange={(target, selection) => editRow(row.id, (current) => ({
-                  ...current,
-                  target: selection === "catalog"
-                    ? localPathFromPickerValue(target, targetOptions, "step_input")
-                    : target,
-                }))}
+                onChange={(target, selection) => editRow(row.id, (current) => {
+                  const currentPickerValue = pickerValueForLocalPath(current.target, targetOptions, "step_input");
+                  const preserveCustom = selection === "catalog" &&
+                    currentPickerValue.provenance === "custom" &&
+                    currentPickerValue.value === target;
+                  return {
+                    ...current,
+                    target: preserveCustom
+                      ? current.target
+                      : selection === "catalog"
+                        ? localPathFromPickerValue(target, targetOptions, "step_input")
+                        : target,
+                  };
+                })}
                 options={targetOptions}
+                selection={targetPickerValue.provenance}
                 uses="step_input"
-                value={pickerValueForLocalPath(row.target, targetOptions, "step_input")}
+                value={targetPickerValue.value}
               />
               <fieldset aria-label={`Source mode for input row ${rowNumber}`} className="schema-form__source">
                 <legend>Value source</legend>

@@ -16,6 +16,7 @@ export type AuthoringPathPickerProps = {
   readonly allowCustom?: boolean;
   readonly describedBy?: string | undefined;
   readonly invalid?: boolean;
+  readonly selection?: AuthoringPathSelection;
 };
 
 type OptionGroup = {
@@ -50,6 +51,7 @@ export const AuthoringPathPicker = ({
   allowCustom = false,
   describedBy,
   invalid = false,
+  selection = "catalog",
 }: AuthoringPathPickerProps) => {
   const id = safeId(useId());
   const searchId = `${id}-search`;
@@ -57,7 +59,9 @@ export const AuthoringPathPicker = ({
   const [search, setSearch] = useState("");
   const [customValue, setCustomValue] = useState(value);
   const [advancedOpen, setAdvancedOpen] = useState(
-    () => allowCustom && value.trim() !== "" && !options.some((option) => option.path === value),
+    () => allowCustom && value.trim() !== "" && (
+      selection === "custom" || !options.some((option) => option.path === value)
+    ),
   );
   const requestedUses = normalizedUses(uses);
   const normalizedSearch = search.trim().toLocaleLowerCase();
@@ -102,11 +106,12 @@ export const AuthoringPathPicker = ({
                   return (
                     <button
                       aria-describedby={description === "" ? undefined : reasonId}
-                      aria-pressed={option.path === value}
+                      aria-pressed={selection === "catalog" && option.path === value}
                       className="authoring-path-picker__option"
                       disabled={!compatible}
                       key={option.path}
                       onClick={() => {
+                        if (option.path !== value) setAdvancedOpen(false);
                         setCustomValue(option.path);
                         onChange(option.path, "catalog");
                       }}

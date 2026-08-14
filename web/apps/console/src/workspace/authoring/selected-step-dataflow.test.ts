@@ -366,9 +366,19 @@ describe("selected-step schema helpers", () => {
     expect(authoringOptionsForUse(inventoryOptions, "step_output_source")).toEqual([
       inventoryOptions[1],
     ]);
-    expect(pickerValueForLocalPath("text", inventoryOptions, "step_output")).toBe("step_output.text");
+    expect(pickerValueForLocalPath("text", inventoryOptions, "step_output")).toEqual({
+      provenance: "catalog",
+      value: "step_output.text",
+    });
+    expect(pickerValueForLocalPath("step_output.text", inventoryOptions, "step_output")).toEqual({
+      provenance: "custom",
+      value: "step_output.text",
+    });
     expect(localPathFromPickerValue("step_output.text", inventoryOptions, "step_output")).toBe("text");
-    expect(localPathFromPickerValue("custom.value", inventoryOptions, "step_output")).toBe("custom.value");
+    expect(pickerValueForLocalPath("custom.value", inventoryOptions, "step_output")).toEqual({
+      provenance: "custom",
+      value: "custom.value",
+    });
 
     const wholeOutput: AuthoringPathOption = {
       availability: "available",
@@ -379,7 +389,10 @@ describe("selected-step schema helpers", () => {
       schema: { type: "object" },
       uses: ["step_output_source"],
     };
-    expect(pickerValueForLocalPath(".", [wholeOutput], "step_output")).toBe("step_output");
+    expect(pickerValueForLocalPath(".", [wholeOutput], "step_output")).toEqual({
+      provenance: "catalog",
+      value: "step_output",
+    });
     expect(localPathFromPickerValue("step_output", [wholeOutput], "step_output")).toBe(".");
   });
 

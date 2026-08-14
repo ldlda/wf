@@ -411,6 +411,11 @@ export const authoringOptionsForUse = (
   use: AuthoringPathUse,
 ): ReadonlyArray<AuthoringPathOption> => options.filter((option) => option.uses.includes(use));
 
+export type PickerPathValue = {
+  readonly provenance: "catalog" | "custom";
+  readonly value: string;
+};
+
 /**
  * Keeps picker values canonical while binding editors continue submitting
  * local paths for step inputs and step outputs.
@@ -419,11 +424,15 @@ export const pickerValueForLocalPath = (
   localPath: string,
   options: ReadonlyArray<AuthoringPathOption>,
   root: "step_input" | "step_output",
-): string => {
+): PickerPathValue => {
+  if (options.some((option) => option.path === localPath)) {
+    return { provenance: "custom", value: localPath };
+  }
   const canonicalPath = localPath === "." ? root : `${root}.${localPath}`;
-  return options.find((option) => option.path === localPath)?.path ??
-    options.find((option) => option.path === canonicalPath)?.path ??
-    localPath;
+  const canonicalOption = options.find((option) => option.path === canonicalPath);
+  return canonicalOption === undefined
+    ? { provenance: "custom", value: localPath }
+    : { provenance: "catalog", value: canonicalOption.path };
 };
 
 export const localPathFromPickerValue = (

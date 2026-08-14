@@ -191,6 +191,7 @@ const OutputRowEditor = ({
   const issues = rowIssueMessages(row, rowDiagnostics, localIssues);
   const errorId = `${row.id}-errors`;
   const preview = inferredStateSchemaPreview(outputSchema, row.sourcePath, row.target);
+  const sourcePickerValue = pickerValueForLocalPath(row.sourcePath, sourceOptions, "step_output");
   const hasIssues = issues.length > 0;
   return (
     <fieldset aria-label={`Output row ${rowNumber}`} className="schema-form__group">
@@ -201,15 +202,24 @@ const OutputRowEditor = ({
           describedBy={hasIssues ? errorId : undefined}
           invalid={hasIssues}
           label={`Source path for output row ${rowNumber}`}
-          onChange={(source, selection) => onEdit(row.id, (current) => ({
-            ...current,
-            sourcePath: selection === "catalog"
-              ? localPathFromPickerValue(source, sourceOptions, "step_output")
-              : source,
-          }))}
+          onChange={(source, selection) => onEdit(row.id, (current) => {
+            const currentPickerValue = pickerValueForLocalPath(current.sourcePath, sourceOptions, "step_output");
+            const preserveCustom = selection === "catalog" &&
+              currentPickerValue.provenance === "custom" &&
+              currentPickerValue.value === source;
+            return {
+              ...current,
+              sourcePath: preserveCustom
+                ? current.sourcePath
+                : selection === "catalog"
+                  ? localPathFromPickerValue(source, sourceOptions, "step_output")
+                  : source,
+            };
+          })}
           options={sourceOptions}
+          selection={sourcePickerValue.provenance}
           uses="step_output_source"
-          value={pickerValueForLocalPath(row.sourcePath, sourceOptions, "step_output")}
+          value={sourcePickerValue.value}
         />
         <AuthoringPathPicker
           allowCustom

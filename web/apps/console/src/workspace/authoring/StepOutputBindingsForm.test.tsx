@@ -145,6 +145,28 @@ describe("StepOutputBindingsForm", () => {
     expect(submissions).toEqual([[{ source: "step_output.text", target: "state.existing" }]]);
   });
 
+  it("preserves a colliding local source when its matching catalog option is clicked", async () => {
+    const user = userEvent.setup();
+    const submissions: ReadonlyArray<OutputBinding>[] = [];
+    render(
+      <StepOutputBindingsForm
+        outputSchema={outputSchema}
+        stateSchema={stateSchema}
+        sourceOptions={[authoringOption("step_output.text", "Text output", "step_output", ["step_output_source"])]}
+        targetOptions={[authoringOption("state.existing", "Existing state", "workflow_state", ["state_target"])]}
+        initialBindings={[{ source: "step_output.text", target: "state.existing" }]}
+        onSubmit={(value) => { submissions.push(value); }}
+      />,
+    );
+
+    const matchingOption = screen.getByRole("button", { name: /Text output/ });
+    expect(matchingOption).toHaveAttribute("aria-pressed", "false");
+    await user.click(matchingOption);
+    await user.click(screen.getByRole("button", { name: "Save outputs" }));
+
+    expect(submissions).toEqual([[{ source: "step_output.text", target: "state.existing" }]]);
+  });
+
   it("offers capability output sources and existing state targets", () => {
     render(
       <StepOutputBindingsForm
