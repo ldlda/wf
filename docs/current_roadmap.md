@@ -106,9 +106,11 @@ Implementation order:
    - Slice 6: workflow contract graph. Add selectable Input, State, Output, and
      Outcomes projections with focused forms for workflow contracts, explicit
      outcomes, entry point, and final workflow output bindings. Add one
-     backend-owned, node-scoped authoring contract inventory so binding and
-     playground pickers can discover input, state, selected-step, and applicable
+     backend-owned, node-scoped authoring contract inventory so workflow-scoped
+     binding pickers can discover input, state, selected-step, and applicable
      runtime-context fields without high-level hardcoding or raw JSON hunting.
+     The standalone capability playground remains literal-only until it has a
+     real workflow scope.
      Design:
      [`workflow contract graph`](superpowers/specs/2026-08-14-workflow-console-contract-graph-design.md).
    - Slice 7: explicit End authoring and a typed Add step palette. End nodes are

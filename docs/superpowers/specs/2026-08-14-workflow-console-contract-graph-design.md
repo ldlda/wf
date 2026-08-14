@@ -106,8 +106,8 @@ inspect_draft_authoring_contract(
 The inventory contains four categories:
 
 - **workflow sources**: readable `input.*` and `state.*` paths;
-- **runtime sources**: readable `context.*` paths valid or conditionally valid
-  for the selected step;
+- **runtime sources**: declared `context.*` paths available or conditionally
+  available for the selected step;
 - **selected-step contract**: capability-local input targets, local output
   sources, and declared step outcomes; and
 - **workflow targets**: writable state fields, public output fields, executable
@@ -153,11 +153,16 @@ execution-frame semantics:
   entries with a warning rather than a false guarantee;
 - ambiguous or malformed control flow never produces a guaranteed scoped key;
   and
-- nested foreach scopes expose all proven enclosing aliases without frontend
-  hardcoding.
+- nested foreach scopes expose only the keys actually carried by the current
+  execution frame. Today that means the innermost iteration alias rather than
+  automatic inheritance of every enclosing alias; a future runtime inheritance
+  change updates the inventory at the same backend seam.
 
-This analysis is intentionally conservative. The runtime resolver and complete
-workflow validation remain authoritative.
+This analysis is intentionally conservative and advisory. Existing validation
+accepts syntactically valid custom `context.*` paths because the runtime may
+provide extensions that static analysis does not know. Runtime resolution
+therefore remains authoritative; this slice does not claim strict static
+context-scope enforcement.
 
 ## Source And Target Picker
 
@@ -168,8 +173,12 @@ or field. It is used by:
 - composite path expressions;
 - condition and interrupt forms when those typed editors arrive;
 - selected-step output bindings;
-- workflow final output bindings; and
-- the capability playground where the same contract vocabulary applies.
+- workflow final output bindings.
+
+The standalone capability playground remains literal-only in this slice. It
+has no draft workspace, workflow input/state schema, or execution frame from
+which to derive truthful path choices. A future workflow-scoped playground may
+reuse the picker once that context exists.
 
 The default experience is browsing and search, not typing paths:
 
@@ -197,8 +206,11 @@ removal must show affected bindings before submission and rely on server
 validation for the final decision.
 
 The Output inspector edits the public output schema and ordered final output
-bindings. Its source picker consumes workflow and applicable context sources;
-its targets come from declared output fields. It lowers through
+bindings. Its source picker consumes workflow input and state sources; its
+targets come from declared output fields. Final workflow projection currently
+runs without execution-frame context, so `context.*` is not offered here and a
+persisted context-backed output is shown as an unsupported repair value. It
+lowers through
 `set_draft_contract` and `set_workflow_output_bindings` without lossy output
 maps.
 
@@ -232,9 +244,10 @@ The browser performs only local, deterministic checks:
 - obvious schema incompatibility reported by the inventory; and
 - incomplete binding rows.
 
-The backend validates schema documents, graph references, path availability,
-binding overlap, context scope, output completeness, route/outcome consistency,
-and the full revised draft.
+The backend validates schema documents, graph references, ordinary path
+availability, binding overlap, output completeness, route/outcome consistency,
+and the full revised draft. Runtime-context inventory remains advisory for the
+reason described above.
 
 An invalid but persisted draft still replaces the displayed canonical draft and
 shows diagnostics. A transport failure preserves confirmed state and local
@@ -284,8 +297,9 @@ The implementation must include:
 
 - An author can discover normal input, state, step-output, and applicable
   context fields without reading JSON or memorizing path syntax.
-- The same source/target vocabulary appears consistently across authoring and
-  playground surfaces.
+- The same source/target vocabulary appears consistently across
+  workflow-scoped authoring surfaces. The standalone capability playground
+  remains literal-only until it receives workflow scope.
 - Foreach aliases appear only where the backend can justify their availability.
 - Input, State, Output, and Outcomes read as workflow contracts in the graph and
   remain absent from the persisted executable step list.

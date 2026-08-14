@@ -39,6 +39,12 @@
 
 ## Console workflow-client gaps
 
+- [ ] Workflow final-output bindings currently accept `context.*` paths in the
+  shared path model and validation, but finalization projects output without an
+  execution-frame context. Define stable final-output context semantics or
+  reject those bindings during validation. Until then, high-level clients must
+  not suggest runtime context as a final-output source and must show persisted
+  occurrences as unsupported repair values.
 - [ ] `first_item` and `last_item` currently reuse the broad `SequenceInput`
   contract even though they reject empty arrays at runtime. Their capability
   schemas therefore truthfully allow `{ "items": [] }`, and the generated form
