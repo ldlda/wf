@@ -63,19 +63,13 @@ const translatedAst = (schema: unknown): AST.AST => {
   return translated.right.ast;
 };
 
-const payloadSchemaFor = <Name extends RuntimeOperationName>(
-  name: Name,
-): Schema.Schema<WorkflowOperationParams<Name>, unknown, never> => {
-  // The AST and payload type are generated from the same checked operation.
-  const schema = Schema.make<WorkflowOperationParams<Name>, unknown, never>(
-    translatedAst(workflowRuntimeContract.operations[name].payload),
-  );
-  return Schema.compose(BoundedRuntimeValueSchema, schema).pipe(
+const boundedRuntimeInputFor = (operationSchema: unknown) =>
+  BoundedRuntimeValueSchema.pipe(
     Schema.filter(
       (value) =>
         hasBoundedInputExpressionsAtSchema(
           value,
-          workflowRuntimeContract.operations[name].payload,
+          operationSchema,
           workflowRuntimeContract.components,
         ),
       {
@@ -83,6 +77,18 @@ const payloadSchemaFor = <Name extends RuntimeOperationName>(
           "runtime value contains an input expression over the 1024-node budget",
       },
     ),
+  );
+
+const payloadSchemaFor = <Name extends RuntimeOperationName>(
+  name: Name,
+): Schema.Schema<WorkflowOperationParams<Name>, unknown, never> => {
+  // The AST and payload type are generated from the same checked operation.
+  const schema = Schema.make<WorkflowOperationParams<Name>, unknown, never>(
+    translatedAst(workflowRuntimeContract.operations[name].payload),
+  );
+  return Schema.compose(
+    boundedRuntimeInputFor(workflowRuntimeContract.operations[name].payload),
+    schema,
   );
 };
 
@@ -93,19 +99,9 @@ const successSchemaFor = <Name extends RuntimeOperationName>(
   const schema = Schema.make<WorkflowOperationResult<Name>, unknown, never>(
     translatedAst(workflowRuntimeContract.operations[name].success),
   );
-  return Schema.compose(BoundedRuntimeValueSchema, schema).pipe(
-    Schema.filter(
-      (value) =>
-        hasBoundedInputExpressionsAtSchema(
-          value,
-          workflowRuntimeContract.operations[name].success,
-          workflowRuntimeContract.components,
-        ),
-      {
-        message: () =>
-          "runtime value contains an input expression over the 1024-node budget",
-      },
-    ),
+  return Schema.compose(
+    boundedRuntimeInputFor(workflowRuntimeContract.operations[name].success),
+    schema,
   );
 };
 

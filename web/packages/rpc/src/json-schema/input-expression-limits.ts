@@ -145,6 +145,11 @@ export const hasBoundedInputExpressionNodeBudget = (
 
 type JsonSchemaRecord = Readonly<Record<string, unknown>>;
 
+const EXPRESSION_BINDING_COMPONENTS = new Set([
+  "StepInputBinding",
+  "InputExpressionBinding",
+]);
+
 const schemaRecord = (value: unknown): JsonSchemaRecord | null =>
   isRecord(value) ? value : null;
 
@@ -167,6 +172,13 @@ export const hasBoundedInputExpressionsAtSchema = (
   components: Readonly<Record<string, unknown>>,
   maxNodes: number = MAX_INPUT_EXPRESSION_NODES,
 ): boolean => {
+  for (const componentName of EXPRESSION_BINDING_COMPONENTS) {
+    if (!Object.hasOwn(components, componentName)) {
+      throw new Error(
+        `input expression component ${componentName} is missing from the contract`,
+      );
+    }
+  }
   const activeValues = new WeakSet<object>();
   const activeComponents = new Set<string>();
 
@@ -176,7 +188,7 @@ export const hasBoundedInputExpressionsAtSchema = (
 
     const componentName = localComponentName(schemaValue.$ref);
     if (componentName !== null) {
-      if (componentName === "StepInputBinding" || componentName === "InputExpressionBinding") {
+      if (EXPRESSION_BINDING_COMPONENTS.has(componentName)) {
         return isRecord(value) && "expression" in value
           ? hasBoundedInputExpressionNodeBudget(value.expression, maxNodes)
           : true;
@@ -191,6 +203,8 @@ export const hasBoundedInputExpressionsAtSchema = (
 
     for (const key of ["allOf", "anyOf", "oneOf"] as const) {
       const branches = schemaValue[key];
+      // Non-expression positions return true, so checking every branch remains
+      // safe while ensuring no generated union branch can bypass the budget.
       if (Array.isArray(branches) && !branches.every((branch) => visit(value, branch))) {
         return false;
       }

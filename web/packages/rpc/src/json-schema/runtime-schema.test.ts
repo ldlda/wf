@@ -110,6 +110,25 @@ describe("runtimeSchemasFor", () => {
     ).toBe(false);
   });
 
+  it("accepts an input expression at the canonical 1024-node boundary", () => {
+    const schemas = runtimeSchemasFor(
+      "workflow.draft_workspaces.set_step_input_bindings",
+    );
+    const expression = {
+      kind: "literal",
+      value: Array.from({ length: 1022 }, () => ({})),
+    };
+
+    expect(
+      accepts(schemas.payload, {
+        workspace_id: "console.demo",
+        revision: 3,
+        step_id: "render",
+        bindings: [{ target: "request", expression }],
+      }),
+    ).toBe(true);
+  });
+
   it("accepts a large ordinary JSON value shaped like a literal in a simple binding", () => {
     const schemas = runtimeSchemasFor(
       "workflow.draft_workspaces.set_step_input_bindings",

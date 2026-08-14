@@ -48,6 +48,12 @@ _STRUCTURAL_KEYWORDS = frozenset(
         "prefixItems",
         "minItems",
         "maxItems",
+        "minLength",
+        "maxLength",
+        "pattern",
+        "format",
+        "uniqueItems",
+        "multipleOf",
         "minimum",
         "maximum",
         "exclusiveMinimum",
@@ -612,7 +618,7 @@ def _validate_schema_references(
             raise ValueError(f"cyclic local schema reference {reference!r} at {label}")
         context.active_refs.add(reference)
         try:
-            resolved = _resolved_schema(schema, label=label, root_schema=root_schema)
+            resolved = _resolve_local_reference(root_schema, schema, label=label)
             _validate_schema_references(
                 resolved,
                 root_schema=root_schema,
@@ -652,6 +658,26 @@ def _validate_schema_references(
                     label=f"{label}.prefixItems[{index}]",
                     context=context,
                 )
+    for key in ("allOf", "anyOf", "oneOf"):
+        branches = schema.get(key)
+        if isinstance(branches, list):
+            for index, child in enumerate(branches):
+                if isinstance(child, Mapping):
+                    _validate_schema_references(
+                        child,
+                        root_schema=root_schema,
+                        label=f"{label}.{key}[{index}]",
+                        context=context,
+                    )
+    for key in ("if", "then", "else"):
+        child = schema.get(key)
+        if isinstance(child, Mapping):
+            _validate_schema_references(
+                child,
+                root_schema=root_schema,
+                label=f"{label}.{key}",
+                context=context,
+            )
     for key in ("$defs", "definitions"):
         definitions = schema.get(key)
         if isinstance(definitions, Mapping):

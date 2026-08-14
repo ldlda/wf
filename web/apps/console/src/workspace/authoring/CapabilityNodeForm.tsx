@@ -77,14 +77,9 @@ const mergeInputBindings = (
         bindingKind(candidate) === kind &&
         bindingTargetKey(candidate) === target,
     );
-    const fallbackIndex = serialized.findIndex(
-      (candidate, candidateIndex) =>
-        !used.has(candidateIndex) && bindingKind(candidate) === kind,
-    );
-    const selectedIndex = index === -1 ? fallbackIndex : index;
-    if (selectedIndex !== -1) {
-      used.add(selectedIndex);
-      merged.push(serialized[selectedIndex]!);
+    if (index !== -1) {
+      used.add(index);
+      merged.push(serialized[index]!);
     }
   }
 

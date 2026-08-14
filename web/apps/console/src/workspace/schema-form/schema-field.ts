@@ -19,6 +19,8 @@ export type SchemaField = {
   readonly fallbackReason: string | null;
 };
 
+export const UNCONSTRAINED_SCHEMA_REASON = "The schema is unconstrained; edit JSON directly.";
+
 export type FieldSource =
   | { readonly mode: "literal"; readonly value: unknown }
   | { readonly mode: "bind"; readonly sourcePath: string };
@@ -222,7 +224,7 @@ const normalizeField = (
 
   const type = resolvedSchema.type;
   if (type === undefined) {
-    return fallback(resolvedSchema, path, key, required, title, "The schema is unconstrained; edit JSON directly.");
+    return fallback(resolvedSchema, path, key, required, title, UNCONSTRAINED_SCHEMA_REASON);
   }
 
   if (type === "object") {

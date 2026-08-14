@@ -1165,6 +1165,18 @@ describe("authored RPC and manifest schema parity", () => {
         bindings: [{ target: "request", expression }],
       }),
     ).toBe(false);
+    expect(
+      accepts(authoredRpcSchemas["workflow.draft_workspaces.set_step_input_bindings"].payload, {
+        ...basePayload,
+        bindings: [{
+          target: "request",
+          expression: {
+            kind: "literal",
+            value: Array.from({ length: 1022 }, () => ({})),
+          },
+        }],
+      }),
+    ).toBe(true);
   });
 
   it("catalogs every authored RPC exactly once", () => {

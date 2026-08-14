@@ -11,7 +11,11 @@ import {
   hasBoundedInputExpressionLiteralValue,
   hasBoundedInputExpressionNodeBudget,
 } from "@lda/workflow-rpc/input-expression-limits";
-import { normalizeSchema, type SchemaField } from "../schema-form/schema-field.js";
+import {
+  normalizeSchema,
+  UNCONSTRAINED_SCHEMA_REASON,
+  type SchemaField,
+} from "../schema-form/schema-field.js";
 import { formatTOMLPath, parseGraphSourcePath, parseTOMLPath } from "../schema-form/schema-paths.js";
 
 export type ExpressionEditorState =
@@ -137,7 +141,7 @@ const unsupported = (raw: InputExpression, reason: string): ExpressionProjection
 
 const schemaReason = (field: SchemaField | null): string | null => {
   if (field?.fallbackReason === null || field?.fallbackReason === undefined) return null;
-  if (field.fallbackReason === "The schema is unconstrained; edit JSON directly.") return null;
+  if (field.fallbackReason === UNCONSTRAINED_SCHEMA_REASON) return null;
   return field.fallbackReason;
 };
 
@@ -236,7 +240,7 @@ export const serializeExpressionEditorState = (
 const issue = (path: ReadonlyArray<string | number>, message: string): ExpressionValidationIssue => ({ path, message });
 
 const unconstrained = (field: SchemaField | null): boolean =>
-  field === null || field.fallbackReason === "The schema is unconstrained; edit JSON directly.";
+  field === null || field.fallbackReason === UNCONSTRAINED_SCHEMA_REASON;
 
 const literalIssues = (
   value: unknown,

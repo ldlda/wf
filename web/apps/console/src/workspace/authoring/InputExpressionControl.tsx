@@ -1,6 +1,10 @@
 import { useId, useState } from "react";
 import { SchemaFieldControl } from "../schema-form/SchemaFieldControl.js";
-import { rebaseSchemaField, type SchemaField } from "../schema-form/schema-field.js";
+import {
+  rebaseSchemaField,
+  UNCONSTRAINED_SCHEMA_REASON,
+  type SchemaField,
+} from "../schema-form/schema-field.js";
 import type { FieldSources } from "../schema-form/schema-values.js";
 import {
   defaultExpressionEditorState,
@@ -17,7 +21,10 @@ export type InputExpressionControlProps = {
 };
 
 const isConstructField = (field: SchemaField | null): boolean =>
-  field?.kind === "array" || field?.kind === "object";
+  field === null ||
+  field.kind === "array" ||
+  field.kind === "object" ||
+  field.fallbackReason === UNCONSTRAINED_SCHEMA_REASON;
 
 const valueSourceFor = (state: ExpressionEditorState): "path" | "literal" | "construct" =>
   state.kind === "array" || state.kind === "object" ? "construct" : state.kind;
@@ -44,7 +51,13 @@ const stateForSource = (
         };
       })();
   }
-  return isConstructField(field) ? defaultExpressionEditorState(field) : current;
+  if (!isConstructField(field)) return current;
+  if (field?.kind === "array" || field?.kind === "object") {
+    return defaultExpressionEditorState(field);
+  }
+  return current.kind === "array" || current.kind === "object"
+    ? current
+    : { kind: "array", items: [] };
 };
 
 const fieldForName = (field: SchemaField | null, name: string): SchemaField | null => {
@@ -53,7 +66,7 @@ const fieldForName = (field: SchemaField | null, name: string): SchemaField | nu
     (field.additionalPropertiesKind === "schema" ? field.additionalProperty : null);
 };
 
-const missingRequiredProperties = (
+const missingDeclaredProperties = (
   field: SchemaField | null,
   fields: ReadonlyArray<{ readonly name: string }>,
 ): ReadonlyArray<SchemaField> => {
@@ -62,7 +75,7 @@ const missingRequiredProperties = (
   for (const entry of fields) presentNames.add(entry.name);
   const missing: SchemaField[] = [];
   for (const child of field.children) {
-    if (child.required && !presentNames.has(child.key)) missing.push(child);
+    if (!presentNames.has(child.key)) missing.push(child);
   }
   return missing;
 };
@@ -73,7 +86,7 @@ const labelForName = (label: string, name: string): string =>
 const pathNeedsDeferredValidation = (field: SchemaField | null, path: string): boolean =>
   path.startsWith("context.") ||
   field === null ||
-  field.fallbackReason === "The schema is unconstrained; edit JSON directly.";
+  field.fallbackReason === UNCONSTRAINED_SCHEMA_REASON;
 
 const safeIdSuffix = (value: string): string =>
   value.replaceAll(/[^a-zA-Z0-9_-]/g, "-");
@@ -362,9 +375,10 @@ export const InputExpressionControl = ({
     <fieldset className="input-expression-control__construct" aria-label={label}>
       <legend>{label}</legend>
       {field?.description && <p>{field.description}</p>}
-      {state.fields.map((entry) => {
+      {state.fields.map((entry, fieldIndex) => {
         const childField = fieldForName(field, entry.name);
-        const declaredField = field?.kind === "object" && field.children.some((child) => child.key === entry.name);
+        const requiredField = field?.kind === "object" &&
+          field.children.some((child) => child.key === entry.name && child.required);
         const childLabel = childField === null && field?.additionalPropertiesKind !== "schema"
           ? labelForName(label, entry.name)
           : `${label}.${entry.name}`;
@@ -372,28 +386,28 @@ export const InputExpressionControl = ({
           <fieldset
             aria-label={childLabel}
             className="input-expression-control__field"
-            key={entry.name}
+            key={`${fieldIndex}-${entry.name}`}
           >
             <InputExpressionControl
               field={childField}
               label={childLabel}
               onChange={(next) => onChange({
                 kind: "object",
-                fields: state.fields.map((candidate) => candidate.name === entry.name
+                fields: state.fields.map((candidate, candidateIndex) => candidateIndex === fieldIndex
                   ? { ...candidate, value: next }
                   : candidate),
               })}
               sourceSuggestions={sourceSuggestions}
               state={entry.value}
             />
-            {!declaredField && (
+            {!requiredField && (
               <div className="input-expression-control__item-actions">
                 <button
                   aria-label={`Remove ${childLabel}`}
                   className="schema-form__secondary-action"
                   onClick={() => onChange({
                     kind: "object",
-                    fields: state.fields.filter((candidate) => candidate.name !== entry.name),
+                    fields: state.fields.filter((_, candidateIndex) => candidateIndex !== fieldIndex),
                   })}
                   type="button"
                 >
@@ -404,9 +418,9 @@ export const InputExpressionControl = ({
           </fieldset>
         );
       })}
-      {missingRequiredProperties(field, state.fields).map((child) => (
+      {missingDeclaredProperties(field, state.fields).map((child) => (
           <button
-            aria-label={`Add required property ${child.key} to ${label}`}
+            aria-label={`Add ${child.required ? "required" : "optional"} property ${child.key} to ${label}`}
             className="schema-form__secondary-action"
             key={`required-${child.key}`}
             onClick={() => onChange({
@@ -418,7 +432,7 @@ export const InputExpressionControl = ({
             })}
             type="button"
           >
-            Add required property {child.key}
+            Add {child.required ? "required" : "optional"} property {child.key}
           </button>
         ))}
       {(field?.additionalPropertiesKind === "allowed" || field?.additionalPropertiesKind === "schema") && (

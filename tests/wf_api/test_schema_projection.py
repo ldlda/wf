@@ -8,9 +8,28 @@ from wf_api.schema_projection import (
     project_schema_path_to_schema_path,
     schema_fragment_at_location,
     schema_fragment_at_path,
+    schema_location_is_explicit,
     schema_path_exists,
     validate_json_value_at_schema_path,
 )
+
+
+def test_schema_location_is_explicit_is_total_for_invalid_array_positions() -> None:
+    assert not schema_location_is_explicit(
+        {"type": "array"},
+        (0,),
+        label="source schema",
+    )
+    assert not schema_location_is_explicit(
+        {"type": "object", "properties": {}},
+        (0,),
+        label="source schema",
+    )
+    assert not schema_location_is_explicit(
+        {"type": "array", "prefixItems": [{"type": "string"}]},
+        (-1,),
+        label="source schema",
+    )
 
 
 def test_project_output_property_copies_schema_and_defs() -> None:

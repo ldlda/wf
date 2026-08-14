@@ -6,9 +6,95 @@ import { normalizeSchema } from "../schema-form/schema-field.js";
 import type { ExpressionEditorState } from "./input-expression-editor.js";
 import { InputExpressionControl } from "./InputExpressionControl.js";
 
-afterEach(() => cleanup());
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+});
 
 describe("InputExpressionControl", () => {
+  it("offers construct mode for an unconstrained target", async () => {
+    const user = userEvent.setup();
+    const Harness = () => {
+      const [state, setState] = useState<ExpressionEditorState>({
+        kind: "literal",
+        value: null,
+        touched: false,
+      });
+      return (
+        <InputExpressionControl
+          field={null}
+          label="payload"
+          onChange={setState}
+          state={state}
+        />
+      );
+    };
+
+    render(<Harness />);
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "Value source for payload" }),
+      "construct",
+    );
+
+    expect(screen.getByRole("group", { name: "payload" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Add item to payload" })).toBeInTheDocument();
+  });
+
+  it("removes and restores an optional declared property", async () => {
+    const user = userEvent.setup();
+    const Harness = () => {
+      const [state, setState] = useState<ExpressionEditorState>({
+        kind: "object",
+        fields: [{ name: "note", value: { kind: "literal", value: "", touched: false } }],
+      });
+      return (
+        <InputExpressionControl
+          field={normalizeSchema({
+            type: "object",
+            properties: { note: { type: "string" } },
+          })}
+          label="payload"
+          onChange={setState}
+          state={state}
+        />
+      );
+    };
+
+    render(<Harness />);
+    await user.click(screen.getByRole("button", { name: "Remove payload.note" }));
+    expect(screen.queryByRole("group", { name: "payload.note" })).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Add optional property note to payload" }));
+    expect(screen.getByRole("group", { name: "payload.note" })).toBeInTheDocument();
+  });
+
+  it("repairs one duplicate object field without changing the other", async () => {
+    const user = userEvent.setup();
+    const Harness = () => {
+      const [state, setState] = useState<ExpressionEditorState>({
+        kind: "object",
+        fields: [
+          { name: "duplicate", value: { kind: "literal", value: "first", touched: false } },
+          { name: "duplicate", value: { kind: "literal", value: "second", touched: false } },
+        ],
+      });
+      return (
+        <InputExpressionControl
+          field={normalizeSchema({ type: "object", additionalProperties: true })}
+          label="payload"
+          onChange={setState}
+          state={state}
+        />
+      );
+    };
+
+    render(<Harness />);
+    const removeButtons = screen.getAllByRole("button", { name: "Remove payload field duplicate" });
+    await user.click(removeButtons[0]!);
+
+    expect(screen.getAllByRole("group", { name: "payload field duplicate" })).toHaveLength(1);
+  });
+
   it("adds, removes, and reorders array expressions with accessible controls", async () => {
     const user = userEvent.setup();
     let state: ExpressionEditorState = { kind: "array", items: [] };
@@ -314,7 +400,6 @@ describe("InputExpressionControl", () => {
     await user.click(screen.getByRole("button", { name: "External replace alias" }));
 
     expect(consoleError.mock.calls.flat().join(" ")).not.toContain("same key");
-    consoleError.mockRestore();
   });
 
   it("transfers the edited occurrence identity when aliased children diverge", async () => {

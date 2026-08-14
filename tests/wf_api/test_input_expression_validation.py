@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import pytest
 
-from wf_api.input_expressions import validate_and_project_input_expression
+from wf_api.input_expressions import (
+    validate_and_project_input_expression,
+    validate_schema_references,
+)
 from wf_core.models.input_bindings import InputExpressionBinding
 
 
@@ -194,6 +197,33 @@ def test_cyclic_local_schema_normalization_fails_closed() -> None:
         )
 
 
+def test_reference_validation_allows_composition_inside_resolved_definition() -> None:
+    validate_schema_references(
+        {
+            "$ref": "#/$defs/OptionalText",
+            "$defs": {
+                "OptionalText": {
+                    "anyOf": [{"type": "string"}, {"type": "null"}],
+                }
+            },
+        },
+        label="source schema",
+    )
+
+
+def test_reference_validation_checks_references_inside_composition() -> None:
+    with pytest.raises(ValueError, match="unsupported reference"):
+        validate_schema_references(
+            {
+                "anyOf": [
+                    {"type": "string"},
+                    {"$ref": "https://example.com/external.json"},
+                ]
+            },
+            label="source schema",
+        )
+
+
 def test_literal_expression_validates_against_exact_array_position() -> None:
     projection = validate_and_project_input_expression(
         _expression(
@@ -229,6 +259,47 @@ def test_literal_expression_rejects_value_for_exact_array_position() -> None:
             state_schema={"type": "object", "properties": {}},
             target_location=("items",),
             label="bindings[0].expression",
+        )
+
+
+def test_literal_expression_honors_common_validation_keywords() -> None:
+    target_schema = {
+        "type": "object",
+        "properties": {"value": {"type": "string", "minLength": 2}},
+    }
+    expression = InputExpressionBinding.model_validate(
+        {"target": "value", "expression": {"kind": "literal", "value": "ok"}}
+    ).expression
+
+    validate_and_project_input_expression(
+        expression,
+        target_schema=target_schema,
+        input_schema={"type": "object", "properties": {}},
+        state_schema={"type": "object", "properties": {}},
+        target_location=("value",),
+    )
+
+    invalid = InputExpressionBinding.model_validate(
+        {"target": "value", "expression": {"kind": "literal", "value": "x"}}
+    ).expression
+    with pytest.raises(ValueError, match="literal does not satisfy"):
+        validate_and_project_input_expression(
+            invalid,
+            target_schema=target_schema,
+            input_schema={"type": "object", "properties": {}},
+            state_schema={"type": "object", "properties": {}},
+            target_location=("value",),
+        )
+
+
+def test_boolean_child_schema_fails_as_unsupported_instead_of_crashing() -> None:
+    with pytest.raises(ValueError, match="unsupported schema comparison"):
+        _path_expression_projection(
+            {"type": "object", "properties": {"value": True}},
+            {
+                "type": "object",
+                "additionalProperties": {"type": "string"},
+            },
         )
 
 

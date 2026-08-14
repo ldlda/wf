@@ -160,12 +160,16 @@ def schema_location_is_explicit(
                 and part < len(current["prefixItems"])
             ):
                 return False
-            child = _array_item_schema(
-                current,
-                part,
-                label=label,
-                location=(*traversed, part),
-            )
+            try:
+                child = _array_item_schema(
+                    current,
+                    part,
+                    label=label,
+                    location=(*traversed, part),
+                )
+            except ValueError:
+                # Predicates remain total for invalid or unconstrained paths.
+                return False
         else:
             properties = current.get("properties")
             if isinstance(properties, Mapping) and part in properties:
@@ -571,6 +575,11 @@ def _array_item_schema(
     label: str,
     location: Sequence[SchemaLocationPart],
 ) -> object:
+    if index < 0:
+        raise ValueError(
+            f"{label} array position {index} is negative at "
+            f"{_format_schema_location(location[:-1]) or label!r}"
+        )
     schema_type = schema.get("type")
     if schema_type is not None and schema_type != "array":
         raise ValueError(
