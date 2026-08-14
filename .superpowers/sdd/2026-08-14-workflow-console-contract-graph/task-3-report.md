@@ -78,3 +78,45 @@ No Serena configuration was modified.
   target set passes when that isolated test is excluded.
 - FastAPI JSON-RPC emits deprecation warnings from the installed
   `fastapi-jsonrpc` dependency; no new warning class was introduced.
+
+## Round 1 Review Fixes
+
+Addressed all three Important findings from `task-3-review.md`.
+
+### Test-First Evidence
+
+Each regression was verified RED before its production fix:
+
+- Invalid persisted workflow schema: `test_inspect_draft_authoring_contract_tolerates_invalid_workflow_schema` initially raised `ValueError` from `schema_path_options` during inventory projection.
+- Saved wrapper capability: `test_inspect_draft_authoring_contract_resolves_saved_wrapper_capability` initially returned no entry contract because the service only called `get_qualified_spec`.
+- Explicit empty capability schemas: `test_inspect_draft_authoring_contract_preserves_empty_capability_schemas` was forced back to the pre-fix truthiness resolver and then advertised Pydantic model fields instead of empty projections.
+
+### Fixes
+
+- Added per-schema validation at the inventory service boundary. Invalid persisted input, state, or output schemas now produce an empty affected projection and a warning while preserving the other inventory sections.
+- Added `WorkflowCapabilityApi.resolve_capability_contract` as the shared resolver for live `NodeSpec` and saved wrapper contracts. Draft inventory inspection now resolves wrapper artifacts using the same capability surface and preserves wrapper schemas/outcomes.
+- Capability schema fallback now uses `is not None`, preserving explicit `{}` input and output contracts.
+
+### Verification
+
+```text
+uv run pytest tests/wf_api/test_drafts_service.py tests/wf_api/test_capability_api.py tests/wf_api/test_authoring_contracts.py -q -k "inspect_draft_authoring_contract or authoring_contract or saved_wrapper"
+17 passed
+
+uv run pytest tests/wf_api/test_drafts_service.py tests/wf_transport_rpc_http/test_app.py tests/wf_transport_rpc_http/test_client.py tests/wf_transport_rpc_http/test_openrpc_contract.py -q -k "not reads_admin_state"
+394 passed, 184 warnings
+
+uv run ruff check
+All checks passed
+
+uv run ruff format --check <touched files>
+3 files already formatted
+
+uv run basedpyright --level error src/wf_api/capabilities.py src/wf_api/service.py
+0 errors, 0 warnings, 0 notes
+```
+
+Repository-wide basedpyright still reports 394 pre-existing diagnostics in
+unrelated examples, CLI, MCP, and test files. The known isolated
+`test_rpc_workflow_client_reads_admin_state` failure remains excluded from the
+target command; no admin-event or Serena configuration files were changed.

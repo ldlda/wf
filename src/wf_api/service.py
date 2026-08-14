@@ -14,6 +14,7 @@ from .authoring_contracts import (
     context_path_options_for_node,
     project_authoring_contract_inventory,
     project_authoring_step_contract,
+    schema_path_options,
 )
 from .capabilities import WorkflowCapabilityApi
 from .deployments import WorkflowDeploymentApi
@@ -53,9 +54,26 @@ from .operation_context import WorkflowOperationContext
 from .runs import TraceRangeLike, WorkflowRunApi
 
 
-def _authoring_schema(value: object) -> dict[str, Any]:
-    """Return a safe schema object from a possibly invalid persisted draft."""
-    return dict(value) if isinstance(value, Mapping) else {}
+def _authoring_schema(
+    value: object,
+    *,
+    field_name: str,
+    root: str,
+    warnings: list[str],
+) -> dict[str, Any]:
+    """Return one valid persisted schema, isolating invalid projections."""
+    if not isinstance(value, Mapping):
+        warnings.append(
+            f"{field_name} authoring choices unavailable: expected a schema object"
+        )
+        return {}
+    schema = dict(value)
+    try:
+        schema_path_options(schema, root=root, uses=[])
+    except ValueError as exc:
+        warnings.append(f"{field_name} authoring choices unavailable: {exc}")
+        return {}
+    return schema
 
 
 def _authoring_outcomes(value: object) -> list[str]:
@@ -393,12 +411,8 @@ class WorkflowApi:
                     )
                 continue
             try:
-                spec = self.context.specs.get_qualified_spec(capability_name)
-                input_schema = (
-                    spec.input_schema_contract or spec.input_model.model_json_schema()
-                )
-                output_schema = (
-                    spec.output_schema_contract or spec.output_model.model_json_schema()
+                resolved_contract = self.capabilities.resolve_capability_contract(
+                    capability_name
                 )
             except (KeyError, TypeError, ValueError) as exc:
                 if raw_step_id == selected_step_id:
@@ -409,18 +423,18 @@ class WorkflowApi:
 
             description = raw_step.get("desc")
             if not isinstance(description, str):
-                description = spec.description
-            contract = project_authoring_step_contract(
+                description = resolved_contract.description
+            projected_contract = project_authoring_step_contract(
                 step_id=raw_step_id,
                 label=_step_label(raw_step_id),
                 description=description,
-                input_schema=input_schema,
-                output_schema=output_schema,
-                outcomes=spec.outcomes,
+                input_schema=resolved_contract.input_schema,
+                output_schema=resolved_contract.output_schema,
+                outcomes=resolved_contract.outcomes,
             )
-            entry_steps.append(contract)
+            entry_steps.append(projected_contract)
             if raw_step_id == selected_step_id:
-                selected_contract = contract
+                selected_contract = projected_contract
 
         context_entries = []
         if selected_step_id is not None:
@@ -449,9 +463,24 @@ class WorkflowApi:
             workspace_id=workspace_id,
             revision=checked.revision,
             selected_step_id=selected_step_id,
-            input_schema=_authoring_schema(draft.get("input_schema")),
-            state_schema=_authoring_schema(draft.get("state_schema")),
-            output_schema=_authoring_schema(draft.get("output_schema")),
+            input_schema=_authoring_schema(
+                draft.get("input_schema"),
+                field_name="input_schema",
+                root="input",
+                warnings=warnings,
+            ),
+            state_schema=_authoring_schema(
+                draft.get("state_schema"),
+                field_name="state_schema",
+                root="state",
+                warnings=warnings,
+            ),
+            output_schema=_authoring_schema(
+                draft.get("output_schema"),
+                field_name="output_schema",
+                root="output",
+                warnings=warnings,
+            ),
             context_entries=context_entries,
             step_input_targets=selected_input_targets,
             step_output_sources=selected_output_sources,

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 from typing import Any, cast
 
 from wf_artifacts import (
@@ -54,6 +55,16 @@ _PROJECT_WRAPPER_DETAIL = JsonProjector(WrapperArtifactCapabilityDetail)
 _PROJECT_CREATE_DRAFT_FROM_CAPABILITY = JsonProjector(
     CreateDraftWorkspaceFromCapabilityResult
 )
+
+
+@dataclass(frozen=True, slots=True)
+class ResolvedCapabilityContract:
+    """Schema and outcome contract shared by node specs and saved wrappers."""
+
+    input_schema: dict[str, Any]
+    output_schema: dict[str, Any]
+    outcomes: tuple[str, ...]
+    description: str | None
 
 
 def _schema_field_names(schema: dict[str, Any]) -> list[str]:
@@ -165,6 +176,36 @@ class WorkflowCapabilityApi:
         if wrapper_detail is not None:
             return wrapper_detail
         raise KeyError(f"unknown workflow capability {qualified_name!r}")
+
+    def resolve_capability_contract(
+        self,
+        qualified_name: str,
+    ) -> ResolvedCapabilityContract:
+        """Resolve authoring schemas for a live node or saved wrapper."""
+        wrapper_artifact = self._wrapper_artifact_for_capability_name(qualified_name)
+        if wrapper_artifact is not None:
+            return ResolvedCapabilityContract(
+                input_schema=wrapper_artifact.input_schema,
+                output_schema=wrapper_artifact.output_schema,
+                outcomes=wrapper_artifact.outcomes,
+                description=wrapper_artifact.description,
+            )
+
+        spec = self.context.specs.get_qualified_spec(qualified_name)
+        return ResolvedCapabilityContract(
+            input_schema=(
+                spec.input_schema_contract
+                if spec.input_schema_contract is not None
+                else spec.input_model.model_json_schema()
+            ),
+            output_schema=(
+                spec.output_schema_contract
+                if spec.output_schema_contract is not None
+                else spec.output_model.model_json_schema()
+            ),
+            outcomes=spec.outcomes,
+            description=spec.description,
+        )
 
     async def call_capability(
         self,
