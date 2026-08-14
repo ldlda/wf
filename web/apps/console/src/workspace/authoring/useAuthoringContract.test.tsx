@@ -125,6 +125,19 @@ describe("useAuthoringContract", () => {
     expect(result.current.inventory?.selectedStepId).toBeNull();
   });
 
+  it("surfaces an initial inspection failure instead of staying loading", async () => {
+    client.inspect.mockRejectedValue(new Error("initial inspection failed"));
+
+    const { result } = renderHook(() =>
+      useAuthoringContract({ workspaceId: "draft-report", revision: 7, selectedStepId: null }),
+    );
+
+    await waitFor(() => expect(result.current.phase).toBe("error"));
+
+    expect(result.current.inventory).toBeNull();
+    expect(result.current.message).toBe("initial inspection failed");
+  });
+
   it("passes the executable step id and ignores a stale selection response", async () => {
     const first = deferred<AuthoringContractInventory>();
     const second = deferred<AuthoringContractInventory>();

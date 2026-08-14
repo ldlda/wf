@@ -41,6 +41,10 @@ const options: ReadonlyArray<AuthoringPathOption> = [
     availability: "conditional",
     reason: "Available when the selected step runs in a viewer frame.",
   }),
+  option("context.viewer_email", "Viewer email", "runtime_context", ["workflow_output"], {
+    availability: "conditional",
+    reason: "Available only in viewer frames.",
+  }),
   option("output.report", "Final report", "workflow_output", ["workflow_output"]),
   option("input.customer.name", "Customer name", "workflow_input", ["step_input"]),
 ];
@@ -131,6 +135,55 @@ describe("AuthoringPathPicker", () => {
 
     expect(onChange).toHaveBeenCalledTimes(1);
     expect(onChange).toHaveBeenCalledWith("input.title");
+  });
+
+  it("gives a conditional incompatible option one composed description node", () => {
+    render(
+      <AuthoringPathPicker
+        label="Source path"
+        onChange={vi.fn()}
+        options={options}
+        uses="step_input"
+        value=""
+      />,
+    );
+
+    const optionButton = screen.getByRole("button", { name: /Viewer email/ });
+    const describedBy = optionButton.getAttribute("aria-describedby");
+
+    expect(optionButton).toBeDisabled();
+    expect(describedBy).not.toBeNull();
+    expect(describedBy?.trim().split(/\s+/)).toHaveLength(1);
+    expect(document.querySelectorAll(`#${describedBy}`).length).toBe(1);
+    expect(document.getElementById(describedBy ?? "")?.textContent).toContain(
+      "Available only in viewer frames.",
+    );
+    expect(document.getElementById(describedBy ?? "")?.textContent).toContain(
+      "Not available for this field.",
+    );
+  });
+
+  it("renders a supplied non-conditional reason before describing the option", () => {
+    render(
+      <AuthoringPathPicker
+        label="Source path"
+        onChange={vi.fn()}
+        options={[
+          option("input.reasoned", "Reasoned", "workflow_input", ["step_input"], {
+            reason: "Retained for repair context.",
+          }),
+        ]}
+        uses="step_input"
+        value=""
+      />,
+    );
+
+    const optionButton = screen.getByRole("button", { name: /Reasoned/ });
+    const describedBy = optionButton.getAttribute("aria-describedby");
+    expect(describedBy).not.toBeNull();
+    expect(document.getElementById(describedBy ?? "")?.textContent).toBe(
+      "Retained for repair context.",
+    );
   });
 
   it("keeps nested choices keyboard reachable and preserves normal choices in Advanced mode", async () => {

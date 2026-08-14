@@ -52,6 +52,8 @@ export type AuthoringContractInventory = {
 };
 
 const JsonObjectSchema = v.record(v.string(), v.unknown());
+const PositiveRevisionSchema = v.pipe(v.number(), v.integer(), v.minValue(1));
+const SelectedStepIdSchema = v.nullable(v.pipe(v.string(), v.minLength(1)));
 
 const AuthoringPathOriginSchema = v.union([
   v.literal("workflow_input"),
@@ -74,77 +76,73 @@ const AuthoringPathUseSchema = v.union([
   v.literal("workflow_output"),
 ]);
 
-const AuthoringPathOptionWireSchema = v.object({
-  path: v.string(),
-  label: v.string(),
-  origin: AuthoringPathOriginSchema,
-  schema: JsonObjectSchema,
-  required: v.boolean(),
-  availability: AuthoringPathAvailabilitySchema,
-  uses: v.array(AuthoringPathUseSchema),
-  description: v.optional(v.string()),
-  reason: v.optional(v.string()),
-});
+const AuthoringPathOptionSchema = v.pipe(
+  v.object({
+    path: v.string(),
+    label: v.string(),
+    origin: AuthoringPathOriginSchema,
+    schema: JsonObjectSchema,
+    required: v.boolean(),
+    availability: AuthoringPathAvailabilitySchema,
+    uses: v.array(AuthoringPathUseSchema),
+    description: v.optional(v.string()),
+    reason: v.optional(v.string()),
+  }),
+  v.check(
+    (option) =>
+      option.availability !== "conditional" ||
+      (option.reason !== undefined && option.reason.trim().length > 0),
+    "conditional authoring options require a non-empty reason",
+  ),
+);
 
 const AuthoringStepContractWireSchema = v.object({
   step_id: v.string(),
   label: v.string(),
   description: v.optional(v.string()),
-  input_targets: v.optional(v.array(AuthoringPathOptionWireSchema)),
-  output_sources: v.optional(v.array(AuthoringPathOptionWireSchema)),
+  input_targets: v.optional(v.array(AuthoringPathOptionSchema)),
+  output_sources: v.optional(v.array(AuthoringPathOptionSchema)),
   outcomes: v.optional(v.array(v.string())),
 });
 
 const AuthoringContractInventoryWireSchema = v.object({
   workspace_id: v.string(),
-  revision: v.number(),
-  selected_step_id: v.nullable(v.string()),
-  readable_sources: v.array(AuthoringPathOptionWireSchema),
-  step_input_targets: v.array(AuthoringPathOptionWireSchema),
-  step_output_sources: v.array(AuthoringPathOptionWireSchema),
-  state_targets: v.array(AuthoringPathOptionWireSchema),
-  workflow_output_targets: v.array(AuthoringPathOptionWireSchema),
+  revision: PositiveRevisionSchema,
+  selected_step_id: SelectedStepIdSchema,
+  readable_sources: v.array(AuthoringPathOptionSchema),
+  step_input_targets: v.array(AuthoringPathOptionSchema),
+  step_output_sources: v.array(AuthoringPathOptionSchema),
+  state_targets: v.array(AuthoringPathOptionSchema),
+  workflow_output_targets: v.array(AuthoringPathOptionSchema),
   entry_steps: v.array(AuthoringStepContractWireSchema),
   workflow_outcomes: v.array(v.string()),
   warnings: v.array(v.string()),
-});
-
-const AuthoringPathOptionBrowserSchema = v.object({
-  path: v.string(),
-  label: v.string(),
-  origin: AuthoringPathOriginSchema,
-  schema: JsonObjectSchema,
-  required: v.boolean(),
-  availability: AuthoringPathAvailabilitySchema,
-  uses: v.array(AuthoringPathUseSchema),
-  description: v.optional(v.string()),
-  reason: v.optional(v.string()),
 });
 
 const AuthoringStepContractBrowserSchema = v.object({
   stepId: v.string(),
   label: v.string(),
   description: v.optional(v.string()),
-  inputTargets: v.optional(v.array(AuthoringPathOptionBrowserSchema)),
-  outputSources: v.optional(v.array(AuthoringPathOptionBrowserSchema)),
+  inputTargets: v.optional(v.array(AuthoringPathOptionSchema)),
+  outputSources: v.optional(v.array(AuthoringPathOptionSchema)),
   outcomes: v.optional(v.array(v.string())),
 });
 
 const AuthoringContractInventoryBrowserSchema = v.object({
   workspaceId: v.string(),
-  revision: v.number(),
-  selectedStepId: v.nullable(v.string()),
-  readableSources: v.array(AuthoringPathOptionBrowserSchema),
-  stepInputTargets: v.array(AuthoringPathOptionBrowserSchema),
-  stepOutputSources: v.array(AuthoringPathOptionBrowserSchema),
-  stateTargets: v.array(AuthoringPathOptionBrowserSchema),
-  workflowOutputTargets: v.array(AuthoringPathOptionBrowserSchema),
+  revision: PositiveRevisionSchema,
+  selectedStepId: SelectedStepIdSchema,
+  readableSources: v.array(AuthoringPathOptionSchema),
+  stepInputTargets: v.array(AuthoringPathOptionSchema),
+  stepOutputSources: v.array(AuthoringPathOptionSchema),
+  stateTargets: v.array(AuthoringPathOptionSchema),
+  workflowOutputTargets: v.array(AuthoringPathOptionSchema),
   entrySteps: v.array(AuthoringStepContractBrowserSchema),
   workflowOutcomes: v.array(v.string()),
   warnings: v.array(v.string()),
 });
 
-type AuthoringPathOptionWire = v.InferOutput<typeof AuthoringPathOptionWireSchema>;
+type AuthoringPathOptionWire = v.InferOutput<typeof AuthoringPathOptionSchema>;
 type AuthoringStepContractWire = v.InferOutput<typeof AuthoringStepContractWireSchema>;
 type AuthoringContractInventoryWire = v.InferOutput<
   typeof AuthoringContractInventoryWireSchema

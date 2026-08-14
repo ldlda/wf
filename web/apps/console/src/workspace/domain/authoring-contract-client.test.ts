@@ -43,7 +43,7 @@ const runWith = (
 
 describe("AuthoringContractClient", () => {
   it("sends the exact inspection params and decodes the response", async () => {
-    const { executor, calls } = runWith(wireInventory);
+    const { executor, calls } = runWith({ ...wireInventory, selected_step_id: "render" });
     const client = createAuthoringContractClient(executor);
 
     const result = await client.inspect({
@@ -80,12 +80,22 @@ describe("AuthoringContractClient", () => {
   it.each([
     ["workspaceId", { workspace_id: "other" }],
     ["revision", { revision: 8 }],
+    ["selectedStepId", { selected_step_id: "render" }],
   ])("rejects a response with a mismatched %s", async (_field, replacement) => {
     const { executor } = runWith({ ...wireInventory, ...replacement });
     const client = createAuthoringContractClient(executor);
 
     await expect(
       client.inspect({ workspaceId: "draft-report", revision: 7, selectedStepId: null }),
+    ).rejects.toThrow("does not match inspection request");
+  });
+
+  it("rejects a response for a different executable step", async () => {
+    const { executor } = runWith({ ...wireInventory, selected_step_id: "other" });
+    const client = createAuthoringContractClient(executor);
+
+    await expect(
+      client.inspect({ workspaceId: "draft-report", revision: 7, selectedStepId: "render" }),
     ).rejects.toThrow("does not match inspection request");
   });
 });

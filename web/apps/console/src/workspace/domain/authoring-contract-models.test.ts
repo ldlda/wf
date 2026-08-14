@@ -96,9 +96,21 @@ describe("authoring contract models", () => {
   });
 
   it("rejects a malformed inventory envelope", () => {
-    expect(() => decodeAuthoringContractInventory({ ...inventory, revision: "7" })).toThrow(
+    for (const revision of [0, -1, 1.5, "7"]) {
+      expect(() => decodeAuthoringContractInventory({ ...inventory, revision })).toThrow(
+        "AuthoringContractInventory is malformed",
+      );
+    }
+    expect(() => decodeAuthoringContractInventory({ ...inventory, selected_step_id: "" })).toThrow(
       "AuthoringContractInventory is malformed",
     );
+  });
+
+  it("requires a reason for conditional options", () => {
+    expect(() => decodeAuthoringContractInventory({
+      ...inventory,
+      readable_sources: [{ ...pathOption, availability: "conditional", reason: undefined }],
+    })).toThrow("AuthoringContractInventory is malformed");
   });
 
   const _typeCheck: AuthoringContractInventory | null = null;

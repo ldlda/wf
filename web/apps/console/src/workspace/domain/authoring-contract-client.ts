@@ -42,7 +42,8 @@ export const createAuthoringContractClient = (
     );
     if (
       inventory.workspaceId !== workspaceId ||
-      inventory.revision !== input.revision
+      inventory.revision !== input.revision ||
+      (inventory.selectedStepId?.trim() || null) !== selectedStepId
     ) {
       throw new Error("authoring contract response does not match inspection request");
     }

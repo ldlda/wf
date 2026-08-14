@@ -80,14 +80,19 @@ export const AuthoringPathPicker = ({
             <fieldset className="authoring-path-picker__group" key={group.origin}>
               <legend>{group.label}</legend>
               <div className="authoring-path-picker__list">
-                {groupOptions.map((option) => {
+                {groupOptions.map((option, optionIndex) => {
                   const compatible = option.uses.some((use) => requestedUses.has(use));
-                  const reasonId = `${id}-${safeId(option.path)}-reason`;
+                  const reasonId = `${id}-${safeId(group.origin)}-${optionIndex}-description`;
+                  const availabilityReason = option.availability === "conditional"
+                    ? option.reason ?? "Conditionally available; verify this path at runtime."
+                    : option.reason;
+                  const description = [
+                    availabilityReason,
+                    ...(compatible ? [] : ["Not available for this field."]),
+                  ].filter((part): part is string => part !== undefined).join(" ");
                   return (
                     <button
-                      aria-describedby={
-                        option.reason !== undefined || !compatible ? reasonId : undefined
-                      }
+                      aria-describedby={description === "" ? undefined : reasonId}
                       aria-pressed={option.path === value}
                       className="authoring-path-picker__option"
                       disabled={!compatible}
@@ -102,10 +107,7 @@ export const AuthoringPathPicker = ({
                       <code>{option.path}</code>
                       {option.description !== undefined && <span>{option.description}</span>}
                       {option.required && <small>Required</small>}
-                      {option.availability === "conditional" && option.reason !== undefined && (
-                        <small id={reasonId}>{option.reason}</small>
-                      )}
-                      {!compatible && <small id={reasonId}>Not available for this field.</small>}
+                      {description !== "" && <small id={reasonId}>{description}</small>}
                     </button>
                   );
                 })}

@@ -42,12 +42,14 @@ type StoredInventory = {
 
 type AuthoringContractState = {
   readonly phase: AuthoringContractPhase;
+  readonly attempted: RequestIdentity | null;
   readonly stored: StoredInventory | null;
   readonly message: string | null;
 };
 
 const initialState: AuthoringContractState = {
   phase: "disconnected",
+  attempted: null,
   stored: null,
   message: null,
 };
@@ -98,6 +100,7 @@ export const useAuthoringContract = ({
       const requested = request;
       setState((current) => ({
         phase: "loading",
+        attempted: requested,
         stored:
           current.stored !== null && sameRequest(current.stored.request, requested)
             ? current.stored
@@ -115,6 +118,7 @@ export const useAuthoringContract = ({
           if (generation !== generationRef.current) return;
           setState({
             phase: "ready",
+            attempted: requested,
             stored: { request: requested, inventory },
             message: null,
           });
@@ -134,6 +138,7 @@ export const useAuthoringContract = ({
       generationRef.current++;
       setState({
         phase: client === null || connectedTarget === null ? "disconnected" : "idle",
+        attempted: null,
         stored: null,
         message: null,
       });
@@ -150,20 +155,28 @@ export const useAuthoringContract = ({
     request !== null && state.stored !== null && sameRequest(state.stored.request, request)
       ? state.stored.inventory
       : null;
-  const phase =
+  const hasCurrentAttempt =
     request !== null &&
-    (state.stored === null || !sameRequest(state.stored.request, request))
-      ? "loading"
-      : request === null
-        ? client === null || connectedTarget === null
-          ? "disconnected"
-          : "idle"
-        : state.phase;
+    state.attempted !== null &&
+    sameRequest(state.attempted, request);
+  const phase = request === null
+    ? client === null || connectedTarget === null
+      ? "disconnected"
+      : "idle"
+    : hasCurrentAttempt && state.phase === "error"
+      ? "error"
+      : state.stored !== null && sameRequest(state.stored.request, request)
+        ? state.phase
+        : "loading";
 
   return {
     phase,
     inventory: currentInventory,
-    message: currentInventory === null && phase === "loading" ? null : state.message,
+    message: hasCurrentAttempt && state.phase === "error"
+      ? state.message
+      : currentInventory === null && phase === "loading"
+        ? null
+        : state.message,
     refresh,
   };
 };
