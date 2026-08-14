@@ -4,6 +4,13 @@ from collections.abc import Mapping, Sequence
 from copy import deepcopy
 from typing import Any
 
+from wf_core.analysis.context_scopes import (
+    ContextFieldAvailability,
+    context_analysis_warnings,
+    context_fields_by_node,
+)
+from wf_core.models.workflow import Workflow
+
 from .models.authoring_contracts import (
     AuthoringContractInventoryPayload,
     AuthoringPathOptionPayload,
@@ -73,6 +80,7 @@ def project_authoring_contract_inventory(
     entry_steps: Sequence[AuthoringStepContractPayload] = (),
     workflow_outcomes: Sequence[str] = (),
     warnings: Sequence[str] = (),
+    workflow: Workflow | None = None,
 ) -> AuthoringContractInventoryPayload:
     """Compose an inventory from caller-provided schemas and graph facts.
 
@@ -80,6 +88,10 @@ def project_authoring_contract_inventory(
     service layer supplies the selected-step and runtime-context projections;
     this function only derives schema choices and copies those projections.
     """
+    if workflow is not None and selected_step_id is not None and not context_entries:
+        context_entries = context_path_options_for_node(workflow, selected_step_id)
+        warnings = [*warnings, *context_analysis_warnings(workflow)]
+
     input_sources = schema_path_options(
         input_schema,
         root="input",
@@ -107,7 +119,7 @@ def project_authoring_contract_inventory(
         "selected_step_id": selected_step_id,
         "readable_sources": [
             *input_sources,
-            *deepcopy(list(context_entries)),
+            *_context_entries_for_inventory(context_entries),
             *state_sources,
         ],
         "step_input_targets": deepcopy(list(step_input_targets)),
@@ -118,6 +130,76 @@ def project_authoring_contract_inventory(
         "workflow_outcomes": list(workflow_outcomes),
         "warnings": list(warnings),
     }
+
+
+def context_path_options(
+    fields: Sequence[ContextFieldAvailability | Mapping[str, Any]],
+) -> list[AuthoringPathOptionPayload]:
+    """Project analyzed runtime context fields into Task 1 path payloads."""
+    options: list[AuthoringPathOptionPayload] = []
+    for field in fields:
+        if isinstance(field, ContextFieldAvailability):
+            name = field.name
+            schema = field.schema
+            description = field.description
+            availability = field.availability
+            reason = field.reason
+        else:
+            raw_name = field.get("name")
+            if not isinstance(raw_name, str) or not raw_name:
+                continue
+            name = raw_name
+            raw_schema = field.get("schema")
+            schema = raw_schema if isinstance(raw_schema, Mapping) else {}
+            raw_description = field.get("description")
+            description = raw_description if isinstance(raw_description, str) else name
+            raw_availability = field.get("availability")
+            availability = (
+                raw_availability
+                if raw_availability in {"available", "conditional"}
+                else "available"
+            )
+            raw_reason = field.get("reason")
+            reason = raw_reason if isinstance(raw_reason, str) else None
+
+        option: AuthoringPathOptionPayload = {
+            "path": f"context.{name}",
+            "label": name.replace("_", " ").replace("-", " ").title(),
+            "origin": "runtime_context",
+            "schema": deepcopy(dict(schema)),
+            "required": False,
+            "availability": availability,
+            "uses": ["step_input"],
+        }
+        if description:
+            option["description"] = description
+        if reason is not None:
+            option["reason"] = reason
+        options.append(option)
+    return options
+
+
+def context_path_options_for_node(
+    workflow: Workflow,
+    node_id: str,
+) -> list[AuthoringPathOptionPayload]:
+    """Project the runtime context available at one workflow node."""
+    return context_path_options(context_fields_by_node(workflow).get(node_id, ()))
+
+
+def _context_entries_for_inventory(
+    entries: Sequence[AuthoringPathOptionPayload],
+) -> list[AuthoringPathOptionPayload]:
+    """Keep runtime context readable only where execution has frame context."""
+    result: list[AuthoringPathOptionPayload] = []
+    for entry in entries:
+        copied = deepcopy(entry)
+        if copied["path"].startswith("context."):
+            copied["uses"] = [use for use in copied["uses"] if use == "step_input"]
+            if not copied["uses"]:
+                continue
+        result.append(copied)
+    return result
 
 
 def _append_schema_options(

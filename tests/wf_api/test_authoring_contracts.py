@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from wf_api.authoring_contracts import (
+    context_path_options,
     project_authoring_contract_inventory,
     schema_path_options,
 )
@@ -328,3 +329,48 @@ def test_project_authoring_contract_inventory_composes_pure_inputs() -> None:
     assert inventory["entry_steps"] == [entry_step]
     assert inventory["workflow_outcomes"] == ["ok", "error"]
     assert inventory["warnings"] == ["selected step has conditional context"]
+
+
+def test_context_path_options_are_step_input_only() -> None:
+    options = context_path_options(
+        [
+            {
+                "name": "loop_item",
+                "schema": {"type": "string"},
+                "description": "Current foreach item",
+                "availability": "conditional",
+                "reason": "Only available inside the foreach body.",
+            }
+        ]
+    )
+
+    assert options[0]["path"] == "context.loop_item"
+    assert options[0]["origin"] == "runtime_context"
+    assert options[0]["uses"] == ["step_input"]
+    assert options[0]["availability"] == "conditional"
+    assert options[0]["reason"] == "Only available inside the foreach body."
+
+
+def test_project_inventory_does_not_offer_context_for_workflow_output() -> None:
+    context_entry = {
+        "path": "context.item",
+        "label": "Item",
+        "origin": "runtime_context",
+        "schema": {},
+        "required": False,
+        "availability": "available",
+        "uses": ["step_input", "workflow_output"],
+    }
+
+    inventory = project_authoring_contract_inventory(
+        workspace_id="workspace-1",
+        revision=1,
+        selected_step_id=None,
+        input_schema={"type": "object"},
+        state_schema={"type": "object"},
+        output_schema={"type": "object"},
+        context_entries=[context_entry],
+    )
+
+    assert inventory["readable_sources"][0]["path"] == "context.item"
+    assert inventory["readable_sources"][0]["uses"] == ["step_input"]

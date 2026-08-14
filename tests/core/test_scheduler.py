@@ -7,6 +7,7 @@ from wf_core.models.schemas import SchemaRef, StateSchema
 from wf_core.models.workflow import Workflow
 from wf_core.run_state import ExecutionFrame, FrameStatus, RunState, RunStatus
 from wf_core.runtime.ops.flow import advance_frame
+from wf_core.runtime.ops.frames import frame_context_values
 from wf_core.runtime.ops.runs import create_run_state
 from wf_core.runtime.scheduler import (
     add_frame,
@@ -207,3 +208,22 @@ def test_deadlock_error_includes_ready_queue_and_frame_summary() -> None:
     assert "deadlocked" in message
     assert "ready_frame_ids=[]" in message
     assert "parent:blocked@foreach" in message
+
+
+def test_frame_context_values_exposes_configured_foreach_alias() -> None:
+    context = frame_context_values(
+        ExecutionFrame(
+            id="child",
+            kind="foreach_iteration",
+            node_id="body",
+            metadata={
+                "loop_item": {"id": "a"},
+                "loop_index": 2,
+                "loop_alias": "record",
+            },
+        )
+    )
+
+    assert context["loop_item"] == {"id": "a"}
+    assert context["loop_index"] == 2
+    assert context["record"] == {"id": "a"}
