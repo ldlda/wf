@@ -22,6 +22,14 @@ from .artifacts import (
     SaveArtifactResult,
     WorkflowArtifactPayload,
 )
+from .authoring_contracts import (
+    AuthoringContractInventoryPayload,
+    AuthoringPathAvailability,
+    AuthoringPathOptionPayload,
+    AuthoringPathOrigin,
+    AuthoringPathUse,
+    AuthoringStepContractPayload,
+)
 from .capabilities import (
     CapabilityCallResult,
     CapabilitySummary,
@@ -122,6 +130,12 @@ __all__ = [
     "AdminEventPayload",
     "ApplyRegistryChangesResult",
     "ArtifactVersionPayload",
+    "AuthoringContractInventoryPayload",
+    "AuthoringPathAvailability",
+    "AuthoringPathOptionPayload",
+    "AuthoringPathOrigin",
+    "AuthoringPathUse",
+    "AuthoringStepContractPayload",
     "AuthRecordSummaryPayload",
     "ArtifactCatalogEntryPayload",
     "ArtifactKindPayload",
