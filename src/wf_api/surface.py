@@ -11,6 +11,7 @@ from .draft_authoring import RouteSource
 from .draft_updates import CapabilityStepUpdate
 from .models import (
     ApplyRegistryChangesResult,
+    AuthoringContractInventoryPayload,
     AuthRecordSummaryPayload,
     CapabilityCallResult,
     CompileDraftWorkspaceResult,
@@ -106,6 +107,14 @@ class WorkflowDraftSurface(Protocol):
         workspace_id: str,
         include_draft: bool = False,
     ) -> DraftWorkspaceResult: ...
+
+    async def inspect_draft_authoring_contract(
+        self,
+        *,
+        workspace_id: str,
+        revision: int,
+        selected_step_id: str | None = None,
+    ) -> AuthoringContractInventoryPayload | DraftWorkspaceResult: ...
 
     async def create_draft_workspace_from_capability(
         self,

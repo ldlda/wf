@@ -492,6 +492,41 @@ def test_openrpc_exposes_typed_draft_workspace_results(
     )
 
 
+def test_openrpc_exposes_typed_authoring_contract_inventory(
+    openrpc_document: dict[str, Any],
+) -> None:
+    method = _method_by_name(
+        openrpc_document,
+        "workflow.draft_workspaces.inspect_authoring_contract",
+    )
+    schemas = openrpc_document["components"]["schemas"]
+
+    assert method["result"]["schema"]["anyOf"] == [
+        {"$ref": "#/components/schemas/AuthoringContractInventoryPayload"},
+        {"$ref": "#/components/schemas/DraftWorkspaceResult"},
+    ]
+    params = method["params"]
+    assert [param["name"] for param in params] == [
+        "workspace_id",
+        "revision",
+        "selected_step_id",
+    ]
+    assert params[0]["required"] is True
+    assert params[1]["required"] is True
+    assert params[2]["required"] is False
+    assert params[2]["schema"]["anyOf"][0] == {
+        "type": "string",
+        "minLength": 1,
+    }
+    assert params[2]["schema"]["anyOf"][1] == {"type": "null"}
+    assert schemas["AuthoringContractInventoryPayload"]["properties"][
+        "selected_step_id"
+    ]["anyOf"] == [{"type": "string"}, {"type": "null"}]
+    option = schemas["AuthoringPathOptionPayload"]
+    assert option["properties"]["reason"]["type"] == "string"
+    assert "reason" not in option["required"]
+
+
 def test_openrpc_separates_step_input_and_workflow_output_binding_unions(
     openrpc_document: dict[str, Any],
 ) -> None:

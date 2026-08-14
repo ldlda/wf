@@ -15,6 +15,7 @@ from wf_transport_rpc_http.app import create_rpc_app
 from wf_transport_rpc_http.models import (
     AddDraftStepParams,
     AddStepFromCapabilityParams,
+    InspectDraftAuthoringContractParams,
     SetDraftContractParams,
     UpdateCapabilityStepParams,
 )
@@ -163,6 +164,28 @@ def test_set_draft_contract_params_reject_whitespace_duplicate_outcomes() -> Non
                 "outcomes": ["ok", " ok "],
             }
         )
+
+
+def test_inspect_draft_authoring_contract_params_allow_nullable_selection() -> None:
+    params = InspectDraftAuthoringContractParams.model_validate(
+        {"workspace_id": "report", "revision": 4}
+    )
+
+    assert params.selected_step_id is None
+
+
+@pytest.mark.parametrize(
+    "params",
+    [
+        {"workspace_id": "report", "revision": 4, "selected_step_id": ""},
+        {"workspace_id": "report", "revision": 0},
+    ],
+)
+def test_inspect_draft_authoring_contract_params_reject_invalid_envelope(
+    params: dict[str, Any],
+) -> None:
+    with pytest.raises(ValidationError):
+        InspectDraftAuthoringContractParams.model_validate(params)
 
 
 async def test_rpc_health_and_capability_methods(tmp_path) -> None:
@@ -731,6 +754,185 @@ async def test_rpc_draft_workspace_lifecycle_methods(tmp_path) -> None:
         "properties": {},
     }
     assert inspected["result"]["draft"]["outcomes"] == ["error"]
+
+
+async def test_rpc_inspects_draft_authoring_contract_without_mutation(tmp_path) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    app = create_rpc_app(server)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        created = await _rpc(
+            client,
+            "workflow.draft_workspaces.create_from_capability",
+            {
+                "workspace_id": "authoring",
+                "capability_name": "wf.std.constant",
+                "name": "authoring",
+            },
+        )
+        before = await _rpc(
+            client,
+            "workflow.draft_workspaces.get",
+            {"workspace_id": "authoring", "include_draft": True},
+        )
+        inspected = await _rpc(
+            client,
+            "workflow.draft_workspaces.inspect_authoring_contract",
+            {
+                "workspace_id": "authoring",
+                "revision": created["result"]["revision"],
+                "selected_step_id": "call",
+            },
+        )
+        after = await _rpc(
+            client,
+            "workflow.draft_workspaces.get",
+            {"workspace_id": "authoring", "include_draft": True},
+        )
+
+    result = inspected["result"]
+    assert result["workspace_id"] == "authoring"
+    assert result["revision"] == created["result"]["revision"]
+    assert result["selected_step_id"] == "call"
+    assert result["entry_steps"][0]["step_id"] == "call"
+    assert result["entry_steps"][0]["outcomes"] == ["ok"]
+    assert result["step_input_targets"]
+    assert result["step_input_targets"][0]["path"] == "step_input.value"
+    assert isinstance(result["step_input_targets"][0]["schema"], dict)
+    assert result["step_output_sources"]
+    assert result["step_output_sources"][0]["path"] == "step_output.value"
+    assert isinstance(result["step_output_sources"][0]["schema"], dict)
+    assert any(
+        option["path"] == "context.prior_outcome"
+        for option in result["readable_sources"]
+    )
+    assert after["result"] == before["result"]
+
+
+async def test_rpc_inspect_authoring_contract_maps_domain_errors_and_conflicts(
+    tmp_path,
+) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    app = create_rpc_app(server)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        created = await _rpc(
+            client,
+            "workflow.draft_workspaces.create_empty",
+            {"workspace_id": "authoring", "name": "authoring"},
+        )
+        unknown = await _rpc(
+            client,
+            "workflow.draft_workspaces.inspect_authoring_contract",
+            {
+                "workspace_id": "authoring",
+                "revision": created["result"]["revision"],
+                "selected_step_id": "missing",
+            },
+        )
+        missing = await _rpc(
+            client,
+            "workflow.draft_workspaces.inspect_authoring_contract",
+            {"workspace_id": "missing", "revision": 1},
+        )
+        changed = await _rpc(
+            client,
+            "workflow.draft_workspaces.set_name",
+            {
+                "workspace_id": "authoring",
+                "revision": created["result"]["revision"],
+                "name": "changed",
+            },
+        )
+        stale = await _rpc(
+            client,
+            "workflow.draft_workspaces.inspect_authoring_contract",
+            {
+                "workspace_id": "authoring",
+                "revision": created["result"]["revision"],
+            },
+        )
+
+    assert unknown["error"]["code"] == 5000
+    assert unknown["error"]["data"]["code"] == "KeyError"
+    assert missing["error"]["code"] == 5000
+    assert changed["result"]["revision"] == 2
+    assert stale["result"]["status"] == "conflict"
+    assert stale["result"]["diagnostics"][0]["code"] == "revision_conflict"
+
+
+async def test_rpc_inspect_authoring_contract_handles_invalid_persisted_draft(
+    tmp_path,
+) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    app = create_rpc_app(server)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        created = await _rpc(
+            client,
+            "workflow.draft_workspaces.create_empty",
+            {
+                "workspace_id": "invalid_authoring",
+                "name": "invalid_authoring",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {"request": {"type": "string"}},
+                },
+            },
+        )
+        before = await _rpc(
+            client,
+            "workflow.draft_workspaces.get",
+            {"workspace_id": "invalid_authoring", "include_draft": True},
+        )
+        malformed = await _rpc(
+            client,
+            "workflow.draft_workspaces.inspect_authoring_contract",
+            {
+                "workspace_id": "invalid_authoring",
+                "revision": created["result"]["revision"],
+                "selected_step_id": "",
+            },
+        )
+        patched = await _rpc(
+            client,
+            "workflow.draft_workspaces.patch",
+            {
+                "workspace_id": "invalid_authoring",
+                "revision": created["result"]["revision"],
+                "patch": [
+                    {
+                        "op": "replace",
+                        "path": "/steps",
+                        "value": {"broken": {"unknown_kind": {}}},
+                    },
+                    {"op": "replace", "path": "/start", "value": "broken"},
+                ],
+            },
+        )
+        inspected = await _rpc(
+            client,
+            "workflow.draft_workspaces.inspect_authoring_contract",
+            {
+                "workspace_id": "invalid_authoring",
+                "revision": patched["result"]["revision"],
+                "selected_step_id": "broken",
+            },
+        )
+        after = await _rpc(
+            client,
+            "workflow.draft_workspaces.get",
+            {"workspace_id": "invalid_authoring", "include_draft": True},
+        )
+
+    assert malformed["error"]["code"] == -32602
+    assert before["result"]["revision"] == 1
+    assert patched["result"]["status"] == "invalid"
+    assert inspected["result"]["selected_step_id"] == "broken"
+    assert inspected["result"]["entry_steps"] == []
+    assert inspected["result"]["readable_sources"][0]["path"] == "input.request"
+    assert any("broken" in warning for warning in inspected["result"]["warnings"])
+    assert after["result"]["revision"] == patched["result"]["revision"]
 
 
 @pytest.mark.parametrize(

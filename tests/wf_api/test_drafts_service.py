@@ -115,6 +115,154 @@ async def test_update_capability_step_changes_metadata_and_inputs_atomically(
 
 
 @pytest.mark.asyncio
+async def test_inspect_draft_authoring_contract_projects_selected_capability(
+    tmp_path: Path,
+) -> None:
+    draft_api, _service, authoring = _draft_api(
+        FileWorkflowArtifactStore(tmp_path / "authoring_contract"),
+        register_echo=True,
+    )
+    draft = _echo_draft()
+    draft["input_schema"] = {
+        "type": "object",
+        "properties": {
+            "request": {
+                "type": "object",
+                "properties": {"text": {"type": "string"}},
+                "required": ["text"],
+            }
+        },
+        "required": ["request"],
+    }
+    draft["state_schema"] = {
+        "type": "object",
+        "properties": {"echoed": {"type": "string"}},
+    }
+    draft["output_schema"] = {
+        "type": "object",
+        "properties": {"echoed": {"type": "string"}},
+    }
+    await draft_api.create_draft_workspace(workspace_id="authoring", draft=draft)
+    api = WorkflowApi(authoring.context)
+
+    inventory = await api.inspect_draft_authoring_contract(
+        workspace_id="authoring",
+        revision=1,
+        selected_step_id="echo",
+    )
+
+    assert inventory["workspace_id"] == "authoring"
+    assert inventory["revision"] == 1
+    assert inventory["selected_step_id"] == "echo"
+    assert [step["step_id"] for step in inventory["entry_steps"]] == ["echo"]
+    assert inventory["workflow_outcomes"] == ["ok"]
+    assert {option["path"] for option in inventory["step_input_targets"]} == {
+        "step_input.text"
+    }
+    assert {option["path"] for option in inventory["step_output_sources"]} == {
+        "step_output.echoed"
+    }
+    assert {option["path"] for option in inventory["readable_sources"]} >= {
+        "input.request",
+        "state.echoed",
+        "context.prior_outcome",
+    }
+    assert "__end__" not in {step["step_id"] for step in inventory["entry_steps"]}
+    selected = inventory["entry_steps"][0]
+    assert selected["input_targets"][0]["schema"]["type"] == "string"
+    assert selected["output_sources"][0]["schema"]["type"] == "string"
+    assert selected["outcomes"] == ["ok"]
+
+
+@pytest.mark.asyncio
+async def test_inspect_draft_authoring_contract_rejects_unknown_selected_step(
+    tmp_path: Path,
+) -> None:
+    draft_api, _service, authoring = _draft_api(
+        FileWorkflowArtifactStore(tmp_path / "authoring_contract_unknown"),
+        register_echo=True,
+    )
+    await draft_api.create_draft_workspace(
+        workspace_id="authoring", draft=_echo_draft()
+    )
+    api = WorkflowApi(authoring.context)
+
+    with pytest.raises(KeyError, match="unknown draft step"):
+        await api.inspect_draft_authoring_contract(
+            workspace_id="authoring",
+            revision=1,
+            selected_step_id="missing",
+        )
+
+
+@pytest.mark.asyncio
+async def test_inspect_draft_authoring_contract_tolerates_invalid_selected_step(
+    tmp_path: Path,
+) -> None:
+    draft_api, _service, authoring = _draft_api(
+        FileWorkflowArtifactStore(tmp_path / "authoring_contract_invalid"),
+        register_echo=True,
+    )
+    draft = _echo_draft()
+    draft["steps"] = {"broken": {"unknown_kind": {}}}
+    draft["start"] = "broken"
+    await draft_api.create_draft_workspace(workspace_id="authoring", draft=draft)
+    api = WorkflowApi(authoring.context)
+
+    inventory = await api.inspect_draft_authoring_contract(
+        workspace_id="authoring",
+        revision=1,
+        selected_step_id="broken",
+    )
+
+    assert inventory["selected_step_id"] == "broken"
+    assert inventory["entry_steps"] == []
+    assert inventory["step_input_targets"] == []
+    assert inventory["step_output_sources"] == []
+    assert inventory["readable_sources"]
+    assert any("broken" in warning for warning in inventory["warnings"])
+
+
+@pytest.mark.asyncio
+async def test_inspect_draft_authoring_contract_stale_revision_is_read_only(
+    tmp_path: Path,
+) -> None:
+    draft_api, _service, authoring = _draft_api(
+        FileWorkflowArtifactStore(tmp_path / "authoring_contract_stale"),
+        register_echo=True,
+    )
+    await draft_api.create_draft_workspace(
+        workspace_id="authoring", draft=_echo_draft()
+    )
+    api = WorkflowApi(authoring.context)
+    changed = await api.set_draft_name(
+        workspace_id="authoring",
+        revision=1,
+        name="changed",
+    )
+    before = await api.get_draft_workspace(
+        workspace_id="authoring",
+        include_draft=True,
+    )
+
+    conflict = await api.inspect_draft_authoring_contract(
+        workspace_id="authoring",
+        revision=1,
+        selected_step_id="echo",
+    )
+    after = await api.get_draft_workspace(
+        workspace_id="authoring",
+        include_draft=True,
+    )
+
+    assert changed["revision"] == 2
+    assert conflict["status"] == "conflict"
+    assert conflict["revision"] == 2
+    assert conflict["diagnostics"][0]["code"] == "revision_conflict"
+    assert after == before
+
+
+@pytest.mark.asyncio
 async def test_update_capability_step_preserves_omitted_fields_and_exact_noop(
     tmp_path: Path,
 ) -> None:

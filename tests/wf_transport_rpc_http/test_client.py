@@ -400,6 +400,33 @@ async def test_rpc_client_sends_exact_draft_lifecycle_payloads() -> None:
     ]
 
 
+async def test_rpc_client_sends_exact_authoring_contract_payload() -> None:
+    calls: list[dict[str, Any]] = []
+
+    class Client(RpcDraftClientMixin):
+        async def _call(self, method: str, params: dict[str, object]):
+            calls.append({"method": method, "params": params})
+            return {"workspace_id": "ws", "revision": 4, "selected_step_id": None}
+
+    client = Client()
+    result = await client.inspect_draft_authoring_contract(
+        workspace_id="ws",
+        revision=4,
+    )
+
+    assert result["revision"] == 4
+    assert calls == [
+        {
+            "method": "workflow.draft_workspaces.inspect_authoring_contract",
+            "params": {
+                "workspace_id": "ws",
+                "revision": 4,
+                "selected_step_id": None,
+            },
+        }
+    ]
+
+
 async def test_rpc_client_sends_exact_stateless_draft_payloads() -> None:
     calls: list[dict[str, Any]] = []
 

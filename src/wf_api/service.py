@@ -1,19 +1,27 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from typing import Any
 
-from wf_artifacts import ArtifactKind
+from wf_artifacts import ArtifactKind, compile_workflow_draft
 from wf_artifacts.drafts.models import DraftStep
+from wf_core.analysis.context_scopes import context_analysis_warnings
 from wf_core.models.steps import InputBinding, OutputBinding, StepInputBinding
+from wf_core.models.workflow import Workflow
 
 from .artifacts import WorkflowArtifactApi
+from .authoring_contracts import (
+    context_path_options_for_node,
+    project_authoring_contract_inventory,
+    project_authoring_step_contract,
+)
 from .capabilities import WorkflowCapabilityApi
 from .deployments import WorkflowDeploymentApi
 from .draft_authoring import RouteSource, WorkflowDraftAuthoringApi
 from .draft_updates import CapabilityStepUpdate
 from .drafts import WorkflowDraftApi
 from .models import (
+    AuthoringContractInventoryPayload,
     CapabilityCallResult,
     CompileDraftWorkspaceResult,
     CompileDraftWorkspaceSuccess,
@@ -43,6 +51,25 @@ from .models import (
 )
 from .operation_context import WorkflowOperationContext
 from .runs import TraceRangeLike, WorkflowRunApi
+
+
+def _authoring_schema(value: object) -> dict[str, Any]:
+    """Return a safe schema object from a possibly invalid persisted draft."""
+    return dict(value) if isinstance(value, Mapping) else {}
+
+
+def _authoring_outcomes(value: object) -> list[str]:
+    """Keep only a complete string outcome list for tolerant inventory output."""
+    if not isinstance(value, list) or not all(
+        isinstance(outcome, str) for outcome in value
+    ):
+        return []
+    return list(value)
+
+
+def _step_label(step_id: str) -> str:
+    """Humanize a keyed draft step for compact executable choices."""
+    return step_id.replace("_", " ").replace("-", " ").title()
 
 
 class WorkflowApi:
@@ -322,6 +349,115 @@ class WorkflowApi:
         return await self.drafts.get_draft_workspace(
             workspace_id=workspace_id,
             include_draft=include_draft,
+        )
+
+    async def inspect_draft_authoring_contract(
+        self,
+        *,
+        workspace_id: str,
+        revision: int,
+        selected_step_id: str | None = None,
+    ) -> AuthoringContractInventoryPayload | DraftWorkspaceResult:
+        """Inspect revision-scoped authoring choices without persisting changes.
+
+        The workspace revision check deliberately happens before interpreting a
+        selected step. This preserves the draft APIs' canonical conflict
+        precedence when an authoring client is holding an old revision.
+        """
+        checked = self.drafts._workspace_if_revision_matches(
+            workspace_id=workspace_id,
+            revision=revision,
+        )
+        if isinstance(checked, dict):
+            return checked
+
+        draft = checked.draft
+        raw_steps = draft.get("steps")
+        steps = raw_steps if isinstance(raw_steps, Mapping) else {}
+        if selected_step_id is not None and selected_step_id not in steps:
+            raise KeyError(f"unknown draft step {selected_step_id!r}")
+
+        warnings: list[str] = []
+        entry_steps = []
+        selected_contract = None
+        for raw_step_id, raw_step in steps.items():
+            if not isinstance(raw_step_id, str) or raw_step_id == "__end__":
+                continue
+            if not isinstance(raw_step, Mapping):
+                continue
+            capability_name = raw_step.get("use")
+            if not isinstance(capability_name, str):
+                if raw_step_id == selected_step_id:
+                    warnings.append(
+                        f"selected step {raw_step_id!r} is not an executable capability"
+                    )
+                continue
+            try:
+                spec = self.context.specs.get_qualified_spec(capability_name)
+                input_schema = (
+                    spec.input_schema_contract or spec.input_model.model_json_schema()
+                )
+                output_schema = (
+                    spec.output_schema_contract or spec.output_model.model_json_schema()
+                )
+            except (KeyError, TypeError, ValueError) as exc:
+                if raw_step_id == selected_step_id:
+                    warnings.append(
+                        f"selected step {raw_step_id!r} cannot be interpreted: {exc}"
+                    )
+                continue
+
+            description = raw_step.get("desc")
+            if not isinstance(description, str):
+                description = spec.description
+            contract = project_authoring_step_contract(
+                step_id=raw_step_id,
+                label=_step_label(raw_step_id),
+                description=description,
+                input_schema=input_schema,
+                output_schema=output_schema,
+                outcomes=spec.outcomes,
+            )
+            entry_steps.append(contract)
+            if raw_step_id == selected_step_id:
+                selected_contract = contract
+
+        context_entries = []
+        if selected_step_id is not None:
+            try:
+                compiled_plan = compile_workflow_draft(draft)
+                workflow = Workflow.model_validate(compiled_plan)
+                context_entries = context_path_options_for_node(
+                    workflow,
+                    selected_step_id,
+                )
+                warnings.extend(context_analysis_warnings(workflow))
+            except (KeyError, TypeError, ValueError) as exc:
+                warnings.append(
+                    f"runtime context unavailable for selected step "
+                    f"{selected_step_id!r}: {exc}"
+                )
+
+        selected_input_targets = []
+        selected_output_sources = []
+        if selected_contract is not None and selected_step_id is not None:
+            if selected_contract["step_id"] == selected_step_id:
+                selected_input_targets = selected_contract.get("input_targets", [])
+                selected_output_sources = selected_contract.get("output_sources", [])
+
+        return project_authoring_contract_inventory(
+            workspace_id=workspace_id,
+            revision=checked.revision,
+            selected_step_id=selected_step_id,
+            input_schema=_authoring_schema(draft.get("input_schema")),
+            state_schema=_authoring_schema(draft.get("state_schema")),
+            output_schema=_authoring_schema(draft.get("output_schema")),
+            context_entries=context_entries,
+            step_input_targets=selected_input_targets,
+            step_output_sources=selected_output_sources,
+            entry_steps=entry_steps,
+            workflow_outcomes=_authoring_outcomes(draft.get("outcomes")),
+            warnings=warnings,
         )
 
     async def delete_draft_workspace(

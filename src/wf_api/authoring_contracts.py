@@ -132,6 +132,36 @@ def project_authoring_contract_inventory(
     }
 
 
+def project_authoring_step_contract(
+    *,
+    step_id: str,
+    label: str,
+    description: str | None,
+    input_schema: JsonObject,
+    output_schema: JsonObject,
+    outcomes: Sequence[str],
+) -> AuthoringStepContractPayload:
+    """Project one resolved executable capability into authoring choices."""
+    payload: AuthoringStepContractPayload = {
+        "step_id": step_id,
+        "label": label,
+        "input_targets": schema_path_options(
+            input_schema,
+            root="step_input",
+            uses=["step_input"],
+        ),
+        "output_sources": schema_path_options(
+            output_schema,
+            root="step_output",
+            uses=["step_output_source", "workflow_output"],
+        ),
+        "outcomes": list(outcomes),
+    }
+    if description is not None:
+        payload["description"] = description
+    return payload
+
+
 def context_path_options(
     fields: Sequence[ContextFieldAvailability | Mapping[str, Any]],
 ) -> list[AuthoringPathOptionPayload]:

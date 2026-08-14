@@ -5,6 +5,7 @@ from typing import Any, Literal, cast
 
 from wf_api import CapabilityStepUpdate
 from wf_api.models import (
+    AuthoringContractInventoryPayload,
     CompileDraftWorkspaceResult,
     CreateArtifactFromWorkspaceResult,
     CreateDraftWorkspaceFromCapabilityResult,
@@ -74,6 +75,25 @@ class RpcDraftClientMixin:
             self,
             "workflow.draft_workspaces.get",
             {"workspace_id": workspace_id, "include_draft": include_draft},
+        )
+
+    async def inspect_draft_authoring_contract(
+        self: RpcCaller,
+        *,
+        workspace_id: str,
+        revision: int,
+        selected_step_id: str | None = None,
+    ) -> AuthoringContractInventoryPayload | DraftWorkspaceResult:
+        return cast(
+            AuthoringContractInventoryPayload | DraftWorkspaceResult,
+            await self._call(
+                "workflow.draft_workspaces.inspect_authoring_contract",
+                {
+                    "workspace_id": workspace_id,
+                    "revision": revision,
+                    "selected_step_id": selected_step_id,
+                },
+            ),
         )
 
     async def create_draft_workspace_from_capability(

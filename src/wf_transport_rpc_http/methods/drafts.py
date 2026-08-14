@@ -7,6 +7,7 @@ while registering nested handlers for response validation and OpenRPC output.
 import fastapi_jsonrpc as jsonrpc
 
 from wf_api.models import (
+    AuthoringContractInventoryPayload,
     CompileDraftWorkspaceResult,
     CreateArtifactFromWorkspaceResult,
     CreateDraftWorkspaceFromCapabilityResult,
@@ -33,6 +34,7 @@ from ..models import (
     DeleteDraftWorkspaceParams,
     GetDraftWorkspaceParams,
     HandleDraftParams,
+    InspectDraftAuthoringContractParams,
     ListDraftWorkspacesParams,
     PatchDraftParams,
     PatchDraftWorkspaceParams,
@@ -109,6 +111,22 @@ def register_methods(
             return await server.api.get_draft_workspace(
                 workspace_id=params.workspace_id,
                 include_draft=params.include_draft,
+            )
+        except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:
+            raise_workflow_rpc_error(exc)
+
+    @entrypoint.method(
+        name="workflow.draft_workspaces.inspect_authoring_contract",
+        errors=[WorkflowRpcError],
+    )
+    async def workflow_draft_workspaces_inspect_authoring_contract(
+        params: InspectDraftAuthoringContractParams = RpcParams(),
+    ) -> AuthoringContractInventoryPayload | DraftWorkspaceResult:
+        try:
+            return await server.api.inspect_draft_authoring_contract(
+                workspace_id=params.workspace_id,
+                revision=params.revision,
+                selected_step_id=params.selected_step_id,
             )
         except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:
             raise_workflow_rpc_error(exc)
