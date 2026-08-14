@@ -2023,6 +2023,124 @@ tbody tr:hover {
   min-width: 0;
 }
 
+.authoring-path-picker {
+  display: grid;
+  min-width: 0;
+  gap: 0.45rem;
+}
+
+.authoring-path-picker h3 {
+  margin: 0;
+  font-size: 0.92rem;
+}
+
+.authoring-path-picker > label,
+.authoring-path-picker__advanced > label {
+  color: var(--color-slate);
+  font-size: 0.78rem;
+}
+
+.authoring-path-picker__options {
+  min-width: 0;
+  max-height: min(20rem, 48dvh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0.15rem;
+  border: 1px solid var(--color-border);
+  background: var(--color-paper);
+}
+
+.authoring-path-picker__group {
+  min-width: 0;
+  margin: 0;
+  padding: 0.55rem;
+  border: 0;
+}
+
+.authoring-path-picker__group + .authoring-path-picker__group {
+  border-top: 1px solid var(--color-border);
+}
+
+.authoring-path-picker__group legend {
+  padding: 0 0.2rem;
+  color: var(--color-ink);
+  font-family: var(--font-heading);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.authoring-path-picker__list {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.authoring-path-picker__option {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  gap: 0.12rem;
+  padding: 0.5rem;
+  border: 1px solid var(--color-border);
+  background: #fff;
+  color: var(--color-ink);
+  text-align: left;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.authoring-path-picker__option:hover,
+.authoring-path-picker__option:focus-visible,
+.authoring-path-picker__option[aria-pressed="true"] {
+  border-color: var(--color-signal-green);
+  background: #f6fbf7;
+}
+
+.authoring-path-picker__option:disabled {
+  border-color: var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-slate);
+  cursor: not-allowed;
+  opacity: 0.72;
+}
+
+.authoring-path-picker__option code {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--color-slate);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+}
+
+.authoring-path-picker__option span,
+.authoring-path-picker__option small {
+  color: var(--color-slate);
+  font-size: 0.72rem;
+}
+
+.authoring-path-picker__option small {
+  overflow-wrap: anywhere;
+}
+
+.authoring-path-picker__advanced {
+  display: grid;
+  gap: 0.45rem;
+  padding-top: 0.25rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.authoring-path-picker__advanced summary {
+  width: fit-content;
+  color: var(--color-ink);
+  cursor: pointer;
+  font-family: var(--font-heading);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 /* Motion */
 @keyframes fadeIn {
   from {
