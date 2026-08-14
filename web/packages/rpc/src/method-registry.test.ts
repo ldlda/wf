@@ -307,6 +307,52 @@ describe("run operation registry", () => {
       },
     },
     {
+      method: "workflow.draft_workspaces.set_contract" as const,
+      params: {
+        workspace_id: "console.demo",
+        revision: 5,
+        outcomes: ["ok", "error"],
+      },
+      cli: "uv run wf draft set-contract console.demo --revision 5 --outcome ok --outcome error",
+      result: {
+        workspace_id: "console.demo",
+        revision: 6,
+        title: "Console demo",
+        status: "valid" as const,
+        diagnostics: [],
+        summary: {
+          name: "console.demo",
+          start: "echo",
+          step_count: 1,
+          route_count: 1,
+          steps: ["echo"],
+        },
+      },
+    },
+    {
+      method: "workflow.draft_workspaces.set_start" as const,
+      params: {
+        workspace_id: "console.demo",
+        revision: 6,
+        step_id: "echo",
+      },
+      cli: "uv run wf draft set-start console.demo --revision 6 --step echo",
+      result: {
+        workspace_id: "console.demo",
+        revision: 7,
+        title: "Console demo",
+        status: "valid" as const,
+        diagnostics: [],
+        summary: {
+          name: "console.demo",
+          start: "echo",
+          step_count: 1,
+          route_count: 1,
+          steps: ["echo"],
+        },
+      },
+    },
+    {
       method: "workflow.draft_workspaces.set_step_input_bindings" as const,
       params: {
         workspace_id: "console.demo",
@@ -364,6 +410,32 @@ describe("run operation registry", () => {
           name: "console.demo",
           start: "echo",
           steps: { echo: { use: "local.example.echo" } },
+        },
+      },
+    },
+    {
+      method: "workflow.draft_workspaces.set_workflow_output_bindings" as const,
+      params: {
+        workspace_id: "console.demo",
+        revision: 7,
+        bindings: [
+          { path: "state.report", target: "report" },
+          { target: "format", value: "markdown" },
+        ],
+      },
+      cli: "uv run wf draft set-workflow-output console.demo --revision 7 --map state.report=report --value 'format=\"markdown\"'",
+      result: {
+        workspace_id: "console.demo",
+        revision: 8,
+        title: "Console demo",
+        status: "valid" as const,
+        diagnostics: [],
+        summary: {
+          name: "console.demo",
+          start: "echo",
+          step_count: 1,
+          route_count: 1,
+          steps: ["echo"],
         },
       },
     },
@@ -520,6 +592,44 @@ describe("run operation registry", () => {
     ).toBe(
       "uv run wf draft add capability console.demo --revision 1 --step echo --capability local.example.echo --input state.text=text --value 'mode={\"kind\":\"fast\"}'",
     );
+  });
+
+  it("registers authoring inspection as a read operation", async () => {
+    const { getOperationMeta } = await import("./method-registry.js");
+    const operation = getOperationMeta(
+      "workflow.draft_workspaces.inspect_authoring_contract",
+    );
+    if (operation === undefined) throw new Error("missing authoring inspection");
+
+    expect(operation.idempotency).toBe("read");
+    expect(
+      operation.equivalentCli({
+        workspace_id: "console.demo",
+        revision: 8,
+        selected_step_id: "render",
+      }),
+    ).toBe(
+      "uv run wf draft inspect console.demo --include-draft [non-equivalent: unavailable CLI representation for revision, selected_step_id]",
+    );
+    expect(
+      operation.interpret({
+        workspace_id: "console.demo",
+        revision: 8,
+        selected_step_id: null,
+        readable_sources: [],
+        step_input_targets: [],
+        step_output_sources: [],
+        state_targets: [],
+        workflow_output_targets: [],
+        entry_steps: [],
+        workflow_outcomes: ["ok"],
+        warnings: [],
+      }),
+    ).toMatchObject({
+      workspaceId: "console.demo",
+      selectedStepId: null,
+      workflowOutcomes: ["ok"],
+    });
   });
 
   it("does not flatten composite bindings into a fake inline CLI value", async () => {

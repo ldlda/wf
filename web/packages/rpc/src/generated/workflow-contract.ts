@@ -42,6 +42,7 @@ export type WorkflowOperationName =
   | "workflow.draft_workspaces.delete"
   | "workflow.draft_workspaces.get"
   | "workflow.draft_workspaces.handle"
+  | "workflow.draft_workspaces.inspect_authoring_contract"
   | "workflow.draft_workspaces.list"
   | "workflow.draft_workspaces.patch"
   | "workflow.draft_workspaces.remove_binding"
@@ -114,6 +115,7 @@ export const workflowOperationNames: readonly WorkflowOperationName[] = [
   "workflow.draft_workspaces.delete",
   "workflow.draft_workspaces.get",
   "workflow.draft_workspaces.handle",
+  "workflow.draft_workspaces.inspect_authoring_contract",
   "workflow.draft_workspaces.list",
   "workflow.draft_workspaces.patch",
   "workflow.draft_workspaces.remove_binding",
@@ -193,6 +195,22 @@ export type CompileDraftWorkspaceResult = CompileDraftWorkspaceSuccess | Invalid
  * via the `definition` "CreateArtifactFromWorkspaceResult".
  */
 export type CreateArtifactFromWorkspaceResult = SavedDraftArtifactResult | UnsavedDraftArtifactResult;
+/**
+ * This interface was referenced by `WorkflowContractMap`'s JSON-Schema
+ * via the `definition` "AuthoringPathAvailability".
+ */
+export type AuthoringPathAvailability = "available" | "conditional";
+/**
+ * This interface was referenced by `WorkflowContractMap`'s JSON-Schema
+ * via the `definition` "AuthoringPathOrigin".
+ */
+export type AuthoringPathOrigin =
+  "workflow_input" | "workflow_state" | "runtime_context" | "step_input" | "step_output" | "workflow_output";
+/**
+ * This interface was referenced by `WorkflowContractMap`'s JSON-Schema
+ * via the `definition` "AuthoringPathUse".
+ */
+export type AuthoringPathUse = "step_input" | "step_output_source" | "state_target" | "workflow_output";
 /**
  * This interface was referenced by `WorkflowContractMap`'s JSON-Schema
  * via the `definition` "PatchDraftResult".
@@ -598,6 +616,14 @@ export interface WorkflowContractMap {
       target: string;
     };
     result: DraftWorkspaceResult;
+  };
+  "workflow.draft_workspaces.inspect_authoring_contract": {
+    params: {
+      workspace_id: string;
+      revision: number;
+      selected_step_id?: string | null;
+    };
+    result: AuthoringContractInventoryPayload | DraftWorkspaceResult;
   };
   "workflow.draft_workspaces.list": {
     params: Record<string, never>;
@@ -2202,6 +2228,59 @@ export interface HandleDraftBranch {
   step_id: string;
 }
 /**
+ * Revision-scoped readable sources and writable authoring targets.
+ *
+ * This interface was referenced by `WorkflowContractMap`'s JSON-Schema
+ * via the `definition` "AuthoringContractInventoryPayload".
+ */
+export interface AuthoringContractInventoryPayload {
+  entry_steps: AuthoringStepContractPayload[];
+  readable_sources: AuthoringPathOptionPayload[];
+  revision: number;
+  selected_step_id: string | null;
+  state_targets: AuthoringPathOptionPayload[];
+  step_input_targets: AuthoringPathOptionPayload[];
+  step_output_sources: AuthoringPathOptionPayload[];
+  warnings: string[];
+  workflow_outcomes: string[];
+  workflow_output_targets: AuthoringPathOptionPayload[];
+  workspace_id: string;
+  [k: string]: unknown;
+}
+/**
+ * Compact executable-step choice used by authoring inventories.
+ *
+ * This interface was referenced by `WorkflowContractMap`'s JSON-Schema
+ * via the `definition` "AuthoringStepContractPayload".
+ */
+export interface AuthoringStepContractPayload {
+  description?: string;
+  input_targets?: AuthoringPathOptionPayload[];
+  label: string;
+  outcomes?: string[];
+  output_sources?: AuthoringPathOptionPayload[];
+  step_id: string;
+  [k: string]: unknown;
+}
+/**
+ * One schema-derived source or target available to an author.
+ *
+ * This interface was referenced by `WorkflowContractMap`'s JSON-Schema
+ * via the `definition` "AuthoringPathOptionPayload".
+ */
+export interface AuthoringPathOptionPayload {
+  availability: AuthoringPathAvailability;
+  description?: string;
+  label: string;
+  origin: AuthoringPathOrigin;
+  path: string;
+  reason?: string;
+  required: boolean;
+  schema: JsonObject;
+  uses: AuthoringPathUse[];
+  [k: string]: unknown;
+}
+/**
  * All persisted draft-workspace summaries.
  *
  * This interface was referenced by `WorkflowContractMap`'s JSON-Schema
@@ -2771,6 +2850,198 @@ export const workflowRuntimeContract = {
         "wrapper"
       ],
       "type": "string"
+    },
+    "AuthoringContractInventoryPayload": {
+      "description": "Revision-scoped readable sources and writable authoring targets.",
+      "properties": {
+        "entry_steps": {
+          "items": {
+            "$ref": "#/components/schemas/AuthoringStepContractPayload"
+          },
+          "type": "array"
+        },
+        "readable_sources": {
+          "items": {
+            "$ref": "#/components/schemas/AuthoringPathOptionPayload"
+          },
+          "type": "array"
+        },
+        "revision": {
+          "type": "integer"
+        },
+        "selected_step_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "state_targets": {
+          "items": {
+            "$ref": "#/components/schemas/AuthoringPathOptionPayload"
+          },
+          "type": "array"
+        },
+        "step_input_targets": {
+          "items": {
+            "$ref": "#/components/schemas/AuthoringPathOptionPayload"
+          },
+          "type": "array"
+        },
+        "step_output_sources": {
+          "items": {
+            "$ref": "#/components/schemas/AuthoringPathOptionPayload"
+          },
+          "type": "array"
+        },
+        "warnings": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "workflow_outcomes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "workflow_output_targets": {
+          "items": {
+            "$ref": "#/components/schemas/AuthoringPathOptionPayload"
+          },
+          "type": "array"
+        },
+        "workspace_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "workspace_id",
+        "revision",
+        "selected_step_id",
+        "readable_sources",
+        "step_input_targets",
+        "step_output_sources",
+        "state_targets",
+        "workflow_output_targets",
+        "entry_steps",
+        "workflow_outcomes",
+        "warnings"
+      ],
+      "type": "object"
+    },
+    "AuthoringPathAvailability": {
+      "enum": [
+        "available",
+        "conditional"
+      ],
+      "type": "string"
+    },
+    "AuthoringPathOptionPayload": {
+      "description": "One schema-derived source or target available to an author.",
+      "properties": {
+        "availability": {
+          "$ref": "#/components/schemas/AuthoringPathAvailability"
+        },
+        "description": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "origin": {
+          "$ref": "#/components/schemas/AuthoringPathOrigin"
+        },
+        "path": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "schema": {
+          "$ref": "#/components/schemas/JsonObject"
+        },
+        "uses": {
+          "items": {
+            "$ref": "#/components/schemas/AuthoringPathUse"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "path",
+        "label",
+        "origin",
+        "schema",
+        "required",
+        "availability",
+        "uses"
+      ],
+      "type": "object"
+    },
+    "AuthoringPathOrigin": {
+      "enum": [
+        "workflow_input",
+        "workflow_state",
+        "runtime_context",
+        "step_input",
+        "step_output",
+        "workflow_output"
+      ],
+      "type": "string"
+    },
+    "AuthoringPathUse": {
+      "enum": [
+        "step_input",
+        "step_output_source",
+        "state_target",
+        "workflow_output"
+      ],
+      "type": "string"
+    },
+    "AuthoringStepContractPayload": {
+      "description": "Compact executable-step choice used by authoring inventories.",
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "input_targets": {
+          "items": {
+            "$ref": "#/components/schemas/AuthoringPathOptionPayload"
+          },
+          "type": "array"
+        },
+        "label": {
+          "type": "string"
+        },
+        "outcomes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "output_sources": {
+          "items": {
+            "$ref": "#/components/schemas/AuthoringPathOptionPayload"
+          },
+          "type": "array"
+        },
+        "step_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "step_id",
+        "label"
+      ],
+      "type": "object"
     },
     "CapabilityCallResult": {
       "description": "Outcome returned by a direct node-spec or wrapper capability call.",
@@ -5780,6 +6051,48 @@ export const workflowRuntimeContract = {
         "$ref": "#/components/schemas/DraftWorkspaceResult"
       }
     },
+    "workflow.draft_workspaces.inspect_authoring_contract": {
+      "payload": {
+        "additionalProperties": false,
+        "properties": {
+          "workspace_id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "revision": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "selected_step_id": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "workspace_id",
+          "revision"
+        ],
+        "type": "object"
+      },
+      "success": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/AuthoringContractInventoryPayload"
+          },
+          {
+            "$ref": "#/components/schemas/DraftWorkspaceResult"
+          }
+        ]
+      }
+    },
     "workflow.draft_workspaces.list": {
       "payload": {
         "additionalProperties": false,
@@ -5789,6 +6102,79 @@ export const workflowRuntimeContract = {
       },
       "success": {
         "$ref": "#/components/schemas/ListDraftWorkspacesResult"
+      }
+    },
+    "workflow.draft_workspaces.set_contract": {
+      "payload": {
+        "additionalProperties": false,
+        "properties": {
+          "workspace_id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "revision": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "input_schema": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "state_schema": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "output_schema": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "outcomes": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "workspace_id",
+          "revision"
+        ],
+        "type": "object"
+      },
+      "success": {
+        "$ref": "#/components/schemas/DraftWorkspaceResult"
       }
     },
     "workflow.draft_workspaces.set_route": {
@@ -5822,6 +6208,34 @@ export const workflowRuntimeContract = {
           "step_id",
           "outcome",
           "target"
+        ],
+        "type": "object"
+      },
+      "success": {
+        "$ref": "#/components/schemas/DraftWorkspaceResult"
+      }
+    },
+    "workflow.draft_workspaces.set_start": {
+      "payload": {
+        "additionalProperties": false,
+        "properties": {
+          "workspace_id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "revision": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "step_id": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "workspace_id",
+          "revision",
+          "step_id"
         ],
         "type": "object"
       },
@@ -5891,6 +6305,44 @@ export const workflowRuntimeContract = {
           "workspace_id",
           "revision",
           "step_id",
+          "bindings"
+        ],
+        "type": "object"
+      },
+      "success": {
+        "$ref": "#/components/schemas/DraftWorkspaceResult"
+      }
+    },
+    "workflow.draft_workspaces.set_workflow_output_bindings": {
+      "payload": {
+        "additionalProperties": false,
+        "properties": {
+          "workspace_id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "revision": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "bindings": {
+            "items": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/InputPathBinding"
+                },
+                {
+                  "$ref": "#/components/schemas/InputValueBinding"
+                }
+              ],
+              "description": "Simple canonical binding for node inputs or workflow outputs. Use either a path binding with `path`, or a literal binding with `value`; composite `expression` bindings are node-local only."
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "workspace_id",
+          "revision",
           "bindings"
         ],
         "type": "object"

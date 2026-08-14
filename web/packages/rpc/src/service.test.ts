@@ -220,6 +220,15 @@ const lifecycleCases = [
     },
   },
   {
+    operation: "workflow.draft_workspaces.inspect_authoring_contract" as const,
+    params: {
+      workspace_id: "console.demo",
+      revision: 1,
+      selected_step_id: "echo",
+    },
+    result: draftWorkspaceResult,
+  },
+  {
     operation: "workflow.draft_workspaces.create_empty" as const,
     params: {
       workspace_id: "console.demo",
@@ -279,6 +288,24 @@ const lifecycleCases = [
     result: draftWorkspaceResult,
   },
   {
+    operation: "workflow.draft_workspaces.set_contract" as const,
+    params: {
+      workspace_id: "console.demo",
+      revision: 2,
+      outcomes: ["ok", "error"],
+    },
+    result: draftWorkspaceResult,
+  },
+  {
+    operation: "workflow.draft_workspaces.set_start" as const,
+    params: {
+      workspace_id: "console.demo",
+      revision: 3,
+      step_id: "echo",
+    },
+    result: draftWorkspaceResult,
+  },
+  {
     operation: "workflow.draft_workspaces.set_step_input_bindings" as const,
     params: {
       workspace_id: "console.demo",
@@ -304,6 +331,18 @@ const lifecycleCases = [
   {
     operation: "workflow.draft_workspaces.validate" as const,
     params: { workspace_id: "console.demo" },
+    result: draftWorkspaceResult,
+  },
+  {
+    operation: "workflow.draft_workspaces.set_workflow_output_bindings" as const,
+    params: {
+      workspace_id: "console.demo",
+      revision: 4,
+      bindings: [
+        { path: "state.report", target: "report" },
+        { target: "format", value: "markdown" },
+      ],
+    },
     result: draftWorkspaceResult,
   },
   {

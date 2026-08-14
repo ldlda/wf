@@ -261,6 +261,10 @@ describe("POST /api/rpc", () => {
       params: { workspace_id: "draft-1" },
     },
     {
+      operation: "workflow.draft_workspaces.inspect_authoring_contract",
+      params: { workspace_id: "draft-1", revision: 1 },
+    },
+    {
       operation: "workflow.draft_workspaces.create_empty",
       params: { workspace_id: "draft-1", name: "draft.workflow" },
     },
@@ -300,6 +304,14 @@ describe("POST /api/rpc", () => {
       },
     },
     {
+      operation: "workflow.draft_workspaces.set_contract",
+      params: { workspace_id: "draft-1", revision: 1, outcomes: ["ok"] },
+    },
+    {
+      operation: "workflow.draft_workspaces.set_start",
+      params: { workspace_id: "draft-1", revision: 1, step_id: "echo" },
+    },
+    {
       operation: "workflow.draft_workspaces.set_step_input_bindings",
       params: {
         workspace_id: "draft-1",
@@ -320,6 +332,14 @@ describe("POST /api/rpc", () => {
     {
       operation: "workflow.draft_workspaces.validate",
       params: { workspace_id: "draft-1" },
+    },
+    {
+      operation: "workflow.draft_workspaces.set_workflow_output_bindings",
+      params: {
+        workspace_id: "draft-1",
+        revision: 1,
+        bindings: [{ source: "result", target: "state.result" }],
+      },
     },
     { operation: "workflow.runs.start", params: {} },
     { operation: "workflow.runs.resume", params: {} },
@@ -466,6 +486,24 @@ describe("POST /api/rpc", () => {
     const body = await res.json();
     expect(body.error.code).toBe("unknown_operation");
   });
+
+  it.each(["workflow.draft_workspaces.patch", "workflow.draft_workspaces.replace_document"])(
+    "does not authorize adjacent generic operation %s",
+    async (operation) => {
+      const res = await app.request("/api/rpc", {
+        method: "POST",
+        headers: validConsoleHeaders,
+        body: JSON.stringify({
+          operation,
+          target: "http://127.0.0.1:8000/rpc",
+        }),
+      });
+
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error.code).toBe("unknown_operation");
+    },
+  );
 
   it("returns 400 for invalid JSON body", async () => {
     const res = await app.request("/api/rpc", {

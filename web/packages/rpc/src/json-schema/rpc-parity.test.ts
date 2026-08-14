@@ -13,14 +13,22 @@ import {
   WorkflowDraftWorkspacesCreateFromCapabilityResultSchema,
   WorkflowDraftWorkspacesGetPayloadSchema,
   WorkflowDraftWorkspacesGetResultSchema,
+  WorkflowDraftWorkspacesInspectAuthoringContractPayloadSchema,
+  WorkflowDraftWorkspacesInspectAuthoringContractResultSchema,
   WorkflowDraftWorkspacesListPayloadSchema,
   WorkflowDraftWorkspacesListResultSchema,
+  WorkflowDraftWorkspacesSetContractPayloadSchema,
+  WorkflowDraftWorkspacesSetContractResultSchema,
   WorkflowDraftWorkspacesSetRoutePayloadSchema,
   WorkflowDraftWorkspacesSetRouteResultSchema,
+  WorkflowDraftWorkspacesSetStartPayloadSchema,
+  WorkflowDraftWorkspacesSetStartResultSchema,
   WorkflowDraftWorkspacesSetStepInputBindingsPayloadSchema,
   WorkflowDraftWorkspacesSetStepInputBindingsResultSchema,
   WorkflowDraftWorkspacesSetStepOutputBindingsPayloadSchema,
   WorkflowDraftWorkspacesSetStepOutputBindingsResultSchema,
+  WorkflowDraftWorkspacesSetWorkflowOutputBindingsPayloadSchema,
+  WorkflowDraftWorkspacesSetWorkflowOutputBindingsResultSchema,
   WorkflowDraftWorkspacesUpdateCapabilityStepPayloadSchema,
   WorkflowDraftWorkspacesUpdateCapabilityStepResultSchema,
   WorkflowDraftWorkspacesValidatePayloadSchema,
@@ -201,6 +209,66 @@ const draftWorkspace = {
     steps: { echo: { use: "local.example.echo" } },
     routes: { echo: { ok: "__end__" } },
   },
+};
+
+const authoringPathOption = {
+  path: "input.title",
+  label: "Title",
+  origin: "workflow_input",
+  schema: { type: "string" },
+  required: true,
+  availability: "available",
+  uses: ["step_input"],
+};
+
+const authoringContractInventory = {
+  workspace_id: "console.demo",
+  revision: 7,
+  selected_step_id: "render",
+  readable_sources: [authoringPathOption],
+  step_input_targets: [
+    {
+      ...authoringPathOption,
+      path: "local.title",
+      origin: "step_input",
+      uses: ["step_input"],
+    },
+  ],
+  step_output_sources: [
+    {
+      ...authoringPathOption,
+      path: "local.markdown",
+      origin: "step_output",
+      uses: ["step_output_source"],
+    },
+  ],
+  state_targets: [
+    {
+      ...authoringPathOption,
+      path: "state.report",
+      origin: "workflow_state",
+      uses: ["state_target", "workflow_output"],
+    },
+  ],
+  workflow_output_targets: [
+    {
+      ...authoringPathOption,
+      path: "output.report",
+      origin: "workflow_output",
+      uses: ["workflow_output"],
+    },
+  ],
+  entry_steps: [
+    {
+      step_id: "render",
+      label: "Render report",
+      input_targets: [],
+      output_sources: [],
+      outcomes: ["ok", "error"],
+    },
+  ],
+  workflow_outcomes: ["ok", "error"],
+  warnings: [],
 };
 
 const createFromCapabilityResult = {
@@ -461,6 +529,22 @@ const parityCases: ReadonlyArray<ParityCase> = [
     },
   },
   {
+    method: "workflow.draft_workspaces.inspect_authoring_contract",
+    payload: WorkflowDraftWorkspacesInspectAuthoringContractPayloadSchema,
+    success: WorkflowDraftWorkspacesInspectAuthoringContractResultSchema,
+    validPayload: {
+      workspace_id: "console.demo",
+      revision: 7,
+      selected_step_id: "render",
+    },
+    invalidPayload: { workspace_id: "console.demo", revision: 0 },
+    validSuccess: authoringContractInventory,
+    invalidSuccess: {
+      ...authoringContractInventory,
+      entry_steps: [{ step_id: "render" }],
+    },
+  },
+  {
     method: "workflow.draft_workspaces.create_empty",
     payload: WorkflowDraftWorkspacesCreateEmptyPayloadSchema,
     success: WorkflowDraftWorkspacesCreateEmptyResultSchema,
@@ -591,6 +675,41 @@ const parityCases: ReadonlyArray<ParityCase> = [
     },
   },
   {
+    method: "workflow.draft_workspaces.set_contract",
+    payload: WorkflowDraftWorkspacesSetContractPayloadSchema,
+    success: WorkflowDraftWorkspacesSetContractResultSchema,
+    validPayload: {
+      workspace_id: "console.demo",
+      revision: 7,
+      input_schema: { type: "object" },
+      state_schema: { type: "object" },
+      output_schema: { type: "object" },
+      outcomes: ["ok", "error"],
+    },
+    invalidPayload: { workspace_id: "console.demo", revision: 0 },
+    validSuccess: draftWorkspace,
+    invalidSuccess: {
+      ...draftWorkspace,
+      summary: { ...draftWorkspace.summary, steps: [1] },
+    },
+  },
+  {
+    method: "workflow.draft_workspaces.set_start",
+    payload: WorkflowDraftWorkspacesSetStartPayloadSchema,
+    success: WorkflowDraftWorkspacesSetStartResultSchema,
+    validPayload: {
+      workspace_id: "console.demo",
+      revision: 7,
+      step_id: "render",
+    },
+    invalidPayload: { workspace_id: "console.demo", revision: 7, step_id: "" },
+    validSuccess: draftWorkspace,
+    invalidSuccess: {
+      ...draftWorkspace,
+      summary: { ...draftWorkspace.summary, steps: [1] },
+    },
+  },
+  {
     method: "workflow.draft_workspaces.set_step_input_bindings",
     payload: WorkflowDraftWorkspacesSetStepInputBindingsPayloadSchema,
     success: WorkflowDraftWorkspacesSetStepInputBindingsResultSchema,
@@ -633,6 +752,29 @@ const parityCases: ReadonlyArray<ParityCase> = [
       revision: 4,
       step_id: "render",
       bindings: [{ source: "report", target: { root: "state", parts: [] } }],
+    },
+    validSuccess: draftWorkspace,
+    invalidSuccess: {
+      ...draftWorkspace,
+      summary: { ...draftWorkspace.summary, steps: [1] },
+    },
+  },
+  {
+    method: "workflow.draft_workspaces.set_workflow_output_bindings",
+    payload: WorkflowDraftWorkspacesSetWorkflowOutputBindingsPayloadSchema,
+    success: WorkflowDraftWorkspacesSetWorkflowOutputBindingsResultSchema,
+    validPayload: {
+      workspace_id: "console.demo",
+      revision: 7,
+      bindings: [
+        { path: "state.report", target: "report" },
+        { target: "format", value: "markdown" },
+      ],
+    },
+    invalidPayload: {
+      workspace_id: "console.demo",
+      revision: 7,
+      bindings: [{ expression: { kind: "literal", value: "bad" } }],
     },
     validSuccess: draftWorkspace,
     invalidSuccess: {
@@ -1188,13 +1330,17 @@ describe("authored RPC and manifest schema parity", () => {
       "workflow.capabilities.call",
       "workflow.draft_workspaces.list",
       "workflow.draft_workspaces.get",
+      "workflow.draft_workspaces.inspect_authoring_contract",
       "workflow.draft_workspaces.create_empty",
       "workflow.draft_workspaces.create_from_capability",
       "workflow.draft_workspaces.add_step_from_capability",
       "workflow.draft_workspaces.update_capability_step",
       "workflow.draft_workspaces.set_route",
+      "workflow.draft_workspaces.set_contract",
+      "workflow.draft_workspaces.set_start",
       "workflow.draft_workspaces.set_step_input_bindings",
       "workflow.draft_workspaces.set_step_output_bindings",
+      "workflow.draft_workspaces.set_workflow_output_bindings",
       "workflow.draft_workspaces.validate",
       "workflow.artifacts.list",
       "workflow.artifacts.inspect",
@@ -1231,6 +1377,7 @@ describe("authored RPC and manifest schema parity", () => {
       "workflow.draft_workspaces.update_capability_step:payload:oneOf@#/components/schemas/InputPathBinding.properties.path",
       "workflow.draft_workspaces.set_step_input_bindings:payload:oneOf@#/components/schemas/InputPathBinding.properties.path",
       "workflow.draft_workspaces.set_step_output_bindings:payload:oneOf@#/components/schemas/OutputBinding.properties.source",
+      "workflow.draft_workspaces.set_workflow_output_bindings:payload:oneOf@#/components/schemas/InputPathBinding.properties.path",
     ]);
   });
 });

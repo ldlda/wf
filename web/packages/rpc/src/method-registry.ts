@@ -2,6 +2,8 @@ import { Schema } from "effect";
 import type {
   NodeSpecCapabilitySummary,
   StepInputBinding,
+  AuthoringContractInventoryPayload,
+  AuthoringPathOptionPayload,
   WorkflowOperationName,
   WrapperArtifactCapabilitySummary,
 } from "./generated/workflow-contract.js";
@@ -18,6 +20,8 @@ import {
   WorkflowDraftWorkspacesListResultSchema,
   WorkflowDraftWorkspacesGetPayloadSchema,
   WorkflowDraftWorkspacesGetResultSchema,
+  WorkflowDraftWorkspacesInspectAuthoringContractPayloadSchema,
+  WorkflowDraftWorkspacesInspectAuthoringContractResultSchema,
   WorkflowDraftWorkspacesCreateEmptyPayloadSchema,
   WorkflowDraftWorkspacesCreateEmptyResultSchema,
   WorkflowDraftWorkspacesCreateFromCapabilityPayloadSchema,
@@ -28,10 +32,16 @@ import {
   WorkflowDraftWorkspacesUpdateCapabilityStepResultSchema,
   WorkflowDraftWorkspacesSetRoutePayloadSchema,
   WorkflowDraftWorkspacesSetRouteResultSchema,
+  WorkflowDraftWorkspacesSetContractPayloadSchema,
+  WorkflowDraftWorkspacesSetContractResultSchema,
+  WorkflowDraftWorkspacesSetStartPayloadSchema,
+  WorkflowDraftWorkspacesSetStartResultSchema,
   WorkflowDraftWorkspacesSetStepInputBindingsPayloadSchema,
   WorkflowDraftWorkspacesSetStepInputBindingsResultSchema,
   WorkflowDraftWorkspacesSetStepOutputBindingsPayloadSchema,
   WorkflowDraftWorkspacesSetStepOutputBindingsResultSchema,
+  WorkflowDraftWorkspacesSetWorkflowOutputBindingsPayloadSchema,
+  WorkflowDraftWorkspacesSetWorkflowOutputBindingsResultSchema,
   WorkflowDraftWorkspacesValidatePayloadSchema,
   WorkflowDraftWorkspacesValidateResultSchema,
   WorkflowArtifactsListPayloadSchema,
@@ -139,6 +149,27 @@ export type DraftWorkspaceInterpreted = {
     readonly steps: ReadonlyArray<string>;
   };
   readonly draft: Readonly<Record<string, unknown>> | null;
+};
+
+export type AuthoringContractInterpreted = {
+  readonly workspaceId: string;
+  readonly revision: number;
+  readonly selectedStepId: string | null;
+  readonly readableSources: ReadonlyArray<ReturnType<typeof interpretAuthoringPathOption>>;
+  readonly stepInputTargets: ReadonlyArray<ReturnType<typeof interpretAuthoringPathOption>>;
+  readonly stepOutputSources: ReadonlyArray<ReturnType<typeof interpretAuthoringPathOption>>;
+  readonly stateTargets: ReadonlyArray<ReturnType<typeof interpretAuthoringPathOption>>;
+  readonly workflowOutputTargets: ReadonlyArray<ReturnType<typeof interpretAuthoringPathOption>>;
+  readonly entrySteps: ReadonlyArray<{
+    readonly stepId: string;
+    readonly label: string;
+    readonly description?: string;
+    readonly inputTargets?: ReadonlyArray<ReturnType<typeof interpretAuthoringPathOption>>;
+    readonly outputSources?: ReadonlyArray<ReturnType<typeof interpretAuthoringPathOption>>;
+    readonly outcomes?: ReadonlyArray<string>;
+  }>;
+  readonly workflowOutcomes: ReadonlyArray<string>;
+  readonly warnings: ReadonlyArray<string>;
 };
 
 const interpretNextActions = (nextActions: {
@@ -299,6 +330,49 @@ const interpretDraftWorkspace = (decoded: {
     steps: decoded.summary.steps,
   },
   draft: decoded.draft ?? null,
+});
+
+const interpretAuthoringPathOption = (option: AuthoringPathOptionPayload) => ({
+  path: option.path,
+  label: option.label,
+  origin: option.origin,
+  schema: option.schema,
+  required: option.required,
+  availability: option.availability,
+  uses: option.uses,
+  ...(option.description === undefined
+    ? {}
+    : { description: option.description }),
+  ...(option.reason === undefined ? {} : { reason: option.reason }),
+});
+
+const interpretAuthoringContract = (
+  decoded: AuthoringContractInventoryPayload,
+): AuthoringContractInterpreted => ({
+  workspaceId: decoded.workspace_id,
+  revision: decoded.revision,
+  selectedStepId: decoded.selected_step_id,
+  readableSources: decoded.readable_sources.map(interpretAuthoringPathOption),
+  stepInputTargets: decoded.step_input_targets.map(interpretAuthoringPathOption),
+  stepOutputSources: decoded.step_output_sources.map(interpretAuthoringPathOption),
+  stateTargets: decoded.state_targets.map(interpretAuthoringPathOption),
+  workflowOutputTargets: decoded.workflow_output_targets.map(
+    interpretAuthoringPathOption,
+  ),
+  entrySteps: decoded.entry_steps.map((step) => ({
+    stepId: step.step_id,
+    label: step.label,
+    ...(step.description === undefined ? {} : { description: step.description }),
+    ...(step.input_targets === undefined
+      ? {}
+      : { inputTargets: step.input_targets.map(interpretAuthoringPathOption) }),
+    ...(step.output_sources === undefined
+      ? {}
+      : { outputSources: step.output_sources.map(interpretAuthoringPathOption) }),
+    ...(step.outcomes === undefined ? {} : { outcomes: step.outcomes }),
+  })),
+  workflowOutcomes: decoded.workflow_outcomes,
+  warnings: decoded.warnings,
 });
 
 /** Adapts a snake_case run detail from the server into camelCase for the browser. */
@@ -534,6 +608,33 @@ const operationEntries = defineOperationEntries([
     },
   },
   {
+    method: "workflow.draft_workspaces.inspect_authoring_contract",
+    label: "Inspect draft authoring contract",
+    explanation: "Inspect schema-derived sources and targets for a draft workspace",
+    idempotency: "read",
+    equivalentCli: (params) => {
+      const p = Schema.decodeUnknownSync(
+        WorkflowDraftWorkspacesInspectAuthoringContractPayloadSchema,
+      )(params, { onExcessProperty: "error" });
+      return nonEquivalentCli(
+        `uv run wf draft inspect ${shellArg(p.workspace_id)} --include-draft`,
+        [
+          "revision",
+          ...(p.selected_step_id == null ? [] : ["selected_step_id"]),
+        ],
+      );
+    },
+    interpret: (result) => {
+      const decoded = Schema.decodeUnknownSync(
+        WorkflowDraftWorkspacesInspectAuthoringContractResultSchema,
+      )(result);
+      if (isRecord(decoded) && "readable_sources" in decoded) {
+        return interpretAuthoringContract(decoded as AuthoringContractInventoryPayload);
+      }
+      return interpretDraftWorkspace(decoded);
+    },
+  },
+  {
     method: "workflow.draft_workspaces.create_empty",
     label: "Create empty draft workspace",
     explanation: "Create an empty persisted workflow draft workspace",
@@ -723,6 +824,55 @@ const operationEntries = defineOperationEntries([
     },
   },
   {
+    method: "workflow.draft_workspaces.set_contract",
+    label: "Set draft contract",
+    explanation: "Replace selected workflow input, state, output, or outcome contract fields",
+    idempotency: "write",
+    equivalentCli: (params) => {
+      const p = Schema.decodeUnknownSync(
+        WorkflowDraftWorkspacesSetContractPayloadSchema,
+      )(params, { onExcessProperty: "error" });
+      const parts = [
+        "uv run wf draft set-contract",
+        shellArg(p.workspace_id),
+        "--revision",
+        String(p.revision),
+      ];
+      const unavailable: string[] = [];
+      if (p.input_schema != null) unavailable.push("input_schema (use --input-schema-file)");
+      if (p.state_schema != null) unavailable.push("state_schema (use --state-schema-file)");
+      if (p.output_schema != null) unavailable.push("output_schema (use --output-schema-file)");
+      for (const outcome of p.outcomes ?? []) {
+        parts.push("--outcome", shellArg(outcome));
+      }
+      return nonEquivalentCli(parts.join(" "), unavailable);
+    },
+    interpret: (result) => {
+      const decoded = Schema.decodeUnknownSync(
+        WorkflowDraftWorkspacesSetContractResultSchema,
+      )(result);
+      return interpretDraftWorkspace(decoded);
+    },
+  },
+  {
+    method: "workflow.draft_workspaces.set_start",
+    label: "Set draft start",
+    explanation: "Set the entry step for a persisted workflow draft",
+    idempotency: "write",
+    equivalentCli: (params) => {
+      const p = Schema.decodeUnknownSync(
+        WorkflowDraftWorkspacesSetStartPayloadSchema,
+      )(params, { onExcessProperty: "error" });
+      return `uv run wf draft set-start ${shellArg(p.workspace_id)} --revision ${p.revision} --step ${shellArg(p.step_id)}`;
+    },
+    interpret: (result) => {
+      const decoded = Schema.decodeUnknownSync(
+        WorkflowDraftWorkspacesSetStartResultSchema,
+      )(result);
+      return interpretDraftWorkspace(decoded);
+    },
+  },
+  {
     method: "workflow.draft_workspaces.set_step_input_bindings",
     label: "Set step input bindings",
     explanation: "Replace one capability-backed step's ordered input bindings",
@@ -784,6 +934,36 @@ const operationEntries = defineOperationEntries([
     interpret: (result) => {
       const decoded = Schema.decodeUnknownSync(
         WorkflowDraftWorkspacesSetStepOutputBindingsResultSchema,
+      )(result);
+      return interpretDraftWorkspace(decoded);
+    },
+  },
+  {
+    method: "workflow.draft_workspaces.set_workflow_output_bindings",
+    label: "Set workflow output bindings",
+    explanation: "Replace the ordered public workflow output bindings",
+    idempotency: "write",
+    equivalentCli: (params) => {
+      const p = Schema.decodeUnknownSync(
+        WorkflowDraftWorkspacesSetWorkflowOutputBindingsPayloadSchema,
+      )(params, { onExcessProperty: "error" });
+      const parts = [
+        "uv run wf draft set-workflow-output",
+        shellArg(p.workspace_id),
+        "--revision",
+        String(p.revision),
+      ];
+      if (p.bindings.length === 0) {
+        parts.push("--clear");
+        return parts.join(" ");
+      }
+      const rendered = inputBindingCliArgs(p.bindings, "--map");
+      parts.push(...rendered.args);
+      return nonEquivalentCli(parts.join(" "), rendered.unavailable);
+    },
+    interpret: (result) => {
+      const decoded = Schema.decodeUnknownSync(
+        WorkflowDraftWorkspacesSetWorkflowOutputBindingsResultSchema,
       )(result);
       return interpretDraftWorkspace(decoded);
     },

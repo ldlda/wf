@@ -15,14 +15,18 @@ describe("browser operation policy", () => {
       "workflow.capabilities.inspect",
       "workflow.draft_workspaces.list",
       "workflow.draft_workspaces.get",
+      "workflow.draft_workspaces.inspect_authoring_contract",
       "workflow.draft_workspaces.create_empty",
       "workflow.draft_workspaces.create_from_capability",
       "workflow.draft_workspaces.add_step_from_capability",
       "workflow.draft_workspaces.update_capability_step",
       "workflow.draft_workspaces.set_route",
+      "workflow.draft_workspaces.set_contract",
+      "workflow.draft_workspaces.set_start",
       "workflow.draft_workspaces.set_step_input_bindings",
       "workflow.draft_workspaces.set_step_output_bindings",
       "workflow.draft_workspaces.validate",
+      "workflow.draft_workspaces.set_workflow_output_bindings",
       "workflow.artifacts.list",
       "workflow.artifacts.inspect",
       "workflow.deployments.list",
@@ -40,6 +44,9 @@ describe("browser operation policy", () => {
     );
     expect(browserAllowedOperationNames).not.toContain(
       "workflow.draft_workspaces.replace_document",
+    );
+    expect(browserAllowedOperationNames).not.toContain(
+      "workflow.draft_workspaces.patch",
     );
     expect(browserAllowedOperationNames).not.toContain(
       "workflow.draft_workspaces.remove_step",

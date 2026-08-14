@@ -36,13 +36,17 @@ import {
   WorkflowCapabilitiesCallPayloadSchema,
   WorkflowDraftWorkspacesListPayloadSchema,
   WorkflowDraftWorkspacesGetPayloadSchema,
+  WorkflowDraftWorkspacesInspectAuthoringContractPayloadSchema,
   WorkflowDraftWorkspacesCreateEmptyPayloadSchema,
   WorkflowDraftWorkspacesCreateFromCapabilityPayloadSchema,
   WorkflowDraftWorkspacesAddStepFromCapabilityPayloadSchema,
   WorkflowDraftWorkspacesUpdateCapabilityStepPayloadSchema,
   WorkflowDraftWorkspacesSetRoutePayloadSchema,
+  WorkflowDraftWorkspacesSetContractPayloadSchema,
+  WorkflowDraftWorkspacesSetStartPayloadSchema,
   WorkflowDraftWorkspacesSetStepInputBindingsPayloadSchema,
   WorkflowDraftWorkspacesSetStepOutputBindingsPayloadSchema,
+  WorkflowDraftWorkspacesSetWorkflowOutputBindingsPayloadSchema,
   WorkflowDraftWorkspacesValidatePayloadSchema,
   WorkflowArtifactsListPayloadSchema,
   WorkflowArtifactsInspectPayloadSchema,
@@ -324,6 +328,15 @@ const executeImpl =
             );
             return yield* client.workflow["draft_workspaces.get"](payload);
           }
+          case "workflow.draft_workspaces.inspect_authoring_contract": {
+            const payload = yield* decodeParams(
+              WorkflowDraftWorkspacesInspectAuthoringContractPayloadSchema,
+              params,
+            );
+            return yield* client.workflow[
+              "draft_workspaces.inspect_authoring_contract"
+            ](payload);
+          }
           case "workflow.draft_workspaces.create_empty": {
             const payload = yield* decodeParams(
               WorkflowDraftWorkspacesCreateEmptyPayloadSchema,
@@ -365,6 +378,20 @@ const executeImpl =
             );
             return yield* client.workflow["draft_workspaces.set_route"](payload);
           }
+          case "workflow.draft_workspaces.set_contract": {
+            const payload = yield* decodeParams(
+              WorkflowDraftWorkspacesSetContractPayloadSchema,
+              params,
+            );
+            return yield* client.workflow["draft_workspaces.set_contract"](payload);
+          }
+          case "workflow.draft_workspaces.set_start": {
+            const payload = yield* decodeParams(
+              WorkflowDraftWorkspacesSetStartPayloadSchema,
+              params,
+            );
+            return yield* client.workflow["draft_workspaces.set_start"](payload);
+          }
           case "workflow.draft_workspaces.set_step_input_bindings": {
             const payload = yield* decodeParams(
               WorkflowDraftWorkspacesSetStepInputBindingsPayloadSchema,
@@ -381,6 +408,15 @@ const executeImpl =
             );
             return yield* client.workflow[
               "draft_workspaces.set_step_output_bindings"
+            ](payload);
+          }
+          case "workflow.draft_workspaces.set_workflow_output_bindings": {
+            const payload = yield* decodeParams(
+              WorkflowDraftWorkspacesSetWorkflowOutputBindingsPayloadSchema,
+              params,
+            );
+            return yield* client.workflow[
+              "draft_workspaces.set_workflow_output_bindings"
             ](payload);
           }
           case "workflow.draft_workspaces.validate": {

@@ -89,14 +89,24 @@ def test_generates_the_complete_real_workflow_contract() -> None:
     manifest = generate_manifest()
     schemas = manifest["components"]["schemas"]
 
-    assert len(manifest["operations"]) == 70
-    assert len({operation["method"] for operation in manifest["operations"]}) == 70
-    assert len(schemas) == 134
+    assert len(manifest["operations"]) == 71
+    assert len({operation["method"] for operation in manifest["operations"]}) == 71
+    assert len(schemas) == 140
     assert len(manifest["components"]["errors"]) == 1
     assert all(
         set(operation["result"]["schema"]) == {"$ref"}
+        or operation["method"] == "workflow.draft_workspaces.inspect_authoring_contract"
         for operation in manifest["operations"]
     )
+    inspection = next(
+        operation
+        for operation in manifest["operations"]
+        if operation["method"] == "workflow.draft_workspaces.inspect_authoring_contract"
+    )
+    assert inspection["result"]["schema"]["anyOf"] == [
+        {"$ref": "#/components/schemas/AuthoringContractInventoryPayload"},
+        {"$ref": "#/components/schemas/DraftWorkspaceResult"},
+    ]
     assert {name for name in UNION_RESULTS if "anyOf" in schemas[name]} == UNION_RESULTS
 
 
@@ -172,6 +182,17 @@ def test_manifest_contains_the_two_focused_step_binding_operations() -> None:
     assert {
         "workflow.draft_workspaces.set_step_input_bindings",
         "workflow.draft_workspaces.set_step_output_bindings",
+    } <= methods
+
+
+def test_manifest_contains_the_four_browser_authoring_operations() -> None:
+    methods = {operation["method"] for operation in generate_manifest()["operations"]}
+
+    assert {
+        "workflow.draft_workspaces.inspect_authoring_contract",
+        "workflow.draft_workspaces.set_contract",
+        "workflow.draft_workspaces.set_start",
+        "workflow.draft_workspaces.set_workflow_output_bindings",
     } <= methods
 
 

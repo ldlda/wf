@@ -107,6 +107,23 @@ export const WorkflowDraftWorkspacesGet = Rpc.make(
   },
 );
 
+const draftWorkspacesInspectAuthoringContractSchemas = runtimeSchemasFor(
+  "workflow.draft_workspaces.inspect_authoring_contract",
+);
+export const WorkflowDraftWorkspacesInspectAuthoringContractPayloadSchema =
+  draftWorkspacesInspectAuthoringContractSchemas.payload;
+export const WorkflowDraftWorkspacesInspectAuthoringContractResultSchema =
+  draftWorkspacesInspectAuthoringContractSchemas.success;
+
+export const WorkflowDraftWorkspacesInspectAuthoringContract = Rpc.make(
+  "workflow.draft_workspaces.inspect_authoring_contract",
+  {
+    payload: WorkflowDraftWorkspacesInspectAuthoringContractPayloadSchema,
+    success: WorkflowDraftWorkspacesInspectAuthoringContractResultSchema,
+    error: Schema.Never,
+  },
+);
+
 // Artifacts
 const artifactListSchemas = runtimeSchemasFor("workflow.artifacts.list");
 export const WorkflowArtifactsListPayloadSchema = artifactListSchemas.payload;
@@ -203,6 +220,40 @@ export const WorkflowDraftWorkspacesSetRoute = Rpc.make(
   },
 );
 
+const draftWorkspacesSetContractSchemas = runtimeSchemasFor(
+  "workflow.draft_workspaces.set_contract",
+);
+export const WorkflowDraftWorkspacesSetContractPayloadSchema =
+  draftWorkspacesSetContractSchemas.payload;
+export const WorkflowDraftWorkspacesSetContractResultSchema =
+  draftWorkspacesSetContractSchemas.success;
+
+export const WorkflowDraftWorkspacesSetContract = Rpc.make(
+  "workflow.draft_workspaces.set_contract",
+  {
+    payload: WorkflowDraftWorkspacesSetContractPayloadSchema,
+    success: WorkflowDraftWorkspacesSetContractResultSchema,
+    error: Schema.Never,
+  },
+);
+
+const draftWorkspacesSetStartSchemas = runtimeSchemasFor(
+  "workflow.draft_workspaces.set_start",
+);
+export const WorkflowDraftWorkspacesSetStartPayloadSchema =
+  draftWorkspacesSetStartSchemas.payload;
+export const WorkflowDraftWorkspacesSetStartResultSchema =
+  draftWorkspacesSetStartSchemas.success;
+
+export const WorkflowDraftWorkspacesSetStart = Rpc.make(
+  "workflow.draft_workspaces.set_start",
+  {
+    payload: WorkflowDraftWorkspacesSetStartPayloadSchema,
+    success: WorkflowDraftWorkspacesSetStartResultSchema,
+    error: Schema.Never,
+  },
+);
+
 const setStepInputBindingsSchemas = runtimeSchemasFor(
   "workflow.draft_workspaces.set_step_input_bindings",
 );
@@ -233,6 +284,23 @@ export const WorkflowDraftWorkspacesSetStepOutputBindings = Rpc.make(
   {
     payload: WorkflowDraftWorkspacesSetStepOutputBindingsPayloadSchema,
     success: WorkflowDraftWorkspacesSetStepOutputBindingsResultSchema,
+    error: Schema.Never,
+  },
+);
+
+const draftWorkspacesSetWorkflowOutputBindingsSchemas = runtimeSchemasFor(
+  "workflow.draft_workspaces.set_workflow_output_bindings",
+);
+export const WorkflowDraftWorkspacesSetWorkflowOutputBindingsPayloadSchema =
+  draftWorkspacesSetWorkflowOutputBindingsSchemas.payload;
+export const WorkflowDraftWorkspacesSetWorkflowOutputBindingsResultSchema =
+  draftWorkspacesSetWorkflowOutputBindingsSchemas.success;
+
+export const WorkflowDraftWorkspacesSetWorkflowOutputBindings = Rpc.make(
+  "workflow.draft_workspaces.set_workflow_output_bindings",
+  {
+    payload: WorkflowDraftWorkspacesSetWorkflowOutputBindingsPayloadSchema,
+    success: WorkflowDraftWorkspacesSetWorkflowOutputBindingsResultSchema,
     error: Schema.Never,
   },
 );
@@ -365,13 +433,17 @@ export const WorkflowRpcs = RpcGroup.make(
   WorkflowCapabilitiesCall,
   WorkflowDraftWorkspacesList,
   WorkflowDraftWorkspacesGet,
+  WorkflowDraftWorkspacesInspectAuthoringContract,
   WorkflowDraftWorkspacesCreateEmpty,
   WorkflowDraftWorkspacesCreateFromCapability,
   WorkflowDraftWorkspacesAddStepFromCapability,
   WorkflowDraftWorkspacesUpdateCapabilityStep,
   WorkflowDraftWorkspacesSetRoute,
+  WorkflowDraftWorkspacesSetContract,
+  WorkflowDraftWorkspacesSetStart,
   WorkflowDraftWorkspacesSetStepInputBindings,
   WorkflowDraftWorkspacesSetStepOutputBindings,
+  WorkflowDraftWorkspacesSetWorkflowOutputBindings,
   WorkflowDraftWorkspacesValidate,
   WorkflowArtifactsList,
   WorkflowArtifactsInspect,

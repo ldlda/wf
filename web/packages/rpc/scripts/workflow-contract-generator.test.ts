@@ -155,11 +155,15 @@ const runtimeOperationNames = [
   "workflow.draft_workspaces.create_from_capability",
   "workflow.draft_workspaces.list",
   "workflow.draft_workspaces.get",
+  "workflow.draft_workspaces.inspect_authoring_contract",
   "workflow.draft_workspaces.set_route",
+  "workflow.draft_workspaces.set_contract",
+  "workflow.draft_workspaces.set_start",
   "workflow.draft_workspaces.set_step_input_bindings",
   "workflow.draft_workspaces.set_step_output_bindings",
   "workflow.draft_workspaces.update_capability_step",
   "workflow.draft_workspaces.validate",
+  "workflow.draft_workspaces.set_workflow_output_bindings",
   "workflow.artifacts.list",
   "workflow.artifacts.inspect",
   "workflow.deployments.list",
@@ -320,6 +324,10 @@ describe("workflow contract generator", () => {
   });
 
   it.each([
+    "workflow.draft_workspaces.inspect_authoring_contract",
+    "workflow.draft_workspaces.set_contract",
+    "workflow.draft_workspaces.set_start",
+    "workflow.draft_workspaces.set_workflow_output_bindings",
     "workflow.draft_workspaces.set_step_input_bindings",
     "workflow.draft_workspaces.set_step_output_bindings",
   ])("rejects a manifest missing focused operation %s", async (method) => {
@@ -351,6 +359,14 @@ describe("workflow contract generator", () => {
     );
     expect(runtimeSource).toContain(
       '"workflow.draft_workspaces.set_step_output_bindings"',
+    );
+    expect(runtimeSource).toContain(
+      '"workflow.draft_workspaces.inspect_authoring_contract"',
+    );
+    expect(runtimeSource).toContain('"workflow.draft_workspaces.set_contract"');
+    expect(runtimeSource).toContain('"workflow.draft_workspaces.set_start"');
+    expect(runtimeSource).toContain(
+      '"workflow.draft_workspaces.set_workflow_output_bindings"',
     );
     expect(runtimeSource).toContain('"InputPathBinding"');
     expect(runtimeSource).toContain('"InputValueBinding"');
@@ -420,6 +436,6 @@ describe("workflow contract generator", () => {
 
     const generatedSource = await generateWorkflowContractSource(manifestText);
     expect(generatedSource).toBe(checkedSource);
-    expect(generatedSource.match(/^  \| "workflow\./gm)).toHaveLength(70);
+    expect(generatedSource.match(/^  \| "workflow\./gm)).toHaveLength(71);
   });
 });

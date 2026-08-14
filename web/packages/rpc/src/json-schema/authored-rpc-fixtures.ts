@@ -157,6 +157,55 @@ const DraftWorkspaceSchema = Schema.Struct({
   workspace_id: Schema.String,
 });
 
+const AuthoringPathOptionSchema = Schema.Struct({
+  path: Schema.String,
+  label: Schema.String,
+  origin: Schema.Literal(
+    "workflow_input",
+    "workflow_state",
+    "runtime_context",
+    "step_input",
+    "step_output",
+    "workflow_output",
+  ),
+  schema: JsonObjectSchema,
+  required: Schema.Boolean,
+  availability: Schema.Literal("available", "conditional"),
+  uses: Schema.Array(
+    Schema.Literal(
+      "step_input",
+      "step_output_source",
+      "state_target",
+      "workflow_output",
+    ),
+  ),
+  description: Schema.optional(Schema.String),
+  reason: Schema.optional(Schema.String),
+});
+
+const AuthoringStepContractSchema = Schema.Struct({
+  step_id: Schema.String,
+  label: Schema.String,
+  description: Schema.optional(Schema.String),
+  input_targets: Schema.optional(Schema.Array(AuthoringPathOptionSchema)),
+  output_sources: Schema.optional(Schema.Array(AuthoringPathOptionSchema)),
+  outcomes: Schema.optional(Schema.Array(Schema.String)),
+});
+
+const AuthoringContractInventorySchema = Schema.Struct({
+  workspace_id: Schema.String,
+  revision: PositiveIntegerSchema,
+  selected_step_id: Schema.NullOr(Schema.String),
+  readable_sources: Schema.Array(AuthoringPathOptionSchema),
+  step_input_targets: Schema.Array(AuthoringPathOptionSchema),
+  step_output_sources: Schema.Array(AuthoringPathOptionSchema),
+  state_targets: Schema.Array(AuthoringPathOptionSchema),
+  workflow_output_targets: Schema.Array(AuthoringPathOptionSchema),
+  entry_steps: Schema.Array(AuthoringStepContractSchema),
+  workflow_outcomes: Schema.Array(Schema.String),
+  warnings: Schema.Array(Schema.String),
+});
+
 // Effect's empty Struct does not traverse excess keys; the impossible optional
 // field keeps the authored empty payload strict under onExcessProperty:error.
 const EmptyPayloadSchema = Schema.Struct({
@@ -478,6 +527,14 @@ export const authoredRpcSchemas = {
     }),
     success: DraftWorkspaceSchema,
   },
+  "workflow.draft_workspaces.inspect_authoring_contract": {
+    payload: Schema.Struct({
+      workspace_id: Schema.String.pipe(Schema.minLength(1)),
+      revision: PositiveIntegerSchema,
+      selected_step_id: Schema.optional(Schema.NullOr(Schema.String)),
+    }),
+    success: Schema.Union(AuthoringContractInventorySchema, DraftWorkspaceSchema),
+  },
   "workflow.draft_workspaces.create_empty": {
     payload: Schema.Struct({
       workspace_id: Schema.String.pipe(Schema.minLength(1)),
@@ -487,6 +544,25 @@ export const authoredRpcSchemas = {
       state_schema: Schema.optional(Schema.NullOr(JsonObjectSchema)),
       output_schema: Schema.optional(Schema.NullOr(JsonObjectSchema)),
       outcomes: Schema.optional(Schema.Array(Schema.String)),
+    }),
+    success: DraftWorkspaceSchema,
+  },
+  "workflow.draft_workspaces.set_contract": {
+    payload: Schema.Struct({
+      workspace_id: Schema.String.pipe(Schema.minLength(1)),
+      revision: PositiveIntegerSchema,
+      input_schema: Schema.optional(Schema.NullOr(JsonObjectSchema)),
+      state_schema: Schema.optional(Schema.NullOr(JsonObjectSchema)),
+      output_schema: Schema.optional(Schema.NullOr(JsonObjectSchema)),
+      outcomes: Schema.optional(Schema.NullOr(Schema.Array(Schema.String))),
+    }),
+    success: DraftWorkspaceSchema,
+  },
+  "workflow.draft_workspaces.set_start": {
+    payload: Schema.Struct({
+      workspace_id: Schema.String.pipe(Schema.minLength(1)),
+      revision: PositiveIntegerSchema,
+      step_id: Schema.String.pipe(Schema.minLength(1)),
     }),
     success: DraftWorkspaceSchema,
   },
@@ -571,6 +647,14 @@ export const authoredRpcSchemas = {
       revision: PositiveIntegerSchema,
       step_id: Schema.String.pipe(Schema.minLength(1)),
       bindings: Schema.Array(OutputBindingSchema),
+    }),
+    success: DraftWorkspaceSchema,
+  },
+  "workflow.draft_workspaces.set_workflow_output_bindings": {
+    payload: Schema.Struct({
+      workspace_id: Schema.String.pipe(Schema.minLength(1)),
+      revision: PositiveIntegerSchema,
+      bindings: Schema.Array(Schema.Union(InputPathBindingSchema, InputValueBindingSchema)),
     }),
     success: DraftWorkspaceSchema,
   },

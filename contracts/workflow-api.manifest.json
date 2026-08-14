@@ -246,6 +246,198 @@
         ],
         "type": "object"
       },
+      "AuthoringContractInventoryPayload": {
+        "description": "Revision-scoped readable sources and writable authoring targets.",
+        "properties": {
+          "entry_steps": {
+            "items": {
+              "$ref": "#/components/schemas/AuthoringStepContractPayload"
+            },
+            "type": "array"
+          },
+          "readable_sources": {
+            "items": {
+              "$ref": "#/components/schemas/AuthoringPathOptionPayload"
+            },
+            "type": "array"
+          },
+          "revision": {
+            "type": "integer"
+          },
+          "selected_step_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "state_targets": {
+            "items": {
+              "$ref": "#/components/schemas/AuthoringPathOptionPayload"
+            },
+            "type": "array"
+          },
+          "step_input_targets": {
+            "items": {
+              "$ref": "#/components/schemas/AuthoringPathOptionPayload"
+            },
+            "type": "array"
+          },
+          "step_output_sources": {
+            "items": {
+              "$ref": "#/components/schemas/AuthoringPathOptionPayload"
+            },
+            "type": "array"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "workflow_outcomes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "workflow_output_targets": {
+            "items": {
+              "$ref": "#/components/schemas/AuthoringPathOptionPayload"
+            },
+            "type": "array"
+          },
+          "workspace_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "workspace_id",
+          "revision",
+          "selected_step_id",
+          "readable_sources",
+          "step_input_targets",
+          "step_output_sources",
+          "state_targets",
+          "workflow_output_targets",
+          "entry_steps",
+          "workflow_outcomes",
+          "warnings"
+        ],
+        "type": "object"
+      },
+      "AuthoringPathAvailability": {
+        "enum": [
+          "available",
+          "conditional"
+        ],
+        "type": "string"
+      },
+      "AuthoringPathOptionPayload": {
+        "description": "One schema-derived source or target available to an author.",
+        "properties": {
+          "availability": {
+            "$ref": "#/components/schemas/AuthoringPathAvailability"
+          },
+          "description": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "origin": {
+            "$ref": "#/components/schemas/AuthoringPathOrigin"
+          },
+          "path": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "schema": {
+            "$ref": "#/components/schemas/JsonObject"
+          },
+          "uses": {
+            "items": {
+              "$ref": "#/components/schemas/AuthoringPathUse"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "path",
+          "label",
+          "origin",
+          "schema",
+          "required",
+          "availability",
+          "uses"
+        ],
+        "type": "object"
+      },
+      "AuthoringPathOrigin": {
+        "enum": [
+          "workflow_input",
+          "workflow_state",
+          "runtime_context",
+          "step_input",
+          "step_output",
+          "workflow_output"
+        ],
+        "type": "string"
+      },
+      "AuthoringPathUse": {
+        "enum": [
+          "step_input",
+          "step_output_source",
+          "state_target",
+          "workflow_output"
+        ],
+        "type": "string"
+      },
+      "AuthoringStepContractPayload": {
+        "description": "Compact executable-step choice used by authoring inventories.",
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "input_targets": {
+            "items": {
+              "$ref": "#/components/schemas/AuthoringPathOptionPayload"
+            },
+            "type": "array"
+          },
+          "label": {
+            "type": "string"
+          },
+          "outcomes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "output_sources": {
+            "items": {
+              "$ref": "#/components/schemas/AuthoringPathOptionPayload"
+            },
+            "type": "array"
+          },
+          "step_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "step_id",
+          "label"
+        ],
+        "type": "object"
+      },
       "BinaryCondition": {
         "description": "Condition that compares two operands.",
         "properties": {
@@ -6950,6 +7142,65 @@
       "result": {
         "schema": {
           "$ref": "#/components/schemas/DraftWorkspaceResult"
+        }
+      }
+    },
+    {
+      "action": "inspect_authoring_contract",
+      "errors": [
+        {
+          "$ref": "#/components/errors/5000"
+        }
+      ],
+      "method": "workflow.draft_workspaces.inspect_authoring_contract",
+      "namespace": [
+        "workflow",
+        "draft_workspaces"
+      ],
+      "params": [
+        {
+          "name": "workspace_id",
+          "required": true,
+          "schema": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        {
+          "name": "revision",
+          "required": true,
+          "schema": {
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        {
+          "name": "selected_step_id",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        }
+      ],
+      "result": {
+        "schema": {
+          "anyOf": [
+            {
+              "$ref": "#/components/schemas/AuthoringContractInventoryPayload"
+            },
+            {
+              "$ref": "#/components/schemas/DraftWorkspaceResult"
+            }
+          ]
         }
       }
     },

@@ -15,8 +15,8 @@ import {
 
 describe("generated workflow contract", () => {
   it("contains every operation exactly once", () => {
-    expect(workflowOperationNames).toHaveLength(70);
-    expect(new Set(workflowOperationNames)).toHaveLength(70);
+    expect(workflowOperationNames).toHaveLength(71);
+    expect(new Set(workflowOperationNames)).toHaveLength(71);
   });
 
   it("contains every authored Effect operation without broadening its boundary", () => {
@@ -30,13 +30,17 @@ describe("generated workflow contract", () => {
       "workflow.capabilities.call",
       "workflow.draft_workspaces.list",
       "workflow.draft_workspaces.get",
+      "workflow.draft_workspaces.inspect_authoring_contract",
       "workflow.draft_workspaces.create_empty",
       "workflow.draft_workspaces.create_from_capability",
       "workflow.draft_workspaces.add_step_from_capability",
       "workflow.draft_workspaces.update_capability_step",
       "workflow.draft_workspaces.set_route",
+      "workflow.draft_workspaces.set_contract",
+      "workflow.draft_workspaces.set_start",
       "workflow.draft_workspaces.set_step_input_bindings",
       "workflow.draft_workspaces.set_step_output_bindings",
+      "workflow.draft_workspaces.set_workflow_output_bindings",
       "workflow.draft_workspaces.validate",
       "workflow.artifacts.list",
       "workflow.artifacts.inspect",

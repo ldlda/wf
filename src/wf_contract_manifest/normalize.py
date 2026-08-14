@@ -255,9 +255,7 @@ def manifest_from_openrpc(document: Mapping[str, object]) -> ContractManifest:
             params.append(
                 {
                     "name": _string(parameter.get("name"), f"{parameter_path}.name"),
-                    "required": _boolean(
-                        raw_required, f"{parameter_path}.required"
-                    ),
+                    "required": _boolean(raw_required, f"{parameter_path}.required"),
                     "schema": _schema(
                         parameter.get("schema"), f"{parameter_path}.schema"
                     ),
@@ -271,12 +269,21 @@ def manifest_from_openrpc(document: Mapping[str, object]) -> ContractManifest:
                 f"{result_path}.schema", "missing success result schema"
             )
         raw_result_schema = result["schema"]
-        if not isinstance(raw_result_schema, Mapping) or (
-            set(raw_result_schema) != {"$ref"}
-            or not (
-                isinstance(raw_result_schema.get("$ref"), str)
-                and raw_result_schema["$ref"].startswith("#/components/schemas/")
+        if not isinstance(raw_result_schema, Mapping):
+            raise ManifestError(
+                f"{result_path}.schema",
+                "success result must be a schema object",
             )
+        named_result = (
+            set(raw_result_schema) == {"$ref"}
+            and isinstance(raw_result_schema.get("$ref"), str)
+            and raw_result_schema["$ref"].startswith("#/components/schemas/")
+        )
+        # This inspection RPC returns either its inventory or the standard
+        # revision-conflict workspace payload, so its OpenRPC result is a union.
+        if (
+            not named_result
+            and method_name != "workflow.draft_workspaces.inspect_authoring_contract"
         ):
             raise ManifestError(
                 f"{result_path}.schema",
