@@ -7,6 +7,7 @@ from wf_core.context_contracts import (
     LOOP_ITEM_CONTEXT_KEY,
     PARENT_LINEAGE_ID_CONTEXT_KEY,
     PRIOR_OUTCOME_CONTEXT_KEY,
+    RESERVED_CONTEXT_KEYS,
     SCOPE_ID_CONTEXT_KEY,
 )
 from wf_core.run_state import ExecutionFrame
@@ -26,6 +27,10 @@ def frame_context_values(frame: ExecutionFrame) -> dict[str, object | None]:
         loop_alias = frame.metadata.get("loop_alias")
         context[LOOP_ITEM_CONTEXT_KEY] = loop_item
         context[LOOP_INDEX_CONTEXT_KEY] = loop_index
-        if isinstance(loop_alias, str) and loop_alias:
+        if (
+            isinstance(loop_alias, str)
+            and loop_alias
+            and loop_alias not in RESERVED_CONTEXT_KEYS
+        ):
             context[loop_alias] = loop_item
     return context

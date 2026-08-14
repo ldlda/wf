@@ -101,6 +101,37 @@ def test_context_contracts_deduplicate_aliases_that_are_standard_loop_keys() -> 
     ]
 
 
+def test_all_standard_context_names_are_reserved_from_foreach_aliases() -> None:
+    expected_values = {
+        "prior_outcome": "ok",
+        "activated_incoming_edge": "start",
+        "scope_id": "scope",
+        "lineage_id": "lineage",
+        "parent_lineage_id": "parent",
+    }
+    standard_names = {field.name for field in STANDARD_CONTEXT_FIELDS}
+
+    for name in standard_names:
+        foreach_names = {
+            field.name for field in foreach_context_fields(name, {"type": "string"})
+        }
+        assert name not in foreach_names
+        context = frame_context_values(
+            ExecutionFrame(
+                id="child",
+                kind="foreach_iteration",
+                node_id="body",
+                scope_id="scope",
+                lineage_id="lineage",
+                parent_lineage_id="parent",
+                prior_outcome="ok",
+                activated_incoming_edge="start",
+                metadata={"loop_item": "item", "loop_index": 0, "loop_alias": name},
+            )
+        )
+        assert context[name] == expected_values[name]
+
+
 def test_serial_and_concurrent_foreach_expose_the_same_scoped_context() -> None:
     for mode in ("serial", "concurrent"):
         workflow = _workflow(
@@ -140,6 +171,40 @@ def test_foreach_item_schema_and_configured_alias_are_reported() -> None:
     assert fields["record"].contract.schema == {"type": "string"}
     assert fields["loop_item"].contract.schema == {"type": "string"}
     assert fields["loop_index"].contract.schema == {"type": "integer"}
+
+
+def test_foreach_item_schema_resolves_bounded_local_array_reference() -> None:
+    workflow = _workflow(
+        start="each",
+        nodes=[_foreach("each", alias="record"), _node("body")],
+        edges=[
+            {"from": "each", "outcome": "loop", "to": "body"},
+            {"from": "body", "outcome": "ok", "to": END},
+            {"from": "each", "outcome": "done", "to": END},
+        ],
+        state_schema={
+            "type": "object",
+            "properties": {"items": {"$ref": "#/$defs/Items"}},
+            "$defs": {
+                "Items": {
+                    "type": "array",
+                    "items": {"$ref": "#/$defs/Item"},
+                },
+                "Item": {
+                    "type": "object",
+                    "properties": {"id": {"type": "string"}},
+                    "required": ["id"],
+                },
+            },
+        },
+    )
+
+    fields = _field_map(workflow, "body")
+    assert fields["loop_item"].contract.schema["type"] == "object"
+    assert fields["loop_item"].contract.schema["properties"] == {
+        "id": {"type": "string"}
+    }
+    assert fields["record"].contract.schema["properties"] == {"id": {"type": "string"}}
 
 
 def test_only_foreach_reachable_node_has_available_context() -> None:
@@ -224,3 +289,20 @@ def test_cyclic_graph_analysis_memoizes_node_and_frame_scope() -> None:
     assert set(fields) == {"a", "b"}
     assert fields["a"]
     assert fields["b"]
+
+
+def test_scoped_cycle_terminates_and_preserves_scoped_field_availability() -> None:
+    workflow = _workflow(
+        start="each",
+        nodes=[_foreach("each", alias="item"), _node("body")],
+        edges=[
+            {"from": "each", "outcome": "loop", "to": "body"},
+            {"from": "body", "outcome": "ok", "to": "each"},
+            {"from": "each", "outcome": "done", "to": END},
+        ],
+    )
+
+    fields = context_fields_by_node(workflow)
+    assert fields["body"]
+    assert _field_map(workflow, "body")["item"].availability == "available"
+    assert _field_map(workflow, "each")["item"].availability == "conditional"

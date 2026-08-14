@@ -70,3 +70,58 @@ uv run basedpyright --level error src/wf_core/context_contracts.py src/wf_core/a
 - The authoring projector accepts an optional workflow for automatic context
   projection, while existing callers can continue supplying Task 1 payloads
   explicitly.
+
+## Round 1 Fix
+
+The review identified three Important findings and the fixes were tested at
+their affected seams.
+
+### 1. Bounded local `$ref` item schemas
+
+Added `test_foreach_item_schema_resolves_bounded_local_array_reference` before
+the production change. Its targeted RED run failed because `loop_item` had no
+`type` after a declared `state.items` array was selected through
+`#/$defs/Items`.
+
+The analyzer now resolves bounded local `$defs`/`definitions` references for
+both the selected array source and its `items` schema. Cyclic, unsupported, or
+unresolved references remain conservative and produce `{}`.
+
+### 2. Reserved context aliases
+
+Added `test_all_standard_context_names_are_reserved_from_foreach_aliases`
+before the production change. Its targeted RED run failed because
+`prior_outcome` was accepted as a foreach alias.
+
+The shared `RESERVED_CONTEXT_KEYS` registry now covers every standard context
+name plus `loop_item` and `loop_index`. Both contract generation and
+`frame_context_values` use it, so runtime values and authoring inventory cannot
+disagree on a colliding alias.
+
+### 3. Scoped-cycle regression
+
+Added `test_scoped_cycle_terminates_and_preserves_scoped_field_availability`,
+which enters a foreach body, routes back to the foreach node under the child
+scope, and asserts the body/owner availability results. The test passed before
+the round-1 production changes because Task 2 already memoized
+`(node_id, active_foreach_id)` correctly; this finding required regression
+coverage but did not require a production change.
+
+Round 1 verification:
+
+```text
+uv run pytest tests/core/test_context_scopes.py tests/core/test_scheduler.py tests/wf_api/test_authoring_contracts.py -q
+32 passed
+
+uv run pytest tests/core -q
+299 passed
+
+uv run ruff check src/wf_core/context_contracts.py src/wf_core/analysis src/wf_core/runtime/ops/frames.py src/wf_api/authoring_contracts.py tests/core/test_context_scopes.py tests/core/test_scheduler.py tests/wf_api/test_authoring_contracts.py
+All checks passed!
+
+uv run ruff format --check src/wf_core/context_contracts.py src/wf_core/analysis src/wf_core/runtime/ops/frames.py src/wf_api/authoring_contracts.py tests/core/test_context_scopes.py tests/core/test_scheduler.py tests/wf_api/test_authoring_contracts.py
+8 files already formatted
+
+uv run basedpyright --level error src/wf_core/context_contracts.py src/wf_core/analysis src/wf_core/runtime/ops/frames.py src/wf_api/authoring_contracts.py
+0 errors, 0 warnings, 0 notes
+```

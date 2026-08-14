@@ -19,6 +19,8 @@ from wf_core.tokens import END
 type ContextAvailability = Literal["available", "conditional"]
 type FrameScope = str | None
 
+_MAX_LOCAL_SCHEMA_REFERENCE_DEPTH = 32
+
 
 @dataclass(frozen=True, slots=True)
 class ContextFieldAvailability:
@@ -206,7 +208,15 @@ def _foreach_item_schema(
         isinstance(source_type, list) and "array" in source_type
     )
     items = source_schema.get("items")
-    return deepcopy(dict(items)) if is_array and isinstance(items, Mapping) else {}
+    if not is_array or not isinstance(items, Mapping):
+        return {}
+    try:
+        resolved_items = _resolve_local_reference(
+            _schema_document(workflow, foreach.over.root), items
+        )
+    except ValueError:
+        return {}
+    return deepcopy(dict(resolved_items))
 
 
 def _schema_at_path(
@@ -216,15 +226,45 @@ def _schema_at_path(
     active_scope: FrameScope,
     foreach_nodes: Mapping[str, ForeachNode],
 ) -> Mapping[str, object] | None:
-    if root == "input":
-        current: object = workflow.input_schema.model_dump(
-            mode="json", exclude_none=True
+    try:
+        schema_document = _schema_document(
+            workflow,
+            root,
+            active_scope=active_scope,
+            foreach_nodes=foreach_nodes,
         )
-    elif root == "state":
-        current = workflow.state_schema.model_dump(mode="json", exclude_none=True)
-    elif root == "context":
-        current = {field.name: field.schema for field in STANDARD_CONTEXT_FIELDS}
-        if active_scope is not None:
+        current: object = schema_document
+        for part in parts:
+            if not isinstance(current, Mapping):
+                return None
+            resolved = _resolve_local_reference(schema_document, current)
+            properties = resolved.get("properties")
+            if not isinstance(properties, Mapping):
+                return None
+            current = properties.get(part)
+        if not isinstance(current, Mapping):
+            return None
+        return _resolve_local_reference(schema_document, current)
+    except ValueError:
+        return None
+
+
+def _schema_document(
+    workflow: Workflow,
+    root: str,
+    *,
+    active_scope: FrameScope = None,
+    foreach_nodes: Mapping[str, ForeachNode] | None = None,
+) -> Mapping[str, object]:
+    if root == "input":
+        return workflow.input_schema.model_dump(mode="json", exclude_none=True)
+    if root == "state":
+        return workflow.state_schema.model_dump(mode="json", exclude_none=True)
+    if root == "context":
+        current: dict[str, object] = {
+            field.name: field.schema for field in STANDARD_CONTEXT_FIELDS
+        }
+        if active_scope is not None and foreach_nodes is not None:
             foreach = foreach_nodes.get(active_scope)
             if foreach is not None:
                 current.update(
@@ -241,14 +281,40 @@ def _schema_at_path(
                         )
                     }
                 )
-    else:
-        return None
+        return {"type": "object", "properties": current}
+    return {}
 
-    for part in parts:
-        if not isinstance(current, Mapping):
-            return None
-        properties = current.get("properties")
-        if not isinstance(properties, Mapping):
-            return None
-        current = properties.get(part)
-    return current if isinstance(current, Mapping) else None
+
+def _resolve_local_reference(
+    root_schema: Mapping[str, object],
+    candidate: Mapping[str, object],
+) -> Mapping[str, object]:
+    """Resolve bounded repository-local refs without becoming a full resolver."""
+    current = candidate
+    seen: set[str] = set()
+    while "$ref" in current:
+        reference = current["$ref"]
+        if not isinstance(reference, str):
+            raise ValueError("schema reference must be a string")
+        if reference in seen:
+            raise ValueError(f"cyclic schema reference {reference!r}")
+        if len(seen) >= _MAX_LOCAL_SCHEMA_REFERENCE_DEPTH:
+            raise ValueError(
+                f"local schema reference depth exceeds "
+                f"{_MAX_LOCAL_SCHEMA_REFERENCE_DEPTH}"
+            )
+        if not (
+            reference.startswith("#/$defs/") or reference.startswith("#/definitions/")
+        ):
+            raise ValueError(f"unsupported schema reference {reference!r}")
+        seen.add(reference)
+        resolved: object = root_schema
+        for raw_part in reference.removeprefix("#/").split("/"):
+            part = raw_part.replace("~1", "/").replace("~0", "~")
+            if not isinstance(resolved, Mapping) or part not in resolved:
+                raise ValueError(f"unresolved schema reference {reference!r}")
+            resolved = resolved[part]
+        if not isinstance(resolved, Mapping):
+            raise ValueError(f"schema reference {reference!r} is not an object")
+        current = resolved
+    return current

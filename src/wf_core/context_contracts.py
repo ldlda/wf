@@ -51,6 +51,13 @@ STANDARD_CONTEXT_FIELDS = (
         "Parent lineage id",
     ),
 )
+STANDARD_CONTEXT_FIELD_NAMES = frozenset(
+    field.name for field in STANDARD_CONTEXT_FIELDS
+)
+RESERVED_CONTEXT_KEYS = STANDARD_CONTEXT_FIELD_NAMES | {
+    LOOP_ITEM_CONTEXT_KEY,
+    LOOP_INDEX_CONTEXT_KEY,
+}
 
 
 def foreach_context_fields(
@@ -69,7 +76,7 @@ def foreach_context_fields(
         "Current foreach item index",
     )
     fields = [item_contract, index_contract]
-    if alias and alias not in {LOOP_ITEM_CONTEXT_KEY, LOOP_INDEX_CONTEXT_KEY}:
+    if alias and alias not in RESERVED_CONTEXT_KEYS:
         fields.append(
             ContextFieldContract(
                 alias,
