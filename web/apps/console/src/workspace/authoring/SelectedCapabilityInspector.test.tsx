@@ -1,12 +1,77 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { CapabilityDetail } from "../domain/capability-models.js";
+import type { AuthoringContractInventory } from "../domain/authoring-contract-models.js";
 import type { DraftWorkspace } from "../domain/draft-workspace-models.js";
 import { SelectedCapabilityInspector } from "./SelectedCapabilityInspector.js";
+import { useAuthoringContract } from "./useAuthoringContract.js";
 import type { DraftAuthoringController } from "./useDraftAuthoring.js";
 
+vi.mock("./useAuthoringContract.js", () => ({ useAuthoringContract: vi.fn() }));
+
+const mockedUseAuthoringContract = vi.mocked(useAuthoringContract);
+
 afterEach(() => cleanup());
+
+const inventory: AuthoringContractInventory = {
+  workspaceId: "draft-report",
+  revision: 3,
+  selectedStepId: "read",
+  readableSources: [{
+    path: "input.title",
+    label: "Inventory title",
+    origin: "workflow_input",
+    schema: { type: "string" },
+    required: true,
+    availability: "available",
+    uses: ["step_input"],
+  }],
+  stepInputTargets: [{
+    path: "step_input.title",
+    label: "Inventory title target",
+    origin: "step_input",
+    schema: { type: "string" },
+    required: true,
+    availability: "available",
+    uses: ["step_input"],
+  }],
+  stepOutputSources: [{
+    path: "step_output.text",
+    label: "Inventory text",
+    origin: "step_output",
+    schema: { type: "string" },
+    required: false,
+    availability: "available",
+    uses: ["step_output_source"],
+  }],
+  stateTargets: [{
+    path: "state.existing",
+    label: "Inventory state",
+    origin: "workflow_state",
+    schema: { type: "string" },
+    required: false,
+    availability: "available",
+    uses: ["state_target"],
+  }],
+  workflowOutputTargets: [],
+  entrySteps: [],
+  workflowOutcomes: [],
+  warnings: [],
+};
+
+beforeEach(() => {
+  mockedUseAuthoringContract.mockReturnValue({
+    phase: "disconnected",
+    inventory: null,
+    message: null,
+    refresh: vi.fn(),
+  });
+});
+
+const customInput = (label: string) =>
+  within(screen.getByRole("region", { name: label }))
+    .getByRole("textbox", { name: `Custom ${label}` });
 
 const detail: CapabilityDetail = {
   kind: "node_spec",
@@ -82,6 +147,42 @@ const controllerFor = (workspace: DraftWorkspace): DraftAuthoringController => (
 });
 
 describe("SelectedCapabilityInspector", () => {
+  it("threads inventory-backed pickers into the selected step editors", async () => {
+    const user = userEvent.setup();
+    mockedUseAuthoringContract.mockReturnValue({
+      phase: "ready",
+      inventory,
+      message: null,
+      refresh: vi.fn(),
+    });
+    const workspace = draft(
+      "read",
+      [{ target: "title", path: "input.title" }],
+      [{ source: "text", target: "state.existing" }],
+    );
+
+    render(
+      <SelectedCapabilityInspector
+        capabilityDetail={detail}
+        capabilityDetailMessage={null}
+        capabilityDetailPhase="ready"
+        controller={controllerFor(workspace)}
+        draft={workspace}
+        nodeKind="use"
+        nodeRef="demo.read"
+        stepId="read"
+      />,
+    );
+
+    await user.click(screen.getByRole("tab", { name: "Inputs" }));
+    expect(screen.getByRole("button", { name: /Inventory title target/ })).toBeInTheDocument();
+    expect(screen.queryByRole("combobox", { name: "Source path for input row 1" })).toBeNull();
+
+    await user.click(screen.getByRole("tab", { name: "Outputs" }));
+    expect(screen.getByRole("button", { name: /Inventory text/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Inventory state/ })).toBeInTheDocument();
+  });
+
   it("composes setup, inputs, and outputs while preserving malformed rows and dispatching focused saves", async () => {
     const user = userEvent.setup();
     const workspace = draft(
@@ -252,7 +353,7 @@ describe("SelectedCapabilityInspector", () => {
       await user.click(screen.getByRole("tab", { name: "Inputs" }));
       expect(screen.getByRole("group", { name: "items" })).toBeInTheDocument();
       expect(screen.getByRole("combobox", { name: "Value source for items item 1" })).toHaveValue("path");
-      expect(screen.getByRole("combobox", { name: "Path for items item 1" })).toHaveValue("state.foo");
+      expect(customInput("Path for items item 1")).toHaveValue("state.foo");
       expect(screen.getByRole("textbox", { name: "Items item" })).toHaveValue("wowcool");
 
       await user.click(screen.getByRole("button", { name: "Save inputs" }));
@@ -322,7 +423,7 @@ describe("SelectedCapabilityInspector", () => {
         stepId="read"
       />,
     );
-    expect(screen.getByRole("combobox", { name: "Path for items item 1" })).toHaveValue("state.bar");
+    expect(customInput("Path for items item 1")).toHaveValue("state.bar");
     expect(screen.getByRole("textbox", { name: "Items item" })).toHaveValue("after");
   });
 
@@ -353,10 +454,10 @@ describe("SelectedCapabilityInspector", () => {
     });
     await user.click(screen.getByRole("button", { name: "Save setup" }));
     await user.click(screen.getByRole("tab", { name: "Inputs" }));
-    await user.clear(screen.getByRole("combobox", { name: "Target for row 1" }));
+    await user.clear(customInput("Target for row 1"));
     await user.click(screen.getByRole("button", { name: "Save inputs" }));
     await user.click(screen.getByRole("tab", { name: "Outputs" }));
-    await user.clear(screen.getByRole("combobox", { name: "Target for output row 1" }));
+    await user.clear(customInput("Target for output row 1"));
     await user.click(screen.getByRole("button", { name: "Save outputs" }));
 
     const diagnosticIds = [...document.querySelectorAll('[id$="-error"], [id$="-errors"]')]
@@ -383,7 +484,7 @@ describe("SelectedCapabilityInspector", () => {
     );
 
     await userEvent.setup().click(screen.getByRole("tab", { name: "Inputs" }));
-    expect(screen.getByRole("combobox", { name: "Target for row 1" })).toHaveValue("title");
+    expect(customInput("Target for row 1")).toHaveValue("title");
     rerender(
       <SelectedCapabilityInspector
         capabilityDetail={detail}
@@ -398,7 +499,7 @@ describe("SelectedCapabilityInspector", () => {
       />,
     );
     await userEvent.setup().click(screen.getByRole("tab", { name: "Inputs" }));
-    expect(screen.getByRole("combobox", { name: "Target for row 1" })).toHaveValue("title");
+    expect(customInput("Target for row 1")).toHaveValue("title");
     expect(screen.getByRole("textbox", { name: "Title" })).toHaveValue("Second");
   });
 

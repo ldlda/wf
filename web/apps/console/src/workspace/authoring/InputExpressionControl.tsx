@@ -1,5 +1,6 @@
 import { useId, useState } from "react";
 import { SchemaFieldControl } from "../schema-form/SchemaFieldControl.js";
+import type { AuthoringPathOption } from "../domain/authoring-contract-models.js";
 import {
   rebaseSchemaField,
   UNCONSTRAINED_SCHEMA_REASON,
@@ -10,12 +11,13 @@ import {
   defaultExpressionEditorState,
   type ExpressionEditorState,
 } from "./input-expression-editor.js";
+import { AuthoringPathPicker } from "./AuthoringPathPicker.js";
 
 export type InputExpressionControlProps = {
   readonly field: SchemaField | null;
   readonly label: string;
   readonly onChange: (state: ExpressionEditorState) => void;
-  readonly sourceSuggestions?: ReadonlyArray<string>;
+  readonly sourceOptions?: ReadonlyArray<AuthoringPathOption>;
   readonly state: ExpressionEditorState;
   readonly showModeControl?: boolean;
 };
@@ -167,7 +169,7 @@ const InputExpressionLeaf = ({
   field,
   label,
   onChange,
-  sourceSuggestions,
+  sourceOptions,
   state,
   idPrefix,
 }: {
@@ -175,26 +177,20 @@ const InputExpressionLeaf = ({
   readonly idPrefix: string;
   readonly label: string;
   readonly onChange: (state: ExpressionEditorState) => void;
-  readonly sourceSuggestions: ReadonlyArray<string>;
+  readonly sourceOptions: ReadonlyArray<AuthoringPathOption>;
   readonly state: ExpressionEditorState;
 }) => {
   if (state.kind === "path") {
-    const pathListId = `${idPrefix}-paths`;
     return (
       <div className="input-expression-control__leaf">
-        <label>
-          Path for {label}
-          <input
-            aria-label={`Path for ${label}`}
-            list={pathListId}
-            onChange={(event) => onChange({ ...state, path: event.target.value, touched: true })}
-            type="text"
-            value={state.path}
-          />
-        </label>
-        <datalist id={pathListId}>
-          {sourceSuggestions.map((suggestion) => <option key={suggestion} value={suggestion} />)}
-        </datalist>
+        <AuthoringPathPicker
+          allowCustom
+          label={`Path for ${label}`}
+          onChange={(path) => onChange({ ...state, path, touched: true })}
+          options={sourceOptions}
+          uses="step_input"
+          value={state.path}
+        />
         {pathNeedsDeferredValidation(field, state.path) && (
           <p className="schema-form__fallback-reason">Validated when the workflow runs</p>
         )}
@@ -248,7 +244,7 @@ export const InputExpressionControl = ({
   field,
   label,
   onChange,
-  sourceSuggestions = [],
+  sourceOptions = [],
   state,
   showModeControl = true,
 }: InputExpressionControlProps) => {
@@ -301,7 +297,7 @@ export const InputExpressionControl = ({
                   items: state.items.map((candidate, candidateIndex) => candidateIndex === index ? next : candidate),
                 });
               }}
-              sourceSuggestions={sourceSuggestions}
+              sourceOptions={sourceOptions}
               state={item}
             />
             <div className="input-expression-control__item-actions">
@@ -397,7 +393,7 @@ export const InputExpressionControl = ({
                   ? { ...candidate, value: next }
                   : candidate),
               })}
-              sourceSuggestions={sourceSuggestions}
+              sourceOptions={sourceOptions}
               state={entry.value}
             />
             {!requiredField && (
@@ -474,7 +470,7 @@ export const InputExpressionControl = ({
       idPrefix={`${controlId}-leaf`}
       label={label}
       onChange={onChange}
-      sourceSuggestions={sourceSuggestions}
+      sourceOptions={sourceOptions}
       state={state}
     />
   );

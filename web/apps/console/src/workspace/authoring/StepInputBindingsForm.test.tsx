@@ -1,6 +1,7 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { AuthoringPathOption } from "../domain/authoring-contract-models.js";
 import type { StepInputBinding } from "../domain/draft-workspace-models.js";
 import { StepInputBindingsForm } from "./StepInputBindingsForm.js";
 import { displayGraphInputPath, displayLocalInputPath } from "./input-binding-paths.js";
@@ -19,7 +20,71 @@ const schema = {
   },
 };
 
+const authoringOption = (
+  path: string,
+  label: string,
+  origin: AuthoringPathOption["origin"],
+  uses: AuthoringPathOption["uses"],
+): AuthoringPathOption => ({
+  path,
+  label,
+  origin,
+  schema: { type: "string" },
+  required: false,
+  availability: "available",
+  uses,
+});
+
+const customInput = (label: string) =>
+  within(screen.getByRole("region", { name: label }))
+    .getByRole("textbox", { name: `Custom ${label}` });
+
+const editableCustomInput = async (
+  user: ReturnType<typeof userEvent.setup>,
+  label: string,
+) => {
+  const picker = screen.getByRole("region", { name: label });
+  const details = picker.querySelector("details");
+  if (!(details instanceof HTMLDetailsElement) || !details.open) {
+    await user.click(within(picker).getByText("Advanced"));
+  }
+  return within(picker).getByRole("textbox", { name: `Custom ${label}` });
+};
+
 describe("StepInputBindingsForm", () => {
+  it("uses inventory pickers for sources and targets while preserving canonical bindings", async () => {
+    const user = userEvent.setup();
+    const submissions: ReadonlyArray<StepInputBinding>[] = [];
+    const sourceOptions = [
+      authoringOption("input.request.id", "Request id", "workflow_input", ["step_input"]),
+      authoringOption("context.loop_item", "Loop item", "runtime_context", ["step_input"]),
+    ];
+    const targetOptions = [
+      authoringOption("step_input.profile.name", "Profile name", "step_input", ["step_input"]),
+    ];
+
+    render(
+      <StepInputBindingsForm
+        inputSchema={schema}
+        sourceOptions={sourceOptions}
+        targetOptions={targetOptions}
+        initialBindings={[{ path: "input.request.id", target: "profile.name" }]}
+        onSubmit={(value) => { submissions.push(value); }}
+      />,
+    );
+
+    expect(screen.getByRole("group", { name: "Workflow input" })).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Runtime context" })).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Step input" })).toBeInTheDocument();
+    expect(screen.queryByRole("combobox", { name: "Source path for input row 1" })).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: /Request id/ }));
+    await user.click(screen.getByRole("button", { name: /Profile name/ }));
+    await user.click(screen.getByRole("button", { name: "Save inputs" }));
+
+    expect(submissions).toEqual([[{ path: "input.request.id", target: "profile.name" }]]);
+  });
+
   it("formats local and graph path objects at whole and nested paths", () => {
     expect(displayLocalInputPath({ root: "local", parts: [] })).toBe(".");
     expect(displayLocalInputPath({ root: "local", parts: ["payload", "item"] })).toBe("payload.item");
@@ -42,11 +107,11 @@ describe("StepInputBindingsForm", () => {
     );
 
     expect(screen.getByRole("group", { name: "Input row 1" })).toBeInTheDocument();
-    expect(screen.getByRole("combobox", { name: "Target for row 1" })).toHaveValue("title");
+    expect(customInput("Target for row 1")).toHaveValue("title");
     expect(screen.getByRole("radio", { name: "Path for input row 1" })).toBeChecked();
-    expect(screen.getByRole("combobox", { name: "Source path for input row 1" })).toHaveValue("input.title");
+    expect(customInput("Source path for input row 1")).toHaveValue("input.title");
     expect(screen.getByRole("combobox", { name: "Nullable" })).toHaveValue("0:null");
-    expect(screen.getByRole("combobox", { name: "Target for row 3" })).toHaveValue("nested.name");
+    expect(customInput("Target for row 3")).toHaveValue("nested.name");
     expect(screen.getByText("Unsupported input binding.")).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Raw unsupported input row 4" })).toHaveTextContent('"target"');
     expect(screen.getByRole("button", { name: "Remove unsupported input row 4" })).toBeInTheDocument();
@@ -178,10 +243,10 @@ describe("StepInputBindingsForm", () => {
       />,
     );
 
-    expect(screen.getByRole("combobox", { name: "Target for row 1" })).toHaveValue("payload.item");
-    expect(screen.getByRole("combobox", { name: "Target for row 2" })).toHaveValue(".");
-    expect(screen.getByRole("combobox", { name: "Source path for input row 1" })).toHaveValue("input.source");
-    expect(screen.getByRole("combobox", { name: "Source path for input row 2" })).toHaveValue("state.audit.latest");
+    expect(customInput("Target for row 1")).toHaveValue("payload.item");
+    expect(customInput("Target for row 2")).toHaveValue(".");
+    expect(customInput("Source path for input row 1")).toHaveValue("input.source");
+    expect(customInput("Source path for input row 2")).toHaveValue("state.audit.latest");
 
     await user.click(screen.getByRole("button", { name: "Save inputs" }));
 
@@ -218,8 +283,8 @@ describe("StepInputBindingsForm", () => {
     await user.clear(screen.getByRole("textbox", { name: "Name" }));
     await user.type(screen.getByRole("textbox", { name: "Name" }), "after");
     await user.click(screen.getByRole("radio", { name: "Path for input row 1" }));
-    await user.clear(screen.getByRole("combobox", { name: "Source path for input row 1" }));
-    await user.type(screen.getByRole("combobox", { name: "Source path for input row 1" }), "input.nested");
+    await user.clear(await editableCustomInput(user, "Source path for input row 1"));
+    await user.type(await editableCustomInput(user, "Source path for input row 1"), "input.nested");
     await user.click(screen.getByRole("radio", { name: "Literal value for input row 1" }));
     await user.click(screen.getByRole("button", { name: "Save inputs" }));
 
@@ -258,13 +323,13 @@ describe("StepInputBindingsForm", () => {
       />,
     );
 
-    await user.clear(screen.getByRole("combobox", { name: "Target for row 1" }));
+    await user.clear(await editableCustomInput(user, "Target for row 1"));
     await user.click(screen.getByRole("button", { name: "Save inputs" }));
 
-    const target = screen.getByRole("combobox", { name: "Target for row 1" });
+    const target = customInput("Target for row 1");
     const describedBy = target.getAttribute("aria-describedby");
+    expect(describedBy).not.toBeNull();
     expect(target).toHaveAttribute("aria-invalid", "true");
-    expect(describedBy).toBeTruthy();
     expect(document.getElementById(describedBy ?? "")).toHaveTextContent("Target is required.");
   });
 
@@ -277,35 +342,24 @@ describe("StepInputBindingsForm", () => {
           type: "object",
           properties: { profile: { type: "object", properties: { name: { type: "string" } } } },
         }}
-        workflowInputSchema={{
-          type: "object",
-          properties: { request: { type: "object", properties: { id: { type: "string" } } } },
-        }}
-        workflowStateSchema={{
-          type: "object",
-          properties: { session: { type: "object", properties: { token: { type: "string" } } } },
-        }}
+        sourceOptions={[
+          authoringOption("input.request.id", "Request id", "workflow_input", ["step_input"]),
+          authoringOption("state.session.token", "Session token", "workflow_state", ["step_input"]),
+        ]}
+        targetOptions={[authoringOption("step_input.profile.name", "Profile name", "step_input", ["step_input"])]}
         initialBindings={[{ path: "input.request.id", target: "profile.name" }]}
         onSubmit={(value) => { submissions.push(value); }}
       />,
     );
 
-    const target = screen.getByRole("combobox", { name: "Target for row 1" });
-    const targetList = document.getElementById(target.getAttribute("list") ?? "");
-    expect(target.getAttribute("list")).toBeTruthy();
-    expect(targetList).not.toBeNull();
-    expect(targetList?.querySelector('option[value="profile.name"]')).not.toBeNull();
-    const source = screen.getByRole("combobox", { name: "Source path for input row 1" });
-    const sourceList = document.getElementById(source.getAttribute("list") ?? "");
-    expect(source.getAttribute("list")).toBeTruthy();
-    expect(sourceList).not.toBeNull();
-    expect(sourceList?.querySelector('option[value="input.request.id"]')).not.toBeNull();
-    expect(sourceList?.querySelector('option[value="state.session.token"]')).not.toBeNull();
+    expect(screen.getByRole("button", { name: /Profile name/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Request id/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Session token/ })).toBeInTheDocument();
 
-    await user.clear(target);
-    await user.type(target, "profile.custom");
-    await user.clear(source);
-    await user.type(source, "context.custom");
+    await user.clear(await editableCustomInput(user, "Target for row 1"));
+    await user.type(await editableCustomInput(user, "Target for row 1"), "profile.custom");
+    await user.clear(await editableCustomInput(user, "Source path for input row 1"));
+    await user.type(await editableCustomInput(user, "Source path for input row 1"), "context.custom");
     await user.click(screen.getByRole("button", { name: "Save inputs" }));
 
     expect(submissions).toEqual([[{ path: "context.custom", target: "profile.custom" }]]);
@@ -325,13 +379,13 @@ describe("StepInputBindingsForm", () => {
       />,
     );
 
-    await user.clear(screen.getByRole("combobox", { name: "Target for row 2" }));
-    await user.type(screen.getByRole("combobox", { name: "Target for row 2" }), "title");
+    await user.clear(await editableCustomInput(user, "Target for row 2"));
+    await user.type(await editableCustomInput(user, "Target for row 2"), "title");
     await user.click(screen.getByRole("button", { name: "Save inputs" }));
 
     expect(submissions).toEqual([]);
-    expect(screen.getByRole("combobox", { name: "Target for row 1" })).toHaveAttribute("aria-invalid", "true");
-    expect(screen.getByRole("combobox", { name: "Target for row 2" })).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByRole("region", { name: "Target for row 1" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Target for row 2" })).toBeInTheDocument();
     expect(screen.getAllByRole("alert").filter((alert) =>
       alert.textContent?.includes("Target is duplicated") ?? false,
     )).toHaveLength(2);
@@ -351,14 +405,14 @@ describe("StepInputBindingsForm", () => {
       />,
     );
 
-    const secondTarget = screen.getByRole("combobox", { name: "Target for row 2" });
+    const secondTarget = await editableCustomInput(user, "Target for row 2");
     await user.clear(secondTarget);
-    await user.type(secondTarget, "title");
+    await user.type(await editableCustomInput(user, "Target for row 2"), "title");
     await user.click(screen.getByRole("button", { name: "Save inputs" }));
     expect(submissions).toEqual([]);
 
-    await user.clear(secondTarget);
-    await user.type(secondTarget, "nullable");
+    await user.clear(await editableCustomInput(user, "Target for row 2"));
+    await user.type(await editableCustomInput(user, "Target for row 2"), "nullable");
     expect(screen.getByRole("button", { name: "Save inputs" })).not.toBeDisabled();
     await user.click(screen.getByRole("button", { name: "Save inputs" }));
     expect(submissions).toHaveLength(1);
@@ -379,7 +433,7 @@ describe("StepInputBindingsForm", () => {
     );
 
     expect(screen.getByRole("button", { name: "Save inputs" })).toBeDisabled();
-    const source = screen.getByRole("combobox", { name: "Source path for input row 1" });
+    const source = await editableCustomInput(user, "Source path for input row 1");
     await user.clear(source);
     await user.type(source, "context.profile");
 
@@ -399,7 +453,7 @@ describe("StepInputBindingsForm", () => {
         onSubmit={() => undefined}
       />,
     );
-    const target = screen.getByRole("combobox", { name: "Target for row 1" });
+    const target = customInput("Target for row 1");
 
     rerender(
       <StepInputBindingsForm
@@ -421,7 +475,7 @@ describe("StepInputBindingsForm", () => {
         onSubmit={() => undefined}
       />,
     );
-    expect(screen.getByRole("combobox", { name: "Target for row 1" })).toHaveValue("edited");
+    expect(customInput("Target for row 1")).toHaveValue("edited");
 
     rerender(
       <StepInputBindingsForm
@@ -431,7 +485,7 @@ describe("StepInputBindingsForm", () => {
         onSubmit={() => undefined}
       />,
     );
-    expect(screen.getByRole("combobox", { name: "Target for row 1" })).toHaveValue("nullable");
+    expect(customInput("Target for row 1")).toHaveValue("nullable");
   });
 
   it("shows row diagnostics at the row that owns them", () => {
@@ -467,13 +521,13 @@ describe("StepInputBindingsForm", () => {
     );
 
     await user.click(screen.getByRole("button", { name: "Add input row" }));
-    await user.type(screen.getByRole("combobox", { name: "Target for row 1" }), "items");
+    await user.type(await editableCustomInput(user, "Target for row 1"), "items");
     await user.click(screen.getByRole("radio", { name: "Construct value for input row 1" }));
     await user.click(screen.getByRole("button", { name: "Add item to items" }));
     await user.click(screen.getByRole("button", { name: "Add item to items" }));
 
     await user.selectOptions(screen.getByRole("combobox", { name: "Value source for items item 1" }), "path");
-    const itemPath = screen.getByRole("combobox", { name: "Path for items item 1" });
+    const itemPath = customInput("Path for items item 1");
     await user.clear(itemPath);
     await user.type(itemPath, "state.foo");
     await user.selectOptions(screen.getByRole("combobox", { name: "Value source for items item 2" }), "literal");
@@ -482,7 +536,7 @@ describe("StepInputBindingsForm", () => {
     await user.type(itemValue, "wowcool");
 
     await user.click(screen.getByRole("button", { name: "Add input row" }));
-    await user.type(screen.getByRole("combobox", { name: "Target for row 2" }), "separator");
+    await user.type(await editableCustomInput(user, "Target for row 2"), "separator");
     await user.click(screen.getByRole("radio", { name: "Literal value for input row 2" }));
     await user.clear(screen.getByRole("textbox", { name: "Separator" }));
     await user.type(screen.getByRole("textbox", { name: "Separator" }), " ");

@@ -1,6 +1,7 @@
 import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
+import type { AuthoringPathOption } from "../domain/authoring-contract-models.js";
 import type { DraftDiagnostic, OutputBinding } from "../domain/draft-workspace-models.js";
 import { StepOutputBindingsForm } from "./StepOutputBindingsForm.js";
 
@@ -24,11 +25,39 @@ const stateSchema = {
   },
 };
 
+const authoringOption = (
+  path: string,
+  label: string,
+  origin: AuthoringPathOption["origin"],
+  uses: AuthoringPathOption["uses"],
+): AuthoringPathOption => ({
+  path,
+  label,
+  origin,
+  schema: { type: "string" },
+  required: false,
+  availability: "available",
+  uses,
+});
+
 type FormUser = ReturnType<typeof userEvent.setup>;
 type ClearMutationCase = {
   readonly name: string;
   readonly mutate: (user: FormUser) => Promise<void>;
   readonly expected: ReadonlyArray<OutputBinding>;
+};
+
+const customInput = (label: string) =>
+  within(screen.getByRole("region", { name: label }))
+    .getByRole("textbox", { name: `Custom ${label}` });
+
+const editableCustomInput = async (user: FormUser, label: string) => {
+  const picker = screen.getByRole("region", { name: label });
+  const details = picker.querySelector("details");
+  if (!(details instanceof HTMLDetailsElement) || !details.open) {
+    await user.click(within(picker).getByText("Advanced"));
+  }
+  return within(picker).getByRole("textbox", { name: `Custom ${label}` });
 };
 
 const clearMutationCases: ReadonlyArray<ClearMutationCase> = [
@@ -37,7 +66,7 @@ const clearMutationCases: ReadonlyArray<ClearMutationCase> = [
     mutate: async (user) => {
       await user.click(screen.getByRole("button", { name: "Add output row" }));
       await user.type(
-        screen.getByRole("combobox", { name: "Target for output row 3" }),
+        await editableCustomInput(user, "Target for output row 3"),
         "state.third",
       );
     },
@@ -50,7 +79,7 @@ const clearMutationCases: ReadonlyArray<ClearMutationCase> = [
   {
     name: "edit",
     mutate: async (user) => {
-      const target = screen.getByRole("combobox", { name: "Target for output row 1" });
+      const target = await editableCustomInput(user, "Target for output row 1");
       await user.clear(target);
       await user.type(target, "state.edited");
     },
@@ -69,30 +98,49 @@ const clearMutationCases: ReadonlyArray<ClearMutationCase> = [
 ];
 
 describe("StepOutputBindingsForm", () => {
+  it("uses inventory step-output and state-target pickers while preserving local output bindings", async () => {
+    const user = userEvent.setup();
+    const submissions: ReadonlyArray<OutputBinding>[] = [];
+    render(
+      <StepOutputBindingsForm
+        outputSchema={{ type: "object", properties: { text: { type: "string" } } }}
+        stateSchema={stateSchema}
+        sourceOptions={[authoringOption("step_output.text", "Text output", "step_output", ["step_output_source"])]}
+        targetOptions={[authoringOption("state.existing", "Existing state", "workflow_state", ["state_target"])]}
+        initialBindings={[{ source: "text", target: "state.existing" }]}
+        onSubmit={(value) => { submissions.push(value); }}
+      />,
+    );
+
+    expect(screen.getByRole("group", { name: "Step output" })).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "State" })).toBeInTheDocument();
+    expect(screen.queryByRole("combobox", { name: "Source choice for output row 1" })).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: /Text output/ }));
+    await user.click(screen.getByRole("button", { name: /Existing state/ }));
+    await user.click(screen.getByRole("button", { name: "Save outputs" }));
+
+    expect(submissions).toEqual([[{ source: "text", target: "state.existing" }]]);
+  });
+
   it("offers capability output sources and existing state targets", () => {
     render(
       <StepOutputBindingsForm
         outputSchema={outputSchema}
         stateSchema={stateSchema}
+        sourceOptions={[
+          authoringOption("step_output.text", "Text", "step_output", ["step_output_source"]),
+          authoringOption("step_output.audit.latest", "Latest audit", "step_output", ["step_output_source"]),
+        ]}
+        targetOptions={[authoringOption("state.existing", "Existing state", "workflow_state", ["state_target"])]}
         initialBindings={[{ source: "text", target: "state.existing" }]}
         onSubmit={() => undefined}
       />,
     );
 
-    const source = screen.getByRole("combobox", { name: "Source choice for output row 1" });
-    expect(within(source).getByRole("option", { name: "Whole output (.)" })).toBeInTheDocument();
-    expect(within(source).getByRole("option", { name: "text" })).toBeInTheDocument();
-    expect(within(source).getByRole("option", { name: "audit.latest" })).toBeInTheDocument();
-
-    const target = screen.getByRole("combobox", { name: "Target for output row 1" });
-    expect(target).toHaveValue("state.existing");
-    const targetList = target.getAttribute("list");
-    expect(targetList).toBeTruthy();
-    const targetListElement = document.getElementById(targetList ?? "");
-    expect(targetListElement).not.toBeNull();
-    if (targetListElement !== null) {
-      expect(targetListElement.querySelector('option[value="state.existing"]')).not.toBeNull();
-    }
+    expect(screen.getByRole("button", { name: /Text/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Latest audit/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Existing state/ })).toBeInTheDocument();
   });
 
   it("submits a nested state target and shows the selected source schema preview", async () => {
@@ -107,9 +155,7 @@ describe("StepOutputBindingsForm", () => {
       />,
     );
 
-    expect(screen.getByRole("combobox", { name: "Target for output row 1" })).toHaveValue(
-      "state.report.markdown",
-    );
+    expect(customInput("Target for output row 1")).toHaveValue("state.report.markdown");
     expect(screen.getByRole("region", { name: "Inferred schema for output row 1" }))
       .toHaveTextContent('"type": "integer"');
 
@@ -152,10 +198,7 @@ describe("StepOutputBindingsForm", () => {
       />,
     );
 
-    expect(screen.getByRole("combobox", { name: "Source choice for output row 1" }))
-      .toHaveValue("custom-source");
-    expect(screen.getByRole("textbox", { name: "Local source path for output row 1" }))
-      .toHaveValue("nested.whole");
+    expect(customInput("Source path for output row 1")).toHaveValue("nested.whole");
 
     await user.click(screen.getByRole("button", { name: "Save outputs" }));
 
@@ -183,10 +226,8 @@ describe("StepOutputBindingsForm", () => {
       />,
     );
 
-    expect(screen.getByRole("textbox", { name: "Local source path for output row 1" }))
-      .toHaveValue("payload.item");
-    expect(screen.getByRole("textbox", { name: "Local source path for output row 2" }))
-      .toHaveValue(".");
+    expect(customInput("Source path for output row 1")).toHaveValue("payload.item");
+    expect(customInput("Source path for output row 2")).toHaveValue(".");
 
     await user.click(screen.getByRole("button", { name: "Save outputs" }));
 
@@ -208,12 +249,8 @@ describe("StepOutputBindingsForm", () => {
     );
 
     await user.click(screen.getByRole("button", { name: "Add output row" }));
-    expect(screen.getByRole("textbox", { name: "Local source path for output row 1" }))
-      .toHaveValue(".");
-    await user.type(
-      screen.getByRole("combobox", { name: "Target for output row 1" }),
-      "state.new",
-    );
+    expect(customInput("Source path for output row 1")).toHaveValue(".");
+    await user.type(await editableCustomInput(user, "Target for output row 1"), "state.new");
     await user.click(screen.getByRole("button", { name: "Save outputs" }));
 
     expect(submissions).toEqual([[{ source: ".", target: "state.new" }]]);
@@ -229,15 +266,17 @@ describe("StepOutputBindingsForm", () => {
           properties: { __custom__: { type: "string" }, text: { type: "string" } },
         }}
         stateSchema={stateSchema}
+        sourceOptions={[
+          authoringOption("step_output.__custom__", "__custom__", "step_output", ["step_output_source"]),
+          authoringOption("step_output.text", "Text", "step_output", ["step_output_source"]),
+        ]}
+        targetOptions={[authoringOption("state.existing", "Existing state", "workflow_state", ["state_target"])]}
         initialBindings={[{ source: "text", target: "state.existing" }]}
         onSubmit={(value) => { submissions.push(value); }}
       />,
     );
 
-    const source = screen.getByRole("combobox", { name: "Source choice for output row 1" });
-    const customSchemaOption = within(source).getAllByRole("option", { name: "__custom__" })[0];
-    expect(customSchemaOption).toBeDefined();
-    await user.selectOptions(source, customSchemaOption ?? "");
+    await user.click(screen.getByRole("button", { name: /__custom__/ }));
     await user.click(screen.getByRole("button", { name: "Save outputs" }));
 
     expect(submissions).toEqual([[{ source: "__custom__", target: "state.existing" }]]);
@@ -426,9 +465,10 @@ describe("StepOutputBindingsForm", () => {
       />,
     );
 
-    const target = screen.getByRole("combobox", { name: "Target for output row 1" });
+    const target = customInput("Target for output row 1");
     const describedBy = target.getAttribute("aria-describedby");
-    expect(describedBy).toBeTruthy();
+    expect(describedBy).not.toBeNull();
+    expect(target).toHaveAttribute("aria-invalid", "true");
     expect(document.getElementById(describedBy ?? "")).toHaveTextContent("Target field is not declared.");
   });
 });

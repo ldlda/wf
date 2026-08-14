@@ -5,12 +5,14 @@ import { CapabilitySetupForm } from "./CapabilitySetupForm.js";
 import { StepInputBindingsForm } from "./StepInputBindingsForm.js";
 import { StepOutputBindingsForm } from "./StepOutputBindingsForm.js";
 import {
+  authoringOptionsForUse,
   bindingDiagnosticsForStep,
   outputBindingRows,
   projectSelectedStepDataflow,
   stepInputBindingRows,
 } from "./selected-step-dataflow.js";
 import type { DraftAuthoringController } from "./useDraftAuthoring.js";
+import { useAuthoringContract } from "./useAuthoringContract.js";
 
 type InspectorTab = "setup" | "inputs" | "outputs";
 
@@ -120,6 +122,16 @@ export const SelectedCapabilityInspector = ({
     if (target !== undefined) activateTab(target);
   };
   const rawStep = selectedStep(draft, stepId);
+  const authoringContract = useAuthoringContract({
+    workspaceId: draft.workspaceId,
+    revision: draft.revision,
+    selectedStepId: stepId,
+  });
+  const inventory = authoringContract.inventory;
+  const inputSourceOptions = authoringOptionsForUse(inventory?.readableSources ?? [], "step_input");
+  const inputTargetOptions = authoringOptionsForUse(inventory?.stepInputTargets ?? [], "step_input");
+  const outputSourceOptions = authoringOptionsForUse(inventory?.stepOutputSources ?? [], "step_output_source");
+  const outputTargetOptions = authoringOptionsForUse(inventory?.stateTargets ?? [], "state_target");
   const projected = projectSelectedStepDataflow(draft, stepId);
   const preservedForm = controller.preservedCapabilityForm?.kind === "update" &&
     controller.preservedCapabilityForm.input.stepId === stepId
@@ -202,8 +214,8 @@ export const SelectedCapabilityInspector = ({
                   canonicalVersion={`${stepId}:${controller.resetGeneration}`}
                   initialRows={inputRows}
                   inputSchema={capabilityDetail.inputSchema}
-                  workflowInputSchema={isRecord(draft.draft) ? draft.draft.input_schema : undefined}
-                  workflowStateSchema={isRecord(draft.draft) ? draft.draft.state_schema : undefined}
+                  sourceOptions={inputSourceOptions}
+                  targetOptions={inputTargetOptions}
                   onDirtyChange={controller.markDirty}
                   onSubmit={controller.setStepInputs}
                   rowDiagnostics={inputDiagnostics.rowIssues}
@@ -216,6 +228,8 @@ export const SelectedCapabilityInspector = ({
                   onDirtyChange={controller.markDirty}
                   onSubmit={controller.setStepOutputs}
                   outputSchema={capabilityDetail.outputSchema}
+                  sourceOptions={outputSourceOptions}
+                  targetOptions={outputTargetOptions}
                   rowDiagnostics={outputDiagnostics.rowIssues}
                   stateSchema={(isRecord(draft.draft) ? draft.draft.state_schema : null) ?? emptyStateSchema}
                 />

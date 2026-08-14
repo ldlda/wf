@@ -1,4 +1,8 @@
 import type {
+  AuthoringPathOption,
+  AuthoringPathUse,
+} from "../domain/authoring-contract-models.js";
+import type {
   DraftDiagnostic,
   DraftWorkspace,
   InputBinding,
@@ -402,13 +406,39 @@ const prefixedSchemaPaths = (prefix: string, schema: unknown): ReadonlyArray<str
     return parts === null ? [] : [formatTOMLPath([prefix, ...parts])];
   });
 
-export const workflowSourceSuggestions = (
-  inputSchema: unknown,
-  stateSchema: unknown,
-): ReadonlyArray<string> => [
-  ...prefixedSchemaPaths("input", inputSchema),
-  ...prefixedSchemaPaths("state", stateSchema),
-];
+export const authoringOptionsForUse = (
+  options: ReadonlyArray<AuthoringPathOption>,
+  use: AuthoringPathUse,
+): ReadonlyArray<AuthoringPathOption> => options.filter((option) => option.uses.includes(use));
+
+/**
+ * Keeps picker values canonical while binding editors continue submitting
+ * local paths for step inputs and step outputs.
+ */
+export const pickerValueForLocalPath = (
+  localPath: string,
+  options: ReadonlyArray<AuthoringPathOption>,
+  root: "step_input" | "step_output",
+): string => {
+  const canonicalPath = localPath === "." ? root : `${root}.${localPath}`;
+  return options.find((option) => option.path === localPath)?.path ??
+    options.find((option) => option.path === canonicalPath)?.path ??
+    localPath;
+};
+
+export const localPathFromPickerValue = (
+  pickerValue: string,
+  options: ReadonlyArray<AuthoringPathOption>,
+  root: "step_input" | "step_output",
+): string => {
+  const option = options.find((candidate) => candidate.path === pickerValue);
+  if (option === undefined) return pickerValue;
+  return pickerValue === root
+    ? "."
+    : pickerValue.startsWith(`${root}.`)
+      ? pickerValue.slice(`${root}.`.length)
+      : pickerValue;
+};
 
 export const capabilityLocalPathSuggestions = (capabilitySchema: unknown): ReadonlyArray<string> => [
   ".",

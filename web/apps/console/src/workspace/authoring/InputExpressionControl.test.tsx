@@ -2,6 +2,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { AuthoringPathOption } from "../domain/authoring-contract-models.js";
 import { normalizeSchema } from "../schema-form/schema-field.js";
 import type { ExpressionEditorState } from "./input-expression-editor.js";
 import { InputExpressionControl } from "./InputExpressionControl.js";
@@ -11,7 +12,70 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+const sourceOptions: ReadonlyArray<AuthoringPathOption> = [
+  {
+    path: "input.title",
+    label: "Title",
+    origin: "workflow_input",
+    schema: { type: "string" },
+    required: true,
+    availability: "available",
+    uses: ["step_input"],
+  },
+  {
+    path: "context.loop_item",
+    label: "Loop item",
+    origin: "runtime_context",
+    schema: { type: "string" },
+    required: false,
+    availability: "conditional",
+    uses: ["step_input"],
+    reason: "Only available inside the foreach body.",
+  },
+];
+
 describe("InputExpressionControl", () => {
+  it("uses the inventory picker for every recursive path expression leaf", () => {
+    render(
+      <InputExpressionControl
+        field={normalizeSchema({
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              first: { type: "string" },
+              nested: { type: "array", items: { type: "string" } },
+            },
+          },
+        })}
+        label="items"
+        onChange={vi.fn()}
+        sourceOptions={sourceOptions}
+        state={{
+          kind: "array",
+          items: [{
+            kind: "object",
+            fields: [
+              { name: "first", value: { kind: "path", path: "input.title", touched: false } },
+              {
+                name: "nested",
+                value: {
+                  kind: "array",
+                  items: [{ kind: "path", path: "context.loop_item", touched: false }],
+                },
+              },
+            ],
+          }],
+        }}
+        showModeControl={false}
+      />,
+    );
+
+    expect(screen.getAllByRole("group", { name: "Workflow input" })).toHaveLength(2);
+    expect(screen.getAllByRole("group", { name: "Runtime context" })).toHaveLength(2);
+    expect(document.querySelectorAll("datalist")).toHaveLength(0);
+  });
+
   it("offers construct mode for an unconstrained target", async () => {
     const user = userEvent.setup();
     const Harness = () => {
@@ -439,7 +503,7 @@ describe("InputExpressionControl", () => {
     expect(screen.getByRole("textbox", { name: "Additional property name for items item 1" })).toHaveValue("second-local");
   });
 
-  it("gives repeated labels unique datalist and typed-leaf control ids", () => {
+  it("gives repeated labels unique picker and typed-leaf control ids", () => {
     const field = normalizeSchema({ type: "string" });
     render(
       <>
@@ -470,10 +534,11 @@ describe("InputExpressionControl", () => {
       </>,
     );
 
-    const datalistIds = [...document.querySelectorAll("datalist")].map((element) => element.id);
+    const searchIds = [...document.querySelectorAll('input[type="search"]')].map((element) => element.id);
     const controlIds = [...document.querySelectorAll("textarea")].map((element) => element.id);
-    expect(datalistIds).toHaveLength(2);
-    expect(new Set(datalistIds).size).toBe(datalistIds.length);
+    expect(searchIds).toHaveLength(2);
+    expect(new Set(searchIds).size).toBe(searchIds.length);
+    expect(document.querySelectorAll("datalist")).toHaveLength(0);
     expect(controlIds).toHaveLength(2);
     expect(new Set(controlIds).size).toBe(controlIds.length);
   });
@@ -496,8 +561,9 @@ describe("InputExpressionControl", () => {
 
     expect(screen.getByText("Validated when the workflow runs")).toBeInTheDocument();
     expect(screen.queryByRole("option", { name: "Construct" })).toBeNull();
-    await user.clear(screen.getByRole("combobox", { name: "Path for name" }));
-    await user.type(screen.getByRole("combobox", { name: "Path for name" }), "state.name");
+    const path = screen.getByRole("textbox", { name: "Custom Path for name" });
+    await user.clear(path);
+    await user.type(path, "state.name");
     expect(state).toMatchObject({ kind: "path", path: "state.name" });
   });
 });

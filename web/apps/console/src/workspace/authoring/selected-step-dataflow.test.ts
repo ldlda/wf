@@ -1,11 +1,18 @@
+import { readdirSync, readFileSync } from "node:fs";
+import { dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import type { AuthoringPathOption } from "../domain/authoring-contract-models.js";
 import type { DraftDiagnostic, DraftWorkspace } from "../domain/draft-workspace-models.js";
 import {
+  authoringOptionsForUse,
   bindingDiagnosticsForStep,
   capabilityLocalPathSuggestions,
   inferredStateSchemaPreview,
   isJsonValue,
   inputBindingRows,
+  localPathFromPickerValue,
+  pickerValueForLocalPath,
   outputBindingRows,
   projectSelectedStepDataflow,
   serializeInputBindingRow,
@@ -13,7 +20,6 @@ import {
   serializeOutputBindingRow,
   serializeOutputBindingRows,
   stateTargetSuggestions,
-  workflowSourceSuggestions,
 } from "./selected-step-dataflow.js";
 
 const summary = {
@@ -323,17 +329,61 @@ describe("selected-step dataflow projection", () => {
 });
 
 describe("selected-step schema helpers", () => {
-  it("returns canonical schema path suggestions", () => {
-    expect(workflowSourceSuggestions(schema, {
-      type: "object",
-      properties: { fallback: { type: "string" } },
-    })).toEqual([
-      "input.items",
-      "input.items.0",
-      "input.account",
-      "input.account.name",
-      "state.fallback",
+  const inventoryOptions: ReadonlyArray<AuthoringPathOption> = [
+    {
+      availability: "available",
+      label: "Input title",
+      origin: "workflow_input",
+      path: "input.title",
+      required: false,
+      schema: { type: "string" },
+      uses: ["step_input"],
+    },
+    {
+      availability: "available",
+      label: "Step output text",
+      origin: "step_output",
+      path: "step_output.text",
+      required: false,
+      schema: { type: "string" },
+      uses: ["step_output_source"],
+    },
+    {
+      availability: "available",
+      label: "State report",
+      origin: "workflow_state",
+      path: "state.report",
+      required: false,
+      schema: { type: "string" },
+      uses: ["state_target"],
+    },
+  ];
+
+  it("filters inventory by picker use and preserves local binding shapes", () => {
+    expect(authoringOptionsForUse(inventoryOptions, "step_input")).toEqual([
+      inventoryOptions[0],
     ]);
+    expect(authoringOptionsForUse(inventoryOptions, "step_output_source")).toEqual([
+      inventoryOptions[1],
+    ]);
+    expect(pickerValueForLocalPath("text", inventoryOptions, "step_output")).toBe("step_output.text");
+    expect(localPathFromPickerValue("step_output.text", inventoryOptions, "step_output")).toBe("text");
+    expect(localPathFromPickerValue("custom.value", inventoryOptions, "step_output")).toBe("custom.value");
+
+    const wholeOutput: AuthoringPathOption = {
+      availability: "available",
+      label: "Whole output",
+      origin: "step_output",
+      path: "step_output",
+      required: false,
+      schema: { type: "object" },
+      uses: ["step_output_source"],
+    };
+    expect(pickerValueForLocalPath(".", [wholeOutput], "step_output")).toBe("step_output");
+    expect(localPathFromPickerValue("step_output", [wholeOutput], "step_output")).toBe(".");
+  });
+
+  it("returns canonical schema path suggestions", () => {
     expect(capabilityLocalPathSuggestions(schema)).toEqual([
       ".",
       "items",
@@ -344,15 +394,26 @@ describe("selected-step schema helpers", () => {
     expect(stateTargetSuggestions(schema)).toEqual(["state.items", "state.items.0", "state.account", "state.account.name"]);
   });
 
-  it("combines workflow input and state source suggestions with nested local targets", () => {
-    expect(workflowSourceSuggestions(
-      { type: "object", properties: { request: { type: "object", properties: { id: { type: "string" } } } } },
-      { type: "object", properties: { session: { type: "object", properties: { token: { type: "string" } } } } },
-    )).toEqual(["input.request", "input.request.id", "state.session", "state.session.token"]);
+  it("keeps nested local capability targets and state targets schema-backed", () => {
     expect(capabilityLocalPathSuggestions({
       type: "object",
       properties: { profile: { type: "object", properties: { name: { type: "string" } } } },
     })).toEqual([".", "profile", "profile.name"]);
+    expect(stateTargetSuggestions({
+      type: "object",
+      properties: { session: { type: "object", properties: { token: { type: "string" } } } },
+    })).toEqual(["state.session", "state.session.token"]);
+  });
+
+  it("does not hardcode runtime context field names in production authoring files", () => {
+    const directory = dirname(fileURLToPath(import.meta.url));
+    const productionFiles = readdirSync(directory)
+      .filter((file) => /\.tsx?$/.test(file) && !file.includes(".test."));
+    const source = productionFiles
+      .map((file) => readFileSync(`${directory}/${file}`, "utf8"))
+      .join("\n");
+
+    expect(source).not.toMatch(/context\.(?:loop_item|item|index|key|value)\b/);
   });
 
   it("previews only the selected output source schema", () => {

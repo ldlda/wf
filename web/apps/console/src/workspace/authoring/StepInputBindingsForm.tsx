@@ -1,5 +1,8 @@
 import { useId, useRef, useState, type FormEvent } from "react";
 import type {
+  AuthoringPathOption,
+} from "../domain/authoring-contract-models.js";
+import type {
   DraftDiagnostic,
   StepInputBinding,
 } from "../domain/draft-workspace-models.js";
@@ -21,13 +24,14 @@ import {
 import { serializeSchemaValues, type FieldSources } from "../schema-form/schema-values.js";
 import { formatBoundedJson } from "../domain/format-bounded-json.js";
 import { displayGraphInputPath, displayLocalInputPath } from "./input-binding-paths.js";
+import { AuthoringPathPicker } from "./AuthoringPathPicker.js";
 import {
-  capabilityLocalPathSuggestions,
+  localPathFromPickerValue,
+  pickerValueForLocalPath,
   isJsonValue,
   serializeInputBindingRow,
   serializeStepInputBindingRow,
   stepInputBindingRows,
-  workflowSourceSuggestions,
   type StepInputBindingRow,
 } from "./selected-step-dataflow.js";
 
@@ -51,8 +55,8 @@ type FormRow = EditableRow | UnsupportedRow;
 
 export type StepInputBindingsFormProps = {
   readonly inputSchema: unknown;
-  readonly workflowInputSchema?: unknown;
-  readonly workflowStateSchema?: unknown;
+  readonly sourceOptions?: ReadonlyArray<AuthoringPathOption>;
+  readonly targetOptions?: ReadonlyArray<AuthoringPathOption>;
   /** Changes only when the parent has accepted a new canonical draft. */
   readonly canonicalVersion?: string | number | null;
   readonly initialRows?: ReadonlyArray<StepInputBindingRow>;
@@ -294,8 +298,8 @@ const duplicateIssuesForRows = (
 const StepInputBindingsFormContent = ({
   canonicalVersion = null,
   inputSchema,
-  workflowInputSchema,
-  workflowStateSchema,
+  sourceOptions = [],
+  targetOptions = [],
   initialRows,
   initialBindings,
   rowDiagnostics = EMPTY_DIAGNOSTICS,
@@ -305,10 +309,6 @@ const StepInputBindingsFormContent = ({
 }: StepInputBindingsFormProps) => {
   const formId = useId();
   const root = normalizeSchema(inputSchema);
-  const sourceSuggestions = workflowSourceSuggestions(workflowInputSchema ?? null, workflowStateSchema ?? null);
-  const targetSuggestions = capabilityLocalPathSuggestions(inputSchema);
-  const sourceListId = `${formId}-workflow-sources`;
-  const targetListId = `${formId}-capability-targets`;
   const [rows, setRows] = useState<ReadonlyArray<FormRow>>(() =>
     rowsFrom(inputRows(initialRows, initialBindings), formId, root),
   );
@@ -420,12 +420,6 @@ const StepInputBindingsFormContent = ({
   return (
     <form className="schema-form authoring-form" noValidate onSubmit={submit}>
       {formIssue !== null && <p id={formErrorId} role="alert">{formIssue}</p>}
-      <datalist id={sourceListId}>
-        {sourceSuggestions.map((suggestion) => <option key={suggestion} value={suggestion} />)}
-      </datalist>
-      <datalist id={targetListId}>
-        {targetSuggestions.map((suggestion) => <option key={suggestion} value={suggestion} />)}
-      </datalist>
       <div className="schema-form__group">
         {rows.length === 0 && <p>No input bindings configured.</p>}
         {rows.map((row, index) => {
@@ -469,9 +463,7 @@ const StepInputBindingsFormContent = ({
             ...(duplicateIssues.get(row.id) ?? []),
             ...bindingForRow(root, row).issues,
           ])];
-          const targetId = `${row.id}-target`;
           const errorId = `${row.id}-errors`;
-          const pathId = `${row.id}-source-path`;
           const literalId = `${row.id}-literal`;
           const pathModeId = `${row.id}-path-mode`;
           const literalModeId = `${row.id}-literal-mode`;
@@ -484,16 +476,18 @@ const StepInputBindingsFormContent = ({
           return (
             <fieldset aria-label={`Input row ${rowNumber}`} className="schema-form__group" key={row.id}>
               <legend>Input row {rowNumber}</legend>
-              <label htmlFor={targetId}>Target</label>
-              <input
-                aria-describedby={hasIssues ? errorId : undefined}
-                aria-invalid={hasIssues}
-                aria-label={`Target for row ${rowNumber}`}
-                id={targetId}
-                list={targetListId}
-                onChange={(event) => editRow(row.id, (current) => ({ ...current, target: event.target.value }))}
-                type="text"
-                value={row.target}
+              <AuthoringPathPicker
+                allowCustom
+                describedBy={hasIssues ? errorId : undefined}
+                invalid={hasIssues}
+                label={`Target for row ${rowNumber}`}
+                onChange={(target) => editRow(row.id, (current) => ({
+                  ...current,
+                  target: localPathFromPickerValue(target, targetOptions, "step_input"),
+                }))}
+                options={targetOptions}
+                uses="step_input"
+                value={pickerValueForLocalPath(row.target, targetOptions, "step_input")}
               />
               <fieldset aria-label={`Source mode for input row ${rowNumber}`} className="schema-form__source">
                 <legend>Value source</legend>
@@ -540,19 +534,16 @@ const StepInputBindingsFormContent = ({
                 </div>
               </fieldset>
               {row.mode === "path" ? (
-                <label htmlFor={pathId}>
-                  Source path for input row {rowNumber}
-                  <input
-                    aria-describedby={hasIssues ? errorId : undefined}
-                    aria-invalid={hasIssues}
-                    aria-label={`Source path for input row ${rowNumber}`}
-                    id={pathId}
-                    list={sourceListId}
-                    onChange={(event) => editRow(row.id, (current) => ({ ...current, sourcePath: event.target.value }))}
-                    type="text"
-                    value={row.sourcePath}
-                  />
-                </label>
+                <AuthoringPathPicker
+                  allowCustom
+                  describedBy={hasIssues ? errorId : undefined}
+                  invalid={hasIssues}
+                  label={`Source path for input row ${rowNumber}`}
+                  onChange={(path) => editRow(row.id, (current) => ({ ...current, sourcePath: path }))}
+                  options={sourceOptions}
+                  uses="step_input"
+                  value={row.sourcePath}
+                />
               ) : row.mode === "expression" ? (
                 <InputExpressionControl
                   field={field}
@@ -562,7 +553,7 @@ const StepInputBindingsFormContent = ({
                     ...current,
                     expression: next,
                   }))}
-                  sourceSuggestions={sourceSuggestions}
+                  sourceOptions={sourceOptions}
                   state={row.expression ?? defaultExpressionEditorState(field)}
                   showModeControl={false}
                 />

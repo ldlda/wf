@@ -1,17 +1,21 @@
 import { useId, useRef, useState, type FormEvent } from "react";
 import type {
+  AuthoringPathOption,
+} from "../domain/authoring-contract-models.js";
+import type {
   DraftDiagnostic,
   LocalInputPath,
   OutputBinding,
   StatePath,
 } from "../domain/draft-workspace-models.js";
 import { formatBoundedJson } from "../domain/format-bounded-json.js";
+import { AuthoringPathPicker } from "./AuthoringPathPicker.js";
 import {
-  capabilityLocalPathSuggestions,
   inferredStateSchemaPreview,
+  localPathFromPickerValue,
   outputBindingRows,
+  pickerValueForLocalPath,
   serializeOutputBindingRow,
-  stateTargetSuggestions,
   type OutputBindingRow,
 } from "./selected-step-dataflow.js";
 import { formatTOMLPath } from "../schema-form/schema-paths.js";
@@ -20,14 +24,9 @@ type EditableRow = {
   readonly kind: "canonical";
   readonly id: string;
   readonly rawIndex: number;
-  readonly sourceSelection: SourceSelection;
   readonly sourcePath: string;
   readonly target: string;
 };
-
-type SourceSelection =
-  | { readonly kind: "schema"; readonly index: number }
-  | { readonly kind: "custom" };
 
 type UnsupportedRow = Extract<OutputBindingRow, { readonly kind: "unsupported" }> & {
   readonly id: string;
@@ -38,6 +37,8 @@ type FormRow = EditableRow | UnsupportedRow;
 export type StepOutputBindingsFormProps = {
   readonly outputSchema: unknown;
   readonly stateSchema: unknown;
+  readonly sourceOptions?: ReadonlyArray<AuthoringPathOption>;
+  readonly targetOptions?: ReadonlyArray<AuthoringPathOption>;
   readonly initialRows?: ReadonlyArray<OutputBindingRow>;
   readonly initialBindings?: ReadonlyArray<OutputBinding>;
   readonly rowDiagnostics?: Readonly<Record<number, ReadonlyArray<DraftDiagnostic>>>;
@@ -48,8 +49,6 @@ export type StepOutputBindingsFormProps = {
 
 const EMPTY_ROWS: ReadonlyArray<OutputBindingRow> = [];
 const EMPTY_DIAGNOSTICS: Readonly<Record<number, ReadonlyArray<DraftDiagnostic>>> = {};
-const CUSTOM_SOURCE_OPTION = "custom-source";
-const SCHEMA_SOURCE_OPTION_PREFIX = "schema-source-";
 const CLEAR_COPY =
   "Saving a new target asks the workflow API to project this output schema into state. Clearing bindings does not delete existing state fields.";
 
@@ -59,43 +58,15 @@ const displayLocalPath = (value: LocalInputPath): string =>
 const displayStatePath = (value: StatePath): string =>
   typeof value === "string" ? value : formatTOMLPath(["state", ...value.parts]);
 
-const sourceSelectionFor = (
-  sourcePath: string,
-  sourceSuggestions: ReadonlyArray<string>,
-): SourceSelection => {
-  const index = sourceSuggestions.indexOf(sourcePath);
-  return index < 0 ? { kind: "custom" } : { kind: "schema", index };
-};
-
-const sourceOptionValue = (selection: SourceSelection): string =>
-  selection.kind === "custom"
-    ? CUSTOM_SOURCE_OPTION
-    : `${SCHEMA_SOURCE_OPTION_PREFIX}${selection.index}`;
-
-const sourceSelectionFromOption = (
-  value: string,
-  sourceSuggestions: ReadonlyArray<string>,
-): { readonly selection: SourceSelection; readonly sourcePath: string } | null => {
-  if (value === CUSTOM_SOURCE_OPTION) return { selection: { kind: "custom" }, sourcePath: "" };
-  if (!value.startsWith(SCHEMA_SOURCE_OPTION_PREFIX)) return null;
-  const index = Number(value.slice(SCHEMA_SOURCE_OPTION_PREFIX.length));
-  const sourcePath = sourceSuggestions[index];
-  return sourcePath === undefined
-    ? null
-    : { selection: { kind: "schema", index }, sourcePath };
-};
-
 const rowsFrom = (
   rows: ReadonlyArray<OutputBindingRow>,
   formId: string,
-  sourceSuggestions: ReadonlyArray<string>,
 ): ReadonlyArray<FormRow> => rows.map((row, index) => {
   if (row.kind === "unsupported") return { ...row, id: `${formId}-output-row-${index}` };
   return {
     kind: "canonical",
     id: `${formId}-output-row-${index}`,
     rawIndex: row.index,
-    sourceSelection: sourceSelectionFor(displayLocalPath(row.value.source), sourceSuggestions),
     sourcePath: displayLocalPath(row.value.source),
     target: displayStatePath(row.value.target),
   };
@@ -194,8 +165,8 @@ type OutputRowEditorProps = {
   readonly index: number;
   readonly rowCount: number;
   readonly outputSchema: unknown;
-  readonly sourceSuggestions: ReadonlyArray<string>;
-  readonly targetListId: string;
+  readonly sourceOptions: ReadonlyArray<AuthoringPathOption>;
+  readonly targetOptions: ReadonlyArray<AuthoringPathOption>;
   readonly rowDiagnostics: Readonly<Record<number, ReadonlyArray<DraftDiagnostic>>>;
   readonly localIssues: Readonly<Record<string, ReadonlyArray<string>>>;
   readonly onEdit: EditRow;
@@ -209,8 +180,8 @@ const OutputRowEditor = ({
   index,
   rowCount,
   outputSchema,
-  sourceSuggestions,
-  targetListId,
+  sourceOptions,
+  targetOptions,
   rowDiagnostics,
   localIssues,
   onEdit,
@@ -220,70 +191,34 @@ const OutputRowEditor = ({
   const issues = rowIssueMessages(row, rowDiagnostics, localIssues);
   const errorId = `${row.id}-errors`;
   const preview = inferredStateSchemaPreview(outputSchema, row.sourcePath, row.target);
-  const targetId = `${row.id}-target`;
-  const sourceChoiceId = `${row.id}-source-choice`;
-  const sourcePathId = `${row.id}-source-path`;
   const hasIssues = issues.length > 0;
   return (
     <fieldset aria-label={`Output row ${rowNumber}`} className="schema-form__group">
       <legend>Output row {rowNumber}</legend>
       <div className="schema-form__output-row-fields">
-        <div className="schema-form__field">
-          <label htmlFor={sourceChoiceId}>Source choice</label>
-          <select
-            aria-label={`Source choice for output row ${rowNumber}`}
-            id={sourceChoiceId}
-            onChange={(event) => {
-              const next = sourceSelectionFromOption(event.target.value, sourceSuggestions);
-              if (next === null) return;
-              onEdit(row.id, (current) => ({
-                ...current,
-                sourceSelection: next.selection,
-                sourcePath: next.sourcePath === "" ? current.sourcePath : next.sourcePath,
-              }));
-            }}
-            value={sourceOptionValue(row.sourceSelection)}
-          >
-            {sourceSuggestions.map((suggestion, index) => (
-              <option key={suggestion} value={`${SCHEMA_SOURCE_OPTION_PREFIX}${index}`}>
-                {suggestion === "." ? "Whole output (.)" : suggestion}
-              </option>
-            ))}
-            <option value={CUSTOM_SOURCE_OPTION}>Custom local path</option>
-          </select>
-        </div>
-        <label htmlFor={sourcePathId}>
-          Local source path
-          <input
-            aria-describedby={hasIssues ? errorId : undefined}
-            aria-invalid={hasIssues}
-            aria-label={`Local source path for output row ${rowNumber}`}
-            id={sourcePathId}
-            onChange={(event) => onEdit(row.id, (current) => ({
-              ...current,
-              sourceSelection: sourceSelectionFor(event.target.value, sourceSuggestions),
-              sourcePath: event.target.value,
-            }))}
-            type="text"
-            value={row.sourcePath}
-          />
-        </label>
-        <label htmlFor={targetId}>
-          Target
-          <input
-            aria-describedby={hasIssues ? errorId : undefined}
-            aria-invalid={hasIssues}
-            aria-label={`Target for output row ${rowNumber}`}
-            id={targetId}
-            list={targetListId}
-            onChange={(event) => onEdit(row.id, (current) => ({
-              ...current,
-              target: event.target.value,
-            }))}
-            type="text"
-            value={row.target}
-          />
-        </label>
+        <AuthoringPathPicker
+          allowCustom
+          describedBy={hasIssues ? errorId : undefined}
+          invalid={hasIssues}
+          label={`Source path for output row ${rowNumber}`}
+          onChange={(source) => onEdit(row.id, (current) => ({
+            ...current,
+            sourcePath: localPathFromPickerValue(source, sourceOptions, "step_output"),
+          }))}
+          options={sourceOptions}
+          uses="step_output_source"
+          value={pickerValueForLocalPath(row.sourcePath, sourceOptions, "step_output")}
+        />
+        <AuthoringPathPicker
+          allowCustom
+          describedBy={hasIssues ? errorId : undefined}
+          invalid={hasIssues}
+          label={`Target for output row ${rowNumber}`}
+          onChange={(target) => onEdit(row.id, (current) => ({ ...current, target }))}
+          options={targetOptions}
+          uses="state_target"
+          value={row.target}
+        />
       </div>
       {preview !== null ? (
         <details className="schema-form__preview">
@@ -332,7 +267,9 @@ const OutputRowEditor = ({
 
 export const StepOutputBindingsForm = ({
   outputSchema,
-  stateSchema,
+  stateSchema: _stateSchema,
+  sourceOptions = [],
+  targetOptions = [],
   initialRows,
   initialBindings,
   rowDiagnostics = EMPTY_DIAGNOSTICS,
@@ -341,13 +278,10 @@ export const StepOutputBindingsForm = ({
   submitLabel = "Save outputs",
 }: StepOutputBindingsFormProps) => {
   const formId = useId();
-  const sourceSuggestions = capabilityLocalPathSuggestions(outputSchema);
-  const targetSuggestions = stateTargetSuggestions(stateSchema);
-  const targetListId = `${formId}-state-targets`;
   const formErrorId = `${formId}-form-error`;
   const initialRowValues = outputRows(initialRows, initialBindings);
   const [rows, setRows] = useState<ReadonlyArray<FormRow>>(() =>
-    rowsFrom(initialRowValues, formId, sourceSuggestions),
+    rowsFrom(initialRowValues, formId),
   );
   const hadInitialRows = initialRowValues.length > 0;
   const [localIssues, setLocalIssues] = useState<Readonly<Record<string, ReadonlyArray<string>>>>({});
@@ -404,7 +338,6 @@ export const StepOutputBindingsForm = ({
         kind: "canonical",
         id,
         rawIndex: -1,
-        sourceSelection: sourceSelectionFor(sourcePath, sourceSuggestions),
         sourcePath,
         target: "",
       },
@@ -466,9 +399,6 @@ export const StepOutputBindingsForm = ({
   return (
     <form className="schema-form authoring-form output-bindings-form" noValidate onSubmit={submit}>
       {formIssue !== null && <p id={formErrorId} role="alert">{formIssue}</p>}
-      <datalist id={targetListId}>
-        {targetSuggestions.map((suggestion) => <option key={suggestion} value={suggestion} />)}
-      </datalist>
       <p className="schema-form__note">{CLEAR_COPY}</p>
       <div className="schema-form__group">
         {rows.length === 0 && <p>No output bindings configured.</p>}
@@ -494,8 +424,8 @@ export const StepOutputBindingsForm = ({
             rowCount={rows.length}
             rowDiagnostics={rowDiagnostics}
             rowNumber={index + 1}
-            sourceSuggestions={sourceSuggestions}
-            targetListId={targetListId}
+            sourceOptions={sourceOptions}
+            targetOptions={targetOptions}
           />
         ))}
         <button className="schema-form__secondary-action" onClick={addRow} type="button">

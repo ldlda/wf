@@ -12,6 +12,8 @@ export type AuthoringPathPickerProps = {
   readonly onChange: (value: string) => void;
   readonly label: string;
   readonly allowCustom?: boolean;
+  readonly describedBy?: string | undefined;
+  readonly invalid?: boolean;
 };
 
 type OptionGroup = {
@@ -44,12 +46,17 @@ export const AuthoringPathPicker = ({
   onChange,
   label,
   allowCustom = false,
+  describedBy,
+  invalid = false,
 }: AuthoringPathPickerProps) => {
   const id = safeId(useId());
   const searchId = `${id}-search`;
   const customId = `${id}-custom`;
   const [search, setSearch] = useState("");
   const [customValue, setCustomValue] = useState(value);
+  const [advancedOpen, setAdvancedOpen] = useState(
+    () => allowCustom && value.trim() !== "" && !options.some((option) => option.path === value),
+  );
   const requestedUses = normalizedUses(uses);
   const normalizedSearch = search.trim().toLocaleLowerCase();
 
@@ -118,10 +125,16 @@ export const AuthoringPathPicker = ({
         {visibleOptions.length === 0 && <p>No matching paths.</p>}
       </div>
       {allowCustom && (
-        <details className="authoring-path-picker__advanced">
+        <details
+          className="authoring-path-picker__advanced"
+          onToggle={(event) => setAdvancedOpen(event.currentTarget.open)}
+          open={advancedOpen}
+        >
           <summary>Advanced</summary>
           <label htmlFor={customId}>Custom {label}</label>
           <input
+            aria-describedby={describedBy}
+            aria-invalid={invalid}
             id={customId}
             onChange={(event) => {
               setCustomValue(event.target.value);
