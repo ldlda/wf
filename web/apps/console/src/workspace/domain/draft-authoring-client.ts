@@ -14,6 +14,9 @@ import {
   type SetDraftRouteInput,
   type SetStepInputBindingsInput,
   type SetStepOutputBindingsInput,
+  type SetWorkflowContractInput,
+  type SetWorkflowOutputBindingsInput,
+  type SetWorkflowStartInput,
   type UpdateCapabilityStepInput,
 } from "./draft-workspace-models.js";
 import { ConsoleClientError } from "./errors.js";
@@ -26,6 +29,9 @@ export interface DraftAuthoringClient {
   updateCapabilityStep(input: UpdateCapabilityStepInput): Promise<DraftWorkspace>;
   setStepInputBindings(input: SetStepInputBindingsInput): Promise<DraftWorkspace>;
   setStepOutputBindings(input: SetStepOutputBindingsInput): Promise<DraftWorkspace>;
+  setContract(input: SetWorkflowContractInput): Promise<DraftWorkspace>;
+  setStart(input: SetWorkflowStartInput): Promise<DraftWorkspace>;
+  setWorkflowOutputBindings(input: SetWorkflowOutputBindingsInput): Promise<DraftWorkspace>;
   setRoute(input: SetDraftRouteInput): Promise<DraftWorkspace>;
   validate(workspaceId: string): Promise<DraftWorkspace>;
 }
@@ -266,6 +272,45 @@ export const createDraftAuthoringClient = (
         revision: input.revision,
         step_id: requireIdentifier(operation, input.stepId, "step id"),
         bindings: copyOutputBindings(input.bindings),
+      },
+      decodeDraftWorkspace,
+    );
+  },
+
+  setContract: async (input) => {
+    const operation = "workflow.draft_workspaces.set_contract";
+    const params: Record<string, unknown> = {
+      workspace_id: requireIdentifier(operation, input.workspaceId, "workspace id"),
+      revision: input.revision,
+    };
+    ifDefined(params, "input_schema", input.inputSchema === undefined ? undefined : copyJsonValue(input.inputSchema));
+    ifDefined(params, "state_schema", input.stateSchema === undefined ? undefined : copyJsonValue(input.stateSchema));
+    ifDefined(params, "output_schema", input.outputSchema === undefined ? undefined : copyJsonValue(input.outputSchema));
+    ifDefined(params, "outcomes", input.outcomes === undefined ? undefined : [...input.outcomes]);
+    return executor.run(operation, params, decodeDraftWorkspace);
+  },
+
+  setStart: async (input) => {
+    const operation = "workflow.draft_workspaces.set_start";
+    return executor.run(
+      operation,
+      {
+        workspace_id: requireIdentifier(operation, input.workspaceId, "workspace id"),
+        revision: input.revision,
+        step_id: requireIdentifier(operation, input.stepId, "step id"),
+      },
+      decodeDraftWorkspace,
+    );
+  },
+
+  setWorkflowOutputBindings: async (input) => {
+    const operation = "workflow.draft_workspaces.set_workflow_output_bindings";
+    return executor.run(
+      operation,
+      {
+        workspace_id: requireIdentifier(operation, input.workspaceId, "workspace id"),
+        revision: input.revision,
+        bindings: copyInputBindings(input.bindings),
       },
       decodeDraftWorkspace,
     );

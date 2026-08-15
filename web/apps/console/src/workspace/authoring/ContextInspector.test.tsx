@@ -102,6 +102,9 @@ const controller = {
   updateCapability: vi.fn(),
   setStepInputs: vi.fn(),
   setStepOutputs: vi.fn(),
+  setContract: vi.fn(),
+  setStart: vi.fn(),
+  setWorkflowOutputBindings: vi.fn(),
   updateSetup: vi.fn(),
   setRoute: vi.fn(),
   validate: vi.fn(),
@@ -115,6 +118,30 @@ const controller = {
 } satisfies DraftAuthoringController;
 
 describe("ContextInspector", () => {
+  it("routes contract selections to the focused editor without deferred actions", () => {
+    render(
+      <ContextInspector
+        capabilities={[]}
+        capabilityDetail={null}
+        capabilityDetailMessage={null}
+        capabilityDetailPhase="ready"
+        controller={controller}
+        draft={{
+          ...draft,
+          draft: {
+            ...draft.draft,
+            input_schema: { type: "object", properties: { query: { type: "string" } } },
+          },
+        }}
+        selection={{ kind: "contract", contract: "input" }}
+      />,
+    );
+
+    expect(screen.getByRole("heading", { name: "Input contract" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save input schema" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Deferred actions" })).not.toBeInTheDocument();
+  });
+
   it("binds the inspected capability schema and canonical node values", () => {
     render(
       <ContextInspector

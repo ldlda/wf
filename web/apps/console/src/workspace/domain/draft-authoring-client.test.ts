@@ -13,6 +13,9 @@ import {
   type SetDraftRouteInput,
   type SetStepInputBindingsInput,
   type SetStepOutputBindingsInput,
+  type SetWorkflowContractInput,
+  type SetWorkflowOutputBindingsInput,
+  type SetWorkflowStartInput,
   type UpdateCapabilityStepInput,
 } from "./draft-workspace-models.js";
 import { createDraftAuthoringClient } from "./draft-authoring-client.js";
@@ -476,6 +479,59 @@ describe("DraftAuthoringClient", () => {
       },
       decodeDraftWorkspace,
     );
+  });
+
+  it("lowers focused workflow contract operations with exact copied payloads", async () => {
+    const { executor: writeExecutor, run } = createExecutor();
+    const client = createDraftAuthoringClient(writeExecutor);
+    const contract = {
+      workspaceId: " report ",
+      revision: 7,
+      inputSchema: { type: "object", properties: { title: { type: "string" } } },
+      outcomes: ["ok", "cancelled"],
+    } satisfies SetWorkflowContractInput;
+    const start = { workspaceId: "report", revision: 8, stepId: " collect " } satisfies SetWorkflowStartInput;
+    const outputs = {
+      workspaceId: "report",
+      revision: 9,
+      bindings: [
+        { path: { root: "state", parts: ["report"] }, target: "text" },
+        { target: "format", value: { kind: "markdown" } },
+      ],
+    } satisfies SetWorkflowOutputBindingsInput;
+
+    await client.setContract(contract);
+    await client.setStart(start);
+    await client.setWorkflowOutputBindings(outputs);
+
+    expect(run).toHaveBeenNthCalledWith(1, "workflow.draft_workspaces.set_contract", {
+      workspace_id: "report",
+      revision: 7,
+      input_schema: contract.inputSchema,
+      outcomes: ["ok", "cancelled"],
+    }, decodeDraftWorkspace);
+    expect(run).toHaveBeenNthCalledWith(2, "workflow.draft_workspaces.set_start", {
+      workspace_id: "report",
+      revision: 8,
+      step_id: "collect",
+    }, decodeDraftWorkspace);
+    expect(run).toHaveBeenNthCalledWith(3, "workflow.draft_workspaces.set_workflow_output_bindings", {
+      workspace_id: "report",
+      revision: 9,
+      bindings: outputs.bindings,
+    }, decodeDraftWorkspace);
+
+    (contract.inputSchema.properties as Record<string, unknown>).title = { type: "number" };
+    (outputs.bindings[0]!.path as { parts: string[] }).parts[0] = "mutated";
+    expect(run.mock.calls[0]?.[1]).toEqual(expect.objectContaining({
+      input_schema: { type: "object", properties: { title: { type: "string" } } },
+    }));
+    expect(run.mock.calls[2]?.[1]).toEqual(expect.objectContaining({
+      bindings: [
+        { path: { root: "state", parts: ["report"] }, target: "text" },
+        { target: "format", value: { kind: "markdown" } },
+      ],
+    }));
   });
 
   it("preserves recursive expression bindings when sending node-local inputs", async () => {

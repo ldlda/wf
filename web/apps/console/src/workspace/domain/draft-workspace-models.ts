@@ -92,6 +92,27 @@ export type SetStepOutputBindingsInput = {
   readonly bindings: ReadonlyArray<OutputBinding>;
 };
 
+export type SetWorkflowContractInput = {
+  readonly workspaceId: string;
+  readonly revision: number;
+  readonly inputSchema?: JsonObject;
+  readonly stateSchema?: JsonObject;
+  readonly outputSchema?: JsonObject;
+  readonly outcomes?: ReadonlyArray<string>;
+};
+
+export type SetWorkflowStartInput = {
+  readonly workspaceId: string;
+  readonly revision: number;
+  readonly stepId: string;
+};
+
+export type SetWorkflowOutputBindingsInput = {
+  readonly workspaceId: string;
+  readonly revision: number;
+  readonly bindings: ReadonlyArray<InputBinding>;
+};
+
 export type CreateEmptyDraftInput = {
   readonly workspaceId: string;
   readonly name: string;

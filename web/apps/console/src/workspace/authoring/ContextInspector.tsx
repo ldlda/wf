@@ -8,6 +8,8 @@ import { CapabilityNodeForm } from "./CapabilityNodeForm.js";
 import { SelectedCapabilityInspector } from "./SelectedCapabilityInspector.js";
 import { RouteForm } from "./RouteForm.js";
 import type { DraftAuthoringController } from "./useDraftAuthoring.js";
+import { useAuthoringContract } from "./useAuthoringContract.js";
+import { WorkflowContractInspector } from "./WorkflowContractInspector.js";
 
 type ContextInspectorProps = {
   readonly draft: DraftWorkspace;
@@ -137,6 +139,36 @@ const DeferredActions = () => (
   </section>
 );
 
+const ContractInspector = ({
+  contract,
+  controller,
+  draft,
+}: {
+  readonly contract: Extract<WorkbenchSelection, { readonly kind: "contract" }>["contract"];
+  readonly controller: DraftAuthoringController;
+  readonly draft: DraftWorkspace;
+}) => {
+  const authoringContract = useAuthoringContract({
+    workspaceId: draft.workspaceId,
+    revision: draft.revision,
+    selectedStepId: null,
+  });
+  return (
+    <>
+      {authoringContract.phase === "loading" && <p role="status">Loading authoring choices...</p>}
+      {authoringContract.phase === "error" && (
+        <p role="alert">{authoringContract.message ?? "Authoring choices failed to load. Advanced repair remains available."}</p>
+      )}
+      <WorkflowContractInspector
+        contract={contract}
+        controller={controller}
+        draft={draft}
+        inventory={authoringContract.inventory}
+      />
+    </>
+  );
+};
+
 export const ContextInspector = ({
   draft,
   capabilities,
@@ -225,21 +257,7 @@ export const ContextInspector = ({
       </>
     );
   } else if (selection.kind === "contract") {
-    const contractNode = graph.nodes.find(
-      (candidate) => candidate.data.contract === selection.contract,
-    );
-    const title = selection.contract.charAt(0).toUpperCase() + selection.contract.slice(1);
-    content = (
-      <section
-        aria-labelledby="contract-selection-heading"
-        className="authoring-inspector__selection"
-      >
-        <p className="workspace-route-pending__eyebrow">Workflow projection</p>
-        <h2 id="contract-selection-heading">{title} contract</h2>
-        <p>{contractNode?.data.summary ?? "No contract fields are declared."}</p>
-        <p>This read-only projection is derived from the canonical draft.</p>
-      </section>
-    );
+    content = <ContractInspector contract={selection.contract} controller={controller} draft={draft} />;
   } else {
     const node = graph.nodes.find((candidate) => candidate.id === selection.nodeId);
     content = (

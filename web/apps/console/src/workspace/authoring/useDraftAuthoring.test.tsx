@@ -64,6 +64,9 @@ const addCapabilityStep = vi.fn<DraftAuthoringClient["addCapabilityStep"]>();
 const updateCapabilityStep = vi.fn<DraftAuthoringClient["updateCapabilityStep"]>();
 const setStepInputBindings = vi.fn<DraftAuthoringClient["setStepInputBindings"]>();
 const setStepOutputBindings = vi.fn<DraftAuthoringClient["setStepOutputBindings"]>();
+const setContract = vi.fn<DraftAuthoringClient["setContract"]>();
+const setStart = vi.fn<DraftAuthoringClient["setStart"]>();
+const setWorkflowOutputBindings = vi.fn<DraftAuthoringClient["setWorkflowOutputBindings"]>();
 const setRoute = vi.fn<DraftAuthoringClient["setRoute"]>();
 const validate = vi.fn<DraftAuthoringClient["validate"]>();
 const list = vi.fn<DraftWorkspaceClient["list"]>();
@@ -75,6 +78,9 @@ const authoringClient = {
   updateCapabilityStep,
   setStepInputBindings,
   setStepOutputBindings,
+  setContract,
+  setStart,
+  setWorkflowOutputBindings,
   setRoute,
   validate,
 } satisfies DraftAuthoringClient;
@@ -121,6 +127,62 @@ beforeEach(() => {
 });
 
 describe("useDraftAuthoring", () => {
+  it("sets a focused contract and reapplies its immutable snapshot after conflict", async () => {
+    const initial = workspace({ revision: 3 });
+    const conflict = workspace({ revision: 3, status: "conflict" });
+    const reloaded = workspace({ revision: 4, status: "invalid" });
+    const canonical = workspace({ revision: 5 });
+    const inputSchema = { type: "object", properties: { query: { type: "string" } } };
+    setContract.mockResolvedValueOnce(conflict).mockResolvedValueOnce(canonical);
+    load.mockResolvedValue(reloaded);
+    const { result } = renderHook(() => useDraftAuthoring({
+      draft: initial,
+      initialSelection: { kind: "contract", contract: "input" },
+    }));
+
+    await act(async () => result.current.setContract({ inputSchema }));
+    inputSchema.properties.query.type = "number";
+    await act(async () => result.current.reload());
+    await act(async () => result.current.reapply());
+
+    expect(setContract).toHaveBeenLastCalledWith({
+      workspaceId: "draft-report",
+      revision: 4,
+      inputSchema: { type: "object", properties: { query: { type: "string" } } },
+    });
+    expect(result.current.selection).toEqual({ kind: "contract", contract: "input" });
+  });
+
+  it("sets the entry step through the focused start operation", async () => {
+    setStart.mockResolvedValue(workspace({ revision: 4 }));
+    const { result } = renderHook(() => useDraftAuthoring({ draft: workspace() }));
+
+    await act(async () => result.current.setStart("render"));
+
+    expect(setStart).toHaveBeenCalledWith({
+      workspaceId: "draft-report",
+      revision: 3,
+      stepId: "render",
+    });
+  });
+
+  it("sets ordered workflow output bindings through the focused operation", async () => {
+    setWorkflowOutputBindings.mockResolvedValue(workspace({ revision: 4 }));
+    const bindings: InputBinding[] = [
+      { path: "state.report", target: "report" },
+      { value: "markdown", target: "format" },
+    ];
+    const { result } = renderHook(() => useDraftAuthoring({ draft: workspace() }));
+
+    await act(async () => result.current.setWorkflowOutputBindings(bindings));
+
+    expect(setWorkflowOutputBindings).toHaveBeenCalledWith({
+      workspaceId: "draft-report",
+      revision: 3,
+      bindings,
+    });
+  });
+
   it("adds an unconnected capability without inventing route information", async () => {
     const initial = workspace();
     const canonical = workspace({

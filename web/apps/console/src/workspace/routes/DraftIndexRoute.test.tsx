@@ -69,6 +69,9 @@ const authoringClient: DraftAuthoringClient = {
   updateCapabilityStep: vi.fn(),
   setStepInputBindings: vi.fn(),
   setStepOutputBindings: vi.fn(),
+  setContract: vi.fn(),
+  setStart: vi.fn(),
+  setWorkflowOutputBindings: vi.fn(),
   setRoute: vi.fn(),
   validate: vi.fn(),
 };

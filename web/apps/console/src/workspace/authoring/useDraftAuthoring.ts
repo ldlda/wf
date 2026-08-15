@@ -11,6 +11,7 @@ import {
 } from "../domain/draft-workspace-client.js";
 import type {
   DraftWorkspace,
+  InputBinding,
   OutputBinding,
   StepInputBinding,
 } from "../domain/draft-workspace-models.js";
@@ -22,6 +23,7 @@ import {
   type WorkbenchSelection,
 } from "./authoring-graph.js";
 import type { CapabilitySetupPatch } from "./selected-step-dataflow.js";
+import { copyJson, type WorkflowContractPatch } from "./workflow-contract-editor.js";
 
 export type DraftAuthoringPhase = "idle" | "saving" | "conflict" | "error";
 
@@ -38,6 +40,9 @@ export interface DraftAuthoringController {
   readonly updateCapability: (input: CapabilityNodeFormValue) => Promise<void>;
   readonly setStepInputs: (bindings: ReadonlyArray<StepInputBinding>) => Promise<void>;
   readonly setStepOutputs: (bindings: ReadonlyArray<OutputBinding>) => Promise<void>;
+  readonly setContract: (patch: WorkflowContractPatch) => Promise<void>;
+  readonly setStart: (stepId: string) => Promise<void>;
+  readonly setWorkflowOutputBindings: (bindings: ReadonlyArray<InputBinding>) => Promise<void>;
   readonly updateSetup: (patch: CapabilitySetupPatch) => Promise<void>;
   readonly setRoute: (input: RouteFormValue) => Promise<void>;
   readonly validate: () => Promise<void>;
@@ -108,6 +113,9 @@ type LastSubmission =
       readonly targetStepId: string;
       readonly bindings: ReadonlyArray<OutputBinding>;
     }
+  | { readonly kind: "contract"; readonly patch: WorkflowContractPatch }
+  | { readonly kind: "start"; readonly stepId: string }
+  | { readonly kind: "workflow_outputs"; readonly bindings: ReadonlyArray<InputBinding> }
   | null;
 
 type MutationOptions = {
@@ -182,6 +190,42 @@ const copyInputBindings = (
 const copyOutputBindings = (
   bindings: ReadonlyArray<OutputBinding>,
 ): ReadonlyArray<OutputBinding> => bindings.map(copyOutputBinding);
+
+const copyWorkflowOutputBindings = (
+  bindings: ReadonlyArray<InputBinding>,
+): ReadonlyArray<InputBinding> => bindings.map((binding) => (
+  "path" in binding
+    ? {
+        path:
+          typeof binding.path === "string"
+            ? binding.path
+            : { root: binding.path.root, parts: [...binding.path.parts] },
+        target:
+          typeof binding.target === "string"
+            ? binding.target
+            : { root: binding.target.root, parts: [...binding.target.parts] },
+      }
+    : {
+        value: copyJson(binding.value),
+        target:
+          typeof binding.target === "string"
+            ? binding.target
+            : { root: binding.target.root, parts: [...binding.target.parts] },
+      }
+));
+
+const copyContractPatch = (patch: WorkflowContractPatch): WorkflowContractPatch => ({
+  ...(patch.inputSchema !== undefined
+    ? { inputSchema: copyJson(patch.inputSchema) as typeof patch.inputSchema }
+    : {}),
+  ...(patch.stateSchema !== undefined
+    ? { stateSchema: copyJson(patch.stateSchema) as typeof patch.stateSchema }
+    : {}),
+  ...(patch.outputSchema !== undefined
+    ? { outputSchema: copyJson(patch.outputSchema) as typeof patch.outputSchema }
+    : {}),
+  ...(patch.outcomes !== undefined ? { outcomes: [...patch.outcomes] } : {}),
+});
 
 const copySetupPatch = (patch: CapabilitySetupPatch): CapabilitySetupPatch => ({
   ...(patch.description !== undefined ? { description: patch.description } : {}),
@@ -624,6 +668,66 @@ export const useDraftAuthoring = ({
     [missingSelectedStep, selectedStepId, submitStepOutputs],
   );
 
+  const submitContract = useCallback(
+    (patch: WorkflowContractPatch): Promise<void> => {
+      const submittedPatch = copyContractPatch(patch);
+      return runMutation(
+        "contract",
+        submittedPatch,
+        (client, requestDraft) => client.setContract({
+          workspaceId: requestDraft.workspaceId,
+          revision: requestDraft.revision,
+          ...submittedPatch,
+        }),
+        { submission: { kind: "contract", patch: submittedPatch } },
+      );
+    },
+    [runMutation],
+  );
+
+  const setContract = useCallback(
+    (patch: WorkflowContractPatch): Promise<void> => submitContract(patch),
+    [submitContract],
+  );
+
+  const submitStart = useCallback(
+    (stepId: string): Promise<void> => runMutation(
+      "start",
+      { stepId },
+      (client, requestDraft) => client.setStart({
+        workspaceId: requestDraft.workspaceId,
+        revision: requestDraft.revision,
+        stepId,
+      }),
+      { submission: { kind: "start", stepId } },
+    ),
+    [runMutation],
+  );
+
+  const setStart = useCallback((stepId: string): Promise<void> => submitStart(stepId), [submitStart]);
+
+  const submitWorkflowOutputBindings = useCallback(
+    (bindings: ReadonlyArray<InputBinding>): Promise<void> => {
+      const submittedBindings = copyWorkflowOutputBindings(bindings);
+      return runMutation(
+        "workflow_outputs",
+        submittedBindings,
+        (client, requestDraft) => client.setWorkflowOutputBindings({
+          workspaceId: requestDraft.workspaceId,
+          revision: requestDraft.revision,
+          bindings: submittedBindings,
+        }),
+        { submission: { kind: "workflow_outputs", bindings: submittedBindings } },
+      );
+    },
+    [runMutation],
+  );
+
+  const setWorkflowOutputBindings = useCallback(
+    (bindings: ReadonlyArray<InputBinding>): Promise<void> => submitWorkflowOutputBindings(bindings),
+    [submitWorkflowOutputBindings],
+  );
+
   const setRoute = useCallback(
     (input: RouteFormValue): Promise<void> => {
       return runMutation(
@@ -740,7 +844,10 @@ export const useDraftAuthoring = ({
     if (last.kind === "route") return setRoute(last.input);
     if (last.kind === "setup") return submitSetup(last.targetStepId, last.patch, true);
     if (last.kind === "inputs") return submitStepInputs(last.targetStepId, last.bindings, true);
-    return submitStepOutputs(last.targetStepId, last.bindings, true);
+    if (last.kind === "outputs") return submitStepOutputs(last.targetStepId, last.bindings, true);
+    if (last.kind === "contract") return submitContract(last.patch);
+    if (last.kind === "start") return submitStart(last.stepId);
+    return submitWorkflowOutputBindings(last.bindings);
   }, [
     setRoute,
     submitCapabilityAdd,
@@ -748,6 +855,9 @@ export const useDraftAuthoring = ({
     submitSetup,
     submitStepInputs,
     submitStepOutputs,
+    submitContract,
+    submitStart,
+    submitWorkflowOutputBindings,
   ]);
 
   const rememberCapabilityForm = useCallback(
@@ -792,6 +902,9 @@ export const useDraftAuthoring = ({
     updateCapability,
     setStepInputs,
     setStepOutputs,
+    setContract,
+    setStart,
+    setWorkflowOutputBindings,
     updateSetup,
     setRoute,
     validate,
