@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 from enum import StrEnum
 from pathlib import Path
 from typing import Annotated, Any
@@ -167,7 +168,7 @@ def call_capability(
 
 
 def render_cap_call_output(
-    result: dict[str, Any],
+    result: Mapping[str, Any],
     *,
     output_format: CapCallOutputFormat,
     unwrap_text: bool,
@@ -198,7 +199,7 @@ def _resolve_cap_call_output_format(
     return output_format
 
 
-def _compact_cap_call_summary(result: dict[str, Any]) -> str:
+def _compact_cap_call_summary(result: Mapping[str, Any]) -> str:
     output = result.get("output")
     output_summary = _summarize_output(output)
     return "\t".join(
@@ -225,7 +226,7 @@ def _summarize_output(output: object) -> str:
     return type(output).__name__
 
 
-def _unwrap_single_mcp_text_block(result: dict[str, Any]) -> str:
+def _unwrap_single_mcp_text_block(result: Mapping[str, Any]) -> str:
     output = result.get("output")
     if not isinstance(output, dict):
         raise ValueError("--unwrap-text requires exactly one MCP text content block")

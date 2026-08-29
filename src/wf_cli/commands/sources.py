@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from enum import StrEnum
 from typing import Annotated
 
@@ -139,7 +140,7 @@ def _list_source_inventory_names(
 
 
 def _source_capability_names(
-    payload: dict[str, object],
+    payload: Mapping[str, object],
     *,
     capability_key: str,
 ) -> list[str]:

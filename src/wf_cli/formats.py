@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 from enum import StrEnum
 from typing import Any
 
@@ -14,7 +15,7 @@ class ListOutputFormat(StrEnum):
 
 
 def render_list_payload(
-    payload: dict[str, Any],
+    payload: Mapping[str, Any],
     *,
     collection_key: str,
     output_format: ListOutputFormat,
@@ -44,7 +45,7 @@ def render_list_payload(
 
 
 def emit_list_payload(
-    payload: dict[str, Any],
+    payload: Mapping[str, Any],
     *,
     collection_key: str,
     output_format: ListOutputFormat,
@@ -64,7 +65,7 @@ def emit_list_payload(
 
 
 def _item_id(item: object, *, id_field: str) -> str:
-    if not isinstance(item, dict):
+    if not isinstance(item, Mapping):
         return str(item)
     value = item.get(id_field)
     return "" if value is None else str(value)
@@ -76,7 +77,7 @@ def _compact_line(
     id_field: str,
     summary_fields: tuple[str, ...],
 ) -> str:
-    if not isinstance(item, dict):
+    if not isinstance(item, Mapping):
         return str(item)
     parts = [_item_id(item, id_field=id_field)]
     for field in summary_fields:

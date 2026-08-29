@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Any
 
 import typer
@@ -153,7 +154,7 @@ async def _fetch_registry(context: CliContext) -> dict[str, Any]:
     }
 
 
-def _payload_count(payload: dict[str, Any], items_key: str) -> int:
+def _payload_count(payload: Mapping[str, Any], items_key: str) -> int:
     """Prefer a paged API's total count, falling back to the current page size."""
     total = payload.get("total")
     if isinstance(total, int):
