@@ -164,8 +164,8 @@ export const WorkflowGraph = ({
           : {})}
         fitView
         proOptions={{ hideAttribution: true }}
-        nodesDraggable={true}
-        nodesConnectable={true}
+        nodesDraggable={false}
+        nodesConnectable={false}
         elementsSelectable={Boolean(onNodeSelect || onEdgeSelect)}
       >
         <Background />
