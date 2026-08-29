@@ -4,6 +4,8 @@ Return annotations stay eagerly evaluated because fastapi-jsonrpc captures them
 while registering nested handlers for response validation and OpenRPC output.
 """
 
+from typing import cast
+
 import fastapi_jsonrpc as jsonrpc
 
 from wf_api.models import (
@@ -108,9 +110,12 @@ def register_methods(
         params: GetDraftWorkspaceParams = RpcParams(),
     ) -> DraftWorkspaceResult:
         try:
-            return await server.api.get_draft_workspace(
-                workspace_id=params.workspace_id,
-                include_draft=params.include_draft,
+            return cast(
+                DraftWorkspaceResult,
+                await server.api.get_draft_workspace(
+                    workspace_id=params.workspace_id,
+                    include_draft=params.include_draft,
+                ),
             )
         except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:
             raise_workflow_rpc_error(exc)

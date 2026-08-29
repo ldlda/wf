@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import replace
 from pathlib import Path
 from typing import Any, Literal, cast
@@ -12,7 +13,11 @@ from tests.wf_mcp.workflow_surface.conftest import echo_artifact
 from wf_api.draft_authoring import RouteSource, WorkflowDraftAuthoringApi
 from wf_api.draft_updates import CapabilityStepUpdate
 from wf_api.drafts import WorkflowDraftApi
-from wf_api.models import RawWorkflowPlan
+from wf_api.models import (
+    AuthoringContractInventoryPayload,
+    DraftWorkspaceResult,
+    RawWorkflowPlan,
+)
 from wf_api.service import WorkflowApi
 from wf_artifacts import FileDraftWorkspaceStore, FileWorkflowArtifactStore
 from wf_artifacts.drafts.models import DraftStep
@@ -30,6 +35,28 @@ from wf_mcp.broker.service.workflow_operation_context import context_from_servic
 from wf_mcp.models import ConnectionConfig
 from wf_mcp.storage import FileStore
 from wf_mcp.workflow_surface import WorkflowSurfaceHandlers
+
+
+def _required_draft(result: Mapping[str, Any]) -> dict[str, Any]:
+    """Return a draft from a test result whose success path includes one."""
+    draft = result.get("draft")
+    assert isinstance(draft, dict)
+    return draft
+
+
+def _authoring_inventory(
+    result: AuthoringContractInventoryPayload | DraftWorkspaceResult,
+) -> AuthoringContractInventoryPayload:
+    """Narrow a successful authoring inspection away from its conflict payload."""
+    assert "entry_steps" in result
+    return cast(AuthoringContractInventoryPayload, result)
+
+
+def _compiled_workspace(result: Mapping[str, Any]) -> dict[str, Any]:
+    """Return a compiled plan from a test case that established valid status."""
+    compiled_plan = result.get("compiled_plan")
+    assert isinstance(compiled_plan, dict)
+    return compiled_plan
 
 
 def test_capability_step_update_preserves_field_presence() -> None:
@@ -97,7 +124,7 @@ async def test_update_capability_step_changes_metadata_and_inputs_atomically(
     step = inspected["draft"]["steps"]["echo"]
 
     assert result["revision"] == 2
-    assert result["draft"]["steps"]["echo"]["desc"] == "New description"
+    assert _required_draft(result)["steps"]["echo"]["desc"] == "New description"
     assert step["use"] == "demo.personal.echo_tool"
     assert step["desc"] == "New description"
     assert step["retry"] == 0
@@ -108,7 +135,7 @@ async def test_update_capability_step_changes_metadata_and_inputs_atomically(
 
     compiled = await draft_api.compile_draft_workspace(workspace_id="echo")
     run = await service.run_workflow_from_plan(
-        RawWorkflowPlan.model_validate(compiled["compiled_plan"]),
+        RawWorkflowPlan.model_validate(_compiled_workspace(compiled)),
         {"text": "ignored"},
     )
     assert run.error is None
@@ -146,10 +173,12 @@ async def test_inspect_draft_authoring_contract_projects_selected_capability(
     await draft_api.create_draft_workspace(workspace_id="authoring", draft=draft)
     api = WorkflowApi(authoring.context)
 
-    inventory = await api.inspect_draft_authoring_contract(
-        workspace_id="authoring",
-        revision=1,
-        selected_step_id="echo",
+    inventory = _authoring_inventory(
+        await api.inspect_draft_authoring_contract(
+            workspace_id="authoring",
+            revision=1,
+            selected_step_id="echo",
+        )
     )
 
     assert inventory["workspace_id"] == "authoring"
@@ -170,9 +199,9 @@ async def test_inspect_draft_authoring_contract_projects_selected_capability(
     }
     assert "__end__" not in {step["step_id"] for step in inventory["entry_steps"]}
     selected = inventory["entry_steps"][0]
-    assert selected["input_targets"][0]["schema"]["type"] == "string"
-    assert selected["output_sources"][0]["schema"]["type"] == "string"
-    assert selected["outcomes"] == ["ok"]
+    assert selected.get("input_targets", [])[0]["schema"]["type"] == "string"
+    assert selected.get("output_sources", [])[0]["schema"]["type"] == "string"
+    assert selected.get("outcomes", []) == ["ok"]
 
 
 @pytest.mark.asyncio
@@ -192,10 +221,12 @@ async def test_inspect_draft_authoring_contract_tolerates_invalid_workflow_schem
     await draft_api.create_draft_workspace(workspace_id="authoring", draft=draft)
     api = WorkflowApi(authoring.context)
 
-    inventory = await api.inspect_draft_authoring_contract(
-        workspace_id="authoring",
-        revision=1,
-        selected_step_id="echo",
+    inventory = _authoring_inventory(
+        await api.inspect_draft_authoring_contract(
+            workspace_id="authoring",
+            revision=1,
+            selected_step_id="echo",
+        )
     )
 
     assert inventory["readable_sources"]
@@ -227,10 +258,12 @@ async def test_inspect_draft_authoring_contract_resolves_saved_wrapper_capabilit
     await draft_api.create_draft_workspace(workspace_id="authoring", draft=draft)
     api = WorkflowApi(authoring.context)
 
-    inventory = await api.inspect_draft_authoring_contract(
-        workspace_id="authoring",
-        revision=1,
-        selected_step_id="echo",
+    inventory = _authoring_inventory(
+        await api.inspect_draft_authoring_contract(
+            workspace_id="authoring",
+            revision=1,
+            selected_step_id="echo",
+        )
     )
 
     assert [step["step_id"] for step in inventory["entry_steps"]] == ["echo"]
@@ -240,7 +273,7 @@ async def test_inspect_draft_authoring_contract_resolves_saved_wrapper_capabilit
     assert {option["path"] for option in inventory["step_output_sources"]} == {
         "step_output.echoed"
     }
-    assert inventory["entry_steps"][0]["outcomes"] == ["completed"]
+    assert inventory["entry_steps"][0].get("outcomes", []) == ["completed"]
 
 
 @pytest.mark.asyncio
@@ -265,14 +298,16 @@ async def test_inspect_draft_authoring_contract_preserves_empty_capability_schem
     await draft_api.create_draft_workspace(workspace_id="authoring", draft=draft)
     api = WorkflowApi(authoring.context)
 
-    inventory = await api.inspect_draft_authoring_contract(
-        workspace_id="authoring",
-        revision=1,
-        selected_step_id="echo",
+    inventory = _authoring_inventory(
+        await api.inspect_draft_authoring_contract(
+            workspace_id="authoring",
+            revision=1,
+            selected_step_id="echo",
+        )
     )
 
-    assert inventory["entry_steps"][0]["input_targets"] == []
-    assert inventory["entry_steps"][0]["output_sources"] == []
+    assert inventory["entry_steps"][0].get("input_targets", []) == []
+    assert inventory["entry_steps"][0].get("output_sources", []) == []
     assert inventory["step_input_targets"] == []
     assert inventory["step_output_sources"] == []
 
@@ -311,14 +346,16 @@ async def test_inspect_draft_authoring_contract_warns_for_invalid_capability_sch
     )
     api = WorkflowApi(authoring.context)
 
-    inventory = await api.inspect_draft_authoring_contract(
-        workspace_id="authoring",
-        revision=1,
-        selected_step_id="echo",
+    inventory = _authoring_inventory(
+        await api.inspect_draft_authoring_contract(
+            workspace_id="authoring",
+            revision=1,
+            selected_step_id="echo",
+        )
     )
 
-    assert inventory["entry_steps"][0]["input_targets"] == []
-    assert inventory["entry_steps"][0]["output_sources"]
+    assert inventory["entry_steps"][0].get("input_targets", []) == []
+    assert inventory["entry_steps"][0].get("output_sources", [])
     assert inventory["step_input_targets"] == []
     assert inventory["step_output_sources"]
     assert any(
@@ -362,10 +399,12 @@ async def test_inspect_draft_authoring_contract_tolerates_invalid_selected_step(
     await draft_api.create_draft_workspace(workspace_id="authoring", draft=draft)
     api = WorkflowApi(authoring.context)
 
-    inventory = await api.inspect_draft_authoring_contract(
-        workspace_id="authoring",
-        revision=1,
-        selected_step_id="broken",
+    inventory = _authoring_inventory(
+        await api.inspect_draft_authoring_contract(
+            workspace_id="authoring",
+            revision=1,
+            selected_step_id="broken",
+        )
     )
 
     assert inventory["selected_step_id"] == "broken"
@@ -409,6 +448,7 @@ async def test_inspect_draft_authoring_contract_stale_revision_is_read_only(
     )
 
     assert changed["revision"] == 2
+    assert "status" in conflict
     assert conflict["status"] == "conflict"
     assert conflict["revision"] == 2
     assert conflict["diagnostics"][0]["code"] == "revision_conflict"
@@ -713,7 +753,7 @@ async def test_add_step_from_capability_accepts_metadata_and_canonical_inputs(
     step = inspected["draft"]["steps"]["report"]
 
     assert result["revision"] == 2
-    assert result["draft"]["steps"]["report"]["desc"] == "Publish report"
+    assert _required_draft(result)["steps"]["report"]["desc"] == "Publish report"
     assert step["desc"] == "Publish report"
     assert step["retry"] == 0
     assert step["timeout_seconds"] == 30
@@ -1038,7 +1078,7 @@ async def test_patch_draft_applies_json_patch(tmp_path: Path) -> None:
     )
 
     assert result["status"] == "invalid"
-    assert result["draft"]["steps"]["echo"]["input"][0]["target"] == {
+    assert _required_draft(result)["steps"]["echo"]["input"][0]["target"] == {
         "root": "local",
         "parts": ["message"],
     }
@@ -1087,7 +1127,7 @@ async def test_create_draft_workspace_creates_workspace(tmp_path: Path) -> None:
 
     assert result["workspace_id"] == "echo_ws"
     assert result["revision"] == 1
-    assert result["draft"]["steps"]["echo"]["use"] == "demo.personal.echo_tool"
+    assert _required_draft(result)["steps"]["echo"]["use"] == "demo.personal.echo_tool"
     fetched = await api.get_draft_workspace(workspace_id="echo_ws", include_draft=True)
 
     assert fetched["workspace_id"] == "echo_ws"
@@ -1588,7 +1628,7 @@ async def test_draft_workspace_patch_helpers_update_revision_and_bindings(
     assert routed["revision"] == 3
     assert input_mapped["revision"] == 4
     assert output_mapped["revision"] == 5
-    assert routed["draft"]["routes"]["echo"]["error"] == "__end__"
+    assert _required_draft(routed)["routes"]["echo"]["error"] == "__end__"
     assert fetched["draft"]["name"] == "echo_v2"
     assert fetched["draft"]["routes"]["echo"]["error"] == "__end__"
     assert fetched["draft"]["steps"]["echo"]["input"] == [
@@ -1890,7 +1930,7 @@ async def test_validate_draft_workspace_refreshes_status(tmp_path: Path) -> None
 
     assert payload["revision"] == 1
     assert payload["status"] == "invalid"
-    assert payload["draft"]["routes"]["echo"] == {"typo": "__end__"}
+    assert _required_draft(payload)["routes"]["echo"] == {"typo": "__end__"}
     assert payload["diagnostics"][0]["code"] in (
         "unknown_outcome",
         "undeclared_edge_outcome",
@@ -2004,8 +2044,8 @@ async def test_validate_draft_workspace_suggests_bind(
 
     diagnostic = payload["diagnostics"][0]
     assert diagnostic["code"] == "invalid_destination_path"
-    assert diagnostic["step_id"] == "snap"
-    assert diagnostic["repair_hint"] == (
+    assert diagnostic.get("step_id") == "snap"
+    assert diagnostic.get("repair_hint") == (
         "wf draft bind snapshot_ws --revision 1 "
         "--step snap --from local.after --to state.after"
     )
@@ -2057,8 +2097,8 @@ async def test_patch_draft_workspace_validates_new_use_step_with_context_specs(
     diagnostic = patched["diagnostics"][0]
     assert patched["status"] == "invalid"
     assert diagnostic["code"] == "invalid_destination_path"
-    assert diagnostic["step_id"] == "snap"
-    assert diagnostic["details"] == {
+    assert diagnostic.get("step_id") == "snap"
+    assert diagnostic.get("details") == {
         "output_field": "after",
         "state_path": "state.after",
     }
@@ -2124,7 +2164,8 @@ async def test_delegation_smoke_validate_draft_equivalence(tmp_path: Path) -> No
     assert handler_result["status"] == api_result["status"]
     assert handler_result["diagnostics"] == api_result["diagnostics"]
     assert (
-        handler_result["compiled_plan"]["nodes"] == api_result["compiled_plan"]["nodes"]
+        _compiled_workspace(handler_result)["nodes"]
+        == _compiled_workspace(api_result)["nodes"]
     )
 
 
@@ -3672,7 +3713,7 @@ async def test_set_step_input_bindings_compiles_and_assembles_nested_payload(
     compiled = await draft_api.compile_draft_workspace(
         workspace_id="execute_structured_binding"
     )
-    plan = RawWorkflowPlan.model_validate(compiled["compiled_plan"])
+    plan = RawWorkflowPlan.model_validate(_compiled_workspace(compiled))
     run = await service.run_workflow_from_plan(
         plan,
         {"title": "Thesis", "body": "Evidence"},
@@ -3728,7 +3769,7 @@ async def test_set_step_output_bindings_compile_and_execute_source_fan_out(
     compiled = await draft_api.compile_draft_workspace(
         workspace_id="execute_output_fan_out"
     )
-    plan = RawWorkflowPlan.model_validate(compiled["compiled_plan"])
+    plan = RawWorkflowPlan.model_validate(_compiled_workspace(compiled))
     run = await service.run_workflow_from_plan(
         plan,
         {"title": "Thesis", "body": "Evidence"},
@@ -4933,7 +4974,8 @@ async def test_compile_draft_workspace_returns_compiled_plan(tmp_path: Path) -> 
     )
     result = await api.compile_draft_workspace(workspace_id="compile_me")
     after = await api.get_draft_workspace(workspace_id="compile_me", include_draft=True)
-    assert result["compiled_plan"]["name"] == "echo"
+    assert _compiled_workspace(result)["name"] == "echo"
+    assert "required_capabilities" in result
     assert result["required_capabilities"]
     assert after == before
 
@@ -4951,6 +4993,7 @@ async def test_compile_draft_workspace_invalid_returns_diagnostics(
         draft=draft,
     )
     result = await api.compile_draft_workspace(workspace_id="invalid_ws")
+    assert "status" in result
     assert result["status"] == "invalid"
     assert "compiled_plan" not in result
     assert result["diagnostics"]
@@ -5454,7 +5497,7 @@ async def test_set_workflow_output_bindings_compile_and_execute(
     )
     compiled = await draft_api.compile_draft_workspace(workspace_id="report")
     run = await service.run_workflow_from_plan(
-        RawWorkflowPlan.model_validate(compiled["compiled_plan"]),
+        RawWorkflowPlan.model_validate(_compiled_workspace(compiled)),
         {"text": "Thesis"},
     )
 
@@ -5490,7 +5533,7 @@ async def test_cleared_workflow_output_bindings_preserve_state_fallback(
     )
     compiled = await draft_api.compile_draft_workspace(workspace_id="report")
     run = await service.run_workflow_from_plan(
-        RawWorkflowPlan.model_validate(compiled["compiled_plan"]),
+        RawWorkflowPlan.model_validate(_compiled_workspace(compiled)),
         {"text": "Thesis"},
     )
 
@@ -5643,7 +5686,7 @@ async def test_workflow_output_map_merge_checks_revision_before_ambiguity(
     )
     assert result["status"] == "conflict"
     assert result["diagnostics"][0]["code"] == "revision_conflict"
-    assert result["draft"] == before["draft"]
+    assert _required_draft(result) == before["draft"]
     assert after == before
 
 
@@ -5747,12 +5790,12 @@ async def test_set_step_input_bindings_projects_composite_source_schema_and_orde
                     },
                 }
             ),
-            InputValueBinding(target="separator", value=" "),
+            InputValueBinding(target=LocalPath.of("separator"), value=" "),
         ],
     )
 
     assert result["revision"] == 2
-    assert result["draft"]["steps"]["concat"]["input"] == [
+    assert _required_draft(result)["steps"]["concat"]["input"] == [
         {
             "target": "items",
             "expression": {
@@ -5765,7 +5808,9 @@ async def test_set_step_input_bindings_projects_composite_source_schema_and_orde
         },
         {"target": "separator", "value": " "},
     ]
-    assert result["draft"]["state_schema"]["properties"]["foo"] == {"type": "string"}
+    assert _required_draft(result)["state_schema"]["properties"]["foo"] == {
+        "type": "string"
+    }
 
 
 @pytest.mark.asyncio
@@ -5843,7 +5888,10 @@ async def test_set_step_input_bindings_rejects_overlapping_expression_targets_at
                         },
                     }
                 ),
-                InputValueBinding(target="items.0", value="shadowed"),
+                InputValueBinding(
+                    target=LocalPath.of("items", "0"),
+                    value="shadowed",
+                ),
             ],
         )
 
@@ -6103,7 +6151,7 @@ async def test_set_step_input_bindings_accepts_additional_property_target(
     )
 
     assert result["revision"] == 2
-    assert result["draft"]["steps"]["concat"]["input"][0]["target"] == "dynamic"
+    assert _required_draft(result)["steps"]["concat"]["input"][0]["target"] == "dynamic"
 
 
 @pytest.mark.asyncio
@@ -6384,6 +6432,7 @@ async def test_invalid_forward_route_cannot_compile_or_save(tmp_path: Path) -> N
 
     compiled = await api.compile_draft_workspace(workspace_id="browser")
 
+    assert "status" in compiled
     assert compiled["status"] == "invalid"
     assert any(
         item["code"] == "unknown_edge_destination" for item in compiled["diagnostics"]
@@ -6397,6 +6446,7 @@ async def test_invalid_forward_route_cannot_compile_or_save(tmp_path: Path) -> N
         outcomes=["ok"],
     )
 
+    assert "status" in saved
     assert saved["status"] == "invalid"
     assert saved["saved"] is False
     assert any(
@@ -6787,9 +6837,11 @@ async def test_validate_draft_workspace_details_invalid_input_source_path(
 
     diagnostic = payload["diagnostics"][0]
     assert diagnostic["code"] == "invalid_source_path"
-    assert diagnostic["step_id"] == "wait"
-    assert diagnostic["details"]["source_path"] == "input.undeclared"
-    assert diagnostic["details"]["target_field"] == "text"
+    assert diagnostic.get("step_id") == "wait"
+    details = diagnostic.get("details")
+    assert isinstance(details, dict)
+    assert details["source_path"] == "input.undeclared"
+    assert details["target_field"] == "text"
 
 
 @pytest.mark.asyncio
@@ -6827,8 +6879,8 @@ async def test_validate_draft_workspace_hints_input_schema_projection(
 
     diagnostic = payload["diagnostics"][0]
     assert diagnostic["code"] == "invalid_source_path"
-    assert diagnostic["step_id"] == "wait"
-    assert diagnostic["repair_hint"] == (
+    assert diagnostic.get("step_id") == "wait"
+    assert diagnostic.get("repair_hint") == (
         "wf draft bind wait_ws --revision 1 "
         "--step wait --from input.undeclared --to local.text"
     )
@@ -6864,7 +6916,7 @@ async def test_validate_draft_workspace_hints_state_schema_projection(
     diagnostic = next(
         item for item in payload["diagnostics"] if item["code"] == "invalid_source_path"
     )
-    assert diagnostic["repair_hint"] == (
+    assert diagnostic.get("repair_hint") == (
         "wf draft bind wait_ws --revision 1 "
         "--step wait --from state.undeclared --to local.text"
     )

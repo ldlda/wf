@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from typing import Any
+from typing import Any, Literal, overload
 
 from wf_artifacts import ArtifactKind, compile_workflow_draft
 from wf_artifacts.drafts.models import DraftStep
@@ -32,6 +32,7 @@ from .models import (
     DeleteDeploymentResult,
     DeleteDraftWorkspaceResult,
     DraftWorkspaceResult,
+    DraftWorkspaceWithDocument,
     InspectCapabilityResult,
     ListArtifactsResult,
     ListCapabilitiesResult,
@@ -358,12 +359,28 @@ class WorkflowApi:
             outcomes=outcomes,
         )
 
+    @overload
+    async def get_draft_workspace(
+        self,
+        *,
+        workspace_id: str,
+        include_draft: Literal[True],
+    ) -> DraftWorkspaceWithDocument: ...
+
+    @overload
+    async def get_draft_workspace(
+        self,
+        *,
+        workspace_id: str,
+        include_draft: Literal[False] = False,
+    ) -> DraftWorkspaceResult: ...
+
     async def get_draft_workspace(
         self,
         *,
         workspace_id: str,
         include_draft: bool = False,
-    ) -> DraftWorkspaceResult:
+    ) -> DraftWorkspaceResult | DraftWorkspaceWithDocument:
         return await self.drafts.get_draft_workspace(
             workspace_id=workspace_id,
             include_draft=include_draft,

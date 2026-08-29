@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Any, Literal, cast
+from typing import Any, Literal, cast, overload
 
 from wf_api import CapabilityStepUpdate
 from wf_api.models import (
@@ -11,6 +11,7 @@ from wf_api.models import (
     CreateDraftWorkspaceFromCapabilityResult,
     DeleteDraftWorkspaceResult,
     DraftWorkspaceResult,
+    DraftWorkspaceWithDocument,
     ListDraftWorkspacesResult,
     PatchDraftResult,
     ValidateDraftResult,
@@ -22,13 +23,38 @@ from wf_core.models.steps import InputBinding, OutputBinding, StepInputBinding
 from .base import RpcCaller
 
 
+@overload
 async def _call_draft_workspace(
     caller: RpcCaller,
     method: str,
     params: dict[str, Any],
-) -> DraftWorkspaceResult:
+    *,
+    include_draft: Literal[True],
+) -> DraftWorkspaceWithDocument: ...
+
+
+@overload
+async def _call_draft_workspace(
+    caller: RpcCaller,
+    method: str,
+    params: dict[str, Any],
+    *,
+    include_draft: Literal[False] = False,
+) -> DraftWorkspaceResult: ...
+
+
+async def _call_draft_workspace(
+    caller: RpcCaller,
+    method: str,
+    params: dict[str, Any],
+    *,
+    include_draft: bool = False,
+) -> DraftWorkspaceResult | DraftWorkspaceWithDocument:
     """Call one server-validated draft method with its canonical client type."""
-    return cast(DraftWorkspaceResult, await caller._call(method, params))
+    result = await caller._call(method, params)
+    if include_draft:
+        return cast(DraftWorkspaceWithDocument, result)
+    return cast(DraftWorkspaceResult, result)
 
 
 class RpcDraftClientMixin:
@@ -64,17 +90,34 @@ class RpcDraftClientMixin:
             await self._call("workflow.draft_workspaces.list", {}),
         )
 
+    @overload
+    async def get_draft_workspace(
+        self: RpcCaller,
+        *,
+        workspace_id: str,
+        include_draft: Literal[True],
+    ) -> DraftWorkspaceWithDocument: ...
+
+    @overload
+    async def get_draft_workspace(
+        self: RpcCaller,
+        *,
+        workspace_id: str,
+        include_draft: Literal[False] = False,
+    ) -> DraftWorkspaceResult: ...
+
     async def get_draft_workspace(
         self: RpcCaller,
         *,
         workspace_id: str,
         include_draft: bool = False,
-    ) -> DraftWorkspaceResult:
+    ) -> DraftWorkspaceResult | DraftWorkspaceWithDocument:
         """Return the remote workspace summary or revision-conflict payload."""
         return await _call_draft_workspace(
             self,
             "workflow.draft_workspaces.get",
             {"workspace_id": workspace_id, "include_draft": include_draft},
+            include_draft=include_draft,
         )
 
     async def inspect_draft_authoring_contract(

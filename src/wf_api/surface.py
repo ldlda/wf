@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from typing import Any, Protocol
+from typing import Any, Literal, Protocol, overload
 
 from wf_artifacts import ArtifactKind
 from wf_artifacts.drafts.models import DraftStep
@@ -22,6 +22,7 @@ from .models import (
     DeleteDeploymentResult,
     DeleteDraftWorkspaceResult,
     DraftWorkspaceResult,
+    DraftWorkspaceWithDocument,
     InspectCapabilityResult,
     InspectRegistryEntryResult,
     InspectSourceResult,
@@ -101,12 +102,28 @@ class WorkflowDraftSurface(Protocol):
 
     async def list_draft_workspaces(self) -> ListDraftWorkspacesResult: ...
 
+    @overload
+    async def get_draft_workspace(
+        self,
+        *,
+        workspace_id: str,
+        include_draft: Literal[True],
+    ) -> DraftWorkspaceWithDocument: ...
+
+    @overload
+    async def get_draft_workspace(
+        self,
+        *,
+        workspace_id: str,
+        include_draft: Literal[False] = False,
+    ) -> DraftWorkspaceResult: ...
+
     async def get_draft_workspace(
         self,
         *,
         workspace_id: str,
         include_draft: bool = False,
-    ) -> DraftWorkspaceResult: ...
+    ) -> DraftWorkspaceResult | DraftWorkspaceWithDocument: ...
 
     async def inspect_draft_authoring_contract(
         self,

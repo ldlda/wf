@@ -40,6 +40,21 @@ class DraftWorkspaceResult(TypedDict):
     draft: NotRequired[JsonObject]
 
 
+class DraftWorkspaceWithDocument(TypedDict):
+    """Persisted workspace envelope that includes the requested draft document."""
+
+    # Keep this as a sibling rather than inheriting DraftWorkspaceResult. The
+    # latter's optional key is not a valid base for a required key, and the
+    # sibling keeps the generated OpenRPC schema stable.
+    workspace_id: str
+    revision: int
+    title: str | None
+    status: Literal["valid", "invalid"]
+    diagnostics: list[DraftDiagnosticPayload]
+    summary: DraftWorkspaceSummary
+    draft: JsonObject
+
+
 class ListDraftWorkspacesResult(TypedDict):
     """All persisted draft-workspace summaries."""
 

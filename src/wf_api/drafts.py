@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from copy import deepcopy
-from typing import Any
+from typing import Any, Literal, cast, overload
 
 from jsonschema import Draft202012Validator, SchemaError
 
@@ -57,6 +57,7 @@ from .models import (
     CompileDraftWorkspaceSuccess,
     DeleteDraftWorkspaceResult,
     DraftWorkspaceResult,
+    DraftWorkspaceWithDocument,
     InvalidDraftResult,
     JsonProjector,
     ListDraftWorkspacesResult,
@@ -318,19 +319,38 @@ class WorkflowDraftApi:
             title=title,
         )
 
+    @overload
+    async def get_draft_workspace(
+        self,
+        *,
+        workspace_id: str,
+        include_draft: Literal[True],
+    ) -> DraftWorkspaceWithDocument: ...
+
+    @overload
+    async def get_draft_workspace(
+        self,
+        *,
+        workspace_id: str,
+        include_draft: Literal[False] = False,
+    ) -> DraftWorkspaceResult: ...
+
     async def get_draft_workspace(
         self,
         *,
         workspace_id: str,
         include_draft: bool = False,
-    ) -> DraftWorkspaceResult:
-        return _PROJECT_DRAFT_WORKSPACE(
+    ) -> DraftWorkspaceResult | DraftWorkspaceWithDocument:
+        projected = _PROJECT_DRAFT_WORKSPACE(
             get_draft_workspace_record(
                 self._draft_store(),
                 workspace_id=workspace_id,
                 include_draft=include_draft,
             )
         )
+        if include_draft:
+            return cast(DraftWorkspaceWithDocument, projected)
+        return projected
 
     async def delete_draft_workspace(
         self, *, workspace_id: str
