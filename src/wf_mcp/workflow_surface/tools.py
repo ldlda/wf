@@ -7,6 +7,26 @@ from fastmcp import FastMCP
 from pydantic import Field
 
 from wf_api import WorkflowApi
+from wf_api.models import (
+    CompileDraftWorkspaceResult,
+    InspectCapabilityResult,
+    ListArtifactsResult,
+    ListCapabilitiesResult,
+    ListDeploymentsResult,
+    PatchDraftResult,
+    SaveArtifactResult,
+    SavedDraftArtifactResult,
+    SaveDeploymentResult,
+    ValidateDraftResult,
+    WorkflowArtifactPayload,
+    WorkflowDeploymentPayload,
+)
+from wf_api.models import (
+    CreateArtifactFromWorkspaceResult as ApiCreateArtifactFromWorkspaceResult,
+)
+from wf_api.models import (
+    DeleteDeploymentResult as ApiDeleteDeploymentResult,
+)
 from wf_artifacts import ArtifactKind
 from wf_artifacts.models import RequiredCapability
 from wf_mcp.broker.service import WfMcpService
@@ -86,7 +106,7 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
                 description="Maximum artifact summaries to return in this page.",
             ),
         ] = 50,
-    ) -> dict[str, Any]:
+    ) -> ListArtifactsResult:
         return await handlers.list_artifacts(
             query=query,
             kind=kind,
@@ -128,7 +148,7 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
                 description="Maximum capability summaries to return in this page.",
             ),
         ] = 50,
-    ) -> dict[str, Any]:
+    ) -> ListCapabilitiesResult:
         return await handlers.list_capabilities(
             query=query,
             source_id=source_id,
@@ -144,7 +164,7 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
             "Use after list_capabilities selects one candidate."
         ),
     )
-    async def inspect_capability(qualified_name: str) -> dict[str, Any]:
+    async def inspect_capability(qualified_name: str) -> InspectCapabilityResult:
         return await handlers.inspect_capability(qualified_name=qualified_name)
 
     @server.tool(
@@ -174,7 +194,7 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
         title="Save Workflow Artifact",
         description="Persist a complete workflow artifact JSON document.",
     )
-    async def save_artifact(artifact: dict[str, Any]) -> dict[str, Any]:
+    async def save_artifact(artifact: dict[str, Any]) -> SaveArtifactResult:
         return await handlers.save_artifact(artifact)
 
     @server.tool(
@@ -182,7 +202,7 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
         title="Validate Workflow Draft",
         description="Validate an LLM-friendly workflow draft without saving it.",
     )
-    async def validate_draft(draft: dict[str, Any]) -> dict[str, Any]:
+    async def validate_draft(draft: dict[str, Any]) -> ValidateDraftResult:
         return await handlers.validate_draft(draft=draft)
 
     @server.tool(
@@ -190,7 +210,7 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
         title="Compile Workflow Draft",
         description="Compile an LLM-friendly workflow draft into a raw workflow plan.",
     )
-    async def compile_draft(draft: dict[str, Any]) -> dict[str, Any]:
+    async def compile_draft(draft: dict[str, Any]) -> CompileDraftWorkspaceResult:
         return await handlers.compile_draft(draft=draft)
 
     @server.tool(
@@ -211,7 +231,7 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
         ) = None,
         source_bindings: Mapping[str, str] | None = None,
         created_from_catalog_version: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> SaveArtifactResult:
         return await handlers.create_artifact_from_plan(
             artifact_id=artifact_id,
             version=version,
@@ -254,7 +274,7 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
         ) = None,
         source_bindings: Mapping[str, str] | None = None,
         created_from_catalog_version: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> SavedDraftArtifactResult:
         return await handlers.create_artifact_from_draft(
             artifact_id=artifact_id,
             version=version,
@@ -284,7 +304,7 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
     async def patch_draft(
         draft: dict[str, Any],
         patch: list[dict[str, Any]],
-    ) -> dict[str, Any]:
+    ) -> PatchDraftResult:
         return await handlers.patch_draft(draft=draft, patch=patch)
 
     @server.tool(
@@ -390,7 +410,7 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
     )
     async def compile_draft_workspace(
         request: CompileDraftWorkspaceRequest,
-    ) -> dict[str, Any]:
+    ) -> CompileDraftWorkspaceResult:
         return await handlers.compile_draft_workspace(
             workspace_id=request.workspace_id,
         )
@@ -786,7 +806,7 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
     )
     async def create_artifact_from_workspace(
         request: CreateArtifactFromWorkspaceRequest,
-    ) -> dict[str, Any]:
+    ) -> ApiCreateArtifactFromWorkspaceResult:
         return await handlers.create_artifact_from_workspace(
             workspace_id=request.workspace_id,
             artifact_id=request.artifact_id,
@@ -819,7 +839,7 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
     )
     async def create_wrapper_from_workspace(
         request: CreateWrapperFromWorkspaceRequest,
-    ) -> dict[str, Any]:
+    ) -> ApiCreateArtifactFromWorkspaceResult:
         return await handlers.create_wrapper_from_workspace(
             workspace_id=request.workspace_id,
             artifact_id=request.artifact_id,
@@ -845,7 +865,9 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
         title="Inspect Workflow Artifact",
         description="Return the full saved artifact for artifact_id and version.",
     )
-    async def inspect_artifact(artifact_id: str, version: int) -> dict[str, Any]:
+    async def inspect_artifact(
+        artifact_id: str, version: int
+    ) -> WorkflowArtifactPayload:
         return await handlers.inspect_artifact(
             artifact_id=artifact_id,
             version=version,
@@ -859,7 +881,7 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
             "inspect_deployment for full source bindings."
         ),
     )
-    async def list_deployments() -> dict[str, Any]:
+    async def list_deployments() -> ListDeploymentsResult:
         return await handlers.list_deployments()
 
     @server.tool(
@@ -867,7 +889,9 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
         title="Inspect Workflow Deployment",
         description="Return one full workflow deployment including source bindings.",
     )
-    async def inspect_deployment(deployment_id: str) -> dict[str, Any]:
+    async def inspect_deployment(
+        deployment_id: str,
+    ) -> WorkflowDeploymentPayload:
         return await handlers.inspect_deployment(deployment_id=deployment_id)
 
     @server.tool(
@@ -875,7 +899,7 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
         title="Save Workflow Deployment",
         description="Persist a workflow deployment that binds logical sources.",
     )
-    async def save_deployment(deployment: dict[str, Any]) -> dict[str, Any]:
+    async def save_deployment(deployment: dict[str, Any]) -> SaveDeploymentResult:
         return await handlers.save_deployment(deployment)
 
     @server.tool(
@@ -891,7 +915,7 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
             str,
             Field(description="Saved workflow deployment id to delete."),
         ],
-    ) -> dict[str, Any]:
+    ) -> ApiDeleteDeploymentResult:
         return await handlers.delete_deployment(deployment_id=deployment_id)
 
     @server.tool(
