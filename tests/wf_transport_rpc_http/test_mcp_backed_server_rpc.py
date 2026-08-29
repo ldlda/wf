@@ -421,11 +421,15 @@ async def test_mcp_backed_rpc_resumes_interrupted_run_after_server_rebuild(
         )
 
     assert started["status"] == "interrupted"
-    assert started["interrupt"]["payload"]["message"] == "approve after restart?"
-    assert started["interrupt"]["outcomes"] == ["submitted"]
-    assert started["interrupt"]["typed"] is True
-    assert started["interrupt"]["request_schema"]["required"] == ["message"]
-    assert started["interrupt"]["resume_schema"]["required"] == ["approved"]
+    started_run_id = started["run_id"]
+    assert started_run_id is not None
+    interrupt = started["interrupt"]
+    assert interrupt is not None
+    assert interrupt["payload"]["message"] == "approve after restart?"
+    assert interrupt["outcomes"] == ["submitted"]
+    assert interrupt["typed"] is True
+    assert interrupt["request_schema"]["required"] == ["message"]
+    assert interrupt["resume_schema"]["required"] == ["approved"]
 
     rebuilt_server = build_workflow_server_from_workflow_config(workflow_config)
     async with httpx.AsyncClient(
@@ -436,15 +440,15 @@ async def test_mcp_backed_rpc_resumes_interrupted_run_after_server_rebuild(
             url="http://test/rpc",
             http_client=http_client,
         )
-        inspected = await rebuilt_client.inspect_run(run_id=started["run_id"])
+        inspected = await rebuilt_client.inspect_run(run_id=started_run_id)
         resumed = await rebuilt_client.resume_run(
-            run_id=started["run_id"],
+            run_id=started_run_id,
             resume_payload={"approved": True},
         )
 
     assert inspected["status"] == "interrupted"
-    assert inspected["run_id"] == started["run_id"]
-    assert resumed["run_id"] == started["run_id"]
+    assert inspected["run_id"] == started_run_id
+    assert resumed["run_id"] == started_run_id
     assert resumed["status"] == "completed"
     assert resumed["outcome"] == "submitted"
 
@@ -507,8 +511,12 @@ async def test_mcp_backed_rpc_workflow_reuses_runtime_session_across_runs(
 
     assert first["status"] == "completed"
     assert second["status"] == "completed"
-    assert first["output"]["count"] == 1
-    assert second["output"]["count"] == 2
+    first_output = first["output"]
+    second_output = second["output"]
+    assert first_output is not None
+    assert second_output is not None
+    assert first_output["count"] == 1
+    assert second_output["count"] == 2
     assert len(factory.clients) == 1
     assert len(factory.created_connections) == 1
     assert factory.clients[0].tool_calls == [
@@ -605,8 +613,12 @@ async def test_mcp_backed_rpc_workflow_reuses_runtime_session_direct_setup(
 
     assert first["status"] == "completed"
     assert second["status"] == "completed"
-    assert first["output"]["count"] == 1
-    assert second["output"]["count"] == 2
+    first_output = first["output"]
+    second_output = second["output"]
+    assert first_output is not None
+    assert second_output is not None
+    assert first_output["count"] == 1
+    assert second_output["count"] == 2
     assert len(factory.clients) == 1
     assert len(factory.created_connections) == 1
     assert factory.clients[0].tool_calls == [
@@ -805,8 +817,10 @@ async def test_mcp_backed_rpc_workflow_reuses_real_stdio_fixture_session(
             deployment_id="recall_workflow.default",
             workflow_input={},
         )
+        recalled_run_id = recalled["run_id"]
+        assert recalled_run_id is not None
         recall_trace = await client.read_run_trace(
-            run_id=recalled["run_id"],
+            run_id=recalled_run_id,
             trace_range=TraceRange(start=0, limit=5),
         )
 

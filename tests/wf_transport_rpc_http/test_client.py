@@ -192,14 +192,18 @@ async def test_rpc_workflow_client_runs_and_reads_trace(tmp_path) -> None:
             workflow_input={},
             trace_range=TraceRange(start=0, limit=1),
         )
-        inspected = await client.inspect_run(run_id=run["run_id"])
+        run_id = run["run_id"]
+        assert run_id is not None
+        inspected = await client.inspect_run(run_id=run_id)
         trace = await client.read_run_trace(
-            run_id=run["run_id"],
+            run_id=run_id,
             trace_range=TraceRange(start=0, limit=1),
         )
 
     assert run["status"] == "completed"
-    assert run["output"]["result"] == "hello from rpc client"
+    output = run["output"]
+    assert output is not None
+    assert output["result"] == "hello from rpc client"
     assert inspected["trace_count"] >= 1
     assert len(trace["trace"]) == 1
 
@@ -339,6 +343,7 @@ async def test_rpc_workflow_client_draft_workspace_lifecycle(tmp_path) -> None:
     assert fetched["workspace_id"] == "client_ws"
     assert validated["status"] in {"valid", "invalid"}
     assert patched["revision"] == created["revision"] + 1
+    assert artifact["saved"] is True
     assert artifact["artifact_id"] == "client_ws_art"
 
 
@@ -553,9 +558,12 @@ async def test_rpc_client_builds_capability_free_draft_lifecycle(tmp_path) -> No
     assert stale["status"] == "conflict"
     assert stale["diagnostics"][0]["code"] == "revision_conflict"
     assert validated["status"] == "valid"
+    assert "compiled_plan" in compiled
     assert compiled["compiled_plan"]["start"] == "gate"
-    assert inspected["draft"]["start"] == "gate"
-    assert inspected["draft"]["steps"] == {
+    draft = inspected.get("draft")
+    assert draft is not None
+    assert draft["start"] == "gate"
+    assert draft["steps"] == {
         "gate": {"join": {}},
         "finish": {"end": {"outcome": "error"}},
     }
@@ -651,8 +659,10 @@ async def test_rpc_client_lists_runs(tmp_path) -> None:
         )
         listed = await client.list_runs(status="completed", limit=5)
 
+    started_run_id = started["run_id"]
+    assert started_run_id is not None
     assert listed["total"] == 1
-    assert listed["runs"][0]["run_id"] == started["run_id"]
+    assert listed["runs"][0]["run_id"] == started_run_id
 
 
 async def test_rpc_client_creates_artifact_from_plan(tmp_path) -> None:
@@ -713,7 +723,9 @@ async def test_rpc_client_set_workflow_output_map(tmp_path) -> None:
         )
 
     assert result["revision"] == 2
-    assert fetched["draft"]["output"] == [
+    draft = fetched.get("draft")
+    assert draft is not None
+    assert draft["output"] == [
         {"path": "state.value", "target": "value"},
     ]
 

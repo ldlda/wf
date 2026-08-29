@@ -9,7 +9,12 @@ import httpx
 from typer.testing import CliRunner
 
 import wf_cli.context as cli_context
-from wf_api.models import RawWorkflowPlan
+from wf_api.models import (
+    InspectSourceResult,
+    ListSourcesResult,
+    RawWorkflowPlan,
+    SourceDiagnosisResult,
+)
 from wf_cli.app import app
 from wf_cli.context import CliContext, load_cli_context, load_local_cli_context
 from wf_core import END
@@ -27,13 +32,13 @@ class BrokenSourceAdmin:
         *,
         cursor: str | None = None,
         limit: int = 50,
-    ) -> dict[str, Any]:
+    ) -> ListSourcesResult:
         return {"sources": [], "next_cursor": None, "total": 0}
 
-    async def inspect_source(self, *, source_id: str) -> dict[str, Any]:
+    async def inspect_source(self, *, source_id: str) -> InspectSourceResult:
         raise RuntimeError(f"broken source admin for {source_id}")
 
-    async def diagnose_source(self, *, source_id: str) -> dict[str, Any]:
+    async def diagnose_source(self, *, source_id: str) -> SourceDiagnosisResult:
         raise RuntimeError(f"broken source admin for {source_id}")
 
 
@@ -43,26 +48,31 @@ class InventorySourceAdmin:
         *,
         cursor: str | None = None,
         limit: int = 50,
-    ) -> dict[str, Any]:
+    ) -> ListSourcesResult:
         return {"sources": [], "next_cursor": None, "total": 0}
 
-    async def inspect_source(self, *, source_id: str) -> dict[str, Any]:
-        return {
-            "id": source_id,
-            "capabilities": {
-                "resources": [
-                    f"{source_id}.architecture.md",
-                    f"{source_id}.startup.md",
-                ],
-                "prompts": [
-                    f"{source_id}.simple-prompt",
-                    f"{source_id}.args-prompt",
-                ],
+    async def inspect_source(self, *, source_id: str) -> InspectSourceResult:
+        # These tests exercise only capability names; keep the fake payload narrow
+        # while declaring the same result boundary as the production client.
+        return cast(
+            InspectSourceResult,
+            {
+                "id": source_id,
+                "capabilities": {
+                    "resources": [
+                        f"{source_id}.architecture.md",
+                        f"{source_id}.startup.md",
+                    ],
+                    "prompts": [
+                        f"{source_id}.simple-prompt",
+                        f"{source_id}.args-prompt",
+                    ],
+                },
             },
-        }
+        )
 
-    async def diagnose_source(self, *, source_id: str) -> dict[str, Any]:
-        return {"source_id": source_id, "status": "ok"}
+    async def diagnose_source(self, *, source_id: str) -> SourceDiagnosisResult:
+        return {"source_id": source_id, "status": "ok", "diagnostics": []}
 
 
 def test_load_cli_context_uses_rpc_client_for_rpc_http_target(tmp_path) -> None:
@@ -894,7 +904,8 @@ def test_wf_draft_import_uses_exact_remote_replacement_payload(
             include_draft=True,
         )
     )
-    expected_draft = source["draft"]
+    expected_draft = source.get("draft")
+    assert expected_draft is not None
     _patch_rpc_client_to_server(monkeypatch, server)
     rpc_calls: list[tuple[str, dict[str, Any]]] = []
     original_call = RpcClientTransport._call
