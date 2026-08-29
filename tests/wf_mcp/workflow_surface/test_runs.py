@@ -68,8 +68,11 @@ def test_workflow_surface_runs_non_interrupting_deployment(tmp_path: Path) -> No
     )
 
     assert payload["status"] == "completed"
-    assert isinstance(payload["run_id"], str)
-    assert payload["output"]["echoed"] == "hello"
+    run_id = payload["run_id"]
+    assert isinstance(run_id, str)
+    output = payload["output"]
+    assert output is not None
+    assert output["echoed"] == "hello"
     assert payload["diagnostics"] == []
     assert payload["trace_count"] == 1
     assert "trace" not in payload
@@ -77,10 +80,10 @@ def test_workflow_surface_runs_non_interrupting_deployment(tmp_path: Path) -> No
     assert payload["next_actions"]["recommended_next_tool"] is None
     assert "completed" in payload["next_actions"]["reason"]
 
-    inspected = asyncio.run(h.inspect_run(run_id=payload["run_id"]))
+    inspected = asyncio.run(h.inspect_run(run_id=run_id))
     traced = asyncio.run(
         h.read_run_trace(
-            run_id=payload["run_id"],
+            run_id=run_id,
             trace_range=TraceRange(start=0, limit=1),
         )
     )
@@ -128,10 +131,14 @@ def test_workflow_surface_failed_deployment_exposes_error_on_run_and_inspect(
             workflow_input={"message": "hello"},
         )
     )
-    inspected = asyncio.run(h.inspect_run(run_id=payload["run_id"]))
+    run_id = payload["run_id"]
+    assert isinstance(run_id, str)
+    inspected = asyncio.run(h.inspect_run(run_id=run_id))
 
     assert payload["status"] == "failed"
-    assert "upstream exploded" in payload["error"]
+    error = payload["error"]
+    assert isinstance(error, str)
+    assert "upstream exploded" in error
     assert payload["trace_count"] == 0
     assert payload["next_actions"]["recommended_next_tool"] is None
     assert "before producing trace" in payload["next_actions"]["reason"]
@@ -174,16 +181,23 @@ def test_workflow_surface_run_deployment_can_include_trace_detail(
 
     assert payload["status"] == "completed"
     assert payload["trace_count"] == 1
-    assert payload["trace_start"] == 0
-    assert payload["trace_limit"] == 10
-    assert payload["trace_truncated"] is False
-    assert len(payload["trace"]) == 1
-    assert payload["trace"][0]["node_id"] == "echo"
-    assert payload["trace"][0]["outcome"] == "ok"
+    trace_start = payload.get("trace_start")
+    assert trace_start == 0
+    trace_limit = payload.get("trace_limit")
+    assert trace_limit == 10
+    trace_truncated = payload.get("trace_truncated")
+    assert trace_truncated is False
+    trace = payload.get("trace")
+    assert trace is not None
+    assert len(trace) == 1
+    assert trace[0]["node_id"] == "echo"
+    assert trace[0]["outcome"] == "ok"
     assert payload["next_actions"]["can_continue"] is False
     assert payload["next_actions"]["patch_examples"] == []
     validated = RunDeploymentResult.model_validate(payload).model_dump(mode="json")
-    assert validated["trace"][0]["node_id"] == "echo"
+    validated_trace = validated["trace"]
+    assert validated_trace is not None
+    assert validated_trace[0]["node_id"] == "echo"
     assert validated["trace_start"] == 0
     assert validated["trace_limit"] == 10
     assert validated["trace_truncated"] is False
@@ -224,10 +238,13 @@ def test_workflow_surface_run_deployment_can_read_empty_trace_range(
     )
 
     assert payload["trace_count"] == 1
-    assert payload["trace_start"] == 5
-    assert payload["trace_limit"] == 10
-    assert payload["trace"] == []
-    assert payload["trace_truncated"] is False
+    trace_start = payload.get("trace_start")
+    assert trace_start == 5
+    trace_limit = payload.get("trace_limit")
+    assert trace_limit == 10
+    trace = payload.get("trace")
+    assert trace == []
+    assert payload.get("trace_truncated") is False
 
 
 def test_workflow_surface_runs_deployment_with_bound_node_spec_dependency(
@@ -262,7 +279,9 @@ def test_workflow_surface_runs_deployment_with_bound_node_spec_dependency(
     )
 
     assert payload["status"] == "completed"
-    assert payload["output"]["echoed"] == "hello"
+    output = payload["output"]
+    assert output is not None
+    assert output["echoed"] == "hello"
     assert payload["diagnostics"] == []
 
 
@@ -314,7 +333,9 @@ def test_workflow_surface_runs_artifact_created_from_concrete_node_ref(
     assert artifact.plan["nodes"][0]["node"] == "demo.echo_tool"
     assert artifact.required_capability_map()["demo.echo_tool"].logical_source == "demo"
     assert payload["status"] == "completed"
-    assert payload["output"]["echoed"] == "hello"
+    output = payload["output"]
+    assert output is not None
+    assert output["echoed"] == "hello"
     assert payload["diagnostics"] == []
 
 
@@ -433,5 +454,7 @@ def test_workflow_surface_runs_deployment_with_bound_reducer_dependency(
     )
 
     assert payload["status"] == "completed"
-    assert payload["output"]["total"] == 6
+    output = payload["output"]
+    assert output is not None
+    assert output["total"] == 6
     assert payload["diagnostics"] == []
