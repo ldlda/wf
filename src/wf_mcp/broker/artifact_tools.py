@@ -4,9 +4,19 @@ from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
-from wf_api.models import RawWorkflowPlan
+from wf_api.models import (
+    DeleteDeploymentResult,
+    ListArtifactsResult,
+    ListDeploymentsResult,
+    RawWorkflowPlan,
+    SaveArtifactResult,
+    SaveDeploymentResult,
+    ValidateDeploymentResult,
+    WorkflowArtifactPayload,
+)
 
 from ..workflow_surface import WorkflowSurfaceHandlers
+from ..workflow_surface.models import RunDeploymentResult
 from .service import WfMcpService
 
 
@@ -15,11 +25,11 @@ def register_artifact_tools(server: FastMCP, service: WfMcpService) -> None:
     handlers = WorkflowSurfaceHandlers(service)
 
     @server.tool()
-    async def list_workflow_artifacts() -> dict[str, Any]:
+    async def list_workflow_artifacts() -> ListArtifactsResult:
         return await handlers.list_artifacts()
 
     @server.tool()
-    async def save_workflow_artifact(artifact: dict[str, Any]) -> dict[str, Any]:
+    async def save_workflow_artifact(artifact: dict[str, Any]) -> SaveArtifactResult:
         return await handlers.save_artifact(artifact)
 
     @server.tool()
@@ -33,7 +43,7 @@ def register_artifact_tools(server: FastMCP, service: WfMcpService) -> None:
         required_capabilities: dict[str, dict[str, Any]] | None = None,
         source_bindings: dict[str, str] | None = None,
         created_from_catalog_version: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> SaveArtifactResult:
         return await handlers.create_artifact_from_plan(
             artifact_id=artifact_id,
             version=version,
@@ -53,37 +63,45 @@ def register_artifact_tools(server: FastMCP, service: WfMcpService) -> None:
     async def inspect_workflow_artifact(
         artifact_id: str,
         version: int,
-    ) -> dict[str, Any]:
+    ) -> WorkflowArtifactPayload:
         return await handlers.inspect_artifact(
             artifact_id=artifact_id,
             version=version,
         )
 
     @server.tool()
-    async def list_workflow_deployments() -> dict[str, Any]:
+    async def list_workflow_deployments() -> ListDeploymentsResult:
         return await handlers.list_deployments()
 
     @server.tool()
-    async def save_workflow_deployment(deployment: dict[str, Any]) -> dict[str, Any]:
+    async def save_workflow_deployment(
+        deployment: dict[str, Any],
+    ) -> SaveDeploymentResult:
         return await handlers.save_deployment(deployment)
 
     @server.tool()
-    async def delete_workflow_deployment(deployment_id: str) -> dict[str, Any]:
+    async def delete_workflow_deployment(
+        deployment_id: str,
+    ) -> DeleteDeploymentResult:
         """Delete one mutable deployment environment binding."""
         return await handlers.delete_deployment(deployment_id=deployment_id)
 
     @server.tool()
-    async def validate_workflow_deployment(deployment_id: str) -> dict[str, Any]:
+    async def validate_workflow_deployment(
+        deployment_id: str,
+    ) -> ValidateDeploymentResult:
         return await handlers.validate_deployment(deployment_id=deployment_id)
 
     @server.tool()
     async def run_workflow_deployment(
         deployment_id: str,
         workflow_input: dict[str, Any],
-    ) -> dict[str, Any]:
-        return await handlers.run_deployment(
-            deployment_id=deployment_id,
-            workflow_input=workflow_input,
+    ) -> RunDeploymentResult:
+        return RunDeploymentResult.model_validate(
+            await handlers.run_deployment(
+                deployment_id=deployment_id,
+                workflow_input=workflow_input,
+            )
         )
 
     @server.tool()
@@ -91,10 +109,12 @@ def register_artifact_tools(server: FastMCP, service: WfMcpService) -> None:
         run_id: str,
         resume_payload: dict[str, Any],
         resume_outcome: str = "submitted",
-    ) -> dict[str, Any]:
+    ) -> RunDeploymentResult:
         """Resume a durable interrupted deployment run."""
-        return await handlers.resume_run(
-            run_id=run_id,
-            resume_payload=resume_payload,
-            resume_outcome=resume_outcome,
+        return RunDeploymentResult.model_validate(
+            await handlers.resume_run(
+                run_id=run_id,
+                resume_payload=resume_payload,
+                resume_outcome=resume_outcome,
+            )
         )

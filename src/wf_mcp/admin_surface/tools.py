@@ -4,6 +4,13 @@ from typing import Annotated, Any
 
 from pydantic import Field
 
+from wf_api.models import (
+    AdminEventPayload,
+    ConnectionPayload,
+    ConnectionStatusPayload,
+    InspectSourceResult,
+    ListSourcesResult,
+)
 from wf_mcp.broker.service import WfMcpService
 
 from .handlers.broker import BrokerAdminHandlers
@@ -45,7 +52,7 @@ def register_service_admin_tools(
             title="List Connections",
             description="List configured MCP connections known to this server.",
         )
-        async def list_connections() -> list[dict[str, Any]]:
+        async def list_connections() -> list[ConnectionPayload]:
             return await handlers.list_connections()
 
         @server.tool(
@@ -53,7 +60,7 @@ def register_service_admin_tools(
             title="Get Connection Statuses",
             description="Show configured MCP connection status and catalog counts.",
         )
-        async def get_connection_statuses() -> list[dict[str, Any]]:
+        async def get_connection_statuses() -> list[ConnectionStatusPayload]:
             return await handlers.get_connection_statuses()
 
     @server.tool(
@@ -106,7 +113,7 @@ def register_service_admin_tools(
                 ),
             ),
         ] = 50,
-    ) -> dict[str, Any]:
+    ) -> ListSourcesResult:
         return await handlers.list_sources(cursor=cursor, limit=limit)
 
     @server.tool(
@@ -124,7 +131,7 @@ def register_service_admin_tools(
                 )
             ),
         ],
-    ) -> dict[str, Any]:
+    ) -> InspectSourceResult:
         return await handlers.inspect_source(source_id)
 
     @server.tool(
@@ -176,5 +183,5 @@ def register_service_admin_tools(
         title="Get Events",
         description="Return locally recorded broker/platform events.",
     )
-    async def get_events() -> list[dict[str, Any]]:
+    async def get_events() -> list[AdminEventPayload]:
         return await handlers.get_broker_events()

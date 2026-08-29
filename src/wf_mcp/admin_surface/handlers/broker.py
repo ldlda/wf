@@ -6,6 +6,13 @@ from wf_api import (
     WorkflowSourceAdminApi,
     WorkflowSourceAdminSurface,
 )
+from wf_api.models import (
+    AdminEventPayload,
+    ConnectionPayload,
+    ConnectionStatusPayload,
+    InspectSourceResult,
+    ListSourcesResult,
+)
 from wf_mcp.broker.service import WfMcpService
 from wf_mcp.broker.service.workflow_operation_context import context_from_service
 from wf_mcp.shared.errors import error_payload
@@ -24,11 +31,11 @@ class BrokerAdminHandlers:
             events=service.events,
         )
 
-    async def list_connections(self) -> list[dict[str, Any]]:
+    async def list_connections(self) -> list[ConnectionPayload]:
         payload = await self.admin.list_connections()
         return payload["connections"]
 
-    async def get_connection_statuses(self) -> list[dict[str, Any]]:
+    async def get_connection_statuses(self) -> list[ConnectionStatusPayload]:
         payload = await self.admin.get_connection_statuses()
         return payload["statuses"]
 
@@ -63,10 +70,10 @@ class BrokerAdminHandlers:
         *,
         cursor: str | None = None,
         limit: int = 50,
-    ) -> dict[str, Any]:
+    ) -> ListSourcesResult:
         return await self.sources.list_sources(cursor=cursor, limit=limit)
 
-    async def inspect_source(self, source_id: str) -> dict[str, Any]:
+    async def inspect_source(self, source_id: str) -> InspectSourceResult:
         return await self.sources.inspect_source(source_id=source_id)
 
     async def read_broker_resource(self, qualified_name: str) -> dict[str, Any]:
@@ -97,6 +104,6 @@ class BrokerAdminHandlers:
                 **error_payload(exc),
             }
 
-    async def get_broker_events(self) -> list[dict[str, Any]]:
+    async def get_broker_events(self) -> list[AdminEventPayload]:
         payload = await self.admin.list_events()
         return payload["events"]
