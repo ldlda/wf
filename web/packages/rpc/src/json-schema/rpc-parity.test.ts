@@ -548,7 +548,11 @@ const parityCases: ReadonlyArray<ParityCase> = [
       revision: 7,
       selected_step_id: "render",
     },
-    invalidPayload: { workspace_id: "console.demo", revision: 0 },
+    invalidPayload: {
+      workspace_id: "console.demo",
+      revision: 7,
+      selected_step_id: "",
+    },
     validSuccess: authoringContractInventory,
     invalidSuccess: {
       ...authoringContractInventory,

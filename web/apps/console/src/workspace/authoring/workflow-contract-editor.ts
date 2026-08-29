@@ -45,11 +45,20 @@ export type WorkflowContractPatch = {
   readonly outcomes?: ReadonlyArray<string>;
 };
 
+type WorkflowSchemaPathSegment =
+  | { readonly kind: "property"; readonly name: string }
+  | { readonly kind: "array-item" };
+
 const MAX_DEPTH = 64;
 const COMPOSITION_KEYS = ["oneOf", "anyOf", "allOf", "not", "if", "then", "else"] as const;
 
 const isRecord = (value: unknown): value is JsonObject =>
   typeof value === "object" && value !== null && !Array.isArray(value);
+
+const schemaFieldId = (path: ReadonlyArray<WorkflowSchemaPathSegment>): string =>
+  // JSON-encoded tagged segments keep a property named "a.b" distinct from
+  // a nested property path ["a", "b"].
+  JSON.stringify(path);
 
 export const copyJson = (value: unknown): unknown => {
   if (Array.isArray(value)) return value.map(copyJson);
@@ -97,7 +106,7 @@ const projectField = (
   name: string,
   schema: unknown,
   required: boolean,
-  path: string,
+  path: ReadonlyArray<WorkflowSchemaPathSegment>,
   depth: number,
 ): WorkflowSchemaFieldRow => {
   const raw = isRecord(schema) ? copyObject(schema) : {};
@@ -117,16 +126,16 @@ const projectField = (
           childName,
           childSchema,
           requiredNames.has(childName),
-          `${path}.${childName}`,
+          [...path, { kind: "property", name: childName }],
           depth + 1,
         ),
       )
     : [];
   const item = reason === null && type === "array" && raw.items !== undefined
-    ? projectField("item", raw.items, true, `${path}.items`, depth + 1)
+    ? projectField("item", raw.items, true, [...path, { kind: "array-item" }], depth + 1)
     : null;
   return {
-    id: path,
+    id: schemaFieldId(path),
     name,
     type,
     required,
@@ -154,11 +163,35 @@ export const projectWorkflowSchema = (schema: unknown): WorkflowSchemaProjection
     schema: root,
     rows: rootReason === null
       ? Object.entries(properties).map(([name, field]) =>
-          projectField(name, field, requiredNames.has(name), name, 1),
+          projectField(
+            name,
+            field,
+            requiredNames.has(name),
+            [{ kind: "property", name }],
+            1,
+          ),
         )
       : [],
     rootUnsupportedReason: rootReason,
   };
+};
+
+export const validateWorkflowSchemaRows = (
+  rows: ReadonlyArray<WorkflowSchemaFieldRow>,
+): ReadonlyArray<string> => {
+  const issues = new Set<string>();
+  const visit = (scopeRows: ReadonlyArray<WorkflowSchemaFieldRow>): void => {
+    const names = new Set<string>();
+    for (const row of scopeRows) {
+      if (row.name.trim() === "") issues.add("Field names must not be blank.");
+      else if (names.has(row.name)) issues.add("Field names must be unique within each object.");
+      names.add(row.name);
+      visit(row.children);
+      if (row.item !== null) visit([row.item]);
+    }
+  };
+  visit(rows);
+  return [...issues];
 };
 
 const serializeField = (row: WorkflowSchemaFieldRow, state: boolean): JsonObject => {
@@ -200,6 +233,8 @@ export const serializeWorkflowSchema = (
   options: { readonly state?: boolean } = {},
 ): JsonObject => {
   if (projection.rootUnsupportedReason !== null) return copyObject(projection.schema);
+  const issues = validateWorkflowSchemaRows(rows);
+  if (issues.length > 0) throw new Error(issues.join(" "));
   const next = copyObject(projection.schema);
   next.type = "object";
   next.properties = Object.fromEntries(

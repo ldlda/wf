@@ -531,7 +531,9 @@ export const authoredRpcSchemas = {
     payload: Schema.Struct({
       workspace_id: Schema.String.pipe(Schema.minLength(1)),
       revision: PositiveIntegerSchema,
-      selected_step_id: Schema.optional(Schema.NullOr(Schema.String)),
+      selected_step_id: Schema.optional(
+        Schema.NullOr(Schema.String.pipe(Schema.minLength(1))),
+      ),
     }),
     success: Schema.Union(AuthoringContractInventorySchema, DraftWorkspaceSchema),
   },

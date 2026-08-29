@@ -61,6 +61,35 @@ describe("run operation registry", () => {
     });
   });
 
+  it("preserves explicit null and empty contract replacement semantics", async () => {
+    const { getOperationMeta } = await import("./method-registry.js");
+    const operation = getOperationMeta("workflow.draft_workspaces.set_contract");
+    if (operation === undefined) throw new Error("missing set contract operation");
+
+    const cli = operation.equivalentCli({
+      workspace_id: "console.demo",
+      revision: 7,
+      input_schema: null,
+      outcomes: [],
+    });
+
+    expect(cli).toContain("input_schema=null (no equivalent CLI clear flag)");
+    expect(cli).toContain("outcomes=[] (no equivalent CLI clear flag)");
+    expect(cli).not.toContain("--outcome");
+  });
+
+  it("renders non-empty contract outcomes as repeated CLI flags", async () => {
+    const { getOperationMeta } = await import("./method-registry.js");
+    const operation = getOperationMeta("workflow.draft_workspaces.set_contract");
+    if (operation === undefined) throw new Error("missing set contract operation");
+
+    expect(operation.equivalentCli({
+      workspace_id: "console.demo",
+      revision: 7,
+      outcomes: ["ok", "cancelled"],
+    })).toContain("--outcome ok --outcome cancelled");
+  });
+
   it("decodes start results with the start success schema", async () => {
     vi.doMock("./rpcs.js", async () => {
       const actual = await vi.importActual<typeof import("./rpcs.js")>(

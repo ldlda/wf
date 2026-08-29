@@ -95,4 +95,32 @@ describe("WorkflowContractInspector", () => {
     await user.click(screen.getByRole("button", { name: "Save outcomes" }));
     expect(controller.setContract).toHaveBeenCalledWith({ outcomes: ["ok"] });
   });
+
+  it("marks output reordering as dirty", async () => {
+    const user = userEvent.setup();
+    controller.markDirty.mockClear();
+    const outputDraft = {
+      ...draft,
+      draft: {
+        ...draft.draft,
+        output: [
+          { path: "state.report", target: "report" },
+          { path: "state.report", target: "report_copy" },
+        ],
+      },
+    } satisfies DraftWorkspace;
+    render(<WorkflowContractInspector contract="output" controller={controller} draft={outputDraft} inventory={inventory} />);
+
+    await user.click(screen.getAllByRole("button", { name: "Move up" })[1]!);
+    expect(controller.markDirty).toHaveBeenCalled();
+  });
+
+  it("marks outcome removal as dirty", async () => {
+    const user = userEvent.setup();
+    controller.markDirty.mockClear();
+    render(<WorkflowContractInspector contract="outcomes" controller={controller} draft={draft} inventory={inventory} />);
+
+    await user.click(screen.getAllByRole("button", { name: "Remove" })[0]!);
+    expect(controller.markDirty).toHaveBeenCalled();
+  });
 });

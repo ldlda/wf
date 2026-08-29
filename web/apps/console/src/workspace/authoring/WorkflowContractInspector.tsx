@@ -127,7 +127,20 @@ const WorkflowOutputBindingsForm = ({ controller, draft, inventory }: WorkflowCo
           ) : <label>Literal JSON<textarea value={row.value} onChange={(event) => update(row.id, { value: event.target.value })} /></label>}
           <label>Output target<select value={row.target} onChange={(event) => update(row.id, { target: event.target.value })}><option value="">Choose output field</option>{targets.map((target) => <option key={target.path} value={target.path.replace(/^output\./, "")}>{target.label}</option>)}</select></label>
           <div className="workflow-output-bindings__actions">
-            <button disabled={index === 0} onClick={() => setRows((current) => { const copy = [...current]; [copy[index - 1], copy[index]] = [copy[index]!, copy[index - 1]!]; return copy; })} type="button">Move up</button>
+            <button
+              disabled={index === 0}
+              onClick={() => {
+                setRows((current) => {
+                  const copy = [...current];
+                  [copy[index - 1], copy[index]] = [copy[index]!, copy[index - 1]!];
+                  return copy;
+                });
+                controller.markDirty();
+              }}
+              type="button"
+            >
+              Move up
+            </button>
             <button onClick={() => { setRows((current) => current.filter((item) => item.id !== row.id)); controller.markDirty(); }} type="button">Remove binding</button>
           </div>
         </fieldset>
@@ -143,7 +156,7 @@ const OutcomesForm = ({ controller, draft }: WorkflowContractInspectorProps) => 
   const [rows, setRows] = useState<ReadonlyArray<string>>(() => Array.isArray(raw) ? raw.map(String) : []);
   return (
     <form className="workflow-outcomes-form" onSubmit={(event) => { event.preventDefault(); void controller.setContract({ outcomes: normalizeOutcomes(rows) }); }}>
-      {rows.map((outcome, index) => <div key={index}><label>Outcome {index + 1}<input value={outcome} onChange={(event) => { setRows((current) => current.map((item, itemIndex) => itemIndex === index ? event.target.value : item)); controller.markDirty(); }} /></label><button onClick={() => setRows((current) => current.filter((_, itemIndex) => itemIndex !== index))} type="button">Remove</button></div>)}
+      {rows.map((outcome, index) => <div key={index}><label>Outcome {index + 1}<input value={outcome} onChange={(event) => { setRows((current) => current.map((item, itemIndex) => itemIndex === index ? event.target.value : item)); controller.markDirty(); }} /></label><button onClick={() => { setRows((current) => current.filter((_, itemIndex) => itemIndex !== index)); controller.markDirty(); }} type="button">Remove</button></div>)}
       <button onClick={() => { setRows((current) => [...current, ""]); controller.markDirty(); }} type="button">Add outcome</button>
       <button type="submit">Save outcomes</button>
     </form>

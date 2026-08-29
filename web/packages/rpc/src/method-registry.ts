@@ -839,11 +839,31 @@ const operationEntries = defineOperationEntries([
         String(p.revision),
       ];
       const unavailable: string[] = [];
-      if (p.input_schema != null) unavailable.push("input_schema (use --input-schema-file)");
-      if (p.state_schema != null) unavailable.push("state_schema (use --state-schema-file)");
-      if (p.output_schema != null) unavailable.push("output_schema (use --output-schema-file)");
-      for (const outcome of p.outcomes ?? []) {
-        parts.push("--outcome", shellArg(outcome));
+      if (p.input_schema !== undefined) {
+        unavailable.push(p.input_schema === null
+          ? "input_schema=null (no equivalent CLI clear flag)"
+          : "input_schema (use --input-schema-file)");
+      }
+      if (p.state_schema !== undefined) {
+        unavailable.push(p.state_schema === null
+          ? "state_schema=null (no equivalent CLI clear flag)"
+          : "state_schema (use --state-schema-file)");
+      }
+      if (p.output_schema !== undefined) {
+        unavailable.push(p.output_schema === null
+          ? "output_schema=null (no equivalent CLI clear flag)"
+          : "output_schema (use --output-schema-file)");
+      }
+      if (p.outcomes !== undefined) {
+        if (p.outcomes === null) {
+          unavailable.push("outcomes=null (no equivalent CLI clear flag)");
+        } else if (p.outcomes.length === 0) {
+          unavailable.push("outcomes=[] (no equivalent CLI clear flag)");
+        } else {
+          for (const outcome of p.outcomes) {
+            parts.push("--outcome", shellArg(outcome));
+          }
+        }
       }
       return nonEquivalentCli(parts.join(" "), unavailable);
     },

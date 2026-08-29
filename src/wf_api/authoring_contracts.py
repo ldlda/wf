@@ -275,7 +275,9 @@ def _append_schema_options(
             "path": path,
             "label": _label_for(name, child_fragment, resolved_child),
             "origin": origin,
-            "schema": child_fragment,
+            # The UI may annotate an option schema; keep that mutation away from
+            # the canonical draft schema used to build the rest of the inventory.
+            "schema": deepcopy(dict(child_fragment)),
             "required": name in required,
             "availability": "available",
             "uses": list(uses),

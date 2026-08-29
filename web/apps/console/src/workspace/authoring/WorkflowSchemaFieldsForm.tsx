@@ -4,6 +4,7 @@ import type { JsonObject } from "../domain/draft-workspace-models.js";
 import {
   projectWorkflowSchema,
   serializeWorkflowSchema,
+  validateWorkflowSchemaRows,
   type WorkflowContractKind,
   type WorkflowSchemaFieldRow,
   type WorkflowSchemaFieldType,
@@ -210,8 +211,12 @@ export const WorkflowSchemaFieldsForm = ({
 }: WorkflowSchemaFieldsFormProps) => {
   const [projection] = useState(() => projectWorkflowSchema(schema));
   const [rows, setRows] = useState(projection.rows);
+  const [validationError, setValidationError] = useState<string | null>(null);
   const nextId = useRef(0);
-  const markDirty = (): void => onDirtyChange?.(true);
+  const markDirty = (): void => {
+    setValidationError(null);
+    onDirtyChange?.(true);
+  };
   const createId = (): string => `new-field-${nextId.current++}`;
   const update = (
     id: string,
@@ -226,6 +231,11 @@ export const WorkflowSchemaFieldsForm = ({
   };
   const submit = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
+    const issues = validateWorkflowSchemaRows(rows);
+    if (issues.length > 0) {
+      setValidationError(issues.join(" "));
+      return;
+    }
     void Promise.resolve(
       onSubmit(serializeWorkflowSchema(projection, rows, { state: contract === "state" })),
     ).catch(() => undefined);
@@ -233,6 +243,7 @@ export const WorkflowSchemaFieldsForm = ({
 
   return (
     <form className="workflow-schema-fields-form" noValidate onSubmit={submit}>
+      {validationError !== null && <p role="alert">{validationError}</p>}
       {projection.rootUnsupportedReason !== null ? (
         <section aria-label="Unsupported root schema" className="workflow-schema-field--unsupported">
           <p>{projection.rootUnsupportedReason}</p>

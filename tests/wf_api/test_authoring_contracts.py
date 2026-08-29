@@ -255,6 +255,24 @@ def test_schema_path_options_returns_empty_schema_for_unconstrained_property() -
     ]
 
 
+def test_schema_path_options_copies_schema_fragments() -> None:
+    schema = {
+        "type": "object",
+        "properties": {
+            "request": {
+                "type": "object",
+                "properties": {"id": {"type": "string"}},
+            }
+        },
+    }
+
+    options = schema_path_options(schema, root="input", uses=["step_input"])
+    # Options are safe for UI consumers to annotate without mutating the source schema.
+    options[0]["schema"]["title"] = "Edited through option"
+
+    assert schema["properties"]["request"].get("title") is None
+
+
 def test_project_authoring_contract_inventory_composes_pure_inputs() -> None:
     context_entry: AuthoringPathOptionPayload = {
         "path": "context.loop_item",
