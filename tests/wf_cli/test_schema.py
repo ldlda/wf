@@ -80,10 +80,8 @@ def test_schema_compact_component_is_queryable() -> None:
     payload = _json_result("NodeUse")
 
     assert payload["name"] == "NodeUse"
-    assert payload["properties"]["input"]["items"]["any_of"] == [
-        "InputPathBinding",
-        "InputValueBinding",
-    ]
+    assert payload["properties"]["input"]["items"] == "StepInputBinding"
+    assert "StepInputBinding" in payload["related"]
     assert "$ref" not in json.dumps(payload)
 
 
@@ -140,21 +138,16 @@ def test_schema_catalog_resolves_aliases_and_components() -> None:
 def test_compact_outline_replaces_local_refs_with_names() -> None:
     payload = compact_schema_outline("NodeUse")
 
-    assert payload["properties"]["input"]["items"]["any_of"] == [
-        "InputPathBinding",
-        "InputValueBinding",
-    ]
+    assert payload["properties"]["input"]["items"] == "StepInputBinding"
+    assert "StepInputBinding" in payload["related"]
     assert "$ref" not in json.dumps(payload)
 
 
-def test_compact_outline_preserves_any_of_keyword() -> None:
+def test_compact_outline_preserves_named_composite_binding() -> None:
     payload = compact_schema_outline("NodeUse")
 
-    assert payload["properties"]["input"]["items"]["any_of"] == [
-        "InputPathBinding",
-        "InputValueBinding",
-    ]
-    assert "one_of" not in payload["properties"]["input"]["items"]
+    assert payload["properties"]["input"]["items"] == "StepInputBinding"
+    assert "any_of" not in payload["properties"]["input"]
 
 
 def test_verbose_component_uses_generated_definitions() -> None:

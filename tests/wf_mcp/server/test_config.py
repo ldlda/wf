@@ -1,11 +1,31 @@
 from __future__ import annotations
 
 import asyncio
+from typing import Any
 
 from wf_mcp.broker.config import build_service_from_config
 from wf_mcp.server import create_server_client
 
 from .conftest import server_config, structured
+
+
+def _resolve_local_ref(schema: Any, root: dict[str, Any]) -> dict[str, Any]:
+    """Resolve one local MCP JSON Schema reference for structural assertions."""
+    assert isinstance(schema, dict)
+    ref = schema.get("$ref")
+    if isinstance(ref, str) and ref.startswith("#/$defs/"):
+        definitions = root.get("$defs")
+        assert isinstance(definitions, dict)
+        resolved = definitions.get(ref.removeprefix("#/$defs/"))
+        assert isinstance(resolved, dict)
+        return resolved
+    return schema
+
+
+def _request_schema(tool_schema: dict[str, Any]) -> dict[str, Any]:
+    """Return the request DTO whether MCP exposes it inline or as a local ref."""
+    request = tool_schema["properties"]["request"]
+    return _resolve_local_ref(request, tool_schema)
 
 
 def test_config_built_service_uses_persistent_tool_executor() -> None:
@@ -97,7 +117,10 @@ def test_server_exposes_upstream_admin_and_workflow_tools() -> None:
             minimal_workspace_input = tools_by_name[
                 "wf.workflow.create_minimal_draft_workspace"
             ].inputSchema
-            minimal_request = minimal_workspace_input["properties"]["request"]
+            minimal_request = _resolve_local_ref(
+                minimal_workspace_input["properties"]["request"],
+                minimal_workspace_input,
+            )
             assert minimal_request["properties"]["workspace_id"]["pattern"]
             assert "error_message_source" in minimal_request["properties"]
             assert "input" in minimal_request["properties"]
@@ -111,7 +134,7 @@ def test_server_exposes_upstream_admin_and_workflow_tools() -> None:
             from_capability_input = tools_by_name[
                 "wf.workflow.create_draft_workspace_from_capability"
             ].inputSchema
-            from_capability_request = from_capability_input["properties"]["request"]
+            from_capability_request = _request_schema(from_capability_input)
             assert "capability_name" in from_capability_request["properties"]
             assert "input_schema" in from_capability_request["properties"]
             assert "input" in from_capability_request["properties"]
@@ -120,40 +143,36 @@ def test_server_exposes_upstream_admin_and_workflow_tools() -> None:
             set_input_schema = tools_by_name[
                 "wf.workflow.set_step_input_map"
             ].inputSchema
-            set_input_request = set_input_schema["properties"]["request"]
+            set_input_request = _request_schema(set_input_schema)
             assert "merge" in set_input_request["properties"]
             set_bindings_schema = tools_by_name[
                 "wf.workflow.set_step_input_bindings"
             ].inputSchema
-            set_bindings_request = set_bindings_schema["properties"]["request"]
+            set_bindings_request = _request_schema(set_bindings_schema)
             assert "bindings" in set_bindings_request["properties"]
             assert "merge" not in set_bindings_request["properties"]
             set_output_bindings_schema = tools_by_name[
                 "wf.workflow.set_step_output_bindings"
             ].inputSchema
-            set_output_bindings_request = set_output_bindings_schema["properties"][
-                "request"
-            ]
+            set_output_bindings_request = _request_schema(set_output_bindings_schema)
             assert "bindings" in set_output_bindings_request["properties"]
             assert "merge" not in set_output_bindings_request["properties"]
             canonical_workflow_output_schema = tools_by_name[
                 "wf.workflow.set_workflow_output_bindings"
             ].inputSchema
-            canonical_workflow_output_request = canonical_workflow_output_schema[
-                "properties"
-            ]["request"]
+            canonical_workflow_output_request = _request_schema(
+                canonical_workflow_output_schema
+            )
             assert "bindings" in canonical_workflow_output_request["properties"]
             assert "merge" not in canonical_workflow_output_request["properties"]
             set_workflow_output_schema = tools_by_name[
                 "wf.workflow.set_workflow_output_map"
             ].inputSchema
-            set_workflow_output_request = set_workflow_output_schema["properties"][
-                "request"
-            ]
+            set_workflow_output_request = _request_schema(set_workflow_output_schema)
             assert "output_map" in set_workflow_output_request["properties"]
             assert "merge" in set_workflow_output_request["properties"]
             bind_schema = tools_by_name["wf.workflow.bind"].inputSchema
-            bind_request = bind_schema["properties"]["request"]
+            bind_request = _request_schema(bind_schema)
             assert set(bind_request["required"]) == {
                 "workspace_id",
                 "revision",
@@ -167,7 +186,7 @@ def test_server_exposes_upstream_admin_and_workflow_tools() -> None:
             add_step_schema = tools_by_name[
                 "wf.workflow.add_step_from_capability"
             ].inputSchema
-            add_step_request = add_step_schema["properties"]["request"]
+            add_step_request = _request_schema(add_step_schema)
             assert "capability_name" in add_step_request["properties"]
             assert "bind_outputs" in add_step_request["properties"]
             assert "input_bindings" in add_step_request["properties"]
@@ -177,7 +196,7 @@ def test_server_exposes_upstream_admin_and_workflow_tools() -> None:
             update_step_schema = tools_by_name[
                 "wf.workflow.update_capability_step"
             ].inputSchema
-            update_step_request = update_step_schema["properties"]["request"]
+            update_step_request = _request_schema(update_step_schema)
             assert "update" in update_step_request["properties"]
             from_capability_output = tools_by_name[
                 "wf.workflow.create_draft_workspace_from_capability"
