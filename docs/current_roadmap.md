@@ -103,16 +103,17 @@ Implementation order:
      [`composite input expressions`](superpowers/specs/2026-08-12-composite-input-expressions-design.md).
      Implementation:
      [`composite input expressions plan`](historical/superpowers/plans/2026-08-12-composite-input-expressions.md).
-   - Slice 6: workflow contract graph. Add selectable Input, State, Output, and
-     Outcomes projections with focused forms for workflow contracts, explicit
-     outcomes, entry point, and final workflow output bindings. Add one
-     backend-owned, node-scoped authoring contract inventory so workflow-scoped
-     binding pickers can discover input, state, selected-step, and applicable
-     runtime-context fields without high-level hardcoding or raw JSON hunting.
+   - Slice 6 is complete: workflow contract graph adds selectable Input, State,
+     Output, and Outcomes projections with focused forms for workflow
+     contracts, explicit outcomes, entry point, and final workflow output
+     bindings. One backend-owned, node-scoped authoring contract inventory
+     supplies discoverable input, state, selected-step, and applicable
+     runtime-context choices without high-level hardcoding or raw JSON hunting.
      The standalone capability playground remains literal-only until it has a
-     real workflow scope.
-     Design:
+     real workflow scope. Design:
      [`workflow contract graph`](superpowers/specs/2026-08-14-workflow-console-contract-graph-design.md).
+     Implementation:
+     [`workflow contract graph plan`](historical/superpowers/plans/2026-08-14-workflow-console-contract-graph.md).
    - Slice 7: explicit End authoring and a typed Add step palette. End nodes are
      real stored steps; Input, State, Output, and Outcomes remain graph
      projections of workflow-level contracts rather than fake runtime steps.

@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
+from time import time
 from typing import Any
 
 from wf_api import (
@@ -63,9 +64,12 @@ class InMemoryWorkflowEventRecorder(WorkflowEventRecorder):
         capability_id: str,
         payload: dict[str, Any],
     ) -> None:
+        # Local/static servers expose these through the same admin event API as
+        # broker-backed servers, whose event records are timestamped.
         self.events.append(
             {
                 "kind": event_type,
+                "timestamp_epoch_ms": int(time() * 1000),
                 "capability_id": capability_id,
                 "payload": payload,
             }

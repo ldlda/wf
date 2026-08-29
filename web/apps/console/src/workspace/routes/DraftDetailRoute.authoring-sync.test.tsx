@@ -68,6 +68,39 @@ const requestBodyAt = (index: number): unknown => {
   return JSON.parse(call?.[1].body ?? "{}");
 };
 
+const requestFor = (operation: OperationName): Record<string, unknown> | undefined =>
+  mockFetch.mock.calls
+    .map((_, index) => requestBodyAt(index) as Record<string, unknown>)
+    .find((body) => body.operation === operation);
+
+const inventoryFor = (revision: number, selectedStepId: string | null = null) => ({
+  workspace_id: "draft-report",
+  revision,
+  selected_step_id: selectedStepId,
+  readable_sources: [],
+  step_input_targets: [],
+  step_output_sources: [],
+  state_targets: [],
+  workflow_output_targets: [],
+  entry_steps: [{ step_id: "collect", label: "Collect" }],
+  workflow_outcomes: ["ok"],
+  warnings: [],
+});
+
+const respondByOperation = (responses: Partial<Record<OperationName, unknown>>): void => {
+  mockFetch.mockImplementation((_url, init: RequestInit | undefined) => {
+    const body = JSON.parse(String(init?.body ?? "{}")) as {
+      readonly operation?: OperationName;
+      readonly params?: { readonly revision?: number; readonly selected_step_id?: string | null };
+    };
+    const operation = body.operation ?? "workflow.health";
+    const interpreted = operation === "workflow.draft_workspaces.inspect_authoring_contract"
+      ? inventoryFor(body.params?.revision ?? 1, body.params?.selected_step_id ?? null)
+      : responses[operation] ?? workspace({ revision: 2, status: "valid" });
+    return jsonResponse(rpcSuccess(interpreted, operation));
+  });
+};
+
 const detail: CapabilityDetail = {
   kind: "node_spec",
   name: "demo.collect",
@@ -224,9 +257,7 @@ beforeEach(() => {
     readExecutor: writeExecutor,
     writeExecutor,
   });
-  mockFetch.mockReturnValue(
-    jsonResponse(rpcSuccess(workspace({ revision: 2, status: "valid" }))),
-  );
+  respondByOperation({});
   mockedUseAuthoringCapabilityDetail.mockReturnValue({
     phase: "ready",
     detail,
@@ -245,12 +276,51 @@ afterEach(() => {
 });
 
 describe("DraftDetailRoute authoring freshness", () => {
+  it("reads authoring choices and saves a focused input contract canonically", async () => {
+    const user = userEvent.setup();
+    loadedReport = workspace({
+      draft: {
+        input_schema: { type: "object", properties: { query: { type: "string" } } },
+        state_schema: { type: "object", properties: {} },
+        output_schema: { type: "object", properties: {} },
+        steps: { collect: { use: "demo.collect" } },
+        routes: {},
+      },
+    });
+    const committed = workspace({ revision: 2, draft: loadedReport.draft });
+    respondByOperation({ "workflow.draft_workspaces.set_contract": committed });
+
+    render(routeElement());
+    fireEvent.click(document.querySelector('[data-node-id="contract:input"]') as HTMLElement);
+    await waitFor(() => expect(screen.getByRole("button", { name: "Save input schema" })).toBeInTheDocument());
+    await user.clear(screen.getByRole("textbox", { name: "Description" }));
+    await user.type(screen.getByRole("textbox", { name: "Description" }), "Search query");
+    await user.click(screen.getByRole("button", { name: "Save input schema" }));
+
+    await waitFor(() => expect(requestFor("workflow.draft_workspaces.set_contract")).toBeDefined());
+    expect(requestFor("workflow.draft_workspaces.inspect_authoring_contract")).toEqual({
+      operation: "workflow.draft_workspaces.inspect_authoring_contract",
+      target: "server-a",
+      params: { workspace_id: "draft-report", revision: 1, selected_step_id: null },
+    });
+    expect(requestFor("workflow.draft_workspaces.set_contract")).toEqual({
+      operation: "workflow.draft_workspaces.set_contract",
+      target: "server-a",
+      params: {
+        workspace_id: "draft-report",
+        revision: 1,
+        input_schema: {
+          type: "object",
+          properties: { query: { type: "string", description: "Search query" } },
+        },
+      },
+    });
+  });
+
   it("uses real controller mutations and loader replacement without synchronization loops", async () => {
     const user = userEvent.setup();
     const committed = workspace({ revision: 2, status: "valid" });
-    mockFetch.mockReturnValueOnce(
-      jsonResponse(rpcSuccess(committed, "workflow.draft_workspaces.update_capability_step")),
-    );
+    respondByOperation({ "workflow.draft_workspaces.update_capability_step": committed });
     const view = render(routeElement());
     const header = (): HTMLElement => document.querySelector(".draft-detail__header") as HTMLElement;
 
@@ -264,7 +334,7 @@ describe("DraftDetailRoute authoring freshness", () => {
     await user.click(screen.getByRole("button", { name: "Save setup" }));
     await waitFor(() => expect(within(header()).getByText("Revision 2")).toBeInTheDocument());
     expect(screen.getByText("Valid")).toBeInTheDocument();
-    expect(requestBodyAt(0)).toEqual({
+    expect(requestFor("workflow.draft_workspaces.update_capability_step")).toEqual({
       operation: "workflow.draft_workspaces.update_capability_step",
       target: "server-a",
       params: expect.objectContaining({
@@ -359,34 +429,38 @@ describe("DraftDetailRoute authoring freshness", () => {
       detail: concatDetail,
       message: null,
     });
-    mockFetch.mockReturnValueOnce(
-      jsonResponse(
-        rpcSuccess(canonicalWire, "workflow.draft_workspaces.set_step_input_bindings"),
-      ),
-    );
+    respondByOperation({ "workflow.draft_workspaces.set_step_input_bindings": canonicalWire });
 
     render(routeElement());
     fireEvent.click(document.querySelector('[data-node-id="concat"]') as HTMLElement);
     await waitFor(() => expect(screen.getByRole("heading", { name: "concat" })).toBeInTheDocument());
     await user.click(screen.getByRole("tab", { name: "Inputs" }));
     await user.click(screen.getByRole("button", { name: "Add input row" }));
-    await user.type(screen.getByRole("combobox", { name: "Target for row 1" }), "items");
+    const firstRow = screen.getByRole("group", { name: "Input row 1" });
+    await user.click(within(firstRow).getAllByText("Advanced")[0]!);
+    await user.type(within(firstRow).getByRole("textbox", { name: "Custom Target for row 1" }), "items");
     await user.click(screen.getByRole("radio", { name: "Construct value for input row 1" }));
     await user.click(screen.getByRole("button", { name: "Add item to items" }));
     await user.click(screen.getByRole("button", { name: "Add item to items" }));
     await user.selectOptions(screen.getByRole("combobox", { name: "Value source for items item 1" }), "path");
-    await user.clear(screen.getByRole("combobox", { name: "Path for items item 1" }));
-    await user.type(screen.getByRole("combobox", { name: "Path for items item 1" }), "state.foo");
+    const firstItem = screen.getByRole("group", { name: "items item 1" });
+    await user.click(within(firstItem).getByText("Advanced"));
+    await user.clear(within(firstItem).getByRole("textbox", { name: "Custom Path for items item 1" }));
+    await user.type(within(firstItem).getByRole("textbox", { name: "Custom Path for items item 1" }), "state.foo");
     await user.selectOptions(screen.getByRole("combobox", { name: "Value source for items item 2" }), "literal");
     await user.type(screen.getByRole("textbox", { name: "Items item" }), "wowcool");
     await user.click(screen.getByRole("button", { name: "Add input row" }));
-    await user.type(screen.getByRole("combobox", { name: "Target for row 2" }), "separator");
+    const secondRow = screen.getByRole("group", { name: "Input row 2" });
+    await user.click(within(secondRow).getAllByText("Advanced")[0]!);
+    await user.type(within(secondRow).getByRole("textbox", { name: "Custom Target for row 2" }), "separator");
     await user.click(screen.getByRole("radio", { name: "Literal value for input row 2" }));
     await user.type(screen.getByRole("textbox", { name: "Separator" }), " ");
     await user.click(screen.getByRole("button", { name: "Save inputs" }));
 
-    await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(1));
-    expect(requestBodyAt(0)).toEqual({
+    await waitFor(() => expect(
+      requestFor("workflow.draft_workspaces.set_step_input_bindings"),
+    ).toBeDefined());
+    expect(requestFor("workflow.draft_workspaces.set_step_input_bindings")).toEqual({
       operation: "workflow.draft_workspaces.set_step_input_bindings",
       target: "server-a",
       params: {
@@ -410,7 +484,7 @@ describe("DraftDetailRoute authoring freshness", () => {
     });
     await waitFor(() => expect(screen.getByText("Revision 2")).toBeInTheDocument());
     expect(screen.getByRole("combobox", { name: "Value source for items item 1" })).toHaveValue("path");
-    expect(screen.getByRole("combobox", { name: "Path for items item 1" })).toHaveValue("state.foo");
+    expect(screen.getByRole("textbox", { name: "Custom Path for items item 1" })).toHaveValue("state.foo");
     expect(screen.getByRole("textbox", { name: "Items item" })).toHaveValue("wowcool");
   });
 });

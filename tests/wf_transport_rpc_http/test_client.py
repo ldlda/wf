@@ -155,6 +155,7 @@ async def test_rpc_workflow_client_reads_admin_state(tmp_path) -> None:
     assert statuses == {"statuses": [], "total": 0}
     assert events["total"] == 1
     assert events["events"][0]["kind"] == "workflow_test_event"
+    assert isinstance(events["events"][0]["timestamp_epoch_ms"], int)
 
 
 async def test_rpc_workflow_client_runs_and_reads_trace(tmp_path) -> None:

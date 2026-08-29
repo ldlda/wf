@@ -198,6 +198,14 @@ combined explorer screen.
   bindings, while Outputs replace output-to-state bindings; the controller
   sends the complete canonical row list for each save. Persisted malformed
   rows remain visible as repair rows and block save or clear until repaired.
+- **Workflow contracts** project Input, State, Output, and Outcomes into the
+  draft graph without creating fake executable nodes. Their focused inspectors
+  edit the canonical schemas, entry step, final output bindings, and outcomes.
+  Pickers use the revision-scoped authoring inventory to show compatible
+  workflow, selected-step, and applicable runtime-context paths. **Advanced**
+  remains available for a deliberate custom path when the inventory cannot
+  describe a valid binding. End nodes, control-flow nodes, subgraphs, and
+  foreach/join authoring forms remain future typed-step work.
 - **Artifacts**, **Deployments**, and **Runs** provide focused lifecycle lists
   and detail routes, including artifact graphs, deployment validation, run
   interrupts, and trace evidence.

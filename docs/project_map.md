@@ -58,6 +58,15 @@ projection and controls live in
 `web/apps/console/src/workspace/authoring/input-expression-editor.ts` and
 `InputExpressionControl.tsx`. These editors emit one expression binding for a
 constructed array or object rather than synthetic indexed targets.
+`authoring-contract-models.ts` and `authoring-contract-client.ts` carry the
+revision-scoped, backend-owned inventory used by the graph's derived Input,
+State, Output, and Outcomes projections. `WorkflowContractInspector.tsx`
+edits those workflow-level contracts through the existing focused draft
+mutations; `AuthoringPathPicker.tsx` offers normal grouped choices first and an
+explicit Advanced custom-path fallback. The inventory may advertise
+node-scoped runtime context only for a selected step where conservative
+execution-scope analysis proves it applicable. It does not make context a
+permanent graph node or expose it as a final workflow-output source.
 
 ## Important Entry Points
 
