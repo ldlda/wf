@@ -230,7 +230,9 @@ async def test_create_draft_workspace_from_capability(tmp_path: Path) -> None:
         workspace_id="echo_ws", include_draft=True
     )
 
-    assert fetched["draft"]["steps"]["call"]["use"] == "demo.personal.echo_tool"
+    draft = fetched.get("draft")
+    assert draft is not None
+    assert draft["steps"]["call"]["use"] == "demo.personal.echo_tool"
 
 
 @pytest.mark.asyncio

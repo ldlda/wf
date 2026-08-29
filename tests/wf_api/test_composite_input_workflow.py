@@ -78,7 +78,9 @@ async def test_composite_concat_runs_through_the_platform_registry(
     compiled = await server.api.compile_draft_workspace(
         workspace_id="composite_concat",
     )
-    plan = RawWorkflowPlan.model_validate(compiled["compiled_plan"])
+    compiled_plan = compiled.get("compiled_plan")
+    assert compiled_plan is not None
+    plan = RawWorkflowPlan.model_validate(compiled_plan)
     run = await server.context.runtime.run_workflow_from_plan(plan, {})
 
     assert run.trace[0].resolved_input == {

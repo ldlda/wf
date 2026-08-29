@@ -92,7 +92,7 @@ async def test_admin_api_lists_events() -> None:
 
     assert payload["total"] == 1
     assert payload["events"][0]["kind"] == "connection_registered"
-    assert payload["events"][0]["connection_id"] == "alpha.work"
+    assert payload["events"][0].get("connection_id") == "alpha.work"
 
 
 def test_admin_api_satisfies_surface_protocol() -> None:
