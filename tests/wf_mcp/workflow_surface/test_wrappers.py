@@ -96,7 +96,9 @@ def test_workflow_surface_calls_saved_wrapper_artifact() -> None:
     assert payload["kind"] == "wrapper_artifact"
     assert payload["diagnostics"] == []
     assert payload["outcome"] == "completed"
-    assert payload["output"]["echoed"] == "hello"
+    output = payload["output"]
+    assert output is not None
+    assert output["echoed"] == "hello"
 
 
 def test_workflow_surface_calls_live_node_spec_with_self_describing_response() -> None:
@@ -124,7 +126,9 @@ def test_workflow_surface_calls_live_node_spec_with_self_describing_response() -
     assert payload["kind"] == "node_spec"
     assert payload["diagnostics"] == []
     assert payload["outcome"] == "ok"
-    assert payload["output"]["echoed"] == "hello"
+    output = payload["output"]
+    assert output is not None
+    assert output["echoed"] == "hello"
 
 
 def test_workflow_surface_calls_saved_wrapper_artifact_with_deployment_bindings() -> (
@@ -169,4 +173,6 @@ def test_workflow_surface_calls_saved_wrapper_artifact_with_deployment_bindings(
     assert payload["deployment_id"] == "logical_echo_wrapper.personal"
     assert payload["diagnostics"] == []
     assert payload["outcome"] == "completed"
-    assert payload["output"]["echoed"] == "hello"
+    output = payload["output"]
+    assert output is not None
+    assert output["echoed"] == "hello"

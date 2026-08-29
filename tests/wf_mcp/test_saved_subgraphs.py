@@ -123,22 +123,27 @@ def test_interrupting_saved_child_pauses_and_resumes_through_deployment_surface(
     )
 
     assert paused["status"] == "interrupted"
-    assert isinstance(paused["run_id"], str)
-    assert paused["interrupt"]["node_id"] == "child_step"
-    assert paused["interrupt"]["payload"]["question"] == "hello"
+    paused_run_id = paused["run_id"]
+    assert isinstance(paused_run_id, str)
+    interrupt = paused["interrupt"]
+    assert interrupt is not None
+    assert interrupt["node_id"] == "child_step"
+    assert interrupt["payload"]["question"] == "hello"
 
     # Durable resume must not rely on the process-local handler instance.
     handlers = _handlers(store, tmp_path)
     resumed = asyncio.run(
         handlers.resume_run(
-            run_id=paused["run_id"],
+            run_id=paused_run_id,
             resume_payload={"answer": "world"},
         )
     )
 
     assert resumed["status"] == "completed"
     assert resumed["outcome"] == "ok"
-    assert resumed["output"]["echoed"] == "world"
+    output = resumed["output"]
+    assert output is not None
+    assert output["echoed"] == "world"
 
 
 def test_interrupted_saved_child_blocks_resume_until_pinned_source_returns(
@@ -158,11 +163,13 @@ def test_interrupted_saved_child_blocks_resume_until_pinned_source_returns(
     )
     run_store = handlers.service.run_store
     assert run_store is not None
+    paused_run_id = paused["run_id"]
+    assert isinstance(paused_run_id, str)
 
     handlers.service.capability_sources["demo.personal"].enabled = False
     blocked = asyncio.run(
         handlers.resume_run(
-            run_id=paused["run_id"],
+            run_id=paused_run_id,
             resume_payload={"answer": "world"},
         )
     )
@@ -171,22 +178,24 @@ def test_interrupted_saved_child_blocks_resume_until_pinned_source_returns(
     assert blocked["resume_readiness"] == "blocked"
     assert blocked["diagnostics"][0]["code"] == "source_disabled"
     assert (
-        run_store.get_run(paused["run_id"]).resume_readiness is ResumeReadiness.BLOCKED
+        run_store.get_run(paused_run_id).resume_readiness is ResumeReadiness.BLOCKED
     )
-    assert run_store.get_latest_checkpoint(paused["run_id"]).sequence == 1
+    assert run_store.get_latest_checkpoint(paused_run_id).sequence == 1
 
     handlers.service.capability_sources["demo.personal"].enabled = True
     resumed = asyncio.run(
         handlers.resume_run(
-            run_id=paused["run_id"],
+            run_id=paused_run_id,
             resume_payload={"answer": "world"},
         )
     )
 
     assert resumed["status"] == "completed"
     assert resumed["resume_readiness"] == "not_applicable"
-    assert resumed["output"]["echoed"] == "world"
-    assert run_store.get_latest_checkpoint(paused["run_id"]).sequence == 2
+    output = resumed["output"]
+    assert output is not None
+    assert output["echoed"] == "world"
+    assert run_store.get_latest_checkpoint(paused_run_id).sequence == 2
 
 
 def test_missing_saved_child_is_unrunnable_on_deployment_surface(
@@ -241,7 +250,9 @@ def test_saved_child_runs_natively_with_parent_deployment_binding(
     )
 
     assert result["status"] == "completed"
-    assert result["output"]["echoed"] == "hello"
+    output = result["output"]
+    assert output is not None
+    assert output["echoed"] == "hello"
     assert result["diagnostics"] == []
 
 
@@ -267,7 +278,9 @@ def test_nested_saved_child_inherits_root_deployment_binding(tmp_path: Path) -> 
     )
 
     assert result["status"] == "completed"
-    assert result["output"]["echoed"] == "hello"
+    output = result["output"]
+    assert output is not None
+    assert output["echoed"] == "hello"
     assert result["diagnostics"] == []
 
 

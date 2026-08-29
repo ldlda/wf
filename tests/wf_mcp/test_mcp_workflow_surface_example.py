@@ -34,7 +34,9 @@ def test_mcp_workflow_surface_example_runs_happy_path(tmp_path) -> None:
     payload = asyncio.run(create_and_run_echo_deployment(tmp_path, text="hello"))
 
     assert payload["status"] == "completed"
-    assert payload["output"]["echoed"] == "hello"
+    output = payload["output"]
+    assert output is not None
+    assert output["echoed"] == "hello"
     assert payload["diagnostics"] == []
 
 

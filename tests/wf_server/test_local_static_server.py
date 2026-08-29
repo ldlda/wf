@@ -102,10 +102,13 @@ async def test_local_static_server_runs_deployment_and_persists_run(tmp_path) ->
     assert artifact_result["artifact_id"] == "server_constant"
     assert deployment_result["deployment_id"] == "server_constant.default"
     assert run_result["status"] == "completed"
-    assert run_result["output"]["result"] == "hello from server"
-    assert isinstance(run_result["run_id"], str)
+    output = run_result["output"]
+    assert output is not None
+    assert output["result"] == "hello from server"
+    run_id = run_result["run_id"]
+    assert isinstance(run_id, str)
     assert (
-        server.stores.run_store.get_run(run_result["run_id"]).id == run_result["run_id"]
+        server.stores.run_store.get_run(run_id).id == run_id
     )
 
 
@@ -132,10 +135,12 @@ async def test_local_static_server_inspects_and_reads_bounded_trace(tmp_path) ->
     run_result = await api.run_deployment(
         deployment_id="server_trace.default", workflow_input={}
     )
+    run_id = run_result["run_id"]
+    assert isinstance(run_id, str)
 
-    summary = await api.inspect_run(run_id=run_result["run_id"])
+    summary = await api.inspect_run(run_id=run_id)
     trace = await api.read_run_trace(
-        run_id=run_result["run_id"],
+        run_id=run_id,
         trace_range=server.trace_range(start=0, limit=1),
     )
 
@@ -177,7 +182,9 @@ async def test_local_static_wf_std_deployment_runs_without_source_binding(
     assert artifact_result["artifact_id"] == "server_constant_no_binding"
     assert deployment_result["deployment_id"] == "server_constant_no_binding.default"
     assert run_result["status"] == "completed"
-    assert run_result["output"]["result"] == "hello from server"
+    output = run_result["output"]
+    assert output is not None
+    assert output["result"] == "hello from server"
 
 
 def test_local_static_server_has_no_source_registry_admin(tmp_path) -> None:

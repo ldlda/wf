@@ -63,13 +63,15 @@ async def test_report_workflow_python_source_loads_and_calls_capability(
     )
 
     assert result["outcome"] == "ok"
-    assert result["output"]["title"] == "Weekly Project Update"
-    assert result["output"]["action_items"][0] == {
+    output = result["output"]
+    assert output is not None
+    assert output["title"] == "Weekly Project Update"
+    assert output["action_items"][0] == {
         "owner": "Alice",
         "task": "Prepare demo config",
         "due": "Friday",
     }
-    assert "Google Drive MCP quota" in result["output"]["risks"][0]
+    assert "Google Drive MCP quota" in output["risks"][0]
 
 
 @pytest.mark.asyncio
@@ -103,9 +105,11 @@ async def test_report_workflow_artifact_deployment_run_path(tmp_path) -> None:
     )
 
     assert run["status"] == "completed"
-    assert run["output"]["report"]["title"] == "Weekly Project Update"
-    assert len(run["output"]["report"]["action_items"]) == 3
-    assert run["output"]["markdown"].startswith("# Weekly Project Update")
+    output = run["output"]
+    assert output is not None
+    assert output["report"]["title"] == "Weekly Project Update"
+    assert len(output["report"]["action_items"]) == 3
+    assert output["markdown"].startswith("# Weekly Project Update")
 
 
 def test_report_workflow_read_notes_accepts_text_by_value() -> None:

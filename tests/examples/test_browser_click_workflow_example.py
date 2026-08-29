@@ -275,8 +275,10 @@ async def test_browser_click_workflow_artifact_deployment_run_path(tmp_path) -> 
     )
 
     assert run["status"] == "completed"
-    assert run["output"]["before"]["clicked"] is False
-    assert run["output"]["after"]["clicked"] is True
-    assert run["output"]["after"]["status_text"] == "Button clicked"
-    assert run["output"]["closed"] is True
+    output = run["output"]
+    assert output is not None
+    assert output["before"]["clicked"] is False
+    assert output["after"]["clicked"] is True
+    assert output["after"]["status_text"] == "Button clicked"
+    assert output["closed"] is True
     assert run["trace_count"] >= 3
