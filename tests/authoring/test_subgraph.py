@@ -221,13 +221,15 @@ def test_subgraph_ref_accepts_composite_child_input_binding() -> None:
         id="run_child",
         workflow=child,
         input=[
-            {
-                "target": "folder_id",
-                "expression": {
-                    "kind": "literal",
-                    "value": "demo-folder",
-                },
-            }
+            InputExpressionBinding.model_validate(
+                {
+                    "target": "folder_id",
+                    "expression": {
+                        "kind": "literal",
+                        "value": "demo-folder",
+                    },
+                }
+            )
         ],
     )
 

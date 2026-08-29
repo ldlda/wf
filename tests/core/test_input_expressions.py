@@ -13,6 +13,7 @@ from wf_artifacts.drafts.models import (
 )
 from wf_core import Workflow
 from wf_core.models.input_bindings import ArrayExpression, LiteralExpression
+from wf_core.models.json_values import JsonValue
 from wf_core.models.steps import (
     InputExpressionBinding,
     InputPathBinding,
@@ -152,8 +153,8 @@ def _nested_expression_array(depth: int) -> dict[str, object]:
     return expression
 
 
-def _nested_json_list(depth: int) -> list[object]:
-    value: list[object] = ["leaf"]
+def _nested_json_list(depth: int) -> list[JsonValue]:
+    value: list[JsonValue] = ["leaf"]
     for _ in range(depth - 1):
         value = [value]
     return value

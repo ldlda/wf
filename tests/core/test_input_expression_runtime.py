@@ -15,13 +15,16 @@ from wf_core import (
     SchemaRef,
     StateField,
     StateSchema,
+    StepInputBinding,
     SubgraphNode,
     Workflow,
     WorkflowExecutionError,
+    WorkflowRef,
     execute_workflow,
     resume_workflow,
 )
-from wf_core.models.steps import InterruptNode
+from wf_core.models.steps import InterruptNode, Step
+from wf_core.paths import GraphSourcePath, LocalPath
 from wf_core.runtime.input_bindings import (
     resolve_input_expression,
     resolve_step_input_bindings,
@@ -43,6 +46,11 @@ COMPOSITE_BINDING = {
         },
     },
 }
+
+
+def _composite_binding() -> StepInputBinding:
+    """Build this raw fixture through the canonical binding model."""
+    return InputExpressionBinding.model_validate(COMPOSITE_BINDING)
 
 
 def test_resolver_builds_nested_json_with_input_state_and_context_paths() -> None:
@@ -107,7 +115,12 @@ def test_simple_path_binding_preserves_legacy_value_identity() -> None:
     legacy_value = {"opaque": object()}
 
     resolved = resolve_step_input_bindings(
-        [InputPathBinding(target="request.value", path="state.value")],
+        [
+            InputPathBinding(
+                target=LocalPath.parse("request.value"),
+                path=GraphSourcePath.parse("state.value"),
+            )
+        ],
         state={"value": legacy_value},
         workflow_input={},
         context={},
@@ -210,7 +223,7 @@ def test_normal_node_execution_resolves_composite_input() -> None:
         return {"outcome": "ok", "output": {}}
 
     workflow = _node_workflow(
-        input_bindings=[COMPOSITE_BINDING],
+        input_bindings=[_composite_binding()],
         state_fields={"foo": StateField(type="string", default="hello")},
     )
     run = execute_workflow(workflow, {}, {"concat": concat})
@@ -220,7 +233,8 @@ def test_normal_node_execution_resolves_composite_input() -> None:
 
 
 def test_prepared_subgraph_input_resolves_composite_input() -> None:
-    parent = _parent_subgraph_workflow([COMPOSITE_BINDING])
+    parent = _parent_subgraph_workflow([_composite_binding()])
+    child_step: Step = EndNode(id="done", type="end", outcome="ok")
     child = Workflow(
         name="child",
         input_schema=_schema({"request": {"type": "object"}}),
@@ -228,7 +242,7 @@ def test_prepared_subgraph_input_resolves_composite_input() -> None:
         output_schema=_schema({}),
         outcomes=["ok"],
         start="done",
-        nodes=[EndNode(id="done", type="end", outcome="ok")],
+        nodes=[child_step],
         edges=[],
     )
 
@@ -290,9 +304,15 @@ def test_interrupt_request_resolves_composite_input_and_resume_continues() -> No
 
 def _node_workflow(
     *,
-    input_bindings: list[dict[str, object]],
+    input_bindings: list[StepInputBinding],
     state_fields: dict[str, StateField],
 ) -> Workflow:
+    node_step: Step = NodeUse(
+        id="concat",
+        type="node",
+        node="concat",
+        input=input_bindings,
+    )
     return Workflow(
         name="node_expression",
         input_schema=_schema({}),
@@ -308,19 +328,20 @@ def _node_workflow(
                 outcomes=["ok"],
             )
         ],
-        nodes=[
-            NodeUse(
-                id="concat",
-                type="node",
-                node="concat",
-                input=input_bindings,
-            )
-        ],
+        nodes=[node_step],
         edges=[Edge.model_validate({"from": "concat", "outcome": "ok", "to": END})],
     )
 
 
-def _parent_subgraph_workflow(input_bindings: list[dict[str, object]]) -> Workflow:
+def _parent_subgraph_workflow(input_bindings: list[StepInputBinding]) -> Workflow:
+    child_step: Step = SubgraphNode(
+        id="child",
+        type="subgraph",
+        workflow=WorkflowRef(name="child"),
+        input_schema=_schema({"request": {"type": "object"}}),
+        output_schema=_schema({}),
+        input=input_bindings,
+    )
     return Workflow(
         name="parent",
         input_schema=_schema({}),
@@ -330,16 +351,7 @@ def _parent_subgraph_workflow(input_bindings: list[dict[str, object]]) -> Workfl
         output_schema=_schema({}),
         outcomes=["ok"],
         start="child",
-        nodes=[
-            SubgraphNode(
-                id="child",
-                type="subgraph",
-                workflow="child",
-                input_schema=_schema({"request": {"type": "object"}}),
-                output_schema=_schema({}),
-                input=input_bindings,
-            )
-        ],
+        nodes=[child_step],
         edges=[Edge.model_validate({"from": "child", "outcome": "ok", "to": END})],
     )
 

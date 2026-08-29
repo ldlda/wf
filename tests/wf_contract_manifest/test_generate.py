@@ -4,6 +4,7 @@ from collections.abc import Iterator, Mapping
 from typing import Any
 
 from wf_contract_manifest import generate_manifest
+from wf_contract_manifest.model import ManifestOperation
 
 UNION_RESULTS = {
     "InspectCapabilityResult",
@@ -148,7 +149,9 @@ def test_manifest_separates_recursive_step_inputs_from_workflow_outputs() -> Non
     } <= schemas.keys()
 
     input_binding_schema = schemas["InputExpressionBinding"]
-    assert input_binding_schema["properties"]["expression"] == {
+    properties = input_binding_schema.get("properties")
+    assert isinstance(properties, dict)
+    assert properties["expression"] == {
         "$ref": "#/components/schemas/InputExpression"
     }
     expression_schema = schemas["InputExpression"]
@@ -162,7 +165,7 @@ def test_manifest_separates_recursive_step_inputs_from_workflow_outputs() -> Non
         "propertyName": "kind",
     }
 
-    def operation(method: str) -> dict[str, Any]:
+    def operation(method: str) -> ManifestOperation:
         return next(item for item in manifest["operations"] if item["method"] == method)
 
     step_input = operation("workflow.draft_workspaces.set_step_input_bindings")
