@@ -6,6 +6,7 @@ from wf_api.authoring_contracts import (
     project_authoring_step_contract,
     schema_path_options,
 )
+from wf_api.models import AuthoringPathOptionPayload, AuthoringStepContractPayload
 
 
 def test_schema_path_options_is_parent_first_and_schema_derived() -> None:
@@ -255,7 +256,7 @@ def test_schema_path_options_returns_empty_schema_for_unconstrained_property() -
 
 
 def test_project_authoring_contract_inventory_composes_pure_inputs() -> None:
-    context_entry = {
+    context_entry: AuthoringPathOptionPayload = {
         "path": "context.loop_item",
         "label": "Loop Item",
         "origin": "runtime_context",
@@ -265,7 +266,7 @@ def test_project_authoring_contract_inventory_composes_pure_inputs() -> None:
         "uses": ["step_input"],
         "reason": "Only available inside the foreach body.",
     }
-    step_input_target = {
+    step_input_target: AuthoringPathOptionPayload = {
         "path": "step.input.query",
         "label": "Query",
         "origin": "step_input",
@@ -274,7 +275,7 @@ def test_project_authoring_contract_inventory_composes_pure_inputs() -> None:
         "availability": "available",
         "uses": ["step_input"],
     }
-    step_output_source = {
+    step_output_source: AuthoringPathOptionPayload = {
         "path": "step.output.answer",
         "label": "Answer",
         "origin": "step_output",
@@ -283,7 +284,7 @@ def test_project_authoring_contract_inventory_composes_pure_inputs() -> None:
         "availability": "available",
         "uses": ["step_output_source", "workflow_output"],
     }
-    entry_step = {
+    entry_step: AuthoringStepContractPayload = {
         "step_id": "fetch",
         "label": "Fetch",
     }
@@ -372,8 +373,10 @@ def test_authoring_paths_exclude_incompatible_binding_roles() -> None:
     state_source = inventory["readable_sources"][0]
     assert state_source["path"] == "state.answer"
     assert "step_output_source" not in state_source["uses"]
-    assert step_contract["output_sources"][0]["path"] == "step_output.answer"
-    assert "workflow_output" not in step_contract["output_sources"][0]["uses"]
+    output_sources = step_contract.get("output_sources")
+    assert output_sources is not None
+    assert output_sources[0]["path"] == "step_output.answer"
+    assert "workflow_output" not in output_sources[0]["uses"]
 
 
 def test_context_path_options_are_step_input_only() -> None:
@@ -393,11 +396,12 @@ def test_context_path_options_are_step_input_only() -> None:
     assert options[0]["origin"] == "runtime_context"
     assert options[0]["uses"] == ["step_input"]
     assert options[0]["availability"] == "conditional"
-    assert options[0]["reason"] == "Only available inside the foreach body."
+    reason = options[0].get("reason")
+    assert reason == "Only available inside the foreach body."
 
 
 def test_project_inventory_does_not_offer_context_for_workflow_output() -> None:
-    context_entry = {
+    context_entry: AuthoringPathOptionPayload = {
         "path": "context.item",
         "label": "Item",
         "origin": "runtime_context",

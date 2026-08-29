@@ -240,23 +240,31 @@ async def test_lda_report_workflow_artifact_interrupt_resume_path(
     )
 
     assert started["status"] == "interrupted"
-    assert started["interrupt"]["kind"] == "issue_review"
-    assert started["interrupt"]["typed"] is True
-    assert set(started["interrupt"]["request_schema"]["required"]) == {
+    interrupt = started["interrupt"]
+    assert interrupt is not None
+    assert interrupt["kind"] == "issue_review"
+    assert interrupt["typed"] is True
+    request_required = interrupt["request_schema"].get("required")
+    assert isinstance(request_required, list)
+    assert set(request_required) == {
         "report_markdown",
         "proposed_issues",
     }
-    assert set(started["interrupt"]["resume_schema"]["required"]) == {
+    resume_required = interrupt["resume_schema"].get("required")
+    assert isinstance(resume_required, list)
+    assert set(resume_required) == {
         "approved",
         "selected_issue_ids",
     }
     proposed_ids = [
-        issue["id"] for issue in started["interrupt"]["payload"]["proposed_issues"]
+        issue["id"] for issue in interrupt["payload"]["proposed_issues"]
     ]
     assert proposed_ids
+    started_run_id = started["run_id"]
+    assert isinstance(started_run_id, str)
 
     resumed = await server.api.resume_run(
-        run_id=started["run_id"],
+        run_id=started_run_id,
         resume_payload={
             "approved": True,
             "selected_issue_ids": proposed_ids[:2],
@@ -267,10 +275,12 @@ async def test_lda_report_workflow_artifact_interrupt_resume_path(
 
     assert resumed["status"] == "completed"
     assert resumed["outcome"] == "completed"
-    assert resumed["output"]["approved"] is True
-    assert resumed["output"]["created_issues"]
-    assert resumed["output"]["created_issues"][0]["id"] == "ISSUE-001"
-    assert resumed["output"]["markdown"].startswith(
+    output = resumed["output"]
+    assert output is not None
+    assert output["approved"] is True
+    assert output["created_issues"]
+    assert output["created_issues"][0]["id"] == "ISSUE-001"
+    assert output["markdown"].startswith(
         "# lda.chat Thesis And Project Readiness Report"
     )
 
@@ -312,9 +322,11 @@ async def test_lda_report_workflow_cancelled_resume_path(tmp_path: Path) -> None
         deployment_id="lda_report_cancel_case.default",
         workflow_input=run_input,
     )
+    started_run_id = started["run_id"]
+    assert isinstance(started_run_id, str)
 
     resumed = await server.api.resume_run(
-        run_id=started["run_id"],
+        run_id=started_run_id,
         resume_payload={
             "approved": False,
             "selected_issue_ids": [],
@@ -325,5 +337,7 @@ async def test_lda_report_workflow_cancelled_resume_path(tmp_path: Path) -> None
 
     assert resumed["status"] == "completed"
     assert resumed["outcome"] == "cancelled"
-    assert resumed["output"]["approved"] is False
-    assert "Revision Requested" in resumed["output"]["markdown"]
+    output = resumed["output"]
+    assert output is not None
+    assert output["approved"] is False
+    assert "Revision Requested" in output["markdown"]
