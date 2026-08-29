@@ -150,7 +150,9 @@ def test_inspect_returns_full_entry_and_shadow_flag() -> None:
     payload = asyncio.run(api.inspect_registry_entry(source_id="github.work"))
 
     assert payload["entry"]["id"] == "github.work"
-    assert payload["entry"]["transport"]["kind"] == "stdio"
+    transport = payload["entry"].get("transport")
+    assert transport is not None
+    assert transport["kind"] == "stdio"
     assert payload["shadowed_by_config"] is True
 
 
@@ -236,7 +238,7 @@ def test_add_registry_entry() -> None:
     payload = asyncio.run(api.add_registry_entry(entry=new_entry))
 
     assert payload["entry"]["id"] == "new.source"
-    assert payload["entry"]["provider"] == "new"
+    assert payload["entry"].get("provider") == "new"
     assert payload["shadowed_by_config"] is False
 
 
@@ -267,7 +269,7 @@ def test_update_registry_entry() -> None:
     )
 
     assert payload["entry"]["id"] == "upd.source"
-    assert payload["entry"]["provider"] == "new"
+    assert payload["entry"].get("provider") == "new"
     assert payload["shadowed_by_config"] is False
 
 

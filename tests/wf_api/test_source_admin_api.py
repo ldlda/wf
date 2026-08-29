@@ -198,7 +198,9 @@ def test_inspect_source_includes_optional_diagnostics() -> None:
     )
 
     assert payload["id"] == "demo.personal"
-    assert payload["diagnostics"]["source_id"] == "demo.personal"
+    diagnostics = payload.get("diagnostics")
+    assert diagnostics is not None
+    assert diagnostics.get("source_id") == "demo.personal"
     assert provider.calls == ["demo.personal"]
 
 
@@ -227,8 +229,12 @@ def test_inspect_source_tolerates_diagnostics_provider_failure() -> None:
     )
 
     assert payload["id"] == "demo.personal"
-    assert payload["diagnostics"]["status"] == "error"
-    assert "Diagnostics unavailable" in payload["diagnostics"]["message"]
+    diagnostics = payload.get("diagnostics")
+    assert diagnostics is not None
+    assert diagnostics["status"] == "error"
+    message = diagnostics.get("message")
+    assert message is not None
+    assert "Diagnostics unavailable" in message
 
 
 def test_diagnose_source_uses_provider() -> None:
@@ -240,7 +246,9 @@ def test_diagnose_source_uses_provider() -> None:
     )
 
     assert payload["status"] == "ok"
-    assert payload["auth"]["record_present"] is True
+    auth = payload.get("auth")
+    assert auth is not None
+    assert auth.get("record_present") is True
 
 
 class _ExtendedDiagnostics:

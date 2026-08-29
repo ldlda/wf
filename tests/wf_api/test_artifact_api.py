@@ -207,6 +207,7 @@ async def test_create_artifact_from_workspace_suggests_exact_available_source_bi
         outcomes=("completed",),
     )
 
+    assert result["saved"] is True
     assert result["required_logical_sources"] == ["demo.personal"]
     assert result["suggested_bindings"] == {"demo.personal": "demo.personal"}
 

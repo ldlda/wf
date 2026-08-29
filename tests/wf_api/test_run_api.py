@@ -153,10 +153,12 @@ def test_run_api_rejects_resume_for_completed_run(tmp_path: Path) -> None:
         )
     )
 
+    run_id = result["run_id"]
+    assert isinstance(run_id, str)
     with pytest.raises(ValueError, match="is not interrupted"):
         asyncio.run(
             api.resume_run(
-                run_id=result["run_id"],
+                run_id=run_id,
                 resume_payload={"answer": "ignored"},
             )
         )
@@ -178,13 +180,17 @@ def test_run_api_inspect_uses_pinned_environment_after_deployment_deleted(
     )
     artifact_store.delete_deployment("echo.personal")
 
-    summary = asyncio.run(api.inspect_run(run_id=result["run_id"]))
+    run_id = result["run_id"]
+    assert isinstance(run_id, str)
+    summary = asyncio.run(api.inspect_run(run_id=run_id))
 
     assert summary["status"] == "completed"
-    assert summary["run_id"] == result["run_id"]
+    assert summary["run_id"] == run_id
     assert summary["deployment_id"] == "echo.personal"
     assert summary["artifact_id"] == "echo"
-    assert summary["output"]["echoed"] == "hello"
+    output = summary["output"]
+    assert output is not None
+    assert output["echoed"] == "hello"
 
 
 def test_run_api_inspect_and_bounded_trace(tmp_path: Path) -> None:
@@ -200,6 +206,7 @@ def test_run_api_inspect_and_bounded_trace(tmp_path: Path) -> None:
         )
     )
     run_id = result["run_id"]
+    assert isinstance(run_id, str)
 
     summary = asyncio.run(api.inspect_run(run_id=run_id))
     trace = asyncio.run(
@@ -261,6 +268,7 @@ def test_run_api_handler_delegation_matches(tmp_path: Path) -> None:
         )
     )
     run_id = run_result["run_id"]
+    assert isinstance(run_id, str)
 
     handler_summary = asyncio.run(handlers.inspect_run(run_id=run_id))
     api_summary = asyncio.run(api.inspect_run(run_id=run_id))
@@ -477,4 +485,6 @@ async def test_resume_run_rejects_payload_that_violates_interrupt_schema(
     )
 
     assert resumed["status"] == "failed"
-    assert "interrupt resume for approval" in resumed["error"]
+    error = resumed["error"]
+    assert isinstance(error, str)
+    assert "interrupt resume for approval" in error
