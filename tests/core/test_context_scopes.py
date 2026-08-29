@@ -2,10 +2,12 @@ from __future__ import annotations
 
 from wf_core import END, Edge, ForeachNode, NodeUse, SchemaRef, StateSchema, Workflow
 from wf_core.analysis.context_scopes import (
+    ContextFieldAvailability,
     context_analysis_warnings,
     context_fields_by_node,
 )
 from wf_core.context_contracts import STANDARD_CONTEXT_FIELDS, foreach_context_fields
+from wf_core.models.steps import Step
 from wf_core.run_state import ExecutionFrame
 from wf_core.runtime.ops.frames import frame_context_values
 
@@ -36,7 +38,7 @@ def _foreach(
 def _workflow(
     *,
     start: str,
-    nodes: list[object],
+    nodes: list[Step],
     edges: list[dict[str, str]],
     state_schema: dict[str, object] | None = None,
 ) -> Workflow:
@@ -57,7 +59,7 @@ def _workflow(
     )
 
 
-def _field_map(workflow: Workflow, node_id: str) -> dict[str, object]:
+def _field_map(workflow: Workflow, node_id: str) -> dict[str, ContextFieldAvailability]:
     return {
         field.contract.name: field
         for field in context_fields_by_node(workflow)[node_id]

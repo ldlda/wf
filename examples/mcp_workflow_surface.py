@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from wf_api.models import RunResult
 from wf_artifacts import (
     FileDraftWorkspaceStore,
     FileRunStore,
@@ -198,7 +199,7 @@ def build_echo_draft() -> dict[str, Any]:
     }
 
 
-async def create_and_run_echo_deployment(root: Path, *, text: str) -> dict[str, Any]:
+async def create_and_run_echo_deployment(root: Path, *, text: str) -> RunResult:
     """Create an artifact/deployment from the draft and run it once."""
     service = await prepare_demo_service(root)
     handlers = WorkflowSurfaceHandlers(service)
