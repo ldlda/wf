@@ -5,6 +5,7 @@ import {
   type CreateEmptyDraftInput,
   type CreateFromCapabilityInput,
   type DraftWorkspace,
+  type InputBinding,
   type JsonValue,
   type InputExpression,
   type InputPath,
@@ -112,25 +113,29 @@ export const copyInputExpression = (
   }
 };
 
-export const copyStepInputBinding = (
-  binding: StepInputBinding,
-): StepInputBinding => {
+export const copyInputBinding = (binding: InputBinding): InputBinding => {
   if ("path" in binding) {
     return {
       path: copyInputPath(binding.path),
       target: copyLocalInputPath(binding.target),
     };
   }
-  if ("value" in binding) {
-    return {
-      target: copyLocalInputPath(binding.target),
-      value: copyJsonValue(binding.value),
-    };
-  }
   return {
     target: copyLocalInputPath(binding.target),
-    expression: copyInputExpression(binding.expression),
+    value: copyJsonValue(binding.value),
   };
+};
+
+export const copyStepInputBinding = (
+  binding: StepInputBinding,
+): StepInputBinding => {
+  if ("expression" in binding) {
+    return {
+      target: copyLocalInputPath(binding.target),
+      expression: copyInputExpression(binding.expression),
+    };
+  }
+  return copyInputBinding(binding);
 };
 
 const copyOutputBinding = (binding: OutputBinding): OutputBinding => ({

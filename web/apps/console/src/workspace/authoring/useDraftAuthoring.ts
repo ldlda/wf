@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useConsoleWorkspace } from "../context.js";
 import {
   createDraftAuthoringClient,
+  copyInputBinding,
   copyStepInputBinding,
   type DraftAuthoringClient,
 } from "../domain/draft-authoring-client.js";
@@ -193,26 +194,7 @@ const copyOutputBindings = (
 
 const copyWorkflowOutputBindings = (
   bindings: ReadonlyArray<InputBinding>,
-): ReadonlyArray<InputBinding> => bindings.map((binding) => (
-  "path" in binding
-    ? {
-        path:
-          typeof binding.path === "string"
-            ? binding.path
-            : { root: binding.path.root, parts: [...binding.path.parts] },
-        target:
-          typeof binding.target === "string"
-            ? binding.target
-            : { root: binding.target.root, parts: [...binding.target.parts] },
-      }
-    : {
-        value: copyJson(binding.value),
-        target:
-          typeof binding.target === "string"
-            ? binding.target
-            : { root: binding.target.root, parts: [...binding.target.parts] },
-      }
-));
+): ReadonlyArray<InputBinding> => bindings.map(copyInputBinding);
 
 const copyContractPatch = (patch: WorkflowContractPatch): WorkflowContractPatch => ({
   ...(patch.inputSchema !== undefined

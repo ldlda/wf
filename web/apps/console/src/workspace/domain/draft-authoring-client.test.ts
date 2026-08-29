@@ -18,7 +18,7 @@ import {
   type SetWorkflowStartInput,
   type UpdateCapabilityStepInput,
 } from "./draft-workspace-models.js";
-import { createDraftAuthoringClient } from "./draft-authoring-client.js";
+import { copyInputBinding, createDraftAuthoringClient } from "./draft-authoring-client.js";
 import type { ConsoleWriteExecutor } from "./write-executor.js";
 
 const canonicalWorkspace = {
@@ -65,6 +65,19 @@ const createExecutor = () => {
 };
 
 describe("DraftAuthoringClient", () => {
+  it("copies workflow-compatible input bindings without sharing nested paths", () => {
+    const binding = {
+      path: { root: "state" as const, parts: ["report"] },
+      target: { root: "local" as const, parts: ["text"] },
+    } satisfies InputBinding;
+
+    const copied = copyInputBinding(binding);
+    expect(copied).not.toBe(binding);
+    if (!("path" in copied)) throw new Error("expected a path binding");
+    expect(copied.path).not.toBe(binding.path);
+    expect(copied.target).not.toBe(binding.target);
+  });
+
   it("lowers all six authoring operations and decodes canonical workspaces", async () => {
     const { executor: writeExecutor, run } = createExecutor();
     const client = createDraftAuthoringClient(writeExecutor);

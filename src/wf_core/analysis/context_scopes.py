@@ -134,7 +134,6 @@ def _analyze(workflow: Workflow) -> _ContextAnalysis:
         fields_by_node[node_id] = _available_fields(
             workflow,
             foreach_nodes,
-            node_id,
             scopes,
             scopes_by_node,
         )
@@ -144,11 +143,9 @@ def _analyze(workflow: Workflow) -> _ContextAnalysis:
 def _available_fields(
     workflow: Workflow,
     foreach_nodes: Mapping[str, ForeachNode],
-    node_id: str,
     scopes: set[FrameScope],
     scopes_by_node: Mapping[str, set[FrameScope]],
 ) -> tuple[ContextFieldAvailability, ...]:
-    del node_id
     fields_by_name: dict[str, ContextFieldContract] = {}
     scopes_by_field: dict[str, set[FrameScope]] = {}
     for scope in sorted(scopes, key=lambda value: value or ""):
