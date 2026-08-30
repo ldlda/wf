@@ -14,11 +14,14 @@ from .codec import (
     decode_capability_inspect,
     decode_dependency_diagnostics,
     decode_deployment,
+    decode_deployment_validation,
+    decode_deployments,
     decode_run_result,
     decode_trace_result,
     decode_validate_artifact_plan,
     decode_workflow_artifact,
 )
+from .deployments import Deployment, DeploymentValidation
 from .errors import (
     ArtifactNotFound,
     ArtifactVersionConflict,
@@ -33,6 +36,7 @@ from .errors import (
     WorkflowClientError,
 )
 from .protocols import WorkflowClientPort
+from .runs import Run, TracePage
 from .workflows import (
     ArtifactRef,
     Diagnostic,
@@ -55,10 +59,13 @@ __all__ = [
     "Diagnostic",
     "DeploymentNotRunnable",
     "DeploymentRequired",
+    "Deployment",
+    "DeploymentValidation",
     "InvalidResponse",
     "Page",
     "ProtocolError",
     "RemoteCapability",
+    "Run",
     "RevisionConflict",
     "TransportError",
     "ValidationFailed",
@@ -68,11 +75,14 @@ __all__ = [
     "WorkflowArtifact",
     "WorkflowDiagnostic",
     "WorkflowValidation",
+    "TracePage",
     "decode_capabilities_page",
     "decode_capability_call",
     "decode_capability_diagnostics",
     "decode_capability_inspect",
     "decode_dependency_diagnostics",
+    "decode_deployment_validation",
+    "decode_deployments",
     "decode_deployment",
     "decode_run_result",
     "decode_trace_result",

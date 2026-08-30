@@ -13,10 +13,12 @@ from wf_api.models import (
     DependencyDiagnosticPayload,
     InspectCapabilityResult,
     ListCapabilitiesResult,
+    ListDeploymentsResult,
     RawWorkflowPlan,
     RunResult,
     RunTraceResult,
     ValidateArtifactPlanResult,
+    ValidateDeploymentResult,
     WorkflowArtifactPayload,
     WorkflowDeploymentPayload,
 )
@@ -155,6 +157,20 @@ def decode_deployment(payload: object) -> WorkflowDeployment:
     operation = "workflow.deployments.inspect"
     wire = _validate(payload, WorkflowDeploymentPayload, operation)
     return _model_validate(WorkflowDeployment, wire, operation)
+
+
+def decode_deployments(payload: object) -> ListDeploymentsResult:
+    """Validate compact deployment discovery rows at the client boundary."""
+    return _validate(payload, ListDeploymentsResult, "workflow.deployments.list")
+
+
+def decode_deployment_validation(payload: object) -> ValidateDeploymentResult:
+    """Validate one deployment readiness response."""
+    return _validate(
+        payload,
+        ValidateDeploymentResult,
+        "workflow.deployments.validate",
+    )
 
 
 def decode_dependency_diagnostics(

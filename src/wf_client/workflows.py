@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Literal
+from collections.abc import Mapping
+from dataclasses import dataclass, field, replace
+from typing import TYPE_CHECKING, Any, Literal
 
 from wf_artifacts.models import (
     RequiredCapability,
@@ -13,11 +14,13 @@ from wf_artifacts.models import (
 )
 from wf_core import ValidationReport, Workflow
 
-from .errors import ValidationFailed
+from .errors import InvalidResponse, ValidationFailed
 
 if TYPE_CHECKING:
     from .authoring import EditableWorkflow
+    from .deployments import Deployment
     from .protocols import WorkflowClientPort
+    from .runs import Run
 
 
 @dataclass(frozen=True, slots=True)
@@ -114,3 +117,63 @@ class WorkflowArtifact:
         from .authoring import EditableWorkflow
 
         return EditableWorkflow.from_artifact(self)
+
+    async def deploy(
+        self,
+        deployment_id: str,
+        *,
+        bindings: Mapping[str, str] | None = None,
+        drift_policy: str = "block",
+    ) -> Deployment:
+        """Save, inspect, and validate a deployment for this artifact version."""
+        from .deployments import Deployment
+
+        await self._port.save_deployment(
+            {
+                "id": deployment_id,
+                "artifact_id": self.artifact.id,
+                "artifact_version": self.artifact.version,
+                "bindings": dict(bindings or {}),
+                "drift_policy": drift_policy,
+            }
+        )
+        deployment = Deployment.from_payload(
+            self._port,
+            await self._port.inspect_deployment(deployment_id=deployment_id),
+        )
+        if (
+            deployment.artifact_id != self.artifact.id
+            or deployment.artifact_version != self.artifact.version
+        ):
+            raise InvalidResponse(
+                operation="workflow.deployments.inspect",
+                details=(
+                    f"deployment {deployment_id!r} does not target artifact "
+                    f"{self.artifact.id!r} version {self.artifact.version}"
+                ),
+            )
+        validation = await deployment.validate()
+        return replace(
+            deployment,
+            diagnostics=validation.diagnostics,
+            runnable=validation.runnable,
+        )
+
+    async def run(
+        self,
+        workflow_input: Mapping[str, Any],
+        *,
+        deployment_id: str | None = None,
+        bindings: Mapping[str, str] | None = None,
+        drift_policy: str = "block",
+    ) -> Run:
+        """Run the artifact under the strict deployment selection policy."""
+        from .deployments import run_artifact
+
+        return await run_artifact(
+            self,
+            workflow_input,
+            deployment_id=deployment_id,
+            bindings=bindings,
+            drift_policy=drift_policy,
+        )

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from wf_platform import CapabilityRef, Page, SourceRef
 from wf_transport_rpc_http import RpcWorkflowApiClient
@@ -19,6 +19,10 @@ from .codec import (
 from .errors import InvalidResponse
 from .protocols import WorkflowClientPort
 from .workflows import WorkflowArtifact
+
+if TYPE_CHECKING:
+    from .deployments import Deployment
+    from .runs import Run
 
 
 def _capability_ref(qualified_name: str, source_id: str) -> CapabilityRef:
@@ -176,3 +180,30 @@ class App:
     ) -> EditableWorkflow:
         """Inspect an exact artifact version and seed an editable builder."""
         return (await self.workflow(artifact_id, version=version)).edit()
+
+    async def deployment(self, deployment_id: str) -> Deployment:
+        """Inspect and reconstruct one immutable deployment snapshot."""
+        from .deployments import Deployment
+
+        deployment = Deployment.from_payload(
+            self._port,
+            await self._port.inspect_deployment(deployment_id=deployment_id),
+        )
+        if deployment.deployment_id != deployment_id:
+            raise InvalidResponse(
+                operation="workflow.deployments.inspect",
+                details=(
+                    f"inspected deployment {deployment.deployment_id!r} does not "
+                    f"match requested {deployment_id!r}"
+                ),
+            )
+        return deployment
+
+    async def run(self, run_id: str) -> Run:
+        """Inspect and reconstruct one immutable durable run snapshot."""
+        from .runs import Run
+
+        return Run.from_payload(
+            self._port,
+            await self._port.inspect_run(run_id=run_id),
+        )
