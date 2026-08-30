@@ -36,6 +36,166 @@ existing workflow API surface, HTTP JSON-RPC adapter, domain models, and
 - Capability nodes and native subgraphs remain distinct authoring operations.
 - Draft workspaces do not appear in the public `wf_client` interface.
 
+## Hypothetical Usage
+
+This section is the intended experience. Names may tighten during
+implementation, but the lifecycle and amount of required ceremony are part of
+the design contract.
+
+### Connect and use one capability
+
+```python
+from wf_client import App
+
+app = App.from_http_jsonrpc("http://localhost:8765/rpc")
+
+search = await app.capability("app.default.search")
+
+print(search.input_schema)
+result = await search(query="durable workflow systems")
+print(result.outcome)
+print(result.output)
+```
+
+`search` is a validated Python object, not an RPC response dictionary. Calling
+it validates input locally, uses the workflow capability operation, validates
+the response, and returns a `CapabilityResult`.
+
+### Build, save, and run a workflow
+
+```python
+from pydantic import BaseModel, Field
+
+from wf_authoring import input_from, input_path, output_to, state_path
+from wf_client import App
+
+
+class ReportInput(BaseModel):
+    topic: str
+
+
+class ReportState(BaseModel):
+    sources: list[str] = Field(default_factory=list)
+
+
+class ReportOutput(BaseModel):
+    sources: list[str]
+
+
+app = App.from_http_jsonrpc("http://localhost:8765/rpc")
+search = await app.capability("app.default.search")
+
+graph = app.new_workflow(
+    "report",
+    input_schema=ReportInput,
+    state_schema=ReportState,
+    output_schema=ReportOutput,
+)
+
+searched = graph.use(
+    search,
+    id="search",
+    input=[input_from(input_path("topic"), "query")],
+    output=[output_to("sources", state_path("sources"))],
+)
+done = graph.end("ok", id="end_ok")
+
+graph.set_entry_point(searched)
+graph.connect(searched, "ok", done)
+graph.set_output([input_from(state_path("sources"), "sources")])
+
+report_v1 = await graph.save(version=1, title="Research report")
+run = await report_v1.run({"topic": "durable workflow systems"})
+
+print(run.status)
+print(run.output)
+```
+
+`graph` is an `EditableWorkflow`, which subclasses `WorkflowBuilder`. Existing
+builder operations such as `use()`, `when()`, `choose()`, `match()`,
+`foreach()`, `interrupt()`, `end()`, `connect()`, and `set_entry_point()` remain
+available directly. `wf_client` adds remote-capability use, provenance,
+lossless workflow output bindings, and `save()`.
+
+The convenient `artifact.run()` form is available only when source bindings
+are already unambiguous. It never chooses between accounts.
+
+### Bind an environment explicitly
+
+```python
+production = await report_v1.deploy(
+    "report.production",
+    bindings={
+        "app.default": "company.production",
+    },
+)
+
+validation = await production.validate()
+if not validation.runnable:
+    for diagnostic in validation.diagnostics:
+        print(diagnostic.message)
+else:
+    run = await production.run({"topic": "durable workflow systems"})
+```
+
+Artifacts describe logical source requirements. Deployments select the actual
+configured sources for an environment. Built-in platform-only workflows need
+little or no deployment ceremony.
+
+### Edit an immutable saved version
+
+```python
+report_v2_graph = await app.edit_workflow("report", version=1)
+summarize = await app.capability("app.default.summarize")
+
+summarized = report_v2_graph.use(summarize, id="summarize")
+report_v2_graph.set_route("search", "ok", summarized)
+report_v2_graph.connect(summarized, "ok", "end_ok")
+
+report_v2 = await report_v2_graph.save(version=2)
+```
+
+Version 1 remains unchanged. `edit_workflow()` validates the artifact and its
+plan, then seeds the same builder methods with every schema, node, edge,
+binding, outcome, and subgraph reference preserved.
+
+### Reuse a saved workflow as a native subgraph
+
+```python
+parent = app.new_workflow(
+    "weekly_digest",
+    input_schema=DigestInput,
+    state_schema=DigestState,
+    output_schema=DigestOutput,
+)
+
+report_step = parent.subgraph(
+    report_v2,
+    input=[input_from(input_path("topic"), "topic")],
+    output=[output_to("sources", state_path("report_sources"))],
+)
+```
+
+An ordinary remote capability uses `graph.use(capability)`. An immutable saved
+workflow uses `graph.subgraph(artifact)`. The distinction remains visible
+because their dependency and runtime semantics differ.
+
+### Resume an interrupted run
+
+```python
+run = await report_v2.run({"topic": "durable workflow systems"})
+
+if run.interrupt is not None:
+    print(run.interrupt.request)
+    run = await run.resume({"approved": True})
+
+for frame in (await run.trace(limit=25)).frames:
+    print(frame.node_id, frame.outcome)
+```
+
+Rich representations may summarize these objects in IPython, but displaying an
+object never performs I/O or executes a capability.
+
 ## Public Package
 
 ```text
@@ -195,7 +355,7 @@ The authoring adapter consumes its reference and schema contract directly.
 ### Editable workflow
 
 ```python
-class EditableWorkflow:
+class EditableWorkflow(WorkflowBuilder):
     name: str
     based_on: ArtifactRef | None
 
@@ -222,6 +382,16 @@ class EditableWorkflow:
     def set_entry_point(self, step: StepRef) -> None: ...
     def connect(self, source: StepRef, outcome: str, target: StepRef) -> None: ...
 
+    def set_route(
+        self,
+        source: StepRef,
+        outcome: str,
+        target: StepRef,
+    ) -> None: ...
+
+    def remove_route(self, source: StepRef, outcome: str) -> None: ...
+    def remove_step(self, step: StepRef) -> None: ...
+
     def set_output(
         self,
         bindings: Sequence[StepInputBindingArg],
@@ -240,9 +410,19 @@ class EditableWorkflow:
     ) -> WorkflowArtifact: ...
 ```
 
-`EditableWorkflow` uses composition around `WorkflowBuilder`. It delegates
-ordinary local authoring methods and owns only remote-capability adaptation,
-artifact provenance, and saving through the connected client port.
+`EditableWorkflow` subclasses `WorkflowBuilder` from the separate `wf_client`
+package. `WorkflowBuilder` stays transport-free, while the subclass inherits
+its full authoring interface and adds remote-capability adaptation, artifact
+provenance, and saving through the connected client port. Do not copy builder
+methods into a parallel wrapper and do not use dynamic `__getattr__`
+delegation; both approaches would create typing and drift problems.
+
+Seeded editing also requires focused `set_route()`, `remove_route()`, and
+`remove_step()` mutations. `set_route()` replaces the unique edge for one
+source/outcome pair rather than appending a duplicate. `remove_step()` rejects
+removal while routes still reference the step, so callers must deliberately
+rewire or remove those routes first. These are local builder operations, not
+draft API calls.
 
 `set_output()` must first become a lossless `WorkflowBuilder` operation.
 `compile()` must preserve workflow output bindings. This repair is required
