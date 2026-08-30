@@ -206,4 +206,6 @@ class App:
         return Run.from_payload(
             self._port,
             await self._port.inspect_run(run_id=run_id),
+            expected_run_id=run_id,
+            operation="workflow.runs.inspect",
         )

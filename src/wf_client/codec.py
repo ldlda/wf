@@ -232,9 +232,12 @@ def _decode_run_fields(
     )
 
 
-def decode_run_result(payload: object) -> DecodedRunResult:
+def decode_run_result(
+    payload: object,
+    *,
+    operation: str = "workflow.runs.inspect",
+) -> DecodedRunResult:
     """Validate and decode a start/inspect/resume run response."""
-    operation = "workflow.runs.inspect"
     wire = _validate(payload, RunResult, operation)
     fields = _decode_run_fields(
         wire,

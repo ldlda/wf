@@ -4,7 +4,8 @@ from typing import Any, cast
 
 import pytest
 
-from wf_client import Run, WorkflowClientPort
+from wf_client import App, Run, WorkflowClientPort
+from wf_client.errors import InvalidResponse
 
 
 def _payload(
@@ -105,6 +106,48 @@ async def test_refresh_returns_a_new_snapshot() -> None:
     assert refreshed is not original
     assert refreshed.status == "completed"
     assert original.status == "interrupted"
+
+
+@pytest.mark.asyncio
+async def test_app_run_rejects_mismatched_inspection_id() -> None:
+    port = _Port()
+    port.resume_payload["run_id"] = "different-run"
+    app = App._from_port(cast(WorkflowClientPort, port))
+    with pytest.raises(InvalidResponse, match="workflow.runs.inspect"):
+        await app.run("run-1")
+
+
+@pytest.mark.asyncio
+async def test_refresh_rejects_mismatched_inspection_id() -> None:
+    port = _Port()
+    port.resume_payload["run_id"] = "different-run"
+    run = Run.from_payload(cast(WorkflowClientPort, port), _payload())
+    with pytest.raises(InvalidResponse, match="workflow.runs.inspect"):
+        await run.refresh()
+
+
+@pytest.mark.asyncio
+async def test_resume_rejects_mismatched_result_id() -> None:
+    port = _Port()
+    port.resume_payload["run_id"] = "different-run"
+    run = Run.from_payload(cast(WorkflowClientPort, port), _payload())
+    with pytest.raises(InvalidResponse, match="workflow.runs.resume"):
+        await run.resume({"approved": True})
+
+
+@pytest.mark.asyncio
+async def test_malformed_interrupt_route_is_invalid_response() -> None:
+    payload = _payload()
+    payload["interrupt"]["route"] = {
+        "frame_id": "child",
+        "node_id": "approve",
+        "scope_id": "scope",
+        "lineage_id": "lineage",
+        "parent_frame_id": "root",
+        "workflow_ref": {"name": "local", "artifact_id": "also-invalid", "version": 1},
+    }
+    with pytest.raises(InvalidResponse, match="workflow.runs.inspect"):
+        Run.from_payload(cast(WorkflowClientPort, _Port()), payload)
 
 
 @pytest.mark.asyncio

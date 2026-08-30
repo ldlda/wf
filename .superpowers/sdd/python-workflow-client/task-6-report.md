@@ -29,3 +29,12 @@ Implemented and committed as `112e9656` (`feat: add Python deployment and run ob
   and were intentionally not staged.
 - Trace limits follow the existing server bound of 1–100 and are validated
   before issuing a trace request.
+
+## Review fix round 1
+
+Identity checks now reject mismatched deployment/artifact/run ids at every
+inspect, validate, start, refresh, and resume boundary. Nested interrupt route
+references are converted to `InvalidResponse` with operation context, and run
+decoding accepts truthful inspect/start/resume operation names.
+
+Fixes committed in the follow-up review commit for this report.

@@ -80,6 +80,18 @@ class Deployment:
                     f"match requested {self.deployment_id!r}"
                 ),
             )
+        if (
+            result["artifact_id"] != self.artifact_id
+            or result["artifact_version"] != self.artifact_version
+        ):
+            raise InvalidResponse(
+                operation="workflow.deployments.validate",
+                details=(
+                    f"validation for {self.deployment_id!r} targets artifact "
+                    f"{result['artifact_id']!r} version {result['artifact_version']}, "
+                    f"expected {self.artifact_id!r} version {self.artifact_version}"
+                ),
+            )
         diagnostics = decode_dependency_diagnostics(result["diagnostics"])
         return DeploymentValidation(
             deployment_id=result["deployment_id"],
@@ -97,8 +109,17 @@ class Deployment:
             await self._port.run_deployment(
                 deployment_id=self.deployment_id,
                 workflow_input=dict(workflow_input),
-            )
+            ),
+            operation="workflow.runs.start",
         )
+        if decoded.deployment_id != self.deployment_id:
+            raise InvalidResponse(
+                operation="workflow.runs.start",
+                details=(
+                    f"returned deployment {decoded.deployment_id!r} does not "
+                    f"match requested {self.deployment_id!r}"
+                ),
+            )
         if decoded.run_id is None or decoded.status in {"unrunnable", "rejected"}:
             raise DeploymentNotRunnable(
                 deployment_id=self.deployment_id,
@@ -135,6 +156,17 @@ async def run_artifact(
                 details=(
                     f"inspected deployment {deployment.deployment_id!r} does not "
                     f"match requested {deployment_id!r}"
+                ),
+            )
+        if (
+            deployment.artifact_id != artifact.artifact.id
+            or deployment.artifact_version != artifact.artifact.version
+        ):
+            raise InvalidResponse(
+                operation="workflow.deployments.inspect",
+                details=(
+                    f"deployment {deployment_id!r} does not target artifact "
+                    f"{artifact.artifact.id!r} version {artifact.artifact.version}"
                 ),
             )
         return await deployment.run(workflow_input)

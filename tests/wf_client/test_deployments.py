@@ -6,7 +6,7 @@ import pytest
 
 from wf_artifacts import WorkflowArtifact as ArtifactModel
 from wf_client import DeploymentRequired, WorkflowClientPort
-from wf_client.errors import DeploymentNotRunnable
+from wf_client.errors import DeploymentNotRunnable, InvalidResponse
 from wf_client.workflows import WorkflowArtifact
 from wf_core import Workflow
 
@@ -40,6 +40,8 @@ class _FakePort:
     def __init__(self) -> None:
         self.calls: list[tuple[str, dict[str, Any]]] = []
         self.list_result: dict[str, Any] = {"deployments": []}
+        self.inspect_artifact_id = "report"
+        self.inspect_artifact_version = 1
         self.validation_result: dict[str, Any] = {
             "deployment_id": "report.production",
             "artifact_id": "report",
@@ -86,8 +88,8 @@ class _FakePort:
         self.calls.append(("inspect_deployment", {"deployment_id": deployment_id}))
         return {
             "id": deployment_id,
-            "artifact_id": "report",
-            "artifact_version": 1,
+            "artifact_id": self.inspect_artifact_id,
+            "artifact_version": self.inspect_artifact_version,
             "bindings": [
                 {
                     "logical_source": "app.default",
@@ -160,5 +162,63 @@ async def test_deployment_run_rejects_missing_run_id() -> None:
     artifact = _artifact()
     deployment = await artifact.deploy("report.production")
     cast(_FakePort, deployment._port).run_result["run_id"] = None
-    with pytest.raises((DeploymentNotRunnable, AttributeError)):
+    with pytest.raises(DeploymentNotRunnable) as captured:
         await deployment.run({})
+    assert captured.value.error is None
+
+
+@pytest.mark.asyncio
+async def test_explicit_artifact_run_rejects_deployment_for_another_artifact() -> None:
+    artifact = _artifact()
+    port = cast(_FakePort, artifact._port)
+    port.inspect_artifact_id = "other"
+    with pytest.raises(InvalidResponse, match="does not target artifact"):
+        await artifact.run({}, deployment_id="report.production")
+    assert not any(call[0] == "run_deployment" for call in port.calls)
+
+
+@pytest.mark.asyncio
+async def test_deployment_validation_rejects_identity_mismatch() -> None:
+    artifact = _artifact()
+    deployment = await artifact.deploy("report.production")
+    port = cast(_FakePort, deployment._port)
+    port.validation_result["artifact_version"] = 2
+    with pytest.raises(InvalidResponse, match="workflow.deployments.validate"):
+        await deployment.validate()
+
+
+@pytest.mark.asyncio
+async def test_deployment_run_rejects_mismatched_start_deployment() -> None:
+    artifact = _artifact()
+    deployment = await artifact.deploy("report.production")
+    port = cast(_FakePort, deployment._port)
+    port.run_result["deployment_id"] = "other.deployment"
+    with pytest.raises(InvalidResponse, match="workflow.runs.start"):
+        await deployment.run({})
+
+
+@pytest.mark.asyncio
+async def test_deployment_run_preserves_server_error_and_diagnostics() -> None:
+    artifact = _artifact()
+    deployment = await artifact.deploy("report.production")
+    port = cast(_FakePort, deployment._port)
+    port.run_result.update(
+        run_id=None,
+        outcome="rejected",
+        error="dependency check failed",
+        diagnostics=[
+            {
+                "severity": "error",
+                "code": "missing_source",
+                "logical_ref": "app.default",
+                "bound_source": None,
+                "message": "missing source",
+                "repair_hint": "bind a source",
+            }
+        ],
+    )
+    with pytest.raises(DeploymentNotRunnable) as captured:
+        await deployment.run({})
+    assert captured.value.error == "dependency check failed"
+    assert captured.value.outcome == "rejected"
+    assert captured.value.diagnostics[0].code == "missing_source"
