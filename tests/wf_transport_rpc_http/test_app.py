@@ -35,12 +35,19 @@ async def _rpc(
 def test_rpc_app_can_omit_draft_methods(tmp_path) -> None:
     server = build_local_static_workflow_server(tmp_path / "store")
 
-    assert server.api.drafts_enabled is True
     app = create_rpc_app(server, drafts=False)
     methods = {method["name"] for method in app.get_openrpc()["methods"]}
 
     assert "workflow.capabilities.list" in methods
     assert "workflow.draft_workspaces.list" not in methods
+
+
+def test_rpc_app_draft_methods_require_explicit_server_opt_in(tmp_path) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store", drafts=True)
+    app = create_rpc_app(server, drafts=True)
+    methods = {method["name"] for method in app.get_openrpc()["methods"]}
+
+    assert "workflow.draft_workspaces.list" in methods
 
 
 def _rpc_constant_draft() -> dict[str, Any]:

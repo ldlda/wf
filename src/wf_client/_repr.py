@@ -11,27 +11,37 @@ from __future__ import annotations
 
 import html
 import json
+import re
 from collections.abc import Mapping, Sequence
+from itertools import islice
 
-_SECRET_KEY_PARTS = (
+_SENSITIVE_KEYS = {
     "authorization",
     "cookie",
-    "set-cookie",
+    "set_cookie",
     "token",
+    "access_token",
+    "refresh_token",
     "secret",
     "password",
     "api_key",
-    "api-key",
-)
+}
 _MAX_DEPTH = 2
 _MAX_ITEMS = 8
 _MAX_STRING = 160
 _MAX_RENDERED = 1_200
 
 
+def _canonical_key(key: object) -> str:
+    """Normalize snake/kebab/camel spellings to the shared evidence keys."""
+    value = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", str(key))
+    return value.replace(" ", "_").replace("-", "_").lower()
+
+
 def _secret_key(key: object) -> bool:
-    lowered = str(key).lower()
-    return any(part in lowered for part in _SECRET_KEY_PARTS)
+    # Match the evidence policy's exact key set; substring matching would
+    # incorrectly redact harmless fields such as ``tokenCount`` or ``secretary``.
+    return _canonical_key(key) in _SENSITIVE_KEYS
 
 
 def bounded_value(value: object, *, depth: int = 0) -> object:
@@ -43,7 +53,8 @@ def bounded_value(value: object, *, depth: int = 0) -> object:
     if value is None or isinstance(value, bool | int | float):
         return value
     if isinstance(value, Mapping):
-        items = list(value.items())
+        iterator = iter(value.items())
+        items = list(islice(iterator, _MAX_ITEMS + 1))
         preview = {
             str(key): "[redacted]"
             if _secret_key(key)
@@ -51,13 +62,23 @@ def bounded_value(value: object, *, depth: int = 0) -> object:
             for key, item in items[:_MAX_ITEMS]
         }
         if len(items) > _MAX_ITEMS:
-            preview["…"] = f"{len(items) - _MAX_ITEMS} more entries"
+            preview["…"] = "more entries"
         return preview
     if isinstance(value, Sequence) and not isinstance(value, str | bytes | bytearray):
-        items = list(value)
+        iterator = iter(value)
+        items = list(islice(iterator, _MAX_ITEMS + 1))
         preview = [bounded_value(item, depth=depth + 1) for item in items[:_MAX_ITEMS]]
         if len(items) > _MAX_ITEMS:
-            preview.append(f"… {len(items) - _MAX_ITEMS} more items")
+            preview.append("… more items")
+        return preview
+    if isinstance(value, Sequence):
+        return "[truncated sequence]"
+    if hasattr(value, "__iter__"):
+        iterator = iter(value)  # type: ignore[call-overload]
+        items = list(islice(iterator, _MAX_ITEMS + 1))
+        preview = [bounded_value(item, depth=depth + 1) for item in items[:_MAX_ITEMS]]
+        if len(items) > _MAX_ITEMS:
+            preview.append("… more items")
         return preview
     rendered = repr(value)
     return rendered if len(rendered) <= _MAX_STRING else rendered[:_MAX_STRING] + "…"

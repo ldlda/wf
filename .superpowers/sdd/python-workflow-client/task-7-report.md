@@ -19,19 +19,31 @@
 
 ## Verification
 
-- `uv run pytest tests/wf_client -q` — 46 passed.
-- Focused/cross-layer Task 7 selection — 288 passed.
-- `uv run pytest tests/wf_api/test_durable_context.py tests/wf_transport_rpc_http/test_app.py::test_rpc_app_can_omit_draft_methods -q` — passed.
+- Initial Task 7 client and cross-layer selection — 288 passed.
+- Fix-round focused client/composition selection — 55 passed.
 - Ruff check and basedpyright for changed client/API/transport surfaces — passed.
 - `uv run python -m wf_contract_manifest check` — passed.
 - `pnpm --dir web --filter @lda/workflow-rpc contract:check` — passed.
 - `pnpm --dir web --filter @lda/workflow-rpc test` — 151 passed, 3 skipped.
 
-The broader repository format check still reports pre-existing formatting
-differences in `src/wf_api/deployments.py`, `src/wf_authoring/builder/core.py`,
-and `tests/wf_client/test_authoring.py`; no formatting errors remain in the
-changed Task 7 files. The full `uv run pytest -q` run reached 2,613 passed,
-1 skipped, and 1 xfailed; three failures were external to this change: two
-legacy direct-service/draft tests were fixed by retaining the default-enabled
-constructor compatibility, while the remaining thesis asset test expects
-untracked PDF figures absent from the base worktree.
+The full repository suite was not used as the fix-round gate: legacy direct
+draft-service tests still construct draft APIs without the now-required
+explicit `drafts=True` opt-in, and one thesis asset test expects untracked PDF
+figures absent from the base worktree. No generated `.wf_mcp_store/` or
+`test-artifacts/` files are part of this change.
+
+## Fix round 1
+
+- Normal `WorkflowApi`, nested capability/artifact services, durable context,
+  local server construction, and JSON-RPC app composition now default to
+  `drafts=False`. Draft APIs are stored as `None` when disabled and require
+  explicit `drafts=True` at composition time; RPC registration rejects an
+  opt-in against a disabled API.
+- The two live walkthroughs now include real schemas, explicit constant input
+  and output bindings, an `end` step, and the terminal route.
+- The repr projector now follows the console evidence policy's exact-key
+  matching, normalizes camelCase spellings (`apiKey`, `accessToken`, etc.),
+  avoids false positives (`tokenCount`, `secretary`), and consumes at most a
+  bounded prefix of mappings/sequences/iterables.
+- Fix-round verification: focused client/composition tests `55 passed`; Ruff
+  and basedpyright passed with zero errors.

@@ -295,8 +295,9 @@ def build_local_static_workflow_server(
     root: str | Path,
     *,
     extra_sources: Mapping[str, CapabilitySource] | None = None,
+    drafts: bool = False,
 ) -> WorkflowServer:
-    """Build a durable local/static workflow server composition."""
+    """Build a durable local/static server, with drafts as an explicit opt-in."""
     config = WorkflowServerConfig(store_root=Path(root))
     stores = file_workflow_stores(config.store_root)
     events = InMemoryWorkflowEventRecorder()
@@ -320,7 +321,7 @@ def build_local_static_workflow_server(
         runtime=runtime,
         live_sources=None,
     )
-    api = durable_workflow_api(context)
+    api = durable_workflow_api(context, drafts=drafts)
     source_admin = WorkflowSourceAdminApi(context)
     admin = WorkflowAdminApi(
         connections=EmptyWorkflowConnectionProvider(),

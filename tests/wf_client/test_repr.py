@@ -86,6 +86,45 @@ def test_rich_representations_bound_large_values_and_redact_secret_like_fields()
     assert port.calls == []
 
 
+def test_repr_redacts_only_exact_sensitive_keys_in_snake_and_camel_case() -> None:
+    result = CapabilityResult(
+        outcome="ok",
+        output={
+            "apiKey": "hide-me",
+            "accessToken": "hide-me-too",
+            "setCookie": "hide-me-three",
+            "tokenCount": 3,
+            "authorizationStatus": "ok",
+            "secretary": "safe",
+        },
+        diagnostics=(),
+    )
+
+    rendered = repr(result)
+
+    assert "hide-me" not in rendered
+    assert "hide-me-too" not in rendered
+    assert "hide-me-three" not in rendered
+    assert '"tokenCount": 3' in rendered
+    assert '"authorizationStatus": "ok"' in rendered
+    assert '"secretary": "safe"' in rendered
+
+
+def test_repr_does_not_materialize_an_unbounded_iterable() -> None:
+    class ExplodingIterable:
+        def __iter__(self):
+            for index in range(10_000):
+                if index > 8:
+                    raise AssertionError("repr consumed too many values")
+                yield index
+
+    result = CapabilityResult("ok", {"values": ExplodingIterable()}, ())
+
+    rendered = repr(result)
+
+    assert "more items" in rendered
+
+
 def test_all_rich_objects_render_without_port_access() -> None:
     port = cast(WorkflowClientPort, _port())
     diagnostic = WorkflowDiagnostic("error", "bad", "state.x", "broken")

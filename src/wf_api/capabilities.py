@@ -98,10 +98,24 @@ class WorkflowCapabilityApi:
     tool schemas stay outside wf_api.
     """
 
-    def __init__(self, context: WorkflowOperationContext) -> None:
+    def __init__(
+        self, context: WorkflowOperationContext, *, drafts: bool = False
+    ) -> None:
         self.context = context
-        self.drafts = WorkflowDraftApi(context)
-        self.draft_authoring = WorkflowDraftAuthoringApi(context, self.drafts)
+        self.drafts: WorkflowDraftApi | None = (
+            WorkflowDraftApi(context) if drafts else None
+        )
+        self.draft_authoring: WorkflowDraftAuthoringApi | None = (
+            WorkflowDraftAuthoringApi(context, self.drafts)
+            if self.drafts is not None
+            else None
+        )
+
+    def _require_draft_authoring(self) -> WorkflowDraftAuthoringApi:
+        """Return draft helpers for the explicitly enabled authoring surface."""
+        if self.draft_authoring is None:
+            raise ValueError("workflow draft APIs are disabled; pass drafts=True")
+        return self.draft_authoring
 
     async def list_capabilities(
         self,
@@ -441,7 +455,7 @@ class WorkflowCapabilityApi:
         # Validate capability-derived guidance before workspace creation. The
         # workspace result is already projected by the draft-workspace API.
         hints = _PROJECT_WRAPPER_HINTS(capability["wrapper_hints"])
-        result = await self.draft_authoring.create_minimal_draft_workspace(
+        result = await self._require_draft_authoring().create_minimal_draft_workspace(
             workspace_id=workspace_id,
             name=name or _draft_name_from_capability(capability_name),
             capability_name=capability_name,

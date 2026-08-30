@@ -28,7 +28,7 @@ def create_rpc_app(
     server: WorkflowServer,
     *,
     rpc_path: str = "/rpc",
-    drafts: bool | None = None,
+    drafts: bool = False,
 ) -> jsonrpc.API:
     """Build a JSON-RPC HTTP app over an existing WorkflowServer.
 
@@ -54,8 +54,9 @@ def create_rpc_app(
         }
 
     register_capability_methods(entrypoint, server)
-    drafts_enabled = server.api.drafts_enabled if drafts is None else drafts
-    if drafts_enabled:
+    if drafts:
+        if not server.api.drafts_enabled:
+            raise ValueError("cannot enable draft RPC methods on a draft-disabled API")
         register_draft_methods(entrypoint, server)
     register_artifact_methods(entrypoint, server)
     register_deployment_methods(entrypoint, server)

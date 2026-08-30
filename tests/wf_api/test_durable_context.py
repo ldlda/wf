@@ -69,3 +69,8 @@ def test_durable_workflow_api_can_opt_out_of_draft_store(tmp_path) -> None:
     api = durable_workflow_api(context, drafts=False)
 
     assert api.drafts_enabled is False
+    assert api.drafts is None
+    assert api.draft_authoring is None
+    assert api.capabilities.drafts is None
+    assert api.capabilities.draft_authoring is None
+    assert api.artifacts.drafts is None

@@ -123,9 +123,19 @@ class WorkflowArtifactApi:
     WorkflowOperationContext so this module stays protocol-neutral.
     """
 
-    def __init__(self, context: WorkflowOperationContext) -> None:
+    def __init__(
+        self, context: WorkflowOperationContext, *, drafts: bool = False
+    ) -> None:
         self.context = context
-        self.drafts = WorkflowDraftApi(context)
+        self.drafts: WorkflowDraftApi | None = (
+            WorkflowDraftApi(context) if drafts else None
+        )
+
+    def _require_drafts(self) -> WorkflowDraftApi:
+        """Return draft helpers for the explicitly enabled authoring surface."""
+        if self.drafts is None:
+            raise ValueError("workflow draft APIs are disabled; pass drafts=True")
+        return self.drafts
 
     def _artifact_store(self):
         if self.context.artifact_store is None:
@@ -369,7 +379,7 @@ class WorkflowArtifactApi:
         if store is None:
             raise KeyError("draft workspace store is not configured")
         workspace = store.get_workspace(workspace_id)
-        validation = await self.drafts.validate_draft(draft=workspace.draft)
+        validation = await self._require_drafts().validate_draft(draft=workspace.draft)
         if validation["status"] != "valid":
             return _PROJECT_UNSAVED_DRAFT_ARTIFACT(
                 {

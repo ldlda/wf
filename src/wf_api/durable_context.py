@@ -8,7 +8,7 @@ from .stores import WorkflowStores
 def require_workflow_stores(
     context: WorkflowOperationContext,
     *,
-    drafts: bool = True,
+    drafts: bool = False,
 ) -> WorkflowStores:
     """Return required stores or fail before constructing durable frontends.
 
@@ -37,7 +37,7 @@ def require_workflow_stores(
 def durable_workflow_api(
     context: WorkflowOperationContext,
     *,
-    drafts: bool = True,
+    drafts: bool = False,
 ) -> WorkflowApi:
     """Construct a durable API, optionally omitting the draft product surface."""
     require_workflow_stores(context, drafts=drafts)

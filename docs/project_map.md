@@ -128,23 +128,37 @@ permanent graph node or expose it as a final workflow-output source.
 ### Python client walkthrough
 
 The Python client is intended for an application that already has a running
-workflow server. This is the complete shape of a real client call; the schema
+workflow server. Hypothetically, an application that wants to turn a constant
+capability into a durable run would use this complete call shape; the schema
 arguments may be JSON Schema dictionaries or the application's schema model
 values:
 
 ```python
 from wf_client import App
+from wf_authoring import input_from, input_value, output_to, state_path
 
 app = App.from_http_jsonrpc("http://localhost:8765/rpc")
 capability = await app.capability("wf.std.constant")
 graph = app.new_workflow(
     "example",
-    input_schema=InputModel,
-    state_schema=StateModel,
-    output_schema=OutputModel,
+    input_schema={"type": "object", "properties": {}},
+    state_schema={"type": "object", "properties": {"value": {"type": "string"}}},
+    output_schema={
+        "type": "object",
+        "properties": {"value": {"type": "string"}},
+        "required": ["value"],
+    },
 )
-step = graph.use(capability)
+step = graph.use(
+    capability,
+    id="constant",
+    input=[input_value("value", "hello")],
+    output=[output_to("value", state_path("value"))],
+)
+end = graph.end("ok", id="end_ok")
 graph.set_entry_point(step)
+graph.connect(step, "ok", end)
+graph.set_output([input_from(state_path("value"), "value")])
 validation = await graph.validate()
 validation.raise_for_errors()
 artifact = await graph.save(version=1)
