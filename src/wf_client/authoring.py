@@ -221,11 +221,32 @@ def _seed_remote_node_defs(
     for requirement in artifact.required_capabilities:
         if requirement.kind != "node_spec":
             continue
-        input_schema = requirement.input_schema_snapshot
-        output_schema = requirement.output_schema_snapshot
-        if not isinstance(input_schema, dict) or not isinstance(output_schema, dict):
-            continue
         name = str(requirement.capability_ref())
+        node_uses = [
+            node
+            for node in artifact.workflow.nodes
+            if isinstance(node, NodeUse) and node.node == name
+        ]
+        input_fields = {
+            field
+            for node in node_uses
+            for binding in node.input
+            if (field := _binding_root_field(binding.target)) is not None
+        }
+        output_fields = {
+            field
+            for node in node_uses
+            for binding in node.output
+            if (field := _binding_root_field(binding.source)) is not None
+        }
+        input_schema = _snapshot_or_permissive_schema(
+            requirement.input_schema_snapshot,
+            input_fields,
+        )
+        output_schema = _snapshot_or_permissive_schema(
+            requirement.output_schema_snapshot,
+            output_fields,
+        )
         builder.seeded_node_defs.setdefault(
             name,
             NodeDef(
@@ -235,3 +256,29 @@ def _seed_remote_node_defs(
                 outcomes=outcomes_by_node.get(name, ["ok"]),
             ),
         )
+
+
+def _binding_root_field(path: object) -> str | None:
+    """Return a local binding's first field, excluding whole-payload ``.``."""
+    parts = getattr(path, "parts", ())
+    if not parts:
+        return None
+    return parts[0]
+
+
+def _snapshot_or_permissive_schema(
+    snapshot: object,
+    fields: set[str],
+) -> dict[str, Any]:
+    """Use a saved snapshot or an unconstrained schema for its used fields.
+
+    A missing server snapshot carries no type information. Declaring only the
+    fields already referenced by graph bindings lets local structural checks
+    proceed without inventing validation constraints for remote data.
+    """
+    if isinstance(snapshot, dict):
+        return snapshot
+    return {
+        "type": "object",
+        "properties": {field: {} for field in sorted(fields)},
+    }

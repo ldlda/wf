@@ -61,6 +61,37 @@ def valid_plan(version: int = 1) -> dict[str, Any]:
     }
 
 
+def remote_plan_without_schema_snapshots(version: int = 1) -> dict[str, Any]:
+    payload = valid_plan(version)
+    payload["plan"]["nodes"] = [
+        {
+            "id": "remote",
+            "type": "node",
+            "node": "app.default.remote",
+            "input": [],
+            "output": [],
+        },
+        {"id": "done", "type": "end", "outcome": "ok"},
+    ]
+    payload["plan"]["start"] = "remote"
+    payload["plan"]["edges"] = [
+        {"from": "remote", "outcome": "ok", "to": "done"}
+    ]
+    payload["required_capabilities"] = [
+        {
+            "ref": {"source": "app.default", "capability_key": "remote"},
+            "kind": "node_spec",
+            "input_schema_hash": None,
+            "input_schema_snapshot": None,
+            "output_schema_hash": None,
+            "output_schema_snapshot": None,
+            "observed_concrete_source": None,
+            "observed_at_epoch_ms": None,
+        }
+    ]
+    return payload
+
+
 @pytest.mark.asyncio
 async def test_validate_stops_before_remote_call_when_local_graph_is_invalid() -> None:
     port = FakePort()
@@ -118,3 +149,19 @@ async def test_edit_and_save_inspects_exact_saved_version() -> None:
     assert inspect == {"artifact_id": "report", "version": 2}
     assert saved.ref == ArtifactRef("report", 2)
     assert str(saved.workflow.output[0].target) == "value"
+
+
+@pytest.mark.asyncio
+async def test_editable_artifact_without_schema_snapshots_remains_saveable() -> None:
+    port = FakePort()
+    port.inspect_artifact_result = remote_plan_without_schema_snapshots(version=1)
+    graph = await App._from_port(cast(WorkflowClientPort, port)).edit_workflow(
+        "report", version=1
+    )
+
+    result = graph.validate_local()
+
+    assert result.ok is True
+    port.inspect_artifact_result = remote_plan_without_schema_snapshots(version=2)
+    saved = await graph.save(version=2)
+    assert saved.ref == ArtifactRef("report", 2)
