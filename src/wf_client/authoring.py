@@ -42,12 +42,15 @@ class EditableWorkflow(WorkflowBuilder):
     _source_workflow: Workflow | None = field(
         default=None, repr=False, kw_only=True
     )
+    _permissive_node_defs: set[str] = field(
+        default_factory=set, repr=False, kw_only=True
+    )
 
     @classmethod
     def from_artifact(cls, artifact: WorkflowArtifact) -> EditableWorkflow:
         """Copy every canonical graph field from an immutable artifact snapshot."""
         builder = WorkflowBuilder.from_workflow(artifact.workflow)
-        _seed_remote_node_defs(builder, artifact)
+        permissive_node_defs = _seed_remote_node_defs(builder, artifact)
         return cls(
             _port=artifact._port,
             based_on=artifact.ref,
@@ -68,6 +71,7 @@ class EditableWorkflow(WorkflowBuilder):
             prepared_subgraphs=builder.prepared_subgraphs,
             _source_plan=deepcopy(artifact.artifact.plan),
             _source_workflow=builder._build_workflow(start=builder.start or ""),
+            _permissive_node_defs=permissive_node_defs,
         )
 
     @overload
@@ -100,6 +104,13 @@ class EditableWorkflow(WorkflowBuilder):
         if isinstance(spec, RemoteCapability):
             return self.use_contract(spec.node_def(), **kwargs)
         return super().use(spec, **kwargs)
+
+    def use_contract(self, node_def: NodeDef, **kwargs: Any) -> NodeUse:
+        """Upgrade an artifact placeholder before normal duplicate checks."""
+        if node_def.name in self._permissive_node_defs:
+            self.seeded_node_defs.pop(node_def.name, None)
+            self._permissive_node_defs.remove(node_def.name)
+        return super().use_contract(node_def, **kwargs)
 
     def subgraph(
         self,
@@ -206,7 +217,7 @@ class EditableWorkflow(WorkflowBuilder):
 def _seed_remote_node_defs(
     builder: WorkflowBuilder,
     artifact: WorkflowArtifact,
-) -> None:
+) -> set[str]:
     """Restore remote node contracts retained as artifact dependency snapshots."""
     node_name_by_step_id = {
         node.id: node.node
@@ -218,6 +229,7 @@ def _seed_remote_node_defs(
         node_name = node_name_by_step_id.get(edge.from_)
         if node_name is not None:
             outcomes_by_node.setdefault(node_name, []).append(edge.outcome)
+    permissive_names: set[str] = set()
     for requirement in artifact.required_capabilities:
         if requirement.kind != "node_spec":
             continue
@@ -247,6 +259,10 @@ def _seed_remote_node_defs(
             requirement.output_schema_snapshot,
             output_fields,
         )
+        if not isinstance(requirement.input_schema_snapshot, dict) or not isinstance(
+            requirement.output_schema_snapshot, dict
+        ):
+            permissive_names.add(name)
         builder.seeded_node_defs.setdefault(
             name,
             NodeDef(
@@ -256,6 +272,7 @@ def _seed_remote_node_defs(
                 outcomes=outcomes_by_node.get(name, ["ok"]),
             ),
         )
+    return permissive_names
 
 
 def _binding_root_field(path: object) -> str | None:

@@ -5,8 +5,9 @@ from typing import Any, cast
 import pytest
 
 from wf_authoring import WorkflowBuilder
-from wf_client import App, ArtifactRef, EditableWorkflow
+from wf_client import App, ArtifactRef, EditableWorkflow, RemoteCapability
 from wf_client.protocols import WorkflowClientPort
+from wf_platform import CapabilityRef
 
 
 class FakePort:
@@ -165,3 +166,43 @@ async def test_editable_artifact_without_schema_snapshots_remains_saveable() -> 
     port.inspect_artifact_result = remote_plan_without_schema_snapshots(version=2)
     saved = await graph.save(version=2)
     assert saved.ref == ArtifactRef("report", 2)
+
+
+@pytest.mark.asyncio
+async def test_snapshotless_remote_node_upgrades_to_real_capability_contract() -> None:
+    port = FakePort()
+    port.inspect_artifact_result = remote_plan_without_schema_snapshots(version=1)
+    graph = await App._from_port(cast(WorkflowClientPort, port)).edit_workflow(
+        "report", version=1
+    )
+    capability = RemoteCapability(
+        _port=cast(WorkflowClientPort, port),
+        ref=CapabilityRef.parse("app.default.remote"),
+        qualified_name="app.default.remote",
+        description=None,
+        input_schema={"type": "object", "properties": {"query": {"type": "string"}}},
+        output_schema={"type": "object", "properties": {}},
+        outcomes=("ok",),
+        is_async=False,
+    )
+
+    replacement = graph.use(capability, id="replacement", input=[], output=[])
+    graph.connect(replacement, "ok", "done")
+
+    assert graph.validate_local().ok is True
+    assert graph.seeded_node_defs["app.default.remote"].input_schema.properties == {
+        "query": {"type": "string"}
+    }
+
+    incompatible = RemoteCapability(
+        _port=cast(WorkflowClientPort, port),
+        ref=CapabilityRef.parse("app.default.remote"),
+        qualified_name="app.default.remote",
+        description=None,
+        input_schema={"type": "object", "properties": {"other": {"type": "string"}}},
+        output_schema={"type": "object", "properties": {}},
+        outcomes=("ok",),
+        is_async=False,
+    )
+    with pytest.raises(ValueError, match="incompatible duplicate"):
+        graph.use(incompatible, id="incompatible", input=[], output=[])
