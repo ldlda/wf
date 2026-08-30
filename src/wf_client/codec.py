@@ -9,7 +9,10 @@ from typing import Any, TypeVar
 from pydantic import BaseModel, TypeAdapter, ValidationError
 
 from wf_api.models import (
+    CapabilityCallResult,
     DependencyDiagnosticPayload,
+    InspectCapabilityResult,
+    ListCapabilitiesResult,
     RawWorkflowPlan,
     RunResult,
     RunTraceResult,
@@ -62,11 +65,48 @@ class DecodedTracePage(_DecodedRunFields):
 _PayloadT = TypeVar("_PayloadT")
 
 
-def _validate(payload: object, schema: type[_PayloadT], operation: str) -> _PayloadT:
+def _validate(payload: object, schema: object, operation: str) -> _PayloadT:
     try:
         return TypeAdapter(schema).validate_python(payload)
     except (TypeError, ValueError, ValidationError) as exc:
         raise InvalidResponse(operation=operation, details=str(exc)) from exc
+
+
+def decode_capability_inspect(payload: object) -> InspectCapabilityResult:
+    """Validate one capability contract returned by discovery inspection."""
+    return _validate(
+        payload,
+        InspectCapabilityResult,
+        "workflow.capabilities.inspect",
+    )
+
+
+def decode_capability_call(payload: object) -> CapabilityCallResult:
+    """Validate one direct capability-call result at the transport boundary."""
+    return _validate(
+        payload,
+        CapabilityCallResult,
+        "workflow.capabilities.call",
+    )
+
+
+def decode_capability_diagnostics(
+    payload: object,
+) -> tuple[DependencyDiagnostic, ...]:
+    """Decode diagnostics attached to a capability invocation."""
+    return _decode_dependency_diagnostics(
+        payload,
+        "workflow.capabilities.call",
+    )
+
+
+def decode_capabilities_page(payload: object) -> ListCapabilitiesResult:
+    """Validate one cursor-paged capability discovery response."""
+    return _validate(
+        payload,
+        ListCapabilitiesResult,
+        "workflow.capabilities.list",
+    )
 
 
 _ModelT = TypeVar("_ModelT", bound=BaseModel)
