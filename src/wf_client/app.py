@@ -94,6 +94,14 @@ class App:
             await self._port.inspect_capability(qualified_name=name)
         )
         qualified_name = wire["name"]
+        if qualified_name != name:
+            raise InvalidResponse(
+                operation="workflow.capabilities.inspect",
+                details=(
+                    f"inspected capability {qualified_name!r} does not match "
+                    f"requested {name!r}"
+                ),
+            )
         source_id = wire["source_id"]
         return RemoteCapability(
             _port=self._port,

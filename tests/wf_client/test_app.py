@@ -6,6 +6,7 @@ import httpx
 import pytest
 
 from wf_client import App, CapabilitySummary, Page
+from wf_client.errors import InvalidResponse
 from wf_client.protocols import WorkflowClientPort
 from wf_platform import CapabilityRef
 
@@ -119,3 +120,11 @@ async def test_capability_reference_keeps_dotted_local_key() -> None:
 
     assert capability.ref.source.parts == ("app", "default")
     assert capability.ref.name == "search.v2"
+
+
+@pytest.mark.asyncio
+async def test_capability_rejects_mismatched_inspection_name() -> None:
+    app = _app(capability_name="app.default.other")
+
+    with pytest.raises(InvalidResponse, match="workflow.capabilities.inspect"):
+        await app.capability("app.default.search")
