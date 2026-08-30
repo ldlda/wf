@@ -111,6 +111,34 @@ def test_create_workflow_artifact_from_plan_rewrites_bound_node_specs() -> None:
     assert str(required.observed_concrete_source) == "demo.personal"
 
 
+def test_create_workflow_artifact_from_plan_derives_saved_workflow_dependencies() -> (
+    None
+):
+    plan = _plan()
+    plan["nodes"] = [
+        {
+            "id": "child",
+            "type": "subgraph",
+            "workflow": {"artifact_id": "child_workflow", "version": 7},
+            "input_schema": {"type": "object"},
+            "output_schema": {"type": "object"},
+            "outcomes": ["ok"],
+        }
+    ]
+    plan["start"] = "child"
+    plan["edges"] = [{"from": "child", "outcome": "ok", "to": "__end__"}]
+
+    artifact = create_workflow_artifact_from_plan(
+        artifact_id="parent",
+        version=1,
+        title="Parent",
+        plan=plan,
+        outcomes=("done",),
+    )
+
+    assert artifact.workflow_dependencies == {"child_workflow": 7}
+
+
 def test_create_workflow_artifact_from_plan_snapshots_observed_node_spec() -> None:
     plan = _plan()
     _set_first_node_ref(plan, "demo.personal.echo_tool")

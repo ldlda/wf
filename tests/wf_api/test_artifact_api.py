@@ -237,6 +237,60 @@ async def test_validate_artifact_plan_projects_invalid_plan_diagnostic(
 
 
 @pytest.mark.asyncio
+async def test_validate_artifact_plan_propagates_unexpected_value_error(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "artifacts_unexpected")
+    api, _service = _artifact_api(artifact_store)
+
+    def raise_programming_error(_context: object) -> dict[str, object]:
+        raise ValueError("unexpected preparation defect")
+
+    monkeypatch.setattr(
+        "wf_api.artifacts.observed_node_specs",
+        raise_programming_error,
+    )
+
+    with pytest.raises(ValueError, match="unexpected preparation defect"):
+        await api.validate_artifact_plan(
+            plan=_echo_artifact().plan,
+            outcomes=("completed",),
+            source_bindings={},
+        )
+
+
+@pytest.mark.asyncio
+async def test_validate_artifact_plan_derives_saved_workflow_dependencies(
+    tmp_path: Path,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "artifacts_dependency")
+    api, _service = _artifact_api(artifact_store)
+    plan = _echo_artifact().plan
+    plan["start"] = "child"
+    plan["nodes"] = [
+        {
+            "id": "child",
+            "type": "subgraph",
+            "workflow": {"artifact_id": "child_workflow", "version": 7},
+            "input_schema": {"type": "object"},
+            "output_schema": {"type": "object"},
+            "outcomes": ["completed"],
+        }
+    ]
+    plan["edges"] = [{"from": "child", "outcome": "completed", "to": "__end__"}]
+
+    result = await api.validate_artifact_plan(
+        plan=plan,
+        outcomes=("completed",),
+        source_bindings={},
+    )
+
+    assert result["status"] == "valid"
+    assert result["workflow_dependencies"] == {"child_workflow": 7}
+
+
+@pytest.mark.asyncio
 async def test_create_artifact_from_workspace_suggests_exact_available_source_binding(
     tmp_path: Path,
 ) -> None:

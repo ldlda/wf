@@ -15,6 +15,7 @@ from wf_artifacts import (
     ArtifactKind,
     RequiredCapability,
     WorkflowArtifact,
+    WorkflowPlanValidationError,
     artifact_catalog_entry,
 )
 from wf_artifacts import (
@@ -263,7 +264,7 @@ class WorkflowArtifactApi:
             return _PROJECT_VALIDATE_ARTIFACT(
                 _invalid_artifact_plan_payload(_diagnostic_from_validation_error(exc))
             )
-        except ValueError as exc:
+        except WorkflowPlanValidationError as exc:
             return _PROJECT_VALIDATE_ARTIFACT(
                 _invalid_artifact_plan_payload(
                     {
