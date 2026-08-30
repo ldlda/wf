@@ -25,6 +25,7 @@ For verified Python 3.14 dependency constraints and their removal criteria, see
 | `wf_api` | Workflow application surface over core/artifacts/platform: capabilities, drafts, artifacts, deployments, runs, and source/admin surfaces. | `wf_cli`, `wf_server`, JSON-RPC clients, future transports. |
 | `wf_server` | Durable server composition boundary around `WorkflowApi` plus optional admin/source-registry surfaces. Owns the `wf-rpc-server` startup CLI/policy. | Transport packages and server startup code. |
 | `wf_transport_rpc_http` | JSON-RPC-over-HTTP app/client and compatibility CLI shim. | Remote `wf` clients and local server smoke tests. |
+| `wf_client` | Async-native Python client for capability discovery, local authoring, immutable artifacts, deployments, and durable runs. | Python applications and notebooks using a workflow server. |
 | `wf_sources_mcp` | MCP-as-upstream-source implementation: ids, registry DTOs, auth/catalog stores, discovery, SDK client/facade, runtime pool, wrappers. | `wf_server`, broker glue, MCP source tests. |
 | `wf_mcp` | MCP frontend/compatibility package: legacy `wf-mcp` entrypoints, broker glue, proxy/admin tools, and shims while extraction continues. | Compatibility callers and MCP transport work. |
 | `wf_cli` | Command-line frontend over local or remote workflow APIs. | Humans, scripts, agent skills. |
@@ -87,6 +88,8 @@ permanent graph node or expose it as a final workflow-output source.
 - `wf_server.WorkflowServer`: durable workflow server composition object.
 - `wf_transport_rpc_http.RpcWorkflowApiClient`: JSON-RPC client implementing
   the workflow/admin surfaces over HTTP.
+- `wf_client.App`: transport-independent async Python facade over capabilities,
+  authored workflows, saved artifacts, deployments, and durable runs.
 - `wf_transport_rpc_http.create_rpc_app`: JSON-RPC HTTP adapter over an existing
   `WorkflowServer`.
 - `wf_sources_mcp.McpRuntimePool`: persistent MCP source runtime for stateful
@@ -121,6 +124,43 @@ permanent graph node or expose it as a final workflow-output source.
   `--keep-temp` to preserve the generated config/store on failure.
 - `examples/browser_click_workflow/` is a serial browser-click workflow
   example with bounded before/after snapshots and full lifecycle tests.
+
+### Python client walkthrough
+
+The Python client is intended for an application that already has a running
+workflow server. This is the complete shape of a real client call; the schema
+arguments may be JSON Schema dictionaries or the application's schema model
+values:
+
+```python
+from wf_client import App
+
+app = App.from_http_jsonrpc("http://localhost:8765/rpc")
+capability = await app.capability("wf.std.constant")
+graph = app.new_workflow(
+    "example",
+    input_schema=InputModel,
+    state_schema=StateModel,
+    output_schema=OutputModel,
+)
+step = graph.use(capability)
+graph.set_entry_point(step)
+validation = await graph.validate()
+validation.raise_for_errors()
+artifact = await graph.save(version=1)
+run = await artifact.run({})
+```
+
+The graph is a local, mutable builder. `validate()` checks its structure locally
+and then asks the server to validate the serialized plan. `save()` persists an
+immutable artifact version; it does not deploy or execute the graph.
+`artifact.run()` selects or creates a deployment, validates its source bindings,
+and starts a durable run. The returned run is a loaded snapshot; call
+`refresh()`, `resume()`, or bounded `trace(start=..., limit=...)` when more
+server state is needed.
+
+Draft workspaces are intentionally not part of `wf_client`. They are a separate
+server/admin surface and must be explicitly enabled when composing a server.
 - `examples/agent_challenges/` contains reusable opencode challenge harnesses
   for evaluating whether agents can use the public workflow CLI/server path.
 

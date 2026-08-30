@@ -12,6 +12,7 @@ from wf_api import TraceRange
 from wf_artifacts import DependencyDiagnostic
 from wf_core import InterruptRequest, InterruptRoute, TraceEntry, WorkflowRef
 
+from ._repr import html_repr, short_repr
 from .codec import DecodedRunResult, decode_run_result, decode_trace_result
 from .errors import DeploymentNotRunnable, InvalidResponse
 from .protocols import WorkflowClientPort
@@ -26,6 +27,24 @@ class TracePage:
     frames: tuple[TraceEntry, ...]
     truncated: bool
     trace_count: int
+
+    def __repr__(self) -> str:
+        return short_repr(
+            type(self).__name__,
+            start=self.start,
+            limit=self.limit,
+            frames=f"{len(self.frames)} loaded/{self.trace_count} total",
+            truncated=self.truncated,
+        )
+
+    def _repr_html_(self) -> str:
+        return html_repr(
+            type(self).__name__,
+            start=self.start,
+            limit=self.limit,
+            frames=f"{len(self.frames)} loaded/{self.trace_count} total",
+            truncated=self.truncated,
+        )
 
 
 def _interrupt(
@@ -109,6 +128,30 @@ class Run:
     interrupt: InterruptRequest | None
     diagnostics: tuple[DependencyDiagnostic, ...]
     trace_count: int
+
+    def __repr__(self) -> str:
+        return short_repr(
+            type(self).__name__,
+            run_id=self.run_id,
+            deployment_id=self.deployment_id,
+            status=self.status,
+            outcome=self.outcome,
+            output=self.output,
+            diagnostics=f"{len(self.diagnostics)} diagnostics",
+            trace=f"{self.trace_count} frames",
+        )
+
+    def _repr_html_(self) -> str:
+        return html_repr(
+            type(self).__name__,
+            run_id=self.run_id,
+            deployment_id=self.deployment_id,
+            status=self.status,
+            outcome=self.outcome,
+            output=self.output,
+            diagnostics=f"{len(self.diagnostics)} diagnostics",
+            trace=f"{self.trace_count} frames (use trace() for a bounded page)",
+        )
 
     @classmethod
     def from_payload(

@@ -20,6 +20,7 @@ frontends can share.
 | `wf_sources_mcp` | MCP-as-upstream-source implementation: source ids, source registry DTOs, auth/catalog stores, discovery, SDK client/facade, persistent runtime pool, and tool-wrapper helpers. |
 | `wf_mcp` | MCP frontend/compatibility package: old `wf-mcp` server entry points, broker glue around MCP-hosted services, proxy/admin tools, and compatibility shims while callers migrate. |
 | `wf_transport_rpc_http` | JSON-RPC-over-HTTP transport adapter and remote client over `WorkflowApiSurface`, not a reimplementation of workflow business logic. |
+| `wf_client` | Async Python consumer facade over a narrow capability/artifact/deployment/run port. It reconstructs immutable snapshots and keeps representations bounded and inert. |
 | future `wf_http` / WebSocket / MCP server transports | Additional transports over `WorkflowApiSurface`, not new workflow application APIs. |
 | `wf_cli` | CLI frontend over `WorkflowApiSurface`; it may run locally against process-local stores or target a remote JSON-RPC backend. |
 
@@ -106,6 +107,40 @@ Important rules:
 
 Do not add a catch-all `service` field to the context. If a domain API needs a
 new dependency, add a narrow protocol or explicit field.
+
+## Python client lifecycle
+
+The Python client makes the intended application flow explicit:
+
+```python
+app = App.from_http_jsonrpc("http://localhost:8765/rpc")
+capability = await app.capability("wf.std.constant")
+graph = app.new_workflow(
+    "example",
+    input_schema=InputModel,
+    state_schema=StateModel,
+    output_schema=OutputModel,
+)
+step = graph.use(capability)
+graph.set_entry_point(step)
+validation = await graph.validate()
+validation.raise_for_errors()
+artifact = await graph.save(version=1)
+run = await artifact.run({})
+```
+
+The graph is an in-process builder. Validation is local structural checking
+plus a server plan check. Saving creates an immutable, versioned artifact; it
+does not execute anything. A deployment is the server's runnable configuration
+for one exact artifact version, including logical-to-concrete source bindings
+and drift policy. A run is a durable execution record for that deployment;
+inspection and bounded trace reads return snapshots, while resume is an
+explicit operation for interrupted runs.
+
+`wf_client` does not expose draft workspaces. Draft API classes remain useful
+to server/admin and console callers, but normal server composition keeps draft
+JSON-RPC registration opt-in so artifact, deployment, and run durability do not
+depend on a draft store.
 
 ## WorkflowApiSurface And Domain Services
 

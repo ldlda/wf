@@ -18,7 +18,7 @@ class WorkflowStores:
     """Protocol-neutral persistence dependencies for workflow APIs."""
 
     artifact_store: WorkflowArtifactStore
-    draft_workspace_store: DraftWorkspaceStore
+    draft_workspace_store: DraftWorkspaceStore | None
     run_store: RunStore
 
 

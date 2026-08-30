@@ -13,6 +13,7 @@ from wf_artifacts.models import DependencyDiagnostic
 from wf_core.models.schemas import NodeDef, SchemaRef
 from wf_platform import CapabilityRef
 
+from ._repr import html_repr, short_repr
 from .codec import decode_capability_call, decode_capability_diagnostics
 from .errors import InvalidResponse
 from .protocols import WorkflowClientPort
@@ -39,6 +40,24 @@ class CapabilitySummary:
         """Compatibility alias for the wire row's ``name`` field."""
         return self.qualified_name
 
+    def __repr__(self) -> str:
+        return short_repr(
+            type(self).__name__,
+            name=self.qualified_name,
+            source=self.source_id,
+            outcomes=self.outcomes,
+        )
+
+    def _repr_html_(self) -> str:
+        return html_repr(
+            type(self).__name__,
+            name=self.qualified_name,
+            source=self.source_id,
+            outcomes=self.outcomes,
+            inputs=f"{len(self.input_fields)} fields",
+            outputs=f"{len(self.output_fields)} fields",
+        )
+
 
 @dataclass(frozen=True, slots=True)
 class CapabilityResult:
@@ -47,6 +66,22 @@ class CapabilityResult:
     outcome: str
     output: dict[str, Any] | None
     diagnostics: tuple[DependencyDiagnostic, ...]
+
+    def __repr__(self) -> str:
+        return short_repr(
+            type(self).__name__,
+            outcome=self.outcome,
+            output=self.output,
+            diagnostics=f"{len(self.diagnostics)} diagnostics",
+        )
+
+    def _repr_html_(self) -> str:
+        return html_repr(
+            type(self).__name__,
+            outcome=self.outcome,
+            output=self.output,
+            diagnostics=f"{len(self.diagnostics)} diagnostics",
+        )
 
 
 def _check_schema(schema: object, *, operation: str) -> dict[str, Any]:
@@ -105,6 +140,27 @@ class RemoteCapability:
             ),
         )
         object.__setattr__(self, "outcomes", tuple(self.outcomes))
+
+    def __repr__(self) -> str:
+        return short_repr(
+            type(self).__name__,
+            name=self.qualified_name,
+            outcomes=self.outcomes,
+            input_schema=f"{len(self.input_schema)} keys",
+            output_schema=f"{len(self.output_schema)} keys",
+        )
+
+    def _repr_html_(self) -> str:
+        return html_repr(
+            type(self).__name__,
+            name=self.qualified_name,
+            description=self.description,
+            outcomes=self.outcomes,
+            **{
+                "input schema": f"{len(self.input_schema)} keys",
+                "output schema": f"{len(self.output_schema)} keys",
+            },
+        )
 
     async def __call__(
         self,

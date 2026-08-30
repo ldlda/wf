@@ -8,6 +8,7 @@ from typing import Any
 
 from wf_artifacts import DependencyDiagnostic, DriftPolicy, WorkflowDeployment
 
+from ._repr import html_repr, short_repr
 from .codec import (
     decode_dependency_diagnostics,
     decode_deployment,
@@ -33,6 +34,22 @@ class DeploymentValidation:
     def runnable(self) -> bool:
         return self.status == "runnable"
 
+    def __repr__(self) -> str:
+        return short_repr(
+            type(self).__name__,
+            deployment_id=self.deployment_id,
+            status=self.status,
+            diagnostics=f"{len(self.diagnostics)} diagnostics",
+        )
+
+    def _repr_html_(self) -> str:
+        return html_repr(
+            type(self).__name__,
+            deployment_id=self.deployment_id,
+            status=self.status,
+            diagnostics=f"{len(self.diagnostics)} diagnostics",
+        )
+
 
 @dataclass(frozen=True, slots=True)
 class Deployment:
@@ -50,6 +67,25 @@ class Deployment:
     @property
     def deployment_id(self) -> str:
         return self.model.id
+
+    def __repr__(self) -> str:
+        return short_repr(
+            type(self).__name__,
+            deployment_id=self.deployment_id,
+            artifact=f"{self.artifact_id}.v{self.artifact_version}",
+            runnable=self.runnable,
+            diagnostics=f"{len(self.diagnostics)} diagnostics",
+        )
+
+    def _repr_html_(self) -> str:
+        return html_repr(
+            type(self).__name__,
+            deployment_id=self.deployment_id,
+            artifact=f"{self.artifact_id}.v{self.artifact_version}",
+            bindings=f"{len(self.bindings)} bindings",
+            runnable=self.runnable,
+            diagnostics=f"{len(self.diagnostics)} diagnostics",
+        )
 
     @property
     def artifact_id(self) -> str:

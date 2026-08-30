@@ -32,6 +32,17 @@ async def _rpc(
     return response.json()
 
 
+def test_rpc_app_can_omit_draft_methods(tmp_path) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+
+    assert server.api.drafts_enabled is True
+    app = create_rpc_app(server, drafts=False)
+    methods = {method["name"] for method in app.get_openrpc()["methods"]}
+
+    assert "workflow.capabilities.list" in methods
+    assert "workflow.draft_workspaces.list" not in methods
+
+
 def _rpc_constant_draft() -> dict[str, Any]:
     """Return the canonical keyed draft shared by stateless RPC tests."""
     return {

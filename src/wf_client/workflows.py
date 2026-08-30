@@ -14,6 +14,7 @@ from wf_artifacts.models import (
 )
 from wf_core import ValidationReport, Workflow
 
+from ._repr import html_repr, short_repr
 from .errors import InvalidResponse, ValidationFailed
 
 if TYPE_CHECKING:
@@ -30,6 +31,16 @@ class ArtifactRef:
     artifact_id: str
     version: int
 
+    def __repr__(self) -> str:
+        return short_repr(
+            type(self).__name__, artifact_id=self.artifact_id, version=self.version
+        )
+
+    def _repr_html_(self) -> str:
+        return html_repr(
+            type(self).__name__, artifact_id=self.artifact_id, version=self.version
+        )
+
 
 @dataclass(frozen=True, slots=True)
 class WorkflowDiagnostic:
@@ -40,6 +51,24 @@ class WorkflowDiagnostic:
     path: str
     message: str
     repair_hint: str | None = None
+
+    def __repr__(self) -> str:
+        return short_repr(
+            type(self).__name__,
+            severity=self.severity,
+            code=self.code,
+            path=self.path,
+            message=self.message,
+        )
+
+    def _repr_html_(self) -> str:
+        return html_repr(
+            type(self).__name__,
+            severity=self.severity,
+            code=self.code,
+            path=self.path,
+            message=self.message,
+        )
 
 
 # Keep the short name used by the public design available without requiring a
@@ -58,6 +87,22 @@ class WorkflowValidation:
     @property
     def ok(self) -> bool:
         return self.local.ok and self.remote_status == "valid"
+
+    def __repr__(self) -> str:
+        return short_repr(
+            type(self).__name__,
+            ok=self.ok,
+            remote_status=self.remote_status,
+            diagnostics=f"{len(self.remote_diagnostics)} diagnostics",
+        )
+
+    def _repr_html_(self) -> str:
+        return html_repr(
+            type(self).__name__,
+            ok=self.ok,
+            remote_status=self.remote_status,
+            diagnostics=f"{len(self.remote_diagnostics)} diagnostics",
+        )
 
     def raise_for_errors(self) -> None:
         """Raise a useful error for either local or remote validation failures."""
@@ -85,6 +130,23 @@ class WorkflowArtifact:
     @property
     def ref(self) -> ArtifactRef:
         return ArtifactRef(self.artifact.id, self.artifact.version)
+
+    def __repr__(self) -> str:
+        return short_repr(
+            type(self).__name__,
+            ref=self.ref,
+            title=self.title,
+            required_capabilities=f"{len(self.required_capabilities)} capabilities",
+        )
+
+    def _repr_html_(self) -> str:
+        return html_repr(
+            type(self).__name__,
+            ref=self.ref,
+            title=self.title,
+            description=self.description,
+            required_capabilities=f"{len(self.required_capabilities)} capabilities",
+        )
 
     @property
     def title(self) -> str:
@@ -137,8 +199,13 @@ class WorkflowArtifact:
                 "drift_policy": drift_policy,
             }
         )
-        if not isinstance(saved, Mapping) or saved.get("deployment_id") != deployment_id:
-            saved_id = saved.get("deployment_id") if isinstance(saved, Mapping) else None
+        if (
+            not isinstance(saved, Mapping)
+            or saved.get("deployment_id") != deployment_id
+        ):
+            saved_id = (
+                saved.get("deployment_id") if isinstance(saved, Mapping) else None
+            )
             raise InvalidResponse(
                 operation="workflow.deployments.save",
                 details=(

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from typing import Any, Literal, overload
+from typing import Any, Literal, cast, overload
 
 from wf_artifacts import ArtifactKind, compile_workflow_draft
 from wf_artifacts.drafts.models import DraftStep
@@ -56,6 +56,19 @@ from .operation_context import WorkflowOperationContext
 from .runs import TraceRangeLike, WorkflowRunApi
 
 
+class _DisabledDraftSurface:
+    """Placeholder that fails clearly if disabled draft methods are called.
+
+    Keeping this tiny seam avoids constructing draft services while preserving
+    the existing method layout on ``WorkflowApi`` for explicit draft callers.
+    """
+
+    def __getattr__(self, name: str) -> Any:
+        raise RuntimeError(
+            "workflow draft APIs are disabled; compose WorkflowApi with drafts=True"
+        )
+
+
 def _authoring_schema(
     value: object,
     *,
@@ -100,11 +113,26 @@ class WorkflowApi:
     callers share one operation surface without importing wf_mcp.
     """
 
-    def __init__(self, context: WorkflowOperationContext) -> None:
+    def __init__(
+        self,
+        context: WorkflowOperationContext,
+        *,
+        drafts: bool = True,
+    ) -> None:
         self.context = context
         self.capabilities = WorkflowCapabilityApi(context)
-        self.drafts = WorkflowDraftApi(context)
-        self.draft_authoring = WorkflowDraftAuthoringApi(context, self.drafts)
+        # ``drafts`` keeps server composition explicit: callers that omit draft
+        # storage must pass False, while the default preserves legacy direct
+        # WorkflowApi callers that use the draft service for validation only.
+        self.drafts_enabled = drafts
+        if self.drafts_enabled:
+            self.drafts = WorkflowDraftApi(context)
+            self.draft_authoring = WorkflowDraftAuthoringApi(context, self.drafts)
+        else:
+            self.drafts = cast(WorkflowDraftApi, _DisabledDraftSurface())
+            self.draft_authoring = cast(
+                WorkflowDraftAuthoringApi, _DisabledDraftSurface()
+            )
         self.artifacts = WorkflowArtifactApi(context)
         self.deployments = WorkflowDeploymentApi(context)
         self.runs = WorkflowRunApi(context)

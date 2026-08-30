@@ -54,3 +54,18 @@ def test_durable_workflow_api_returns_workflow_api_with_same_context(tmp_path) -
 
     assert isinstance(api, WorkflowApi)
     assert api.context is context
+
+
+def test_durable_workflow_api_can_opt_out_of_draft_store(tmp_path) -> None:
+    stores = file_workflow_stores(tmp_path / "workflow_stores")
+    service = WfMcpService(
+        store=FileStore(tmp_path / "mcp"),
+        artifact_store=stores.artifact_store,
+        draft_workspace_store=None,
+        run_store=stores.run_store,
+    )
+    context = context_from_service(service)
+
+    api = durable_workflow_api(context, drafts=False)
+
+    assert api.drafts_enabled is False
