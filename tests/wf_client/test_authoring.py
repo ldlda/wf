@@ -93,6 +93,22 @@ def remote_plan_without_schema_snapshots(version: int = 1) -> dict[str, Any]:
     return payload
 
 
+def remote_plan_with_real_node_def(version: int = 1) -> dict[str, Any]:
+    payload = remote_plan_without_schema_snapshots(version)
+    payload["plan"]["node_defs"] = [
+        {
+            "name": "app.default.remote",
+            "input_schema": {
+                "type": "object",
+                "properties": {"real": {"type": "string"}},
+            },
+            "output_schema": {"type": "object", "properties": {}},
+            "outcomes": ["ok"],
+        }
+    ]
+    return payload
+
+
 @pytest.mark.asyncio
 async def test_validate_stops_before_remote_call_when_local_graph_is_invalid() -> None:
     port = FakePort()
@@ -206,3 +222,29 @@ async def test_snapshotless_remote_node_upgrades_to_real_capability_contract() -
     )
     with pytest.raises(ValueError, match="incompatible duplicate"):
         graph.use(incompatible, id="incompatible", input=[], output=[])
+
+
+@pytest.mark.asyncio
+async def test_real_plan_node_def_remains_authoritative_without_snapshots() -> None:
+    port = FakePort()
+    port.inspect_artifact_result = remote_plan_with_real_node_def(version=1)
+    graph = await App._from_port(cast(WorkflowClientPort, port)).edit_workflow(
+        "report", version=1
+    )
+    incompatible = RemoteCapability(
+        _port=cast(WorkflowClientPort, port),
+        ref=CapabilityRef.parse("app.default.remote"),
+        qualified_name="app.default.remote",
+        description=None,
+        input_schema={"type": "object", "properties": {"other": {"type": "string"}}},
+        output_schema={"type": "object", "properties": {}},
+        outcomes=("ok",),
+        is_async=False,
+    )
+
+    with pytest.raises(ValueError, match="incompatible duplicate"):
+        graph.use(incompatible, id="incompatible", input=[], output=[])
+
+    assert graph.seeded_node_defs["app.default.remote"].input_schema.properties == {
+        "real": {"type": "string"}
+    }

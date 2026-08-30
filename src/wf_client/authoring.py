@@ -259,18 +259,19 @@ def _seed_remote_node_defs(
             requirement.output_schema_snapshot,
             output_fields,
         )
+        if name in builder.seeded_node_defs:
+            # A contract explicitly carried by the plan is authoritative even
+            # when the server omitted dependency snapshots for this capability.
+            continue
         if not isinstance(requirement.input_schema_snapshot, dict) or not isinstance(
             requirement.output_schema_snapshot, dict
         ):
             permissive_names.add(name)
-        builder.seeded_node_defs.setdefault(
-            name,
-            NodeDef(
-                name=name,
-                input_schema=SchemaRef.model_validate(input_schema),
-                output_schema=SchemaRef.model_validate(output_schema),
-                outcomes=outcomes_by_node.get(name, ["ok"]),
-            ),
+        builder.seeded_node_defs[name] = NodeDef(
+            name=name,
+            input_schema=SchemaRef.model_validate(input_schema),
+            output_schema=SchemaRef.model_validate(output_schema),
+            outcomes=outcomes_by_node.get(name, ["ok"]),
         )
     return permissive_names
 
