@@ -400,6 +400,11 @@ def test_openrpc_exposes_typed_auth_delete_result(
             {"artifact_id", "version", "saved"},
         ),
         (
+            "workflow.artifacts.validate_plan",
+            "ValidateArtifactPlanResult",
+            {"status", "diagnostics", "required_capabilities", "workflow_dependencies"},
+        ),
+        (
             "workflow.artifacts.save",
             "SaveArtifactResult",
             {"artifact_id", "version", "saved"},

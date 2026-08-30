@@ -436,6 +436,6 @@ describe("workflow contract generator", () => {
 
     const generatedSource = await generateWorkflowContractSource(manifestText);
     expect(generatedSource).toBe(checkedSource);
-    expect(generatedSource.match(/^  \| "workflow\./gm)).toHaveLength(71);
+    expect(generatedSource.match(/^  \| "workflow\./gm)).toHaveLength(72);
   });
 });

@@ -46,6 +46,7 @@ from .models import (
     SaveArtifactResult,
     SavedDraftArtifactResult,
     SaveDeploymentResult,
+    ValidateArtifactPlanResult,
     ValidateDeploymentResult,
     ValidateDraftResult,
     WorkflowArtifactPayload,
@@ -215,6 +216,21 @@ class WorkflowApi:
             required_capabilities=required_capabilities,
             source_bindings=source_bindings,
             created_from_catalog_version=created_from_catalog_version,
+        )
+
+    async def validate_artifact_plan(
+        self,
+        *,
+        plan: dict[str, Any],
+        outcomes: Sequence[str],
+        required_capabilities: dict[str, dict[str, Any]] | None = None,
+        source_bindings: dict[str, str] | None = None,
+    ) -> ValidateArtifactPlanResult:
+        return await self.artifacts.validate_artifact_plan(
+            plan=plan,
+            outcomes=outcomes,
+            required_capabilities=required_capabilities,
+            source_bindings=source_bindings,
         )
 
     async def create_artifact_from_draft(

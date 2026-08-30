@@ -1333,6 +1333,33 @@ async def test_rpc_create_artifact_from_plan(tmp_path) -> None:
     assert inspected["result"]["plan"]["name"] == "rpc_constant"
 
 
+async def test_rpc_validate_artifact_plan_does_not_persist(tmp_path) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    app = create_rpc_app(server)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        validated = await _rpc(
+            client,
+            "workflow.artifacts.validate_plan",
+            {
+                "plan": _constant_plan().model_dump(mode="json", by_alias=True),
+                "outcomes": ["ok"],
+                "source_bindings": {},
+            },
+        )
+        listed = await _rpc(
+            client, "workflow.artifacts.list", {"query": "rpc_constant"}
+        )
+
+    assert validated["result"]["status"] == "valid"
+    assert validated["result"]["diagnostics"] == []
+    assert listed["result"] == {
+        "nodes": [],
+        "next_cursor": None,
+        "total": 0,
+    }
+
+
 async def test_rpc_draft_workspace_focused_edit_methods(tmp_path) -> None:
     server = build_local_static_workflow_server(tmp_path / "store")
     app = create_rpc_app(server)

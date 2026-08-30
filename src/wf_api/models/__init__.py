@@ -14,12 +14,14 @@ from .admin import (
 from .artifacts import (
     ArtifactCatalogEntryPayload,
     ArtifactKindPayload,
+    ArtifactPlanDiagnosticPayload,
     CapabilityKindPayload,
     CapabilityRefPayload,
     DeleteArtifactResult,
     ListArtifactsResult,
     RequiredCapabilityPayload,
     SaveArtifactResult,
+    ValidateArtifactPlanResult,
     WorkflowArtifactPayload,
 )
 from .authoring_contracts import (
@@ -139,6 +141,7 @@ __all__ = [
     "AuthoringStepContractPayload",
     "AuthRecordSummaryPayload",
     "ArtifactCatalogEntryPayload",
+    "ArtifactPlanDiagnosticPayload",
     "ArtifactKindPayload",
     "CapabilityKindPayload",
     "CapabilityCallResult",
@@ -205,6 +208,7 @@ __all__ = [
     "RequiredCapabilityPayload",
     "RemoveRegistryEntryResult",
     "SaveArtifactResult",
+    "ValidateArtifactPlanResult",
     "SavedDraftArtifactResult",
     "SaveDeploymentResult",
     "SourceBindingPayload",

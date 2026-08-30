@@ -186,6 +186,57 @@ async def test_create_artifact_from_plan_saves_with_observed_node_specs(
 
 
 @pytest.mark.asyncio
+async def test_validate_artifact_plan_does_not_persist(tmp_path: Path) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "artifacts_validate")
+    api, _service = _artifact_api(artifact_store)
+
+    result = await api.validate_artifact_plan(
+        plan=_echo_artifact().plan,
+        outcomes=("completed",),
+        source_bindings={},
+    )
+
+    assert result["status"] == "valid"
+    assert result["diagnostics"] == []
+    assert await api.list_artifacts(query="echo") == {
+        "nodes": [],
+        "next_cursor": None,
+        "total": 0,
+    }
+
+
+@pytest.mark.asyncio
+async def test_validate_artifact_plan_projects_invalid_plan_diagnostic(
+    tmp_path: Path,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "artifacts_invalid")
+    api, _service = _artifact_api(artifact_store)
+    invalid_plan = {**_echo_artifact().plan, "start": "missing"}
+
+    result = await api.validate_artifact_plan(
+        plan=invalid_plan,
+        outcomes=("completed",),
+        source_bindings={},
+    )
+
+    assert result["status"] == "invalid"
+    assert result["diagnostics"] == [
+        {
+            "severity": "error",
+            "code": "artifact_plan_invalid",
+            "path": "plan",
+            "message": "invalid workflow plan: start node 'missing' does not exist",
+            "repair_hint": None,
+        }
+    ]
+    assert await api.list_artifacts(query="echo") == {
+        "nodes": [],
+        "next_cursor": None,
+        "total": 0,
+    }
+
+
+@pytest.mark.asyncio
 async def test_create_artifact_from_workspace_suggests_exact_available_source_binding(
     tmp_path: Path,
 ) -> None:

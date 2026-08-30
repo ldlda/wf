@@ -80,6 +80,25 @@ class SaveArtifactResult(TypedDict):
     saved: bool
 
 
+class ArtifactPlanDiagnosticPayload(TypedDict):
+    """Stable diagnostic projected when an artifact plan is invalid."""
+
+    severity: Literal["error", "warning"]
+    code: str
+    path: str
+    message: str
+    repair_hint: str | None
+
+
+class ValidateArtifactPlanResult(TypedDict):
+    """Non-persisting artifact-plan validation and dependency inventory."""
+
+    status: Literal["valid", "invalid"]
+    diagnostics: list[ArtifactPlanDiagnosticPayload]
+    required_capabilities: list[RequiredCapabilityPayload]
+    workflow_dependencies: dict[str, int]
+
+
 class DeleteArtifactResult(TypedDict):
     artifact_id: str
     version: int

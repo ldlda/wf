@@ -695,6 +695,31 @@ async def test_rpc_client_creates_artifact_from_plan(tmp_path) -> None:
     assert inspected["id"] == "client_plan"
 
 
+async def test_rpc_client_validates_artifact_plan_without_persisting(tmp_path) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    app = create_rpc_app(server)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport, base_url="http://test"
+    ) as http_client:
+        client = RpcWorkflowApiClient(
+            url="http://test/rpc",
+            timeout_seconds=5,
+            http_client=http_client,
+        )
+        validated = await client.validate_artifact_plan(
+            plan=_constant_plan().model_dump(mode="json", by_alias=True),
+            outcomes=("ok",),
+            source_bindings={},
+        )
+        listed = await client.list_artifacts(query="client_constant")
+
+    assert validated["status"] == "valid"
+    assert validated["diagnostics"] == []
+    assert listed["nodes"] == []
+    assert listed["total"] == 0
+
+
 async def test_rpc_client_set_workflow_output_map(tmp_path) -> None:
     server = build_local_static_workflow_server(tmp_path / "store")
     app = create_rpc_app(server)

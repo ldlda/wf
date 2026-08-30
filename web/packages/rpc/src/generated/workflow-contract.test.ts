@@ -15,8 +15,8 @@ import {
 
 describe("generated workflow contract", () => {
   it("contains every operation exactly once", () => {
-    expect(workflowOperationNames).toHaveLength(71);
-    expect(new Set(workflowOperationNames)).toHaveLength(71);
+    expect(workflowOperationNames).toHaveLength(72);
+    expect(new Set(workflowOperationNames)).toHaveLength(72);
   });
 
   it("contains every authored Effect operation without broadening its boundary", () => {

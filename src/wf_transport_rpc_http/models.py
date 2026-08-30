@@ -120,6 +120,13 @@ class SaveArtifactParams(RpcParamsModel):
     artifact: dict[str, Any]
 
 
+class ValidateArtifactPlanParams(RpcParamsModel):
+    plan: dict[str, Any]
+    outcomes: list[str]
+    required_capabilities: dict[str, dict[str, Any]] | None = None
+    source_bindings: dict[str, str] | None = None
+
+
 class SaveDeploymentParams(RpcParamsModel):
     deployment: dict[str, Any]
 

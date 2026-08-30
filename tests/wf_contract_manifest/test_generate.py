@@ -90,9 +90,9 @@ def test_generates_the_complete_real_workflow_contract() -> None:
     manifest = generate_manifest()
     schemas = manifest["components"]["schemas"]
 
-    assert len(manifest["operations"]) == 71
-    assert len({operation["method"] for operation in manifest["operations"]}) == 71
-    assert len(schemas) == 140
+    assert len(manifest["operations"]) == 72
+    assert len({operation["method"] for operation in manifest["operations"]}) == 72
+    assert len(schemas) == 142
     assert len(manifest["components"]["errors"]) == 1
     assert all(
         set(operation["result"]["schema"]) == {"$ref"}
