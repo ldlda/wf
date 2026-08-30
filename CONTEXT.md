@@ -68,6 +68,19 @@ captures the workflow graph and declared requirements, but it is not itself a
 live execution.
 _Avoid_: Mutable draft, run record
 
+**Editable Workflow**:
+A process-local, mutable Python authoring object used to construct or revise a
+workflow graph before saving an immutable workflow artifact. Editing an
+existing artifact creates a new editable workflow seeded from that exact
+version; it never mutates the saved artifact.
+_Avoid_: Draft workspace, workflow artifact, deployment
+
+**Remote Capability**:
+A Python client object reconstructed from an inspected workflow capability. It
+preserves the canonical capability reference, schemas, outcomes, direct-call
+behavior, and graph-authoring contract while hiding transport payloads.
+_Avoid_: Raw provider tool, unvalidated JSON-RPC result, local NodeSpec
+
 **Workflow Deployment**:
 A binding from a workflow artifact version to concrete source/runtime context.
 Deployment validation determines whether the artifact can currently run.
