@@ -143,11 +143,25 @@ def auto_input_map(
     state_schema: StateSchema,
 ) -> dict[str, str]:
     """Map node input fields from state first, then workflow input."""
+    return auto_input_map_from_schema(
+        spec.to_node_def().input_schema,
+        input_schema=input_schema,
+        state_schema=state_schema,
+    )
+
+
+def auto_input_map_from_schema(
+    capability_input_schema: SchemaRef,
+    *,
+    input_schema: SchemaRef,
+    state_schema: StateSchema,
+) -> dict[str, str]:
+    """Map schema-declared capability inputs from state or workflow input."""
     return {
         _auto_source_path(
             field, input_schema=input_schema, state_schema=state_schema
         ): field
-        for field in spec.input_model.model_json_schema().get("properties", {})
+        for field in capability_input_schema.properties
     }
 
 
@@ -157,10 +171,22 @@ def auto_output_map(
     state_schema: StateSchema,
 ) -> dict[str, str]:
     """Map node output fields back into matching state fields."""
+    return auto_output_map_from_schema(
+        spec.to_node_def().output_schema,
+        state_schema=state_schema,
+    )
+
+
+def auto_output_map_from_schema(
+    capability_output_schema: SchemaRef,
+    *,
+    state_schema: StateSchema,
+) -> dict[str, str]:
+    """Map schema-declared capability outputs into matching state fields."""
     state_fields = state_schema.field_map()
     return {
         field: f"state.{field}"
-        for field in spec.output_model.model_json_schema().get("properties", {})
+        for field in capability_output_schema.properties
         if field in state_fields
     }
 

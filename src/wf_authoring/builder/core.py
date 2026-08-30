@@ -15,6 +15,7 @@ from wf_core import (
     ForeachItemErrorPolicy,
     ForeachNode,
     InterruptNode,
+    NodeDef,
     NodeHandler,
     NodeUse,
     PreparedSubgraph,
@@ -22,6 +23,7 @@ from wf_core import (
     SchemaRef,
     StateSchema,
     SubgraphNode,
+    ValidationReport,
     Workflow,
     WorkflowRef,
     execute_workflow,
@@ -31,6 +33,7 @@ from wf_core.errors import WorkflowExecutionError
 from wf_core.models.conditions import BinaryCondition, ExistsCondition, PathOperand
 from wf_core.models.conditions import Condition as CoreCondition
 from wf_core.models.steps import (
+    InputBinding,
     InputPathBinding,
     InputValueBinding,
     OutputBinding,
@@ -54,7 +57,9 @@ from .mapping import (
     OutputBindingArg,
     StepInputBindingArg,
     auto_input_map,
+    auto_input_map_from_schema,
     auto_output_map,
+    auto_output_map_from_schema,
     coerce_path,
     normalize_input_mapping,
     normalize_input_values,
@@ -136,6 +141,11 @@ def _canonical_output_bindings(
     ]
 
 
+def _node_defs_compatible(left: NodeDef, right: NodeDef) -> bool:
+    """Compare contracts by their serialized canonical content."""
+    return left.model_dump(mode="json") == right.model_dump(mode="json")
+
+
 def _reject_mixed_binding_styles(
     *,
     input: object | None,
@@ -213,6 +223,8 @@ class WorkflowBuilder:
     node_specs: dict[str, NodeSpec[Any, Any]] = field(default_factory=dict)
     nodes: list[Step] = field(default_factory=list)
     edges: list[Edge] = field(default_factory=list)
+    workflow_output: list[InputBinding] = field(default_factory=list)
+    seeded_node_defs: dict[str, NodeDef] = field(default_factory=dict, repr=False)
     prepared_subgraphs: dict[str, PreparedSubgraph[NodeHandler]] = field(
         default_factory=dict
     )
@@ -391,6 +403,134 @@ class WorkflowBuilder:
         )
         self.nodes.append(node)
         return node
+
+    def use_contract(
+        self,
+        node_def: NodeDef,
+        *,
+        id: str | None = None,
+        input: Sequence[StepInputBindingArg] | None = None,
+        output: Sequence[OutputBindingArg] | None = None,
+        desc: str | None = None,
+    ) -> NodeUse:
+        """Use a schema-backed external node contract without a local handler."""
+        existing = self.seeded_node_defs.get(node_def.name)
+        if existing is not None and not _node_defs_compatible(existing, node_def):
+            raise ValueError(
+                f"incompatible duplicate node definition {node_def.name!r}"
+            )
+        self.seeded_node_defs[node_def.name] = node_def.model_copy(deep=True)
+        normalized_input_schema = cast(SchemaRef, self.input_schema)
+        normalized_state_schema = cast(StateSchema, self.state_schema)
+        node_input = (
+            normalize_step_input_bindings(input)
+            if input is not None
+            else _canonical_input_bindings(
+                normalize_input_mapping(
+                    auto_input_map_from_schema(
+                        node_def.input_schema,
+                        input_schema=normalized_input_schema,
+                        state_schema=normalized_state_schema,
+                    )
+                ),
+                {},
+            )
+        )
+        node_output = (
+            normalize_output_bindings(output)
+            if output is not None
+            else _canonical_output_bindings(
+                normalize_output_mapping(
+                    auto_output_map_from_schema(
+                        node_def.output_schema,
+                        state_schema=normalized_state_schema,
+                    )
+                )
+            )
+        )
+        return self.use_ref(
+            node_def.name,
+            id=id,
+            input=node_input,
+            output=node_output,
+            desc=desc,
+        )
+
+    @classmethod
+    def from_workflow(cls, workflow: Workflow) -> WorkflowBuilder:
+        """Create an independently editable builder from a canonical workflow."""
+        return cls(
+            name=workflow.name,
+            input_schema=workflow.input_schema.model_copy(deep=True),
+            state_schema=workflow.state_schema.model_copy(deep=True),
+            output_schema=workflow.output_schema.model_copy(deep=True),
+            outcomes=tuple(workflow.outcomes),
+            start=workflow.start,
+            nodes=[node.model_copy(deep=True) for node in workflow.nodes],
+            edges=[edge.model_copy(deep=True) for edge in workflow.edges],
+            workflow_output=[
+                binding.model_copy(deep=True) for binding in workflow.output
+            ],
+            seeded_node_defs={
+                node_def.name: node_def.model_copy(deep=True)
+                for node_def in workflow.node_defs
+            },
+        )
+
+    def set_output(self, bindings: Sequence[StepInputBindingArg]) -> None:
+        """Replace final workflow output projection bindings."""
+        self.workflow_output = cast(
+            list[InputBinding], normalize_step_input_bindings(bindings)
+        )
+
+    def set_route(self, source: StepRef, outcome: str, target: StepRef) -> None:
+        """Replace the unique route for one source/outcome pair."""
+        source_id = step_id(source)
+        target_id = step_id(target)
+        self.edges = [
+            edge
+            for edge in self.edges
+            if not (edge.from_ == source_id and edge.outcome == outcome)
+        ]
+        self.edges.append(
+            Edge.model_validate(
+                {"from": source_id, "outcome": outcome, "to": target_id}
+            )
+        )
+
+    def remove_route(self, source: StepRef, outcome: str) -> None:
+        """Remove one route, raising when the requested route is absent."""
+        source_id = step_id(source)
+        matching = [
+            edge
+            for edge in self.edges
+            if edge.from_ == source_id and edge.outcome == outcome
+        ]
+        if not matching:
+            raise ValueError(
+                f"route from step {source_id!r} with outcome {outcome!r} not found"
+            )
+        self.edges = [
+            edge
+            for edge in self.edges
+            if not (edge.from_ == source_id and edge.outcome == outcome)
+        ]
+
+    def remove_step(self, step: StepRef) -> None:
+        """Remove an unreferenced step, rejecting dangling graph references."""
+        step_id_value = step_id(step)
+        if not any(node.id == step_id_value for node in self.nodes):
+            raise ValueError(f"step {step_id_value!r} not found")
+        if self.start == step_id_value:
+            raise ValueError(
+                f"step {step_id_value!r} is still referenced as workflow start"
+            )
+        if any(
+            edge.from_ == step_id_value or edge.to == step_id_value
+            for edge in self.edges
+        ):
+            raise ValueError(f"step {step_id_value!r} is still referenced by route")
+        self.nodes = [node for node in self.nodes if node.id != step_id_value]
 
     def subgraph(
         self,
@@ -869,21 +1009,45 @@ class WorkflowBuilder:
             )
         return self.match(value, cases, id=id, default=default)
 
+    def _build_workflow(self, *, start: str) -> Workflow:
+        """Build a canonical workflow snapshot from current builder state."""
+        node_defs = [
+            node_def.model_copy(deep=True)
+            for node_def in self.seeded_node_defs.values()
+        ]
+        by_name = {node_def.name: node_def for node_def in node_defs}
+        for spec in self.node_specs.values():
+            node_def = spec.to_node_def()
+            existing = by_name.get(node_def.name)
+            if existing is not None:
+                if not _node_defs_compatible(existing, node_def):
+                    raise ValueError(
+                        f"incompatible duplicate node definition {node_def.name!r}"
+                    )
+                continue
+            by_name[node_def.name] = node_def
+            node_defs.append(node_def)
+        return Workflow(
+            name=self.name,
+            input_schema=cast(SchemaRef, self.input_schema).model_copy(deep=True),
+            state_schema=cast(StateSchema, self.state_schema).model_copy(deep=True),
+            output_schema=cast(SchemaRef, self.output_schema).model_copy(deep=True),
+            outcomes=list(self.outcomes),
+            node_defs=node_defs,
+            start=start,
+            output=[binding.model_copy(deep=True) for binding in self.workflow_output],
+            nodes=[node.model_copy(deep=True) for node in self.nodes],
+            edges=[edge.model_copy(deep=True) for edge in self.edges],
+        )
+
+    def validate_structure(self) -> ValidationReport:
+        """Return structural issues, including an unset workflow start."""
+        return self._build_workflow(start=self.start or "").validate_structure()
+
     def compile(self) -> Workflow:
         if self.start is None:
             raise WorkflowExecutionError(
                 "workflow builder requires an explicit start; "
                 "call set_entry_point(...) or pass start=..."
             )
-        node_defs = [spec.to_node_def() for spec in self.node_specs.values()]
-        return Workflow(
-            name=self.name,
-            input_schema=cast(SchemaRef, self.input_schema),
-            state_schema=cast(StateSchema, self.state_schema),
-            output_schema=cast(SchemaRef, self.output_schema),
-            outcomes=list(self.outcomes),
-            node_defs=node_defs,
-            start=self.start,
-            nodes=self.nodes,
-            edges=self.edges,
-        )
+        return self._build_workflow(start=self.start)

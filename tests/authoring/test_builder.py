@@ -21,7 +21,15 @@ from wf_authoring import (
     state_path,
 )
 from wf_authoring.builder.mapping import normalize_input_mapping
-from wf_core import END, EndNode, RunStatus, WorkflowExecutionError
+from wf_core import (
+    END,
+    EndNode,
+    NodeDef,
+    RunStatus,
+    ValidationIssueCode,
+    Workflow,
+    WorkflowExecutionError,
+)
 from wf_core.models.steps import (
     InputExpressionBinding,
     InputPathBinding,
@@ -29,6 +37,163 @@ from wf_core.models.steps import (
 )
 from wf_core.paths import GraphSourcePath, LocalPath, StatePath
 from wf_platform import CapabilityRef
+
+
+def _editable_three_step_builder() -> WorkflowBuilder:
+    builder = WorkflowBuilder(
+        name="editable_three_step",
+        input_schema={"type": "object", "properties": {}},
+        state_schema={"type": "object", "properties": {}},
+        output_schema={"type": "object", "properties": {}},
+        start="first",
+    )
+    builder.use_ref("demo.first", id="first")
+    builder.use_ref("demo.second", id="second")
+    builder.use_ref("demo.third", id="third")
+    builder.connect("first", "ok", "second")
+    builder.connect("second", "ok", "third")
+    builder.connect("third", "ok", END)
+    return builder
+
+
+def test_builder_round_trip_preserves_complete_workflow() -> None:
+    original = Workflow.model_validate(
+        {
+            "name": "round_trip",
+            "input_schema": {
+                "type": "object",
+                "properties": {"topic": {"type": "string"}},
+            },
+            "state_schema": {
+                "type": "object",
+                "properties": {"result": {"type": "string"}},
+            },
+            "output_schema": {
+                "type": "object",
+                "properties": {"result": {"type": "string"}},
+            },
+            "output": [{"path": "state.result", "target": "result"}],
+            "node_defs": [
+                {
+                    "name": "app.default.search",
+                    "input_schema": {"type": "object", "properties": {}},
+                    "output_schema": {
+                        "type": "object",
+                        "properties": {"result": {"type": "string"}},
+                    },
+                    "outcomes": ["ok"],
+                }
+            ],
+            "outcomes": ["ok"],
+            "start": "search",
+            "nodes": [
+                {
+                    "id": "search",
+                    "type": "node",
+                    "node": "app.default.search",
+                    "input": [],
+                    "output": [{"source": "result", "target": "state.result"}],
+                },
+                {"id": "end_ok", "type": "end", "outcome": "ok"},
+            ],
+            "edges": [{"from": "search", "outcome": "ok", "to": "end_ok"}],
+        }
+    )
+
+    builder = WorkflowBuilder.from_workflow(original)
+    rebuilt = builder.compile()
+
+    assert rebuilt.model_dump(mode="json", by_alias=True) == original.model_dump(
+        mode="json", by_alias=True
+    )
+    builder.set_output([{"value": "changed", "target": "result"}])
+    original_output = original.output[0]
+    assert isinstance(original_output, InputPathBinding)
+    assert str(original_output.path) == "state.result"
+
+
+def test_set_route_replaces_unique_source_outcome_edge() -> None:
+    builder = _editable_three_step_builder()
+
+    builder.set_route("first", "ok", "third")
+
+    matching = [
+        edge for edge in builder.edges if edge.from_ == "first" and edge.outcome == "ok"
+    ]
+    assert [(edge.from_, edge.outcome, edge.to) for edge in matching] == [
+        ("first", "ok", "third")
+    ]
+
+
+def test_remove_route_removes_only_requested_source_outcome_pair() -> None:
+    builder = _editable_three_step_builder()
+    builder.connect("first", "error", "third")
+
+    builder.remove_route("first", "ok")
+
+    assert [(edge.from_, edge.outcome) for edge in builder.edges] == [
+        ("second", "ok"),
+        ("third", "ok"),
+        ("first", "error"),
+    ]
+
+
+def test_remove_step_rejects_referenced_step() -> None:
+    builder = _editable_three_step_builder()
+
+    with pytest.raises(ValueError, match="still referenced by route"):
+        builder.remove_step("second")
+
+
+def test_use_contract_registers_schema_only_external_node() -> None:
+    builder = WorkflowBuilder(
+        name="contract_builder",
+        input_schema={"type": "object", "properties": {"topic": {"type": "string"}}},
+        state_schema={
+            "type": "object",
+            "properties": {"result": {"type": "string"}},
+        },
+        output_schema={"type": "object", "properties": {"result": {"type": "string"}}},
+    )
+    contract = NodeDef.model_validate(
+        {
+            "name": "app.remote.search",
+            "input_schema": {
+                "type": "object",
+                "properties": {"topic": {"type": "string"}},
+            },
+            "output_schema": {
+                "type": "object",
+                "properties": {"result": {"type": "string"}},
+            },
+            "outcomes": ["ok"],
+        }
+    )
+
+    step = builder.use_contract(contract, id="search")
+    builder.set_entry_point(step)
+    builder.connect(step, "ok", END)
+
+    assert step.node == contract.name
+    assert contract.name in {node_def.name for node_def in builder.compile().node_defs}
+    assert builder.node_specs == {}
+    assert builder.registry() == {}
+    assert isinstance(step.input[0], InputPathBinding)
+    assert step.input[0].path == GraphSourcePath.input("topic")
+    assert step.output[0].target == StatePath.of("result")
+
+
+def test_validate_structure_reports_unknown_start_when_unset() -> None:
+    builder = WorkflowBuilder(
+        name="missing_start",
+        input_schema={},
+        state_schema={"type": "object"},
+        output_schema={},
+    )
+
+    report = builder.validate_structure()
+
+    assert report.errors[0].code == ValidationIssueCode.UNKNOWN_START
 
 
 def test_builder_auto_binds_matching_node_inputs_and_outputs_to_state() -> None:
