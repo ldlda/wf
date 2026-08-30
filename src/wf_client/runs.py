@@ -81,6 +81,7 @@ def _run_from_decoded(
             deployment_id=decoded.deployment_id,
             diagnostics=decoded.diagnostics,
             outcome=decoded.outcome,
+            error=decoded.error,
         )
     return Run(
         _port=port,

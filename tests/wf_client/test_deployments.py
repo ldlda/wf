@@ -42,6 +42,13 @@ class _FakePort:
         self.list_result: dict[str, Any] = {"deployments": []}
         self.inspect_artifact_id = "report"
         self.inspect_artifact_version = 1
+        self.inspect_deployment_id: str | None = None
+        self.save_result: dict[str, Any] = {
+            "deployment_id": "report.production",
+            "artifact_id": "report",
+            "artifact_version": 1,
+            "saved": True,
+        }
         self.validation_result: dict[str, Any] = {
             "deployment_id": "report.production",
             "artifact_id": "report",
@@ -82,12 +89,12 @@ class _FakePort:
 
     async def save_deployment(self, deployment: dict[str, Any]) -> object:
         self.calls.append(("save_deployment", {"deployment": deployment}))
-        return {"deployment_id": deployment["id"], "saved": True}
+        return self.save_result
 
     async def inspect_deployment(self, *, deployment_id: str) -> object:
         self.calls.append(("inspect_deployment", {"deployment_id": deployment_id}))
         return {
-            "id": deployment_id,
+            "id": self.inspect_deployment_id or deployment_id,
             "artifact_id": self.inspect_artifact_id,
             "artifact_version": self.inspect_artifact_version,
             "bindings": [
@@ -178,6 +185,44 @@ async def test_explicit_artifact_run_rejects_deployment_for_another_artifact() -
 
 
 @pytest.mark.asyncio
+async def test_artifact_deploy_rejects_wrong_created_deployment_id() -> None:
+    artifact = _artifact()
+    port = cast(_FakePort, artifact._port)
+    port.save_result["deployment_id"] = "other.deployment"
+    with pytest.raises(InvalidResponse, match="save"):
+        await artifact.deploy("report.production")
+
+
+@pytest.mark.asyncio
+async def test_artifact_deploy_rejects_wrong_inspected_deployment_id() -> None:
+    artifact = _artifact()
+    port = cast(_FakePort, artifact._port)
+    port.inspect_deployment_id = "other.deployment"
+    with pytest.raises(InvalidResponse, match="inspect"):
+        await artifact.deploy("report.production")
+
+
+@pytest.mark.asyncio
+async def test_discovered_deployment_rechecks_inspected_artifact_identity() -> None:
+    artifact = _artifact()
+    port = cast(_FakePort, artifact._port)
+    port.list_result = {
+        "deployments": [
+            {
+                "id": "report.production",
+                "artifact_id": "report",
+                "artifact_version": 1,
+                "binding_count": 0,
+                "drift_policy": "block",
+            }
+        ]
+    }
+    port.inspect_artifact_id = "other"
+    with pytest.raises(InvalidResponse, match="does not target artifact"):
+        await artifact.run({})
+
+
+@pytest.mark.asyncio
 async def test_deployment_validation_rejects_identity_mismatch() -> None:
     artifact = _artifact()
     deployment = await artifact.deploy("report.production")
@@ -193,6 +238,49 @@ async def test_deployment_run_rejects_mismatched_start_deployment() -> None:
     deployment = await artifact.deploy("report.production")
     port = cast(_FakePort, deployment._port)
     port.run_result["deployment_id"] = "other.deployment"
+    with pytest.raises(InvalidResponse, match="workflow.runs.start"):
+        await deployment.run({})
+
+
+@pytest.mark.asyncio
+async def test_deployment_run_rejects_mismatched_start_artifact() -> None:
+    artifact = _artifact()
+    deployment = await artifact.deploy("report.production")
+    port = cast(_FakePort, deployment._port)
+    port.run_result["artifact_id"] = "other"
+    with pytest.raises(InvalidResponse, match="workflow.runs.start"):
+        await deployment.run({})
+
+
+@pytest.mark.asyncio
+async def test_start_malformed_interrupt_reports_start_operation() -> None:
+    artifact = _artifact()
+    deployment = await artifact.deploy("report.production")
+    port = cast(_FakePort, deployment._port)
+    port.run_result["interrupt"] = {
+        "id": "interrupt-1",
+        "frame_id": "root",
+        "node_id": "approve",
+        "kind": "approval",
+        "payload": {},
+        "resumable": True,
+        "route": {
+            "frame_id": "child",
+            "node_id": "approve",
+            "scope_id": "scope",
+            "lineage_id": "lineage",
+            "parent_frame_id": "root",
+            "workflow_ref": {
+                "name": "local",
+                "artifact_id": "invalid",
+                "version": 1,
+            },
+        },
+        "outcomes": ["submitted"],
+        "request_schema": {"type": "object"},
+        "resume_schema": {"type": "object"},
+        "typed": False,
+    }
     with pytest.raises(InvalidResponse, match="workflow.runs.start"):
         await deployment.run({})
 

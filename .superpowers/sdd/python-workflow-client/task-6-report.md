@@ -38,3 +38,11 @@ references are converted to `InvalidResponse` with operation context, and run
 decoding accepts truthful inspect/start/resume operation names.
 
 Fixes committed in the follow-up review commit for this report.
+
+## Review fix round 2
+
+The sole discovered deployment path now rechecks the inspected artifact
+identity, deployment creation acknowledgements and inspected ids are checked
+before validation, and run-start responses enforce deployment plus artifact
+identity. Missing-run errors preserve server text, including operation-aware
+start interrupt decoding.

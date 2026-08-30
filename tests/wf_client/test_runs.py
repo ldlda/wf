@@ -5,7 +5,7 @@ from typing import Any, cast
 import pytest
 
 from wf_client import App, Run, WorkflowClientPort
-from wf_client.errors import InvalidResponse
+from wf_client.errors import DeploymentNotRunnable, InvalidResponse
 
 
 def _payload(
@@ -148,6 +148,15 @@ async def test_malformed_interrupt_route_is_invalid_response() -> None:
     }
     with pytest.raises(InvalidResponse, match="workflow.runs.inspect"):
         Run.from_payload(cast(WorkflowClientPort, _Port()), payload)
+
+
+@pytest.mark.asyncio
+async def test_missing_run_id_preserves_server_error() -> None:
+    payload = _payload(run_id=None, status="failed")
+    payload["error"] = "server refused to start"
+    with pytest.raises(DeploymentNotRunnable) as captured:
+        Run.from_payload(cast(WorkflowClientPort, _Port()), payload)
+    assert captured.value.error == "server refused to start"
 
 
 @pytest.mark.asyncio

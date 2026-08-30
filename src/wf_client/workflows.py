@@ -128,7 +128,7 @@ class WorkflowArtifact:
         """Save, inspect, and validate a deployment for this artifact version."""
         from .deployments import Deployment
 
-        await self._port.save_deployment(
+        saved = await self._port.save_deployment(
             {
                 "id": deployment_id,
                 "artifact_id": self.artifact.id,
@@ -137,10 +137,27 @@ class WorkflowArtifact:
                 "drift_policy": drift_policy,
             }
         )
+        if not isinstance(saved, Mapping) or saved.get("deployment_id") != deployment_id:
+            saved_id = saved.get("deployment_id") if isinstance(saved, Mapping) else None
+            raise InvalidResponse(
+                operation="workflow.deployments.save",
+                details=(
+                    f"saved deployment id {saved_id!r} does not match requested "
+                    f"{deployment_id!r}"
+                ),
+            )
         deployment = Deployment.from_payload(
             self._port,
             await self._port.inspect_deployment(deployment_id=deployment_id),
         )
+        if deployment.deployment_id != deployment_id:
+            raise InvalidResponse(
+                operation="workflow.deployments.inspect",
+                details=(
+                    f"inspected deployment {deployment.deployment_id!r} does not "
+                    f"match requested {deployment_id!r}"
+                ),
+            )
         if (
             deployment.artifact_id != self.artifact.id
             or deployment.artifact_version != self.artifact.version

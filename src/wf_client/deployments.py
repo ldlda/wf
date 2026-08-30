@@ -120,6 +120,18 @@ class Deployment:
                     f"match requested {self.deployment_id!r}"
                 ),
             )
+        if (
+            decoded.artifact_id != self.artifact_id
+            or decoded.artifact_version != self.artifact_version
+        ):
+            raise InvalidResponse(
+                operation="workflow.runs.start",
+                details=(
+                    f"start result for {self.deployment_id!r} targets artifact "
+                    f"{decoded.artifact_id!r} version {decoded.artifact_version}, "
+                    f"expected {self.artifact_id!r} version {self.artifact_version}"
+                ),
+            )
         if decoded.run_id is None or decoded.status in {"unrunnable", "rejected"}:
             raise DeploymentNotRunnable(
                 deployment_id=self.deployment_id,
@@ -127,7 +139,11 @@ class Deployment:
                 outcome=decoded.outcome,
                 error=decoded.error,
             )
-        return _run_from_decoded(self._port, decoded)
+        return _run_from_decoded(
+            self._port,
+            decoded,
+            operation="workflow.runs.start",
+        )
 
 
 def _decode_summaries(payload: object) -> list[dict[str, Any]]:
@@ -220,6 +236,17 @@ async def run_artifact(
             details=(
                 f"inspected deployment {deployment.deployment_id!r} does not "
                 f"match requested {matches[0]['id']!r}"
+            ),
+        )
+    if (
+        deployment.artifact_id != artifact.artifact.id
+        or deployment.artifact_version != artifact.artifact.version
+    ):
+        raise InvalidResponse(
+            operation="workflow.deployments.inspect",
+            details=(
+                f"deployment {matches[0]['id']!r} does not target artifact "
+                f"{artifact.artifact.id!r} version {artifact.artifact.version}"
             ),
         )
     return await deployment.run(workflow_input)
