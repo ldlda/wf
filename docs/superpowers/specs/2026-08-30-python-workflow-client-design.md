@@ -104,6 +104,9 @@ graph.set_entry_point(searched)
 graph.connect(searched, "ok", done)
 graph.set_output([input_from(state_path("sources"), "sources")])
 
+validation = await graph.validate()
+validation.raise_for_errors()
+
 report_v1 = await graph.save(version=1, title="Research report")
 run = await report_v1.run({"topic": "durable workflow systems"})
 
@@ -397,7 +400,10 @@ class EditableWorkflow(WorkflowBuilder):
         bindings: Sequence[StepInputBindingArg],
     ) -> None: ...
 
-    def validate(self) -> ValidationReport: ...
+    def validate_local(self) -> ValidationReport: ...
+
+    async def validate(self) -> WorkflowValidation: ...
+
     def compile(self) -> Workflow: ...
 
     async def save(
@@ -427,6 +433,32 @@ draft API calls.
 `set_output()` must first become a lossless `WorkflowBuilder` operation.
 `compile()` must preserve workflow output bindings. This repair is required
 before artifact editing is exposed.
+
+`validate_local()` performs deterministic core structural validation without
+I/O. Async `validate()` always runs local validation first, then submits a valid
+compiled plan to the server for dependency and environment-aware validation
+without saving an artifact. It returns both sides in one result. A local
+failure prevents the remote request but remains represented in the combined
+result.
+
+```python
+@dataclass(frozen=True, slots=True)
+class WorkflowValidation:
+    local: ValidationReport
+    remote_status: Literal["valid", "invalid", "not_run"]
+    remote_diagnostics: tuple[Diagnostic, ...]
+
+    @property
+    def ok(self) -> bool: ...
+
+    def raise_for_errors(self) -> None: ...
+```
+
+The server-side half requires one focused, non-persisting
+`workflow.artifacts.validate_plan` operation. It must reuse the same plan,
+capability-requirement, saved-subgraph, and schema validation used by
+`create_artifact_from_plan()`; validation and saving must not become parallel
+implementations.
 
 `use()` accepts `RemoteCapability`; `subgraph()` accepts a workflow artifact.
 These methods are intentionally not overloaded into one operation because a
@@ -528,6 +560,8 @@ Authoring and saving:
 
 ```text
 EditableWorkflow local mutations
+  -> validate_local()
+  -> workflow.artifacts.validate_plan when validate() is requested
   -> WorkflowBuilder.compile()
   -> core Workflow validation
   -> JSON-compatible plan at the adapter seam
@@ -615,6 +649,8 @@ Tests exercise the same public interface callers use:
   JSON-RPC application.
 - Capability tests cover inspection, schema validation, direct calls, and graph
   use.
+- Validation tests prove local failures avoid I/O, valid graphs receive remote
+  dependency validation, and `save()` shares the same server validation seam.
 - Round-trip tests require exact preservation of schemas, nodes, edges, step
   bindings, workflow output bindings, outcomes, and subgraph references across
   artifact inspection, editing, compilation, and saving.
