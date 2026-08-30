@@ -16,6 +16,7 @@ from wf_api.models import (
     RawWorkflowPlan,
     RunResult,
     RunTraceResult,
+    ValidateArtifactPlanResult,
     WorkflowArtifactPayload,
     WorkflowDeploymentPayload,
 )
@@ -109,6 +110,15 @@ def decode_capabilities_page(payload: object) -> ListCapabilitiesResult:
     )
 
 
+def decode_validate_artifact_plan(payload: object) -> ValidateArtifactPlanResult:
+    """Validate a non-persisting artifact-plan response at the client boundary."""
+    return _validate(
+        payload,
+        ValidateArtifactPlanResult,
+        "workflow.artifacts.validate_plan",
+    )
+
+
 _ModelT = TypeVar("_ModelT", bound=BaseModel)
 
 
@@ -129,11 +139,14 @@ def decode_workflow_artifact(
     wire = _validate(payload, WorkflowArtifactPayload, operation)
     artifact = _model_validate(WorkflowArtifact, wire, operation)
     raw_plan = _model_validate(RawWorkflowPlan, wire["plan"], operation)
-    workflow = _model_validate(
-        Workflow,
-        raw_plan.model_dump(mode="python", by_alias=True),
-        operation,
-    )
+    workflow_payload = raw_plan.model_dump(mode="python", by_alias=True)
+    # Raw artifact plans normally omit node definitions because the server
+    # inventories remote contracts. Preserve them when a caller supplies them
+    # so an inspect/edit/save round trip remains lossless.
+    raw_node_defs = wire["plan"].get("node_defs")
+    if isinstance(raw_node_defs, list):
+        workflow_payload["node_defs"] = raw_node_defs
+    workflow = _model_validate(Workflow, workflow_payload, operation)
     return artifact, workflow
 
 

@@ -3,6 +3,7 @@
 from wf_platform import CapabilityRef, Page
 
 from .app import App
+from .authoring import EditableWorkflow
 from .capabilities import CapabilityResult, CapabilitySummary, RemoteCapability
 from .codec import (
     DecodedRunResult,
@@ -15,6 +16,7 @@ from .codec import (
     decode_deployment,
     decode_run_result,
     decode_trace_result,
+    decode_validate_artifact_plan,
     decode_workflow_artifact,
 )
 from .errors import (
@@ -31,17 +33,26 @@ from .errors import (
     WorkflowClientError,
 )
 from .protocols import WorkflowClientPort
+from .workflows import (
+    ArtifactRef,
+    Diagnostic,
+    WorkflowArtifact,
+    WorkflowDiagnostic,
+    WorkflowValidation,
+)
 
 __all__ = [
     "ArtifactNotFound",
     "ArtifactVersionConflict",
     "App",
+    "ArtifactRef",
     "CapabilityNotFound",
     "CapabilityRef",
     "CapabilityResult",
     "CapabilitySummary",
     "DecodedRunResult",
     "DecodedTracePage",
+    "Diagnostic",
     "DeploymentNotRunnable",
     "DeploymentRequired",
     "InvalidResponse",
@@ -53,6 +64,10 @@ __all__ = [
     "ValidationFailed",
     "WorkflowClientError",
     "WorkflowClientPort",
+    "EditableWorkflow",
+    "WorkflowArtifact",
+    "WorkflowDiagnostic",
+    "WorkflowValidation",
     "decode_capabilities_page",
     "decode_capability_call",
     "decode_capability_diagnostics",
@@ -61,5 +76,6 @@ __all__ = [
     "decode_deployment",
     "decode_run_result",
     "decode_trace_result",
+    "decode_validate_artifact_plan",
     "decode_workflow_artifact",
 ]

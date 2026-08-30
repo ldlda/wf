@@ -6,17 +6,19 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
-from wf_authoring import WorkflowBuilder
 from wf_platform import CapabilityRef, Page, SourceRef
 from wf_transport_rpc_http import RpcWorkflowApiClient
 
+from .authoring import EditableWorkflow
 from .capabilities import CapabilitySummary, RemoteCapability
 from .codec import (
     decode_capabilities_page,
     decode_capability_inspect,
+    decode_workflow_artifact,
 )
 from .errors import InvalidResponse
 from .protocols import WorkflowClientPort
+from .workflows import WorkflowArtifact
 
 
 def _capability_ref(qualified_name: str, source_id: str) -> CapabilityRef:
@@ -145,12 +147,32 @@ class App:
         state_schema: Any,
         output_schema: Any,
         outcomes: Sequence[str] = ("ok",),
-    ) -> WorkflowBuilder:
+    ) -> EditableWorkflow:
         """Construct a local builder; remote operations remain opt-in/async."""
-        return WorkflowBuilder(
+        return EditableWorkflow(
+            _port=self._port,
             name=name,
             input_schema=input_schema,
             state_schema=state_schema,
             output_schema=output_schema,
             outcomes=outcomes,
         )
+
+    async def workflow(self, artifact_id: str, *, version: int) -> WorkflowArtifact:
+        """Inspect and reconstruct one exact immutable workflow artifact version."""
+        artifact, workflow = decode_workflow_artifact(
+            await self._port.inspect_artifact(
+                artifact_id=artifact_id,
+                version=version,
+            )
+        )
+        return WorkflowArtifact(self._port, artifact, workflow)
+
+    async def edit_workflow(
+        self,
+        artifact_id: str,
+        *,
+        version: int,
+    ) -> EditableWorkflow:
+        """Inspect an exact artifact version and seed an editable builder."""
+        return (await self.workflow(artifact_id, version=version)).edit()
