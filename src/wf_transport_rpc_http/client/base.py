@@ -7,6 +7,31 @@ from uuid import uuid4
 import httpx
 
 
+@dataclass(frozen=True, slots=True)
+class RpcProtocolError(RuntimeError):
+    """Structured JSON-RPC application error returned by a remote endpoint.
+
+    The exception intentionally remains a ``RuntimeError`` for compatibility
+    with the existing CLI's remote-operation handling, while retaining the
+    server's machine-readable code and data for richer clients.
+    """
+
+    code: int | str | None
+    message: str
+    data: object = None
+
+    def __post_init__(self) -> None:
+        # ``Exception`` stores positional arguments separately from dataclass
+        # fields; populate them so generic exception tooling sees the useful
+        # rendered message as well.
+        object.__setattr__(self, "args", (str(self),))
+
+    def __str__(self) -> str:
+        if isinstance(self.data, dict) and isinstance(self.data.get("message"), str):
+            return f"{self.message}: {self.data['message']}"
+        return self.message
+
+
 class RpcCaller(Protocol):
     """Transport primitive required by domain RPC client mixins."""
 
@@ -41,11 +66,15 @@ class RpcClientTransport:
         payload = response.json()
         if "error" in payload:
             error = payload["error"]
+            if not isinstance(error, dict):
+                raise RpcProtocolError(None, "JSON-RPC error", error)
+            code = error.get("code")
+            if not isinstance(code, (int, str)):
+                code = None
             message = error.get("message", "JSON-RPC error")
-            data = error.get("data")
-            if isinstance(data, dict) and data.get("message"):
-                message = f"{message}: {data['message']}"
-            raise RuntimeError(message)
+            if not isinstance(message, str):
+                message = "JSON-RPC error"
+            raise RpcProtocolError(code, message, error.get("data"))
         result = payload.get("result")
         if not isinstance(result, dict):
             raise RuntimeError("JSON-RPC response result must be an object")

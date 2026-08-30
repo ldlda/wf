@@ -26,8 +26,39 @@ from wf_core.models.steps import (
 from wf_core.paths import GraphSourcePath, LocalPath, StatePath
 from wf_server import build_local_static_workflow_server
 from wf_transport_rpc_http import RpcWorkflowApiClient, create_rpc_app
+from wf_transport_rpc_http.client.base import RpcProtocolError
 from wf_transport_rpc_http.client.drafts import RpcDraftClientMixin
 from wf_transport_rpc_http.client.sources import RpcSourceAdminClientMixin
+
+
+async def test_rpc_client_preserves_structured_jsonrpc_error() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "jsonrpc": "2.0",
+                "id": "request",
+                "error": {
+                    "code": "missing_source",
+                    "message": "workflow operation failed",
+                    "data": {"message": "source is not configured", "hint": "bind it"},
+                },
+            },
+        )
+
+    http_client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    async with http_client:
+        client = RpcWorkflowApiClient(url="http://test/rpc", http_client=http_client)
+        with pytest.raises(RpcProtocolError) as raised:
+            await client.list_capabilities()
+
+    assert raised.value.code == "missing_source"
+    assert raised.value.message == "workflow operation failed"
+    assert raised.value.data == {
+        "message": "source is not configured",
+        "hint": "bind it",
+    }
+    assert str(raised.value) == ("workflow operation failed: source is not configured")
 
 
 def _constant_plan() -> RawWorkflowPlan:
