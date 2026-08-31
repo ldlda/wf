@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from copy import deepcopy
 from dataclasses import dataclass
 
 from wf_artifacts import DependencyDiagnostic
@@ -16,7 +17,27 @@ class TransportError(WorkflowClientError):
 
 
 class ProtocolError(WorkflowClientError):
-    """The service returned a response that violates its protocol contract."""
+    """An inspectable JSON-RPC error not covered by a stable public subclass."""
+
+    code: int | str | None
+    message: str
+    data: object
+
+    def __init__(
+        self,
+        code: int | str | None,
+        message: str,
+        data: object = None,
+    ) -> None:
+        self.code = code
+        self.message = message
+        self.data = deepcopy(data)
+        super().__init__(str(self))
+
+    def __str__(self) -> str:
+        if isinstance(self.data, dict) and isinstance(self.data.get("message"), str):
+            return f"{self.message}: {self.data['message']}"
+        return self.message
 
 
 @dataclass(slots=True)

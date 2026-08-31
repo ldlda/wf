@@ -6,6 +6,7 @@ import pytest
 
 from wf_authoring import WorkflowBuilder
 from wf_client import App, ArtifactRef, EditableWorkflow, RemoteCapability
+from wf_client.errors import InvalidResponse
 from wf_client.protocols import WorkflowClientPort
 from wf_platform import CapabilityRef
 
@@ -20,6 +21,7 @@ class FakePort:
             "workflow_dependencies": {},
         }
         self.inspect_artifact_result: dict[str, Any] | None = None
+        self.create_artifact_result: dict[str, Any] | None = None
 
     async def validate_artifact_plan(self, **params: Any) -> object:
         self.calls.append(("validate_artifact_plan", params))
@@ -27,7 +29,11 @@ class FakePort:
 
     async def create_artifact_from_plan(self, **params: Any) -> object:
         self.calls.append(("create_artifact_from_plan", params))
-        return {"artifact_id": params["artifact_id"], "version": params["version"], "saved": True}
+        return self.create_artifact_result or {
+            "artifact_id": params["artifact_id"],
+            "version": params["version"],
+            "saved": True,
+        }
 
     async def inspect_artifact(self, **params: Any) -> object:
         self.calls.append(("inspect_artifact", params))
@@ -43,13 +49,22 @@ def valid_plan(version: int = 1) -> dict[str, Any]:
         "kind": "workflow",
         "description": None,
         "input_schema": {"type": "object", "properties": {}},
-        "output_schema": {"type": "object", "properties": {"value": {"type": "string"}}},
+        "output_schema": {
+            "type": "object",
+            "properties": {"value": {"type": "string"}},
+        },
         "outcomes": ["ok"],
         "plan": {
             "name": "report",
             "input_schema": {"type": "object", "properties": {}},
-            "state_schema": {"type": "object", "properties": {"value": {"type": "string"}}},
-            "output_schema": {"type": "object", "properties": {"value": {"type": "string"}}},
+            "state_schema": {
+                "type": "object",
+                "properties": {"value": {"type": "string"}},
+            },
+            "output_schema": {
+                "type": "object",
+                "properties": {"value": {"type": "string"}},
+            },
             "outcomes": ["ok"],
             "output": [{"path": "state.value", "target": "value"}],
             "start": "done",
@@ -75,9 +90,7 @@ def remote_plan_without_schema_snapshots(version: int = 1) -> dict[str, Any]:
         {"id": "done", "type": "end", "outcome": "ok"},
     ]
     payload["plan"]["start"] = "remote"
-    payload["plan"]["edges"] = [
-        {"from": "remote", "outcome": "ok", "to": "done"}
-    ]
+    payload["plan"]["edges"] = [{"from": "remote", "outcome": "ok", "to": "done"}]
     payload["required_capabilities"] = [
         {
             "ref": {"source": "app.default", "capability_key": "remote"},
@@ -155,17 +168,71 @@ async def test_edit_and_save_inspects_exact_saved_version() -> None:
     graph = await app.edit_workflow("report", version=1)
     assert isinstance(graph, WorkflowBuilder)
     assert isinstance(graph, EditableWorkflow)
-    assert all(hasattr(graph, name) for name in ("when", "choose", "match", "foreach", "interrupt", "end", "connect", "set_entry_point"))
+    assert all(
+        hasattr(graph, name)
+        for name in (
+            "when",
+            "choose",
+            "match",
+            "foreach",
+            "interrupt",
+            "end",
+            "connect",
+            "set_entry_point",
+        )
+    )
 
     port.inspect_artifact_result = valid_plan(version=2)
     saved = await graph.save(version=2)
 
-    create = next(params for operation, params in port.calls if operation == "create_artifact_from_plan")
+    create = next(
+        params
+        for operation, params in port.calls
+        if operation == "create_artifact_from_plan"
+    )
     assert create["plan"] == valid_plan(version=1)["plan"]
-    inspect = [params for operation, params in port.calls if operation == "inspect_artifact"][-1]
+    inspect = [
+        params for operation, params in port.calls if operation == "inspect_artifact"
+    ][-1]
     assert inspect == {"artifact_id": "report", "version": 2}
     assert saved.ref == ArtifactRef("report", 2)
     assert str(saved.workflow.output[0].target) == "value"
+
+
+@pytest.mark.asyncio
+async def test_save_rejects_mismatched_create_acknowledgement() -> None:
+    port = FakePort()
+    graph = App._from_port(cast(WorkflowClientPort, port)).new_workflow(
+        "report",
+        input_schema={"type": "object", "properties": {}},
+        state_schema={"type": "object", "properties": {}},
+        output_schema={"type": "object", "properties": {}},
+    )
+    graph.set_entry_point(graph.end("ok", id="done"))
+    port.create_artifact_result = {
+        "artifact_id": "other",
+        "version": 2,
+        "saved": True,
+    }
+
+    with pytest.raises(InvalidResponse, match="workflow.artifacts.create_from_plan"):
+        await graph.save(version=2)
+
+
+@pytest.mark.asyncio
+async def test_save_rejects_mismatched_exact_inspection() -> None:
+    port = FakePort()
+    graph = App._from_port(cast(WorkflowClientPort, port)).new_workflow(
+        "report",
+        input_schema={"type": "object", "properties": {}},
+        state_schema={"type": "object", "properties": {}},
+        output_schema={"type": "object", "properties": {}},
+    )
+    graph.set_entry_point(graph.end("ok", id="done"))
+    port.inspect_artifact_result = valid_plan(version=3)
+
+    with pytest.raises(InvalidResponse, match="workflow.artifacts.inspect"):
+        await graph.save(version=2)
 
 
 @pytest.mark.asyncio

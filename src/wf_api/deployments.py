@@ -62,9 +62,7 @@ class WorkflowDeploymentApi:
             .model_dump(mode="json"),
         )
 
-    async def save_deployment(
-        self, deployment: dict[str, Any]
-    ) -> SaveDeploymentResult:
+    async def save_deployment(self, deployment: dict[str, Any]) -> SaveDeploymentResult:
         workflow_deployment = WorkflowDeployment.model_validate(deployment)
         self._artifact_store().save_deployment(workflow_deployment)
         self.context.events.record_workflow_event(
@@ -83,9 +81,7 @@ class WorkflowDeploymentApi:
             "saved": True,
         }
 
-    async def delete_deployment(
-        self, *, deployment_id: str
-    ) -> DeleteDeploymentResult:
+    async def delete_deployment(self, *, deployment_id: str) -> DeleteDeploymentResult:
         """Delete one mutable deployment environment binding."""
         self._artifact_store().delete_deployment(deployment_id)
         self.context.events.record_workflow_event(

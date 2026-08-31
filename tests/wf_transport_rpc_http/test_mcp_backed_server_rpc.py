@@ -200,7 +200,7 @@ def _runtime_reuse_server(
         ],
     )
     store_roots = config.store_roots
-    workflow_stores = file_workflow_stores(store_roots.workflow_root)
+    workflow_stores = file_workflow_stores(store_roots.workflow_root, drafts=True)
     auth_store = FileAuthStore(store_roots.auth_root)
     catalog_store = FileCatalogStore(store_roots.catalog_cache_root)
     factory = _RecordingSessionFactory()
@@ -232,7 +232,7 @@ async def test_mcp_backed_rpc_lists_and_mutates_source_registry(tmp_path) -> Non
         SourceRegistryFile(sources=[_registry_entry("demo.registry")])
     )
     server = build_workflow_server_from_config(config)
-    app = create_rpc_app(server)
+    app = create_rpc_app(server, drafts=True)
     transport = httpx.ASGITransport(app=app)
 
     async with httpx.AsyncClient(
@@ -255,7 +255,7 @@ async def test_mcp_backed_rpc_lists_and_mutates_source_registry(tmp_path) -> Non
 async def test_mcp_backed_rpc_capability_list_filters_by_source(tmp_path) -> None:
     config = BrokerConfig(store_root=tmp_path / "store", connections=[])
     server = build_workflow_server_from_config(config)
-    app = create_rpc_app(server)
+    app = create_rpc_app(server, drafts=True)
     transport = httpx.ASGITransport(app=app)
 
     async with httpx.AsyncClient(
@@ -285,7 +285,7 @@ async def test_mcp_backed_rpc_reports_connections_and_events(tmp_path) -> None:
         ],
     )
     server = build_workflow_server_from_config(config)
-    app = create_rpc_app(server)
+    app = create_rpc_app(server, drafts=True)
     transport = httpx.ASGITransport(app=app)
 
     async with httpx.AsyncClient(
@@ -299,7 +299,7 @@ async def test_mcp_backed_rpc_reports_connections_and_events(tmp_path) -> None:
 async def test_mcp_backed_rpc_applies_source_registry_changes(tmp_path) -> None:
     config = BrokerConfig(store_root=tmp_path / "store", connections=[])
     server = build_workflow_server_from_config(config)
-    app = create_rpc_app(server)
+    app = create_rpc_app(server, drafts=True)
 
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app),
@@ -368,7 +368,7 @@ async def test_mcp_backed_rpc_can_be_built_from_neutral_workflow_config(
         }
     )
     server = build_workflow_server_from_workflow_config(workflow_config)
-    app = create_rpc_app(server)
+    app = create_rpc_app(server, drafts=True)
     transport = httpx.ASGITransport(app=app)
 
     async with httpx.AsyncClient(
@@ -408,7 +408,7 @@ async def test_mcp_backed_rpc_resumes_interrupted_run_after_server_rebuild(
         }
     )
     async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=create_rpc_app(first_server)),
+        transport=httpx.ASGITransport(app=create_rpc_app(first_server, drafts=True)),
         base_url="http://test",
     ) as http_client:
         first_client = RpcWorkflowApiClient(
@@ -433,7 +433,7 @@ async def test_mcp_backed_rpc_resumes_interrupted_run_after_server_rebuild(
 
     rebuilt_server = build_workflow_server_from_workflow_config(workflow_config)
     async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=create_rpc_app(rebuilt_server)),
+        transport=httpx.ASGITransport(app=create_rpc_app(rebuilt_server, drafts=True)),
         base_url="http://test",
     ) as http_client:
         rebuilt_client = RpcWorkflowApiClient(
@@ -463,7 +463,7 @@ async def test_mcp_backed_rpc_workflow_reuses_runtime_session_across_runs(
     assert factory.created_connections[0].id == "fixture.default"
 
     async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=create_rpc_app(server)),
+        transport=httpx.ASGITransport(app=create_rpc_app(server, drafts=True)),
         base_url="http://test",
     ) as http_client:
         client = RpcWorkflowApiClient(url="http://test/rpc", http_client=http_client)
@@ -597,7 +597,7 @@ async def test_mcp_backed_rpc_workflow_reuses_runtime_session_direct_setup(
     )
 
     async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=create_rpc_app(server)),
+        transport=httpx.ASGITransport(app=create_rpc_app(server, drafts=True)),
         base_url="http://test",
     ) as http_client:
         client = RpcWorkflowApiClient(url="http://test/rpc", http_client=http_client)
@@ -696,7 +696,7 @@ async def test_mcp_backed_rpc_deployment_becomes_unrunnable_after_source_removed
     )
 
     async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=create_rpc_app(server)),
+        transport=httpx.ASGITransport(app=create_rpc_app(server, drafts=True)),
         base_url="http://test",
     ) as http_client:
         client = RpcWorkflowApiClient(url="http://test/rpc", http_client=http_client)
@@ -748,7 +748,7 @@ async def test_mcp_backed_rpc_workflow_reuses_real_stdio_fixture_session(
     )
 
     async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=create_rpc_app(server)),
+        transport=httpx.ASGITransport(app=create_rpc_app(server, drafts=True)),
         base_url="http://test",
     ) as http_client:
         client = RpcWorkflowApiClient(url="http://test/rpc", http_client=http_client)

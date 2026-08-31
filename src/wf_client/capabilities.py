@@ -13,6 +13,7 @@ from wf_artifacts.models import DependencyDiagnostic
 from wf_core.models.schemas import NodeDef, SchemaRef
 from wf_platform import CapabilityRef
 
+from ._identity import require_response_identity
 from ._repr import html_repr, short_repr
 from .codec import decode_capability_call, decode_capability_diagnostics
 from .errors import InvalidResponse
@@ -113,6 +114,7 @@ class RemoteCapability:
     output_schema: dict[str, Any]
     outcomes: tuple[str, ...]
     is_async: bool
+    _kind: str = field(default="node_spec", repr=False, compare=False)
 
     def __post_init__(self) -> None:
         # Freeze the public container shape at construction. The nested JSON
@@ -200,6 +202,23 @@ class RemoteCapability:
                     f"match requested {self.qualified_name!r}"
                 ),
             )
+        require_response_identity(
+            operation="workflow.capabilities.call",
+            actual={
+                "source_id": wire["source_id"],
+                "kind": wire["kind"],
+                "deployment_id": wire["deployment_id"],
+            },
+            expected={
+                "source_id": str(self.ref.source),
+                "kind": self._kind,
+                # Direct node calls intentionally ignore deployment ids; saved
+                # wrapper capabilities echo the selected deployment exactly.
+                "deployment_id": (
+                    deployment_id if self._kind == "wrapper_artifact" else None
+                ),
+            },
+        )
         if wire["outcome"] not in self.outcomes:
             raise InvalidResponse(
                 operation="workflow.capabilities.call",

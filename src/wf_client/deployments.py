@@ -51,22 +51,64 @@ class DeploymentValidation:
         )
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, init=False)
 class Deployment:
     """Immutable snapshot of one configured artifact deployment."""
 
     _port: WorkflowClientPort = field(repr=False, compare=False)
-    model: WorkflowDeployment
-    diagnostics: tuple[DependencyDiagnostic, ...] = ()
+    _model: WorkflowDeployment = field(repr=False)
+    _diagnostics: tuple[DependencyDiagnostic, ...] = field(repr=False)
     runnable: bool | None = None
+
+    def __init__(
+        self,
+        _port: WorkflowClientPort,
+        model: WorkflowDeployment,
+        diagnostics: tuple[DependencyDiagnostic, ...] = (),
+        runnable: bool | None = None,
+    ) -> None:
+        # Pydantic models remain mutable even inside a frozen dataclass. Keep
+        # private copies so public inspection cannot retarget later calls.
+        object.__setattr__(self, "_port", _port)
+        object.__setattr__(self, "_model", model.model_copy(deep=True))
+        object.__setattr__(
+            self,
+            "_diagnostics",
+            tuple(item.model_copy(deep=True) for item in diagnostics),
+        )
+        object.__setattr__(self, "runnable", runnable)
 
     @classmethod
     def from_payload(cls, port: WorkflowClientPort, payload: object) -> Deployment:
         return cls(_port=port, model=decode_deployment(payload))
 
+    def with_validation(
+        self,
+        *,
+        diagnostics: tuple[DependencyDiagnostic, ...],
+        runnable: bool,
+    ) -> Deployment:
+        """Return a new snapshot enriched with one validation result."""
+        return type(self)(
+            _port=self._port,
+            model=self._model,
+            diagnostics=diagnostics,
+            runnable=runnable,
+        )
+
+    @property
+    def model(self) -> WorkflowDeployment:
+        """Return a defensive copy of the deployment domain model."""
+        return self._model.model_copy(deep=True)
+
+    @property
+    def diagnostics(self) -> tuple[DependencyDiagnostic, ...]:
+        """Return defensive copies of loaded dependency diagnostics."""
+        return tuple(item.model_copy(deep=True) for item in self._diagnostics)
+
     @property
     def deployment_id(self) -> str:
-        return self.model.id
+        return self._model.id
 
     def __repr__(self) -> str:
         return short_repr(
@@ -89,19 +131,19 @@ class Deployment:
 
     @property
     def artifact_id(self) -> str:
-        return self.model.artifact_id
+        return self._model.artifact_id
 
     @property
     def artifact_version(self) -> int:
-        return self.model.artifact_version
+        return self._model.artifact_version
 
     @property
     def bindings(self) -> dict[str, str]:
-        return self.model.binding_map()
+        return self._model.binding_map()
 
     @property
     def drift_policy(self) -> DriftPolicy:
-        return self.model.drift_policy
+        return self._model.drift_policy
 
     async def validate(self) -> DeploymentValidation:
         payload = await self._port.validate_deployment(
@@ -171,7 +213,10 @@ class Deployment:
         if decoded.run_id is None or decoded.status in {"unrunnable", "rejected"}:
             raise DeploymentNotRunnable(
                 deployment_id=self.deployment_id,
-                diagnostics=decoded.diagnostics,
+                diagnostics=tuple(
+                    diagnostic.model_copy(deep=True)
+                    for diagnostic in decoded.diagnostics
+                ),
                 outcome=decoded.outcome,
                 error=decoded.error,
             )
@@ -194,7 +239,7 @@ async def run_artifact(
     *,
     deployment_id: str | None,
     bindings: Mapping[str, str] | None,
-    drift_policy: DriftPolicy | str,
+    drift_policy: DriftPolicy,
 ) -> Run:
     """Apply the artifact's strict deployment-selection policy."""
     if deployment_id is not None:
@@ -211,14 +256,14 @@ async def run_artifact(
                 ),
             )
         if (
-            deployment.artifact_id != artifact.artifact.id
-            or deployment.artifact_version != artifact.artifact.version
+            deployment.artifact_id != artifact.ref.artifact_id
+            or deployment.artifact_version != artifact.ref.version
         ):
             raise InvalidResponse(
                 operation="workflow.deployments.inspect",
                 details=(
                     f"deployment {deployment_id!r} does not target artifact "
-                    f"{artifact.artifact.id!r} version {artifact.artifact.version}"
+                    f"{artifact.ref.artifact_id!r} version {artifact.ref.version}"
                 ),
             )
         return await deployment.run(workflow_input)
@@ -228,8 +273,8 @@ async def run_artifact(
         (
             summary
             for summary in summaries
-            if summary["artifact_id"] == artifact.artifact.id
-            and summary["artifact_version"] == artifact.artifact.version
+            if summary["artifact_id"] == artifact.ref.artifact_id
+            and summary["artifact_version"] == artifact.ref.version
         ),
         key=lambda summary: summary["id"],
     )
@@ -237,7 +282,7 @@ async def run_artifact(
         raise DeploymentRequired(
             candidate_deployment_ids=tuple(summary["id"] for summary in matches)
         )
-    default_id = f"{artifact.artifact.id}.v{artifact.artifact.version}.default"
+    default_id = f"{artifact.ref.artifact_id}.v{artifact.ref.version}.default"
     if not matches:
         conflicting = next(
             (
@@ -245,8 +290,8 @@ async def run_artifact(
                 for summary in summaries
                 if summary["id"] == default_id
                 and (
-                    summary["artifact_id"] != artifact.artifact.id
-                    or summary["artifact_version"] != artifact.artifact.version
+                    summary["artifact_id"] != artifact.ref.artifact_id
+                    or summary["artifact_version"] != artifact.ref.version
                 )
             ),
             None,
@@ -275,14 +320,14 @@ async def run_artifact(
             ),
         )
     if (
-        deployment.artifact_id != artifact.artifact.id
-        or deployment.artifact_version != artifact.artifact.version
+        deployment.artifact_id != artifact.ref.artifact_id
+        or deployment.artifact_version != artifact.ref.version
     ):
         raise InvalidResponse(
             operation="workflow.deployments.inspect",
             details=(
                 f"deployment {matches[0]['id']!r} does not target artifact "
-                f"{artifact.artifact.id!r} version {artifact.artifact.version}"
+                f"{artifact.ref.artifact_id!r} version {artifact.ref.version}"
             ),
         )
     return await deployment.run(workflow_input)

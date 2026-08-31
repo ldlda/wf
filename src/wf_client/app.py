@@ -9,6 +9,8 @@ from typing import TYPE_CHECKING, Any
 from wf_platform import CapabilityRef, Page, SourceRef
 from wf_transport_rpc_http import RpcWorkflowApiClient
 
+from ._http_port import PublicErrorWorkflowClientPort
+from ._identity import require_response_identity
 from .authoring import EditableWorkflow
 from .capabilities import CapabilitySummary, RemoteCapability
 from .codec import (
@@ -82,9 +84,11 @@ class App:
     ) -> App:
         """Configure a lazy HTTP JSON-RPC connection without performing I/O."""
         return cls(
-            _port=RpcWorkflowApiClient(
-                url=url,
-                timeout_seconds=timeout_seconds,
+            _port=PublicErrorWorkflowClientPort(
+                RpcWorkflowApiClient(
+                    url=url,
+                    timeout_seconds=timeout_seconds,
+                )
             ),
             endpoint=url,
         )
@@ -118,6 +122,7 @@ class App:
             output_schema=dict(wire["output_schema"]),
             outcomes=tuple(wire["outcomes"]),
             is_async=wire["is_async"],
+            _kind=wire["kind"],
         )
 
     async def capabilities(
@@ -169,6 +174,11 @@ class App:
                 artifact_id=artifact_id,
                 version=version,
             )
+        )
+        require_response_identity(
+            operation="workflow.artifacts.inspect",
+            actual={"artifact_id": artifact.id, "version": artifact.version},
+            expected={"artifact_id": artifact_id, "version": version},
         )
         return WorkflowArtifact(self._port, artifact, workflow)
 

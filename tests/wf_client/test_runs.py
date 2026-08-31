@@ -4,8 +4,9 @@ from typing import Any, cast
 
 import pytest
 
-from wf_client import App, Run, WorkflowClientPort
+from wf_client import App, Run
 from wf_client.errors import DeploymentNotRunnable, InvalidResponse
+from wf_client.protocols import WorkflowClientPort
 
 
 def _payload(
@@ -136,6 +137,22 @@ async def test_resume_rejects_mismatched_result_id() -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("operation", ["refresh", "resume"])
+async def test_run_lifecycle_rejects_mismatched_deployment_identity(
+    operation: str,
+) -> None:
+    port = _Port()
+    port.resume_payload["deployment_id"] = "other.deployment"
+    run = Run.from_payload(cast(WorkflowClientPort, port), _payload())
+
+    with pytest.raises(InvalidResponse, match="workflow.runs"):
+        if operation == "refresh":
+            await run.refresh()
+        else:
+            await run.resume({"approved": True})
+
+
+@pytest.mark.asyncio
 async def test_malformed_interrupt_route_is_invalid_response() -> None:
     payload = _payload()
     payload["interrupt"]["route"] = {
@@ -180,3 +197,59 @@ async def test_trace_rejects_invalid_bounds_before_io() -> None:
     with pytest.raises(ValueError):
         await run.trace(limit=101)
     assert port.calls == []
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("run_id", "other-run"),
+        ("deployment_id", "other.deployment"),
+        ("trace_start", 1),
+        ("trace_limit", 26),
+    ],
+)
+async def test_trace_rejects_mismatched_identity_or_page(
+    field: str,
+    value: object,
+) -> None:
+    port = _Port()
+    port.trace_payload[field] = value
+    run = Run.from_payload(cast(WorkflowClientPort, port), _payload())
+
+    with pytest.raises(InvalidResponse, match="workflow.runs.trace"):
+        await run.trace(start=0, limit=25)
+
+
+@pytest.mark.asyncio
+async def test_run_snapshot_defensively_copies_nested_public_values() -> None:
+    port = _Port()
+    payload = _payload()
+    payload["output"] = {"nested": {"value": "original"}}
+    payload["diagnostics"] = [
+        {
+            "severity": "warning",
+            "code": "drift",
+            "logical_ref": "app.default",
+            "bound_source": "company.production",
+            "message": "original",
+            "repair_hint": None,
+        }
+    ]
+    run = Run.from_payload(cast(WorkflowClientPort, port), payload)
+
+    exposed_output = run.output
+    exposed_interrupt = run.interrupt
+    exposed_diagnostics = run.diagnostics
+    assert exposed_output is not None
+    assert exposed_interrupt is not None
+    exposed_output["nested"]["value"] = "mutated"
+    exposed_interrupt.payload["question"] = "mutated"
+    exposed_diagnostics[0].message = "mutated"
+
+    assert run.output == {"nested": {"value": "original"}}
+    assert run.interrupt is not None
+    assert run.interrupt.payload == {"question": "approve?"}
+    assert run.diagnostics[0].message == "original"
+    await run.resume({"approved": True})
+    assert port.calls[-1][1]["run_id"] == "run-1"

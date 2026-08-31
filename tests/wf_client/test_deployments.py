@@ -5,8 +5,9 @@ from typing import Any, cast
 import pytest
 
 from wf_artifacts import WorkflowArtifact as ArtifactModel
-from wf_client import DeploymentRequired, WorkflowClientPort
+from wf_client import DeploymentRequired
 from wf_client.errors import DeploymentNotRunnable, InvalidResponse
+from wf_client.protocols import WorkflowClientPort
 from wf_client.workflows import WorkflowArtifact
 from wf_core import Workflow
 
@@ -194,6 +195,16 @@ async def test_artifact_deploy_rejects_wrong_created_deployment_id() -> None:
 
 
 @pytest.mark.asyncio
+async def test_artifact_deploy_rejects_wrong_created_artifact_identity() -> None:
+    artifact = _artifact()
+    port = cast(_FakePort, artifact._port)
+    port.save_result["artifact_version"] = 2
+
+    with pytest.raises(InvalidResponse, match="workflow.deployments.save"):
+        await artifact.deploy("report.production")
+
+
+@pytest.mark.asyncio
 async def test_artifact_deploy_rejects_wrong_inspected_deployment_id() -> None:
     artifact = _artifact()
     port = cast(_FakePort, artifact._port)
@@ -310,3 +321,47 @@ async def test_deployment_run_preserves_server_error_and_diagnostics() -> None:
     assert captured.value.error == "dependency check failed"
     assert captured.value.outcome == "rejected"
     assert captured.value.diagnostics[0].code == "missing_source"
+
+
+@pytest.mark.asyncio
+async def test_artifact_snapshot_defensively_copies_nested_models() -> None:
+    artifact = _artifact()
+
+    exposed_artifact = artifact.artifact
+    exposed_workflow = artifact.workflow
+    exposed_artifact.id = "mutated"
+    exposed_artifact.plan["name"] = "mutated"
+    exposed_workflow.name = "mutated"
+
+    assert artifact.ref.artifact_id == "report"
+    assert artifact.inspect().name == "report"
+    assert artifact.edit().name == "report"
+
+
+@pytest.mark.asyncio
+async def test_deployment_snapshot_defensively_copies_model_and_diagnostics() -> None:
+    artifact = _artifact()
+    port = cast(_FakePort, artifact._port)
+    port.validation_result["diagnostics"] = [
+        {
+            "severity": "warning",
+            "code": "drift",
+            "logical_ref": "app.default",
+            "bound_source": "company.production",
+            "message": "original",
+            "repair_hint": None,
+        }
+    ]
+    deployment = await artifact.deploy("report.production")
+
+    exposed_model = deployment.model
+    exposed_diagnostics = deployment.diagnostics
+    exposed_model.id = "mutated"
+    exposed_model.bindings = []
+    exposed_diagnostics[0].message = "mutated"
+
+    assert deployment.deployment_id == "report.production"
+    assert deployment.bindings == {"app.default": "company.production"}
+    assert deployment.diagnostics[0].message == "original"
+    await deployment.run({})
+    assert port.calls[-1][1]["deployment_id"] == "report.production"

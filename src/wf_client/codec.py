@@ -17,6 +17,8 @@ from wf_api.models import (
     RawWorkflowPlan,
     RunResult,
     RunTraceResult,
+    SaveArtifactResult,
+    SaveDeploymentResult,
     ValidateArtifactPlanResult,
     ValidateDeploymentResult,
     WorkflowArtifactPayload,
@@ -118,6 +120,24 @@ def decode_validate_artifact_plan(payload: object) -> ValidateArtifactPlanResult
         payload,
         ValidateArtifactPlanResult,
         "workflow.artifacts.validate_plan",
+    )
+
+
+def decode_save_artifact(payload: object) -> SaveArtifactResult:
+    """Validate an artifact creation acknowledgement."""
+    return _validate(
+        payload,
+        SaveArtifactResult,
+        "workflow.artifacts.create_from_plan",
+    )
+
+
+def decode_save_deployment(payload: object) -> SaveDeploymentResult:
+    """Validate a deployment save acknowledgement."""
+    return _validate(
+        payload,
+        SaveDeploymentResult,
+        "workflow.deployments.save",
     )
 
 

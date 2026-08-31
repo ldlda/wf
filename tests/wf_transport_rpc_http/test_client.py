@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import sys
 from typing import Any
 
 import httpx
@@ -30,25 +29,6 @@ from wf_transport_rpc_http import RpcWorkflowApiClient, create_rpc_app
 from wf_transport_rpc_http.client.base import RpcProtocolError
 from wf_transport_rpc_http.client.drafts import RpcDraftClientMixin
 from wf_transport_rpc_http.client.sources import RpcSourceAdminClientMixin
-
-
-@pytest.fixture(autouse=True)
-def _draft_enabled_composition(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Opt draft-focused RPC client tests into the explicit draft surface."""
-    build_local = build_local_static_workflow_server
-    create_app = create_rpc_app
-
-    def draft_local(root, *args, **kwargs):
-        kwargs.setdefault("drafts", True)
-        return build_local(root, *args, **kwargs)
-
-    def draft_app(server, *args, **kwargs):
-        kwargs.setdefault("drafts", True)
-        return create_app(server, *args, **kwargs)
-
-    module = sys.modules[__name__]
-    monkeypatch.setattr(module, "build_local_static_workflow_server", draft_local)
-    monkeypatch.setattr(module, "create_rpc_app", draft_app)
 
 
 async def test_rpc_client_preserves_structured_jsonrpc_error() -> None:
@@ -354,8 +334,8 @@ async def test_rpc_workflow_client_lists_inspects_validates_and_deletes_deployme
 
 
 async def test_rpc_workflow_client_draft_workspace_lifecycle(tmp_path) -> None:
-    server = build_local_static_workflow_server(tmp_path / "store")
-    app = create_rpc_app(server)
+    server = build_local_static_workflow_server(tmp_path / "store", drafts=True)
+    app = create_rpc_app(server, drafts=True)
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(
         transport=transport, base_url="http://test"
@@ -550,8 +530,8 @@ async def test_rpc_client_sends_exact_replace_document_payload() -> None:
 
 
 async def test_rpc_client_builds_capability_free_draft_lifecycle(tmp_path) -> None:
-    server = build_local_static_workflow_server(tmp_path / "store")
-    app = create_rpc_app(server)
+    server = build_local_static_workflow_server(tmp_path / "store", drafts=True)
+    app = create_rpc_app(server, drafts=True)
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(
         transport=transport,
@@ -625,8 +605,8 @@ def test_rpc_client_satisfies_draft_surface_static_shape() -> None:
 
 
 async def test_rpc_workflow_client_deletes_draft_workspace(tmp_path) -> None:
-    server = build_local_static_workflow_server(tmp_path / "store")
-    app = create_rpc_app(server)
+    server = build_local_static_workflow_server(tmp_path / "store", drafts=True)
+    app = create_rpc_app(server, drafts=True)
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(
         transport=transport, base_url="http://test"
@@ -772,8 +752,8 @@ async def test_rpc_client_validates_artifact_plan_without_persisting(tmp_path) -
 
 
 async def test_rpc_client_set_workflow_output_map(tmp_path) -> None:
-    server = build_local_static_workflow_server(tmp_path / "store")
-    app = create_rpc_app(server)
+    server = build_local_static_workflow_server(tmp_path / "store", drafts=True)
+    app = create_rpc_app(server, drafts=True)
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(
         transport=transport, base_url="http://test"
@@ -807,8 +787,8 @@ async def test_rpc_client_set_workflow_output_map(tmp_path) -> None:
 
 
 async def test_rpc_client_draft_workspace_focused_edit_methods(tmp_path) -> None:
-    server = build_local_static_workflow_server(tmp_path / "store")
-    app = create_rpc_app(server)
+    server = build_local_static_workflow_server(tmp_path / "store", drafts=True)
+    app = create_rpc_app(server, drafts=True)
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(
         transport=transport, base_url="http://test"
@@ -1069,8 +1049,8 @@ async def test_rpc_client_draft_remove_methods(tmp_path) -> None:
 
 
 async def test_rpc_client_draft_workspace_add_step_from_capability(tmp_path) -> None:
-    server = build_local_static_workflow_server(tmp_path / "store")
-    app = create_rpc_app(server)
+    server = build_local_static_workflow_server(tmp_path / "store", drafts=True)
+    app = create_rpc_app(server, drafts=True)
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(
         transport=transport, base_url="http://test"

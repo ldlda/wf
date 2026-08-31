@@ -18,7 +18,9 @@ def _manifest() -> ContractManifest:
     return manifest_from_openrpc(synthetic_openrpc_document())
 
 
-def test_write_generates_once_and_writes_requested_contract(monkeypatch, tmp_path: Path) -> None:
+def test_write_generates_once_and_writes_requested_contract(
+    monkeypatch, tmp_path: Path
+) -> None:
     manifest = _manifest()
     calls: list[tuple[object, Path]] = []
     generate_calls = 0
@@ -35,7 +37,10 @@ def test_write_generates_once_and_writes_requested_contract(monkeypatch, tmp_pat
         "wf_contract_manifest.__main__.write_manifest",
         lambda value, path: calls.append((value, path)) or path,
     )
-    monkeypatch.setattr("wf_contract_manifest.__main__.DEFAULT_MANIFEST_PATH", tmp_path / "manifest.json")
+    monkeypatch.setattr(
+        "wf_contract_manifest.__main__.DEFAULT_MANIFEST_PATH",
+        tmp_path / "manifest.json",
+    )
 
     assert main(["write"]) == 0
     assert calls == [(manifest, tmp_path / "manifest.json")]

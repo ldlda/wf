@@ -8,6 +8,7 @@ import typer
 from typer.core import TyperCommand
 
 from wf_api import WorkflowApi
+from wf_artifacts import FileWorkflowArtifactStore
 from wf_cli.context import (
     CliTyperState,
     config_path_from_context,
@@ -128,10 +129,9 @@ def test_load_cli_context_local_uses_workflow_store_override(
     assert context.service is None
     assert isinstance(context.handlers, WorkflowApi)
     assert context.handlers.drafts_enabled is True
-    assert (
-        context.handlers.context.artifact_store.root
-        == (tmp_path / ".workflow").resolve()
-    )
+    artifact_store = context.handlers.context.artifact_store
+    assert isinstance(artifact_store, FileWorkflowArtifactStore)
+    assert artifact_store.root == (tmp_path / ".workflow").resolve()
 
 
 @pytest.mark.asyncio

@@ -126,7 +126,8 @@ def test_repr_does_not_materialize_an_unbounded_iterable() -> None:
 
 
 def test_all_rich_objects_render_without_port_access() -> None:
-    port = cast(WorkflowClientPort, _port())
+    raw_port = _port()
+    port = cast(WorkflowClientPort, raw_port)
     diagnostic = WorkflowDiagnostic("error", "bad", "state.x", "broken")
     local = ValidationReport()
     objects = [
@@ -153,4 +154,4 @@ def test_all_rich_objects_render_without_port_access() -> None:
             },
         )
     )
-    assert port.calls == []
+    assert raw_port.calls == []

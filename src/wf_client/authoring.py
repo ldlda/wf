@@ -19,8 +19,13 @@ from wf_core import (
     Workflow,
 )
 
+from ._identity import require_response_identity
 from .capabilities import RemoteCapability
-from .codec import decode_validate_artifact_plan, decode_workflow_artifact
+from .codec import (
+    decode_save_artifact,
+    decode_validate_artifact_plan,
+    decode_workflow_artifact,
+)
 from .protocols import WorkflowClientPort
 from .workflows import (
     ArtifactRef,
@@ -39,9 +44,7 @@ class EditableWorkflow(WorkflowBuilder):
     artifact_title: str | None = field(default=None, kw_only=True)
     artifact_description: str | None = field(default=None, kw_only=True)
     _source_plan: dict[str, Any] | None = field(default=None, repr=False, kw_only=True)
-    _source_workflow: Workflow | None = field(
-        default=None, repr=False, kw_only=True
-    )
+    _source_workflow: Workflow | None = field(default=None, repr=False, kw_only=True)
     _permissive_node_defs: set[str] = field(
         default_factory=set, repr=False, kw_only=True
     )
@@ -191,18 +194,31 @@ class EditableWorkflow(WorkflowBuilder):
         validation = await self.validate()
         validation.raise_for_errors()
         _workflow, plan = self._plan()
-        saved_id = artifact_id or (self.based_on.artifact_id if self.based_on else self.name)
+        saved_id = artifact_id or (
+            self.based_on.artifact_id if self.based_on else self.name
+        )
         saved_title = title if title is not None else self.artifact_title or self.name
         saved_description = (
             description if description is not None else self.artifact_description
         )
-        await self._port.create_artifact_from_plan(
-            artifact_id=saved_id,
-            version=version,
-            title=saved_title,
-            plan=plan,
-            outcomes=tuple(self.outcomes),
-            description=saved_description,
+        acknowledgement = decode_save_artifact(
+            await self._port.create_artifact_from_plan(
+                artifact_id=saved_id,
+                version=version,
+                title=saved_title,
+                plan=plan,
+                outcomes=tuple(self.outcomes),
+                description=saved_description,
+            )
+        )
+        require_response_identity(
+            operation="workflow.artifacts.create_from_plan",
+            actual={
+                "artifact_id": acknowledgement["artifact_id"],
+                "version": acknowledgement["version"],
+                "saved": acknowledgement["saved"],
+            },
+            expected={"artifact_id": saved_id, "version": version, "saved": True},
         )
         # The acknowledgement is only an identity signal. Inspecting the exact
         # requested version ensures server normalization is retained losslessly.
@@ -211,6 +227,11 @@ class EditableWorkflow(WorkflowBuilder):
             version=version,
         )
         artifact, workflow = decode_workflow_artifact(inspected)
+        require_response_identity(
+            operation="workflow.artifacts.inspect",
+            actual={"artifact_id": artifact.id, "version": artifact.version},
+            expected={"artifact_id": saved_id, "version": version},
+        )
         return WorkflowArtifact(self._port, artifact, workflow)
 
 

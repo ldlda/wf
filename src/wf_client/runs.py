@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from copy import deepcopy
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -12,6 +13,7 @@ from wf_api import TraceRange
 from wf_artifacts import DependencyDiagnostic
 from wf_core import InterruptRequest, InterruptRoute, TraceEntry, WorkflowRef
 
+from ._identity import require_response_identity
 from ._repr import html_repr, short_repr
 from .codec import DecodedRunResult, decode_run_result, decode_trace_result
 from .errors import DeploymentNotRunnable, InvalidResponse
@@ -85,15 +87,20 @@ def _run_from_decoded(
     decoded: DecodedRunResult,
     *,
     expected_run_id: str | None = None,
+    expected_deployment_id: str | None = None,
     operation: str = "workflow.runs.inspect",
 ) -> Run:
     if expected_run_id is not None and decoded.run_id != expected_run_id:
-        raise InvalidResponse(
+        require_response_identity(
             operation=operation,
-            details=(
-                f"returned run {decoded.run_id!r} does not match requested "
-                f"{expected_run_id!r}"
-            ),
+            actual={"run_id": decoded.run_id},
+            expected={"run_id": expected_run_id},
+        )
+    if expected_deployment_id is not None:
+        require_response_identity(
+            operation=operation,
+            actual={"deployment_id": decoded.deployment_id},
+            expected={"deployment_id": expected_deployment_id},
         )
     if decoded.run_id is None:
         raise DeploymentNotRunnable(
@@ -115,7 +122,7 @@ def _run_from_decoded(
     )
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, init=False)
 class Run:
     """Immutable client snapshot of one durable deployment run."""
 
@@ -124,10 +131,52 @@ class Run:
     deployment_id: str
     status: str
     outcome: str | None
-    output: dict[str, Any] | None
-    interrupt: InterruptRequest | None
-    diagnostics: tuple[DependencyDiagnostic, ...]
+    _output: dict[str, Any] | None = field(repr=False)
+    _interrupt: InterruptRequest | None = field(repr=False)
+    _diagnostics: tuple[DependencyDiagnostic, ...] = field(repr=False)
     trace_count: int
+
+    def __init__(
+        self,
+        *,
+        _port: WorkflowClientPort,
+        run_id: str,
+        deployment_id: str,
+        status: str,
+        outcome: str | None,
+        output: dict[str, Any] | None,
+        interrupt: InterruptRequest | None,
+        diagnostics: tuple[DependencyDiagnostic, ...],
+        trace_count: int,
+    ) -> None:
+        object.__setattr__(self, "_port", _port)
+        object.__setattr__(self, "run_id", run_id)
+        object.__setattr__(self, "deployment_id", deployment_id)
+        object.__setattr__(self, "status", status)
+        object.__setattr__(self, "outcome", outcome)
+        object.__setattr__(self, "_output", deepcopy(output))
+        object.__setattr__(self, "_interrupt", deepcopy(interrupt))
+        object.__setattr__(
+            self,
+            "_diagnostics",
+            tuple(item.model_copy(deep=True) for item in diagnostics),
+        )
+        object.__setattr__(self, "trace_count", trace_count)
+
+    @property
+    def output(self) -> dict[str, Any] | None:
+        """Return a defensive copy of the already-loaded workflow output."""
+        return deepcopy(self._output)
+
+    @property
+    def interrupt(self) -> InterruptRequest | None:
+        """Return a defensive copy of the already-loaded interrupt contract."""
+        return deepcopy(self._interrupt)
+
+    @property
+    def diagnostics(self) -> tuple[DependencyDiagnostic, ...]:
+        """Return defensive copies of loaded dependency diagnostics."""
+        return tuple(item.model_copy(deep=True) for item in self._diagnostics)
 
     def __repr__(self) -> str:
         return short_repr(
@@ -136,8 +185,8 @@ class Run:
             deployment_id=self.deployment_id,
             status=self.status,
             outcome=self.outcome,
-            output=self.output,
-            diagnostics=f"{len(self.diagnostics)} diagnostics",
+            output=self._output,
+            diagnostics=f"{len(self._diagnostics)} diagnostics",
             trace=f"{self.trace_count} frames",
         )
 
@@ -148,8 +197,8 @@ class Run:
             deployment_id=self.deployment_id,
             status=self.status,
             outcome=self.outcome,
-            output=self.output,
-            diagnostics=f"{len(self.diagnostics)} diagnostics",
+            output=self._output,
+            diagnostics=f"{len(self._diagnostics)} diagnostics",
             trace=f"{self.trace_count} frames (use trace() for a bounded page)",
         )
 
@@ -160,6 +209,7 @@ class Run:
         payload: object,
         *,
         expected_run_id: str | None = None,
+        expected_deployment_id: str | None = None,
         operation: str = "workflow.runs.inspect",
     ) -> Run:
         """Validate one run response and reconstruct its immutable snapshot."""
@@ -167,6 +217,7 @@ class Run:
             port,
             decode_run_result(payload, operation=operation),
             expected_run_id=expected_run_id,
+            expected_deployment_id=expected_deployment_id,
             operation=operation,
         )
 
@@ -176,6 +227,7 @@ class Run:
             self._port,
             await self._port.inspect_run(run_id=self.run_id),
             expected_run_id=self.run_id,
+            expected_deployment_id=self.deployment_id,
             operation="workflow.runs.inspect",
         )
 
@@ -186,9 +238,9 @@ class Run:
         outcome: str = "submitted",
     ) -> Run:
         """Resume an interrupted run and return the server's new snapshot."""
-        if self.status != "interrupted" or self.interrupt is None:
+        if self.status != "interrupted" or self._interrupt is None:
             raise ValueError("only interrupted runs can be resumed")
-        if not self.interrupt.resumable:
+        if not self._interrupt.resumable:
             raise ValueError("run interrupt is not resumable")
         return self.from_payload(
             self._port,
@@ -198,6 +250,7 @@ class Run:
                 resume_outcome=outcome,
             ),
             expected_run_id=self.run_id,
+            expected_deployment_id=self.deployment_id,
             operation="workflow.runs.resume",
         )
 
@@ -213,10 +266,25 @@ class Run:
                 trace_range=TraceRange(start=start, limit=limit),
             )
         )
+        require_response_identity(
+            operation="workflow.runs.trace",
+            actual={
+                "run_id": decoded.run_id,
+                "deployment_id": decoded.deployment_id,
+                "trace_start": decoded.trace_start,
+                "trace_limit": decoded.trace_limit,
+            },
+            expected={
+                "run_id": self.run_id,
+                "deployment_id": self.deployment_id,
+                "trace_start": start,
+                "trace_limit": limit,
+            },
+        )
         frames = tuple(TraceEntry(**dict(frame)) for frame in (decoded.trace or ()))
         return TracePage(
-            start=decoded.trace_start if decoded.trace_start is not None else start,
-            limit=decoded.trace_limit if decoded.trace_limit is not None else limit,
+            start=start,
+            limit=limit,
             frames=frames,
             truncated=bool(decoded.trace_truncated),
             trace_count=decoded.trace_count,

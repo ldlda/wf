@@ -329,7 +329,7 @@ def _patch_rpc_client_to_server(monkeypatch, server) -> None:
             url=url,
             timeout_seconds=timeout_seconds,
             http_client=httpx.AsyncClient(
-                transport=httpx.ASGITransport(app=create_rpc_app(server)),
+                transport=httpx.ASGITransport(app=create_rpc_app(server, drafts=True)),
                 base_url="http://test",
             ),
         )
@@ -340,7 +340,7 @@ def _patch_rpc_client_to_server(monkeypatch, server) -> None:
 
 
 def test_wf_cap_commands_use_rpc_url_override(monkeypatch, tmp_path) -> None:
-    server = build_local_static_workflow_server(tmp_path / "store")
+    server = build_local_static_workflow_server(tmp_path / "store", drafts=True)
     _patch_rpc_client_to_server(monkeypatch, server)
     config_path = tmp_path / "wf.json"
     config_path.write_text('{"version": 1}', encoding="utf-8")
@@ -433,7 +433,7 @@ def test_wf_cap_commands_use_rpc_url_override(monkeypatch, tmp_path) -> None:
 
 
 def test_wf_source_commands_use_rpc_url_override(monkeypatch, tmp_path) -> None:
-    server = build_local_static_workflow_server(tmp_path / "store")
+    server = build_local_static_workflow_server(tmp_path / "store", drafts=True)
     _patch_rpc_client_to_server(monkeypatch, server)
     config_path = tmp_path / "wf.json"
     config_path.write_text('{"version": 1}', encoding="utf-8")
@@ -511,7 +511,7 @@ def test_wf_remote_source_inspect_formats_expected_rpc_error(
     monkeypatch,
     tmp_path,
 ) -> None:
-    server = build_local_static_workflow_server(tmp_path / "store")
+    server = build_local_static_workflow_server(tmp_path / "store", drafts=True)
     _patch_rpc_client_to_server(monkeypatch, server)
     config_path = tmp_path / "wf.json"
     config_path.write_text('{"version": 1}', encoding="utf-8")
@@ -607,7 +607,7 @@ def test_wf_verbose_shows_full_traceback_for_unexpected_error(
 
 
 def test_wf_admin_commands_use_rpc_url_override(monkeypatch, tmp_path) -> None:
-    server = build_local_static_workflow_server(tmp_path / "store")
+    server = build_local_static_workflow_server(tmp_path / "store", drafts=True)
     server.events.record_workflow_event(
         "workflow_test_event",
         capability_id="workflow.demo.v1",
@@ -632,7 +632,7 @@ def test_wf_admin_commands_use_rpc_url_override(monkeypatch, tmp_path) -> None:
 
 
 def test_wf_remote_draft_artifact_deploy_lifecycle(monkeypatch, tmp_path) -> None:
-    server = build_local_static_workflow_server(tmp_path / "store")
+    server = build_local_static_workflow_server(tmp_path / "store", drafts=True)
     _patch_rpc_client_to_server(monkeypatch, server)
     config_path = tmp_path / "wf.json"
     config_path.write_text('{"version": 1}', encoding="utf-8")
@@ -760,7 +760,7 @@ def test_wf_remote_draft_artifact_deploy_lifecycle(monkeypatch, tmp_path) -> Non
 
 
 def test_wf_remote_capability_free_draft_lifecycle(monkeypatch, tmp_path) -> None:
-    server = build_local_static_workflow_server(tmp_path / "store")
+    server = build_local_static_workflow_server(tmp_path / "store", drafts=True)
     _patch_rpc_client_to_server(monkeypatch, server)
     config_path = tmp_path / "wf.json"
     config_path.write_text('{"version": 1}', encoding="utf-8")
@@ -833,7 +833,7 @@ def test_wf_remote_capability_free_draft_lifecycle(monkeypatch, tmp_path) -> Non
 def test_wf_draft_export_uses_remote_get_and_writes_only_draft(
     monkeypatch, tmp_path
 ) -> None:
-    server = build_local_static_workflow_server(tmp_path / "store")
+    server = build_local_static_workflow_server(tmp_path / "store", drafts=True)
     _patch_rpc_client_to_server(monkeypatch, server)
     rpc_calls: list[tuple[str, dict[str, Any]]] = []
     original_call = RpcClientTransport._call
@@ -885,7 +885,7 @@ def test_wf_draft_export_uses_remote_get_and_writes_only_draft(
 def test_wf_draft_import_uses_exact_remote_replacement_payload(
     monkeypatch, tmp_path
 ) -> None:
-    server = build_local_static_workflow_server(tmp_path / "store")
+    server = build_local_static_workflow_server(tmp_path / "store", drafts=True)
     asyncio.run(
         server.api.create_empty_draft_workspace(
             workspace_id="source_ws",
@@ -956,7 +956,7 @@ def test_wf_draft_import_uses_exact_remote_replacement_payload(
 def test_wf_draft_transfer_round_trip_preserves_document_and_destination_id(
     monkeypatch, tmp_path
 ) -> None:
-    server = build_local_static_workflow_server(tmp_path / "store")
+    server = build_local_static_workflow_server(tmp_path / "store", drafts=True)
     asyncio.run(
         server.api.create_empty_draft_workspace(
             workspace_id="source_ws",
@@ -1023,7 +1023,7 @@ def test_wf_draft_transfer_round_trip_preserves_document_and_destination_id(
 
 
 def test_wf_remote_run_resume_interrupted_deployment(monkeypatch, tmp_path) -> None:
-    server = build_local_static_workflow_server(tmp_path / "store")
+    server = build_local_static_workflow_server(tmp_path / "store", drafts=True)
     asyncio.run(
         server.api.create_artifact_from_plan(
             artifact_id="remote_approval",
@@ -1083,7 +1083,7 @@ def test_wf_remote_run_resume_interrupted_deployment(monkeypatch, tmp_path) -> N
 
 
 def test_wf_status_uses_rpc_url_override(monkeypatch, tmp_path) -> None:
-    server = build_local_static_workflow_server(tmp_path / "store")
+    server = build_local_static_workflow_server(tmp_path / "store", drafts=True)
     asyncio.run(
         server.api.create_artifact_from_plan(
             artifact_id="status_constant",
@@ -1143,7 +1143,7 @@ def test_wf_status_uses_rpc_url_override(monkeypatch, tmp_path) -> None:
 
 
 def test_wf_status_reports_rpc_config_target(monkeypatch, tmp_path) -> None:
-    server = build_local_static_workflow_server(tmp_path / "store")
+    server = build_local_static_workflow_server(tmp_path / "store", drafts=True)
     _patch_rpc_client_to_server(monkeypatch, server)
     config_path = tmp_path / "wf.json"
     config_path.write_text(
@@ -1178,7 +1178,7 @@ def test_wf_status_reports_rpc_config_target(monkeypatch, tmp_path) -> None:
 
 
 def test_wf_draft_delete_requires_confirm(monkeypatch, tmp_path) -> None:
-    server = build_local_static_workflow_server(tmp_path / "store")
+    server = build_local_static_workflow_server(tmp_path / "store", drafts=True)
     _patch_rpc_client_to_server(monkeypatch, server)
     config_path = tmp_path / "wf.json"
     config_path.write_text('{"version": 1}', encoding="utf-8")
@@ -1192,7 +1192,7 @@ def test_wf_draft_delete_requires_confirm(monkeypatch, tmp_path) -> None:
 
 
 def test_wf_draft_delete_succeeds_with_confirm(monkeypatch, tmp_path) -> None:
-    server = build_local_static_workflow_server(tmp_path / "store")
+    server = build_local_static_workflow_server(tmp_path / "store", drafts=True)
     _patch_rpc_client_to_server(monkeypatch, server)
     config_path = tmp_path / "wf.json"
     config_path.write_text('{"version": 1}', encoding="utf-8")
@@ -1225,7 +1225,7 @@ def test_wf_draft_delete_succeeds_with_confirm(monkeypatch, tmp_path) -> None:
 
 
 def test_wf_source_diagnose_uses_rpc_url_override(monkeypatch, tmp_path) -> None:
-    server = build_local_static_workflow_server(tmp_path / "store")
+    server = build_local_static_workflow_server(tmp_path / "store", drafts=True)
     _patch_rpc_client_to_server(monkeypatch, server)
     config_path = tmp_path / "wf.json"
     config_path.write_text('{"version": 1}', encoding="utf-8")
@@ -1300,7 +1300,7 @@ def test_wf_draft_create_reports_optional_inputs_without_binding(
 def test_wf_draft_set_input_bindings_preserves_composite_expression_over_rpc(
     monkeypatch, tmp_path
 ) -> None:
-    server = build_local_static_workflow_server(tmp_path / "store")
+    server = build_local_static_workflow_server(tmp_path / "store", drafts=True)
     _patch_rpc_client_to_server(monkeypatch, server)
     rpc_calls: list[tuple[str, dict[str, Any]]] = []
     original_call = RpcClientTransport._call
@@ -1381,7 +1381,7 @@ def test_wf_draft_set_input_bindings_preserves_composite_expression_over_rpc(
 
 
 def test_wf_draft_focused_edit_commands_use_rpc_target(monkeypatch, tmp_path) -> None:
-    server = build_local_static_workflow_server(tmp_path / "store")
+    server = build_local_static_workflow_server(tmp_path / "store", drafts=True)
     _patch_rpc_client_to_server(monkeypatch, server)
     config_path = tmp_path / "wf.json"
     config_path.write_text('{"version": 1}', encoding="utf-8")
@@ -1536,7 +1536,7 @@ def test_wf_draft_focused_edit_commands_use_rpc_target(monkeypatch, tmp_path) ->
 def test_wf_draft_set_workflow_output_replaces_canonical_bindings_over_rpc(
     monkeypatch, tmp_path
 ) -> None:
-    server = build_local_static_workflow_server(tmp_path / "store")
+    server = build_local_static_workflow_server(tmp_path / "store", drafts=True)
     _patch_rpc_client_to_server(monkeypatch, server)
     rpc_calls: list[tuple[str, dict[str, Any]]] = []
     original_call = RpcClientTransport._call
@@ -1625,7 +1625,7 @@ def test_wf_draft_set_workflow_output_replaces_canonical_bindings_over_rpc(
 def test_wf_draft_set_workflow_output_merge_uses_compatibility_rpc_target(
     monkeypatch, tmp_path
 ) -> None:
-    server = build_local_static_workflow_server(tmp_path / "store")
+    server = build_local_static_workflow_server(tmp_path / "store", drafts=True)
     _patch_rpc_client_to_server(monkeypatch, server)
     rpc_methods: list[str] = []
     original_call = RpcClientTransport._call
@@ -1685,7 +1685,7 @@ def test_wf_draft_set_workflow_output_merge_uses_compatibility_rpc_target(
 def test_wf_draft_set_workflow_output_merge_reports_canonical_replacement(
     monkeypatch, tmp_path
 ) -> None:
-    server = build_local_static_workflow_server(tmp_path / "store")
+    server = build_local_static_workflow_server(tmp_path / "store", drafts=True)
     _patch_rpc_client_to_server(monkeypatch, server)
     rpc_methods: list[str] = []
     original_call = RpcClientTransport._call
@@ -1760,7 +1760,7 @@ def test_wf_draft_set_workflow_output_merge_reports_canonical_replacement(
 
 
 def test_wf_draft_remove_route_uses_rpc_target(monkeypatch, tmp_path) -> None:
-    server = build_local_static_workflow_server(tmp_path / "store")
+    server = build_local_static_workflow_server(tmp_path / "store", drafts=True)
     _patch_rpc_client_to_server(monkeypatch, server)
     config_path = tmp_path / "wf.json"
     config_path.write_text('{"version": 1}', encoding="utf-8")
@@ -1811,7 +1811,7 @@ def test_wf_draft_remove_route_uses_rpc_target(monkeypatch, tmp_path) -> None:
 
 
 def test_wf_draft_bind_uses_rpc_target(monkeypatch, tmp_path) -> None:
-    server = build_local_static_workflow_server(tmp_path / "store")
+    server = build_local_static_workflow_server(tmp_path / "store", drafts=True)
     _patch_rpc_client_to_server(monkeypatch, server)
     config_path = tmp_path / "wf.json"
     config_path.write_text('{"version": 1}', encoding="utf-8")
@@ -1868,7 +1868,7 @@ def test_wf_draft_bind_uses_rpc_target(monkeypatch, tmp_path) -> None:
 def test_wf_draft_set_input_preserves_nested_target_over_rpc(
     monkeypatch, tmp_path
 ) -> None:
-    server = build_local_static_workflow_server(tmp_path / "store")
+    server = build_local_static_workflow_server(tmp_path / "store", drafts=True)
     _patch_rpc_client_to_server(monkeypatch, server)
     config_path = tmp_path / "wf.json"
     config_path.write_text('{"version": 1}', encoding="utf-8")
@@ -1921,7 +1921,7 @@ def test_wf_draft_set_input_preserves_nested_target_over_rpc(
 def test_wf_draft_set_input_replaces_canonical_bindings_over_rpc(
     monkeypatch, tmp_path
 ) -> None:
-    server = build_local_static_workflow_server(tmp_path / "store")
+    server = build_local_static_workflow_server(tmp_path / "store", drafts=True)
     _patch_rpc_client_to_server(monkeypatch, server)
     rpc_methods: list[str] = []
     original_call = RpcClientTransport._call
@@ -2024,7 +2024,7 @@ def test_wf_draft_set_input_replaces_canonical_bindings_over_rpc(
 def test_wf_draft_set_output_replaces_canonical_bindings_over_rpc(
     monkeypatch, tmp_path
 ) -> None:
-    server = build_local_static_workflow_server(tmp_path / "store")
+    server = build_local_static_workflow_server(tmp_path / "store", drafts=True)
     _patch_rpc_client_to_server(monkeypatch, server)
     rpc_calls: list[tuple[str, dict[str, Any]]] = []
     original_call = RpcClientTransport._call
@@ -2117,7 +2117,7 @@ def test_wf_draft_set_output_replaces_canonical_bindings_over_rpc(
 
 
 def test_wf_draft_add_capability_uses_rpc_target(monkeypatch, tmp_path) -> None:
-    server = build_local_static_workflow_server(tmp_path / "store")
+    server = build_local_static_workflow_server(tmp_path / "store", drafts=True)
     _patch_rpc_client_to_server(monkeypatch, server)
     rpc_methods: list[str] = []
     original_call = RpcClientTransport._call
@@ -2187,7 +2187,7 @@ def test_wf_draft_add_capability_uses_rpc_target(monkeypatch, tmp_path) -> None:
 def test_wf_draft_capability_add_and_update_preserve_rpc_payloads(
     monkeypatch, tmp_path
 ) -> None:
-    server = build_local_static_workflow_server(tmp_path / "store")
+    server = build_local_static_workflow_server(tmp_path / "store", drafts=True)
     _patch_rpc_client_to_server(monkeypatch, server)
     rpc_calls: list[tuple[str, dict[str, Any]]] = []
     original_call = RpcClientTransport._call
@@ -2289,7 +2289,7 @@ def test_wf_draft_capability_add_and_update_preserve_rpc_payloads(
 def test_wf_draft_add_control_steps_use_generic_rpc_target(
     monkeypatch, tmp_path
 ) -> None:
-    server = build_local_static_workflow_server(tmp_path / "store")
+    server = build_local_static_workflow_server(tmp_path / "store", drafts=True)
     _patch_rpc_client_to_server(monkeypatch, server)
     rpc_methods: list[str] = []
     original_call = RpcClientTransport._call
@@ -2544,7 +2544,7 @@ def test_wf_draft_add_control_steps_use_generic_rpc_target(
 def test_wf_draft_add_capability_reports_bare_output_target_without_traceback(
     monkeypatch, tmp_path
 ) -> None:
-    server = build_local_static_workflow_server(tmp_path / "store")
+    server = build_local_static_workflow_server(tmp_path / "store", drafts=True)
     _patch_rpc_client_to_server(monkeypatch, server)
     config_path = tmp_path / "wf.json"
     config_path.write_text('{"version": 1}', encoding="utf-8")
@@ -2592,7 +2592,7 @@ def test_wf_draft_add_capability_reports_bare_output_target_without_traceback(
 
 
 def test_wf_draft_compile_prints_compiled_plan(monkeypatch, tmp_path) -> None:
-    server = build_local_static_workflow_server(tmp_path / "store")
+    server = build_local_static_workflow_server(tmp_path / "store", drafts=True)
     _patch_rpc_client_to_server(monkeypatch, server)
     config_path = tmp_path / "wf.json"
     config_path.write_text('{"version": 1}', encoding="utf-8")
@@ -2625,7 +2625,7 @@ def test_wf_draft_compile_prints_compiled_plan(monkeypatch, tmp_path) -> None:
 def test_wf_draft_compile_invalid_prints_diagnostics_to_stderr(
     monkeypatch, tmp_path
 ) -> None:
-    server = build_local_static_workflow_server(tmp_path / "store")
+    server = build_local_static_workflow_server(tmp_path / "store", drafts=True)
     asyncio.run(
         server.api.create_draft_workspace(
             workspace_id="invalid_compile_ws",
@@ -2672,7 +2672,7 @@ def test_wf_draft_compile_invalid_prints_diagnostics_to_stderr(
 
 
 def test_wf_deploy_create_alias_saves_deployment(monkeypatch, tmp_path) -> None:
-    server = build_local_static_workflow_server(tmp_path / "store")
+    server = build_local_static_workflow_server(tmp_path / "store", drafts=True)
     asyncio.run(
         server.api.create_artifact_from_plan(
             artifact_id="alias_artifact",
@@ -2710,7 +2710,7 @@ def test_wf_deploy_create_alias_saves_deployment(monkeypatch, tmp_path) -> None:
 
 
 def test_wf_draft_forward_route_invalid_via_rpc(monkeypatch, tmp_path) -> None:
-    server = build_local_static_workflow_server(tmp_path / "store")
+    server = build_local_static_workflow_server(tmp_path / "store", drafts=True)
     _patch_rpc_client_to_server(monkeypatch, server)
     config_path = tmp_path / "wf.json"
     config_path.write_text('{"version": 1}', encoding="utf-8")

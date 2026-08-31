@@ -7,7 +7,7 @@ from uuid import uuid4
 import httpx
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(slots=True)
 class RpcProtocolError(RuntimeError):
     """Structured JSON-RPC application error returned by a remote endpoint.
 
@@ -64,6 +64,8 @@ class RpcClientTransport:
             response = await self.http_client.post(self.url, json=request)
         response.raise_for_status()
         payload = response.json()
+        if not isinstance(payload, dict):
+            raise RuntimeError("JSON-RPC response must be an object")
         if "error" in payload:
             error = payload["error"]
             if not isinstance(error, dict):

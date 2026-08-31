@@ -22,6 +22,7 @@ def __getattr__(name: str) -> object:
         return generate_manifest
     raise AttributeError(name)
 
+
 __all__ = [
     "ContractManifest",
     "JsonSchema",

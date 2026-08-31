@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
+from pydantic import ValidationError
+
 from wf_core import ReducerRef, Workflow
 from wf_core.models.workflow_refs import WorkflowRef
 from wf_platform import CapabilityRef, NodeSpecInventory, hash_json_schema
@@ -69,7 +71,7 @@ def _required_object_field(plan: JsonObject, field_name: str) -> JsonObject:
 def _validate_workflow_plan(plan: JsonObject) -> None:
     try:
         workflow = Workflow.model_validate(plan)
-    except Exception as exc:
+    except ValidationError as exc:
         raise WorkflowPlanValidationError(f"invalid workflow plan: {exc}") from exc
 
     node_ids = {node.id for node in workflow.nodes}

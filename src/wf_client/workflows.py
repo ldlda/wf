@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Literal
 
 from wf_artifacts.models import (
+    DriftPolicy,
     RequiredCapability,
 )
 from wf_artifacts.models import (
@@ -14,7 +15,9 @@ from wf_artifacts.models import (
 )
 from wf_core import ValidationReport, Workflow
 
+from ._identity import require_response_identity
 from ._repr import html_repr, short_repr
+from .codec import decode_save_deployment
 from .errors import InvalidResponse, ValidationFailed
 
 if TYPE_CHECKING:
@@ -119,17 +122,39 @@ class WorkflowValidation:
         )
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, init=False)
 class WorkflowArtifact:
     """Immutable client snapshot retaining the validated artifact and workflow."""
 
     _port: WorkflowClientPort = field(repr=False, compare=False)
-    artifact: ArtifactDomainModel
-    workflow: Workflow
+    _artifact: ArtifactDomainModel = field(repr=False)
+    _workflow: Workflow = field(repr=False)
+
+    def __init__(
+        self,
+        port: WorkflowClientPort,
+        artifact: ArtifactDomainModel,
+        workflow: Workflow,
+    ) -> None:
+        # Frozen dataclasses do not recursively freeze Pydantic models. Retain
+        # private deep copies and expose only defensive projections below.
+        object.__setattr__(self, "_port", port)
+        object.__setattr__(self, "_artifact", artifact.model_copy(deep=True))
+        object.__setattr__(self, "_workflow", workflow.model_copy(deep=True))
+
+    @property
+    def artifact(self) -> ArtifactDomainModel:
+        """Return a defensive copy of the validated artifact envelope."""
+        return self._artifact.model_copy(deep=True)
+
+    @property
+    def workflow(self) -> Workflow:
+        """Return a defensive copy of the executable workflow."""
+        return self._workflow.model_copy(deep=True)
 
     @property
     def ref(self) -> ArtifactRef:
-        return ArtifactRef(self.artifact.id, self.artifact.version)
+        return ArtifactRef(self._artifact.id, self._artifact.version)
 
     def __repr__(self) -> str:
         return short_repr(
@@ -150,28 +175,28 @@ class WorkflowArtifact:
 
     @property
     def title(self) -> str:
-        return self.artifact.title
+        return self._artifact.title
 
     @property
     def description(self) -> str | None:
-        return self.artifact.description
+        return self._artifact.description
 
     @property
     def required_capabilities(self) -> tuple[RequiredCapability, ...]:
         return tuple(
-            capability
+            capability.model_copy(deep=True)
             if isinstance(capability, RequiredCapability)
             else RequiredCapability.model_validate(capability)
-            for capability in self.artifact.required_capabilities
+            for capability in self._artifact.required_capabilities
         )
 
     @property
     def workflow_dependencies(self) -> dict[str, int]:
-        return dict(self.artifact.workflow_dependencies)
+        return dict(self._artifact.workflow_dependencies)
 
     def inspect(self) -> Workflow:
         """Return a deep copy so inspecting an artifact cannot mutate its snapshot."""
-        return self.workflow.model_copy(deep=True)
+        return self._workflow.model_copy(deep=True)
 
     def edit(self) -> EditableWorkflow:
         """Seed an editable builder from this exact immutable artifact version."""
@@ -185,34 +210,37 @@ class WorkflowArtifact:
         deployment_id: str,
         *,
         bindings: Mapping[str, str] | None = None,
-        drift_policy: str = "block",
+        drift_policy: DriftPolicy = DriftPolicy.BLOCK,
     ) -> Deployment:
         """Save, inspect, and validate a deployment for this artifact version."""
         from .deployments import Deployment
 
-        saved = await self._port.save_deployment(
-            {
-                "id": deployment_id,
-                "artifact_id": self.artifact.id,
-                "artifact_version": self.artifact.version,
-                "bindings": dict(bindings or {}),
-                "drift_policy": drift_policy,
-            }
+        saved = decode_save_deployment(
+            await self._port.save_deployment(
+                {
+                    "id": deployment_id,
+                    "artifact_id": self._artifact.id,
+                    "artifact_version": self._artifact.version,
+                    "bindings": dict(bindings or {}),
+                    "drift_policy": drift_policy,
+                }
+            )
         )
-        if (
-            not isinstance(saved, Mapping)
-            or saved.get("deployment_id") != deployment_id
-        ):
-            saved_id = (
-                saved.get("deployment_id") if isinstance(saved, Mapping) else None
-            )
-            raise InvalidResponse(
-                operation="workflow.deployments.save",
-                details=(
-                    f"saved deployment id {saved_id!r} does not match requested "
-                    f"{deployment_id!r}"
-                ),
-            )
+        require_response_identity(
+            operation="workflow.deployments.save",
+            actual={
+                "deployment_id": saved["deployment_id"],
+                "artifact_id": saved["artifact_id"],
+                "artifact_version": saved["artifact_version"],
+                "saved": saved["saved"],
+            },
+            expected={
+                "deployment_id": deployment_id,
+                "artifact_id": self._artifact.id,
+                "artifact_version": self._artifact.version,
+                "saved": True,
+            },
+        )
         deployment = Deployment.from_payload(
             self._port,
             await self._port.inspect_deployment(deployment_id=deployment_id),
@@ -226,19 +254,18 @@ class WorkflowArtifact:
                 ),
             )
         if (
-            deployment.artifact_id != self.artifact.id
-            or deployment.artifact_version != self.artifact.version
+            deployment.artifact_id != self._artifact.id
+            or deployment.artifact_version != self._artifact.version
         ):
             raise InvalidResponse(
                 operation="workflow.deployments.inspect",
                 details=(
                     f"deployment {deployment_id!r} does not target artifact "
-                    f"{self.artifact.id!r} version {self.artifact.version}"
+                    f"{self._artifact.id!r} version {self._artifact.version}"
                 ),
             )
         validation = await deployment.validate()
-        return replace(
-            deployment,
+        return deployment.with_validation(
             diagnostics=validation.diagnostics,
             runnable=validation.runnable,
         )
@@ -249,7 +276,7 @@ class WorkflowArtifact:
         *,
         deployment_id: str | None = None,
         bindings: Mapping[str, str] | None = None,
-        drift_policy: str = "block",
+        drift_policy: DriftPolicy = DriftPolicy.BLOCK,
     ) -> Run:
         """Run the artifact under the strict deployment selection policy."""
         from .deployments import run_artifact

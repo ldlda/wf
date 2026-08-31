@@ -36,14 +36,18 @@ def _inspect_payload() -> dict[str, Any]:
 class _Port:
     def __init__(self) -> None:
         self.calls: list[dict[str, Any]] = []
+        self.result_qualified_name = "app.default.search"
+        self.result_source_id = "app.default"
+        self.result_kind = "node_spec"
+        self.result_deployment_id: str | None = None
 
     async def call_capability(self, **params: Any) -> object:
         self.calls.append(params)
         return {
-            "qualified_name": "app.default.search",
-            "source_id": "app.default",
-            "kind": "node_spec",
-            "deployment_id": None,
+            "qualified_name": self.result_qualified_name,
+            "source_id": self.result_source_id,
+            "kind": self.result_kind,
+            "deployment_id": self.result_deployment_id,
             "outcome": "ok",
             "output": {"results": ["one"]},
             "diagnostics": [],
@@ -116,6 +120,67 @@ async def test_remote_capability_rejects_mixed_payload_forms() -> None:
 
     with pytest.raises(TypeError, match="not both"):
         await capability({"query": "workflow"}, query="again")
+
+
+@pytest.mark.asyncio
+async def test_remote_capability_rejects_mismatched_call_source() -> None:
+    port = _Port()
+    port.result_source_id = "other.source"
+    capability = RemoteCapability(
+        _port=cast(WorkflowClientPort, port),
+        ref=CapabilityRef.parse("app.default.search"),
+        qualified_name="app.default.search",
+        description=None,
+        input_schema={"type": "object"},
+        output_schema={"type": "object"},
+        outcomes=("ok",),
+        is_async=False,
+    )
+
+    with pytest.raises(InvalidResponse, match="workflow.capabilities.call"):
+        await capability({})
+
+
+@pytest.mark.asyncio
+async def test_node_capability_rejects_unexpected_result_deployment() -> None:
+    port = _Port()
+    port.result_deployment_id = "unexpected"
+    capability = RemoteCapability(
+        _port=cast(WorkflowClientPort, port),
+        ref=CapabilityRef.parse("app.default.search"),
+        qualified_name="app.default.search",
+        description=None,
+        input_schema={"type": "object"},
+        output_schema={"type": "object"},
+        outcomes=("ok",),
+        is_async=False,
+    )
+
+    with pytest.raises(InvalidResponse, match="workflow.capabilities.call"):
+        await capability.call({}, deployment_id="ignored-by-node-spec")
+
+
+@pytest.mark.asyncio
+async def test_wrapper_capability_requires_exact_result_deployment() -> None:
+    port = _Port()
+    port.result_qualified_name = "workflow.report.v1"
+    port.result_source_id = "workflow"
+    port.result_kind = "wrapper_artifact"
+    port.result_deployment_id = "other.deployment"
+    capability = RemoteCapability(
+        _port=cast(WorkflowClientPort, port),
+        ref=CapabilityRef(source=SourceRef.parse("workflow"), name="report.v1"),
+        qualified_name="workflow.report.v1",
+        description=None,
+        input_schema={"type": "object"},
+        output_schema={"type": "object"},
+        outcomes=("ok",),
+        is_async=False,
+        _kind="wrapper_artifact",
+    )
+
+    with pytest.raises(InvalidResponse, match="workflow.capabilities.call"):
+        await capability.call({}, deployment_id="report.production")
 
 
 def test_remote_capability_rejects_invalid_inspected_schema() -> None:

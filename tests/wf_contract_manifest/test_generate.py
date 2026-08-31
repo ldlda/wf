@@ -151,9 +151,7 @@ def test_manifest_separates_recursive_step_inputs_from_workflow_outputs() -> Non
     input_binding_schema = schemas["InputExpressionBinding"]
     properties = input_binding_schema.get("properties")
     assert isinstance(properties, dict)
-    assert properties["expression"] == {
-        "$ref": "#/components/schemas/InputExpression"
-    }
+    assert properties["expression"] == {"$ref": "#/components/schemas/InputExpression"}
     expression_schema = schemas["InputExpression"]
     assert expression_schema["discriminator"] == {
         "mapping": {

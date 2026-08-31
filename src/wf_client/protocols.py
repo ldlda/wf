@@ -8,10 +8,8 @@ from typing import Any, Literal, Protocol
 from wf_api.models import (
     CapabilityCallResult,
     InspectCapabilityResult,
-    ListArtifactsResult,
     ListCapabilitiesResult,
     ListDeploymentsResult,
-    ListRunsResult,
     RunResult,
     RunTraceResult,
     SaveArtifactResult,
@@ -55,23 +53,12 @@ class WorkflowClientPort(Protocol):
         deployment_id: str | None = None,
     ) -> CapabilityCallResult: ...
 
-    async def list_artifacts(
-        self,
-        *,
-        query: str | None = None,
-        kind: Literal["workflow", "wrapper"] | None = None,
-        cursor: str | None = None,
-        limit: int = 50,
-    ) -> ListArtifactsResult: ...
-
     async def inspect_artifact(
         self,
         *,
         artifact_id: str,
         version: int,
     ) -> WorkflowArtifactPayload: ...
-
-    async def save_artifact(self, artifact: dict[str, Any]) -> SaveArtifactResult: ...
 
     async def create_artifact_from_plan(
         self,
@@ -116,14 +103,6 @@ class WorkflowClientPort(Protocol):
         deployment_id: str,
         live_check: bool = False,
     ) -> ValidateDeploymentResult: ...
-
-    async def list_runs(
-        self,
-        *,
-        status: str | None = None,
-        cursor: str | None = None,
-        limit: int = 50,
-    ) -> ListRunsResult: ...
 
     async def run_deployment(
         self,
