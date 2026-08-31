@@ -22,17 +22,14 @@ The durable product path is now `wf-rpc-server` plus neutral `wf_config` /
 `wf_server` composition. The old `wf-mcp` script remains a legacy/special-purpose
 MCP entrypoint and compatibility surface.
 
-Delivered, with the repository-wide verification gate still open: the async
-`wf_client` Python slice is verified against the real JSON-RPC ASGI application.
-It covers capability discovery, local graph authoring, remote validation,
-immutable artifact save, deployment selection, and durable run execution. Rich
-client objects have bounded, secret-safe `repr()` and `_repr_html_()` views that
-never perform remote I/O. Draft workspaces remain a separate server/admin
-surface and are not part of the client; server registration is explicit so the
-artifact -> deployment -> run path does not require draft storage. All
-slice-owned checks pass, while the full repository suite still has its
-pre-existing missing-thesis-PDF failure; mark this slice complete only when that
-repository asset gate also passes.
+Completed: the async `wf_client` Python slice is verified against the real
+JSON-RPC ASGI application and the full repository suite. It covers capability
+discovery, local graph authoring, remote validation, immutable artifact save,
+deployment selection, and durable run execution. Rich client objects have
+bounded, secret-safe `repr()` and `_repr_html_()` views that never perform
+remote I/O. Draft workspaces remain a separate server/admin surface and are not
+part of the client; server registration is explicit so the artifact ->
+deployment -> run path does not require draft storage.
 
 ## Active Initiative: Workflow Console And Defense Demo
 
