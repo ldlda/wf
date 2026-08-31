@@ -16,7 +16,6 @@ from wf_cli.context import (
     rpc_timeout_from_context,
     rpc_url_from_context,
 )
-from wf_server.config import build_workflow_server_from_workflow_config
 
 from .conftest import write_python_source_config
 
@@ -104,7 +103,6 @@ def test_load_cli_context_builds_service_and_handlers(tmp_path: Path) -> None:
 
 def test_load_cli_context_local_uses_workflow_store_override(
     tmp_path: Path,
-    monkeypatch,
 ) -> None:
     config_path = tmp_path / "wf.json"
     config_path.write_text(
@@ -125,21 +123,15 @@ def test_load_cli_context_local_uses_workflow_store_override(
         ),
         encoding="utf-8",
     )
-    captured: dict[str, object] = {}
-
-    def fake_build_workflow_server_from_workflow_config(config):
-        captured["store_root"] = config.server.workflow_store.root
-        return build_workflow_server_from_workflow_config(config)
-
-    monkeypatch.setattr(
-        "wf_cli.context.build_workflow_server_from_workflow_config",
-        fake_build_workflow_server_from_workflow_config,
-    )
-
     context = load_cli_context(config_path)
 
     assert context.service is None
-    assert captured["store_root"] == (tmp_path / ".workflow").resolve()
+    assert isinstance(context.handlers, WorkflowApi)
+    assert context.handlers.drafts_enabled is True
+    assert (
+        context.handlers.context.artifact_store.root
+        == (tmp_path / ".workflow").resolve()
+    )
 
 
 @pytest.mark.asyncio

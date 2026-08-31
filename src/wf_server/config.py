@@ -53,11 +53,15 @@ def _build_mcp_workflow_server_from_legacy_config(path: Path) -> WorkflowServer:
 
 def build_workflow_server_from_workflow_config(
     config: WorkflowConfigFile,
+    *,
+    drafts: bool = False,
 ) -> WorkflowServer:
     """Build a WorkflowServer from neutral workflow config.
 
     Local/static configs use built-in sources. Configs with ``kind: "mcp"``
-    sources delegate to the MCP provider adapter.
+    sources delegate to the MCP provider adapter. Draft persistence is opt-in
+    for static composition; MCP broker composition owns its draft-bearing
+    workflow surface.
     """
     if _has_mcp_sources(config):
         return _build_mcp_workflow_server_from_workflow_config(config)
@@ -68,6 +72,7 @@ def build_workflow_server_from_workflow_config(
         raise ValueError("wf-rpc-server currently requires filesystem store")
     return build_local_static_workflow_server(
         store.root,
+        drafts=drafts,
         extra_sources=collect_static_sources(_static_source_providers(config)),
     )
 

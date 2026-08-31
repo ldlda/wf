@@ -31,7 +31,12 @@ def _assert_result_component(
 
 @pytest.fixture
 def openrpc_document(tmp_path: Path) -> dict[str, Any]:
-    app = create_rpc_app(build_local_static_workflow_server(tmp_path / "store"))
+    # This fixture inventories the complete RPC contract, including the
+    # explicitly opt-in draft methods.
+    app = create_rpc_app(
+        build_local_static_workflow_server(tmp_path / "store", drafts=True),
+        drafts=True,
+    )
     return app.get_openrpc()
 
 

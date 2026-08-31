@@ -83,13 +83,15 @@ def test_rpc_server_cli_uses_configured_store_and_transport(
     )
     captured: dict[str, object] = {}
 
-    def fake_build_server(config):
+    def fake_build_server(config, *, drafts=False):
         captured["store_root"] = config.server.store.root
+        captured["drafts"] = drafts
         return object()
 
-    def fake_create_rpc_app(server, *, rpc_path="/rpc"):
+    def fake_create_rpc_app(server, *, rpc_path="/rpc", drafts=False):
         captured["server"] = server
         captured["rpc_path"] = rpc_path
+        captured["drafts"] = drafts
         return object()
 
     def fake_uvicorn_run(app_obj, *, host, port, access_log):
@@ -110,6 +112,7 @@ def test_rpc_server_cli_uses_configured_store_and_transport(
     assert result.exit_code == 0, result.output
     assert captured["store_root"] == (tmp_path / ".wf_store").resolve()
     assert captured["rpc_path"] == "/workflow-rpc"
+    assert captured["drafts"] is True
     assert captured["host"] == "127.0.0.2"
     assert captured["port"] == 9999
     assert captured["access_log"] is False
@@ -132,9 +135,10 @@ def test_rpc_server_cli_uses_mcp_config_server(monkeypatch, tmp_path) -> None:
         captured["mcp_config_path"] = path
         return object()
 
-    def fake_create_rpc_app(server, *, rpc_path="/rpc"):
+    def fake_create_rpc_app(server, *, rpc_path="/rpc", drafts=False):
         captured["server"] = server
         captured["rpc_path"] = rpc_path
+        captured["drafts"] = drafts
         return object()
 
     def fake_uvicorn_run(app_obj, *, host, port, access_log):
@@ -207,9 +211,10 @@ def test_rpc_server_cli_mcp_config_builds_registry_capable_server(
     )
     captured: dict[str, object] = {}
 
-    def fake_create_rpc_app(server, *, rpc_path="/rpc"):
+    def fake_create_rpc_app(server, *, rpc_path="/rpc", drafts=False):
         captured["source_registry_admin"] = server.source_registry_admin
         captured["rpc_path"] = rpc_path
+        captured["drafts"] = drafts
         return object()
 
     def fake_uvicorn_run(app_obj, *, host, port, access_log):
@@ -263,9 +268,10 @@ def test_rpc_server_cli_mcp_config_with_config_uses_transport_settings(
     )
     captured: dict[str, object] = {}
 
-    def fake_create_rpc_app(server, *, rpc_path="/rpc"):
+    def fake_create_rpc_app(server, *, rpc_path="/rpc", drafts=False):
         captured["server"] = server
         captured["rpc_path"] = rpc_path
+        captured["drafts"] = drafts
         return object()
 
     def fake_uvicorn_run(app_obj, *, host, port, access_log):
@@ -299,13 +305,15 @@ def test_rpc_server_cli_config_with_mcp_source_uses_mcp_builder(
 ) -> None:
     captured = {}
 
-    def fake_build_from_workflow_config(config):
+    def fake_build_from_workflow_config(config, *, drafts=False):
         captured["source_kinds"] = [source.kind for source in config.server.sources]
+        captured["build_drafts"] = drafts
         return object()
 
-    def fake_create_rpc_app(server, *, rpc_path="/rpc"):
+    def fake_create_rpc_app(server, *, rpc_path="/rpc", drafts=False):
         captured["server"] = server
         captured["rpc_path"] = rpc_path
+        captured["drafts"] = drafts
         return "app"
 
     def fake_run(app, *, host, port, access_log):
@@ -409,13 +417,15 @@ def test_rpc_server_cli_config_uses_workflow_store_override(
     )
     captured: dict[str, object] = {}
 
-    def fake_build_server(config):
+    def fake_build_server(config, *, drafts=False):
         captured["workflow_store_root"] = config.server.workflow_store.root
+        captured["build_drafts"] = drafts
         return object()
 
-    def fake_create_rpc_app(server, *, rpc_path="/rpc"):
+    def fake_create_rpc_app(server, *, rpc_path="/rpc", drafts=False):
         captured["server"] = server
         captured["rpc_path"] = rpc_path
+        captured["drafts"] = drafts
         return object()
 
     def fake_uvicorn_run(app_obj, *, host, port, access_log):

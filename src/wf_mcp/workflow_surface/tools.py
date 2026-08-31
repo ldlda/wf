@@ -71,7 +71,9 @@ from .models import (
 
 def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None:
     """Register stable workflow tools on the public MCP server surface."""
-    handlers = WorkflowApi(context_from_service(service))
+    # This MCP surface registers the draft authoring tools below, so its API
+    # composition must explicitly opt into the draft services.
+    handlers = WorkflowApi(context_from_service(service), drafts=True)
 
     @server.tool(
         name="wf.workflow.list_artifacts",

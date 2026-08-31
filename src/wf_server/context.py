@@ -299,7 +299,7 @@ def build_local_static_workflow_server(
 ) -> WorkflowServer:
     """Build a durable local/static server, with drafts as an explicit opt-in."""
     config = WorkflowServerConfig(store_root=Path(root))
-    stores = file_workflow_stores(config.store_root)
+    stores = file_workflow_stores(config.store_root, drafts=drafts)
     events = InMemoryWorkflowEventRecorder()
     sources = builtin_sources()
     if extra_sources:

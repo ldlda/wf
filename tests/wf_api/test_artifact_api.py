@@ -131,7 +131,7 @@ def _artifact_api(
         )
         service.register_specs("demo.personal", echo_tool)
     context = context_from_service(service)
-    return WorkflowArtifactApi(context), service
+    return WorkflowArtifactApi(context, drafts=True), service
 
 
 @pytest.mark.asyncio
@@ -454,7 +454,7 @@ def _api(root: Path) -> WorkflowApi:
         artifact_store=FileWorkflowArtifactStore(root),
         draft_workspace_store=FileDraftWorkspaceStore(mcp_root),
     )
-    return WorkflowApi(context_from_service(service))
+    return WorkflowApi(context_from_service(service), drafts=True)
 
 
 @pytest.mark.asyncio

@@ -69,6 +69,8 @@ def test_workflow_server_from_service_wires_neutral_surfaces(tmp_path) -> None:
     assert isinstance(server, WorkflowServer)
     assert server.config.store_root == config.store_root
     assert server.api.context is server.context
+    assert server.api.drafts_enabled is True
+    assert server.api.drafts is not None
     assert server.source_registry_admin is not None
     assert server.admin.connections is service.connection_service
     assert server.admin.events is service.events

@@ -32,6 +32,30 @@ explicit `drafts=True` opt-in, and one thesis asset test expects untracked PDF
 figures absent from the base worktree. No generated `.wf_mcp_store/` or
 `test-artifacts/` files are part of this change.
 
+## Fix round 2
+
+- `file_workflow_stores()` now skips `FileDraftWorkspaceStore` by default;
+  `build_local_static_workflow_server()` forwards `drafts` so default local
+  composition creates no draft directory, while `drafts=True` remains a
+  working explicit opt-in.
+- Draft-bearing MCP broker/workflow-surface and CLI compositions now pass
+  `drafts=True` explicitly. The standalone RPC server CLI does the same for
+  its documented draft RPC surface. The complete OpenRPC inventory fixture and
+  draft-focused RPC tests now opt into both server storage and RPC method
+  registration.
+- The API architecture walkthrough now imports `App` from `wf_client`.
+
+Fix-round 2 verification (fresh after formatting):
+
+- `uv run pytest tests/wf_api/test_stores.py tests/wf_server/test_local_static_server.py tests/wf_mcp/test_mcp_workflow_server.py tests/wf_mcp/server/test_tools.py tests/wf_mcp/workflow_surface tests/wf_cli/test_context.py tests/wf_server/test_cli.py tests/wf_transport_rpc_http/test_openrpc_contract.py -q` — 183 passed.
+- `uv run pytest tests/wf_client tests/authoring/test_builder.py tests/authoring/test_subgraph.py tests/wf_api/test_artifact_api.py tests/wf_transport_rpc_http/test_client.py tests/wf_transport_rpc_http/test_app.py tests/wf_transport_rpc_http/test_openrpc_contract.py tests/wf_contract_manifest/test_generate.py tests/wf_contract_manifest/test_committed_manifest.py -q` — 291 passed, 201 warnings.
+- Ruff check and `ruff format --check` on changed Python surfaces — passed.
+- `uv run basedpyright --level error src/wf_api src/wf_cli src/wf_mcp/broker src/wf_mcp/workflow_surface src/wf_server` — 0 errors, 0 warnings, 0 notes.
+- `uv run python -m wf_contract_manifest check` — passed.
+- `pnpm --dir web --filter @lda/workflow-rpc contract:check` — passed.
+- `pnpm --dir web --filter @lda/workflow-rpc test` — 151 passed, 3 skipped.
+- `git diff --check` — passed.
+
 ## Fix round 1
 
 - Normal `WorkflowApi`, nested capability/artifact services, durable context,

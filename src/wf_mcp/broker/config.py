@@ -163,7 +163,9 @@ def build_service_from_config(config: BrokerConfig) -> WfMcpService:
     """Create a broker service with SDK adapters for configured connections."""
     runtime_factory = PersistentSessionFactory()
     store_roots = config.store_roots
-    workflow_stores = file_workflow_stores(store_roots.workflow_root)
+    # The broker's documented workflow/draft tools are a draft-bearing
+    # composition, so opt into the otherwise disabled draft store explicitly.
+    workflow_stores = file_workflow_stores(store_roots.workflow_root, drafts=True)
     # Keep FileStore as the compatibility facade on WfMcpService.store while
     # focused services receive role-specific stores.
     auth_store = FileAuthStore(store_roots.auth_root)

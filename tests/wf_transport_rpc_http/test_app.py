@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 from typing import Any
 
 import httpx
@@ -19,6 +20,33 @@ from wf_transport_rpc_http.models import (
     SetDraftContractParams,
     UpdateCapabilityStepParams,
 )
+
+
+@pytest.fixture(autouse=True)
+def _draft_enabled_composition(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Opt draft-focused RPC tests into the otherwise disabled composition."""
+    build_local = build_local_static_workflow_server
+    build_config = build_workflow_server_from_workflow_config
+    create_app = create_rpc_app
+
+    def draft_local(root, *args, **kwargs):
+        kwargs.setdefault("drafts", True)
+        return build_local(root, *args, **kwargs)
+
+    def draft_config(config, *args, **kwargs):
+        kwargs.setdefault("drafts", True)
+        return build_config(config, *args, **kwargs)
+
+    def draft_app(server, *args, **kwargs):
+        kwargs.setdefault("drafts", True)
+        return create_app(server, *args, **kwargs)
+
+    module = sys.modules[__name__]
+    monkeypatch.setattr(module, "build_local_static_workflow_server", draft_local)
+    monkeypatch.setattr(
+        module, "build_workflow_server_from_workflow_config", draft_config
+    )
+    monkeypatch.setattr(module, "create_rpc_app", draft_app)
 
 
 async def _rpc(

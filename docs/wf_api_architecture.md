@@ -114,6 +114,7 @@ Hypothetically, an application that wants to turn a discovered capability into
 a durable run would use the following complete flow:
 
 ```python
+from wf_client import App
 from wf_authoring import input_from, input_value, output_to, state_path
 
 app = App.from_http_jsonrpc("http://localhost:8765/rpc")

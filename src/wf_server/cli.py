@@ -68,7 +68,11 @@ def serve(
         workflow_config = load_workflow_config(config)
         store = workflow_config.server.workflow_store
         if server is None and store_root is None:
-            server = build_workflow_server_from_workflow_config(workflow_config)
+            # The server CLI exposes the full draft RPC surface.
+            server = build_workflow_server_from_workflow_config(
+                workflow_config,
+                drafts=True,
+            )
         elif server is None:
             has_mcp_sources = any(
                 getattr(source, "kind", None) == "mcp"
@@ -101,9 +105,11 @@ def serve(
             raise typer.BadParameter(
                 "--store-root is required when --config is not supplied"
             )
-        server = build_local_static_workflow_server(resolved_store_root)
+        # The standalone server CLI is the documented draft-capable RPC
+        # endpoint; opt into its persistence explicitly at this boundary.
+        server = build_local_static_workflow_server(resolved_store_root, drafts=True)
 
-    rpc_app = create_rpc_app(server, rpc_path=resolved_rpc_path)
+    rpc_app = create_rpc_app(server, rpc_path=resolved_rpc_path, drafts=True)
     uvicorn.run(
         rpc_app,
         host=resolved_host or "127.0.0.1",

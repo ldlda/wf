@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 from typing import Any
 
 import httpx
@@ -29,6 +30,25 @@ from wf_transport_rpc_http import RpcWorkflowApiClient, create_rpc_app
 from wf_transport_rpc_http.client.base import RpcProtocolError
 from wf_transport_rpc_http.client.drafts import RpcDraftClientMixin
 from wf_transport_rpc_http.client.sources import RpcSourceAdminClientMixin
+
+
+@pytest.fixture(autouse=True)
+def _draft_enabled_composition(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Opt draft-focused RPC client tests into the explicit draft surface."""
+    build_local = build_local_static_workflow_server
+    create_app = create_rpc_app
+
+    def draft_local(root, *args, **kwargs):
+        kwargs.setdefault("drafts", True)
+        return build_local(root, *args, **kwargs)
+
+    def draft_app(server, *args, **kwargs):
+        kwargs.setdefault("drafts", True)
+        return create_app(server, *args, **kwargs)
+
+    module = sys.modules[__name__]
+    monkeypatch.setattr(module, "build_local_static_workflow_server", draft_local)
+    monkeypatch.setattr(module, "create_rpc_app", draft_app)
 
 
 async def test_rpc_client_preserves_structured_jsonrpc_error() -> None:
