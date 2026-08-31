@@ -171,7 +171,7 @@ async def test_inspect_draft_authoring_contract_projects_selected_capability(
         "properties": {"echoed": {"type": "string"}},
     }
     await draft_api.create_draft_workspace(workspace_id="authoring", draft=draft)
-    api = WorkflowApi(authoring.context)
+    api = WorkflowApi(authoring.context, drafts=True)
 
     inventory = _authoring_inventory(
         await api.inspect_draft_authoring_contract(
@@ -219,7 +219,7 @@ async def test_inspect_draft_authoring_contract_tolerates_invalid_workflow_schem
         "properties": {"echoed": {"type": "string"}},
     }
     await draft_api.create_draft_workspace(workspace_id="authoring", draft=draft)
-    api = WorkflowApi(authoring.context)
+    api = WorkflowApi(authoring.context, drafts=True)
 
     inventory = _authoring_inventory(
         await api.inspect_draft_authoring_contract(
@@ -256,7 +256,7 @@ async def test_inspect_draft_authoring_contract_resolves_saved_wrapper_capabilit
         "properties": {"echoed": {"type": "string"}},
     }
     await draft_api.create_draft_workspace(workspace_id="authoring", draft=draft)
-    api = WorkflowApi(authoring.context)
+    api = WorkflowApi(authoring.context, drafts=True)
 
     inventory = _authoring_inventory(
         await api.inspect_draft_authoring_contract(
@@ -296,7 +296,7 @@ async def test_inspect_draft_authoring_contract_preserves_empty_capability_schem
         "properties": {"echoed": {"type": "string"}},
     }
     await draft_api.create_draft_workspace(workspace_id="authoring", draft=draft)
-    api = WorkflowApi(authoring.context)
+    api = WorkflowApi(authoring.context, drafts=True)
 
     inventory = _authoring_inventory(
         await api.inspect_draft_authoring_contract(
@@ -344,7 +344,7 @@ async def test_inspect_draft_authoring_contract_warns_for_invalid_capability_sch
         workspace_id="authoring",
         draft=_echo_draft(),
     )
-    api = WorkflowApi(authoring.context)
+    api = WorkflowApi(authoring.context, drafts=True)
 
     inventory = _authoring_inventory(
         await api.inspect_draft_authoring_contract(
@@ -375,7 +375,7 @@ async def test_inspect_draft_authoring_contract_rejects_unknown_selected_step(
     await draft_api.create_draft_workspace(
         workspace_id="authoring", draft=_echo_draft()
     )
-    api = WorkflowApi(authoring.context)
+    api = WorkflowApi(authoring.context, drafts=True)
 
     with pytest.raises(KeyError, match="unknown draft step"):
         await api.inspect_draft_authoring_contract(
@@ -397,7 +397,7 @@ async def test_inspect_draft_authoring_contract_tolerates_invalid_selected_step(
     draft["steps"] = {"broken": {"unknown_kind": {}}}
     draft["start"] = "broken"
     await draft_api.create_draft_workspace(workspace_id="authoring", draft=draft)
-    api = WorkflowApi(authoring.context)
+    api = WorkflowApi(authoring.context, drafts=True)
 
     inventory = _authoring_inventory(
         await api.inspect_draft_authoring_contract(
@@ -426,7 +426,7 @@ async def test_inspect_draft_authoring_contract_stale_revision_is_read_only(
     await draft_api.create_draft_workspace(
         workspace_id="authoring", draft=_echo_draft()
     )
-    api = WorkflowApi(authoring.context)
+    api = WorkflowApi(authoring.context, drafts=True)
     changed = await api.set_draft_name(
         workspace_id="authoring",
         revision=1,
@@ -1023,7 +1023,7 @@ async def _create_structured_binding_api(
         workspace_id=workspace_id,
         draft=_structured_report_draft(),
     )
-    return draft_api, service, WorkflowApi(authoring.context)
+    return draft_api, service, WorkflowApi(authoring.context, drafts=True)
 
 
 async def _create_nested_output_binding_api(
@@ -1058,7 +1058,7 @@ async def _create_nested_output_binding_api(
         workspace_id=workspace_id,
         draft=_nested_report_draft(),
     )
-    return draft_api, service, WorkflowApi(authoring.context)
+    return draft_api, service, WorkflowApi(authoring.context, drafts=True)
 
 
 @pytest.mark.asyncio
@@ -1163,7 +1163,7 @@ async def test_create_empty_draft_workspace_persists_invalid_skeleton(
 ) -> None:
     artifact_store = FileWorkflowArtifactStore(tmp_path / "drafts_create_empty")
     _drafts, _service, authoring = _draft_api(artifact_store)
-    facade = WorkflowApi(authoring.context)
+    facade = WorkflowApi(authoring.context, drafts=True)
 
     created = await facade.create_empty_draft_workspace(
         workspace_id="control_first",
@@ -1198,7 +1198,7 @@ async def test_create_empty_draft_workspace_preserves_custom_contract(
 ) -> None:
     artifact_store = FileWorkflowArtifactStore(tmp_path / "drafts_create_contract")
     _drafts, _service, authoring = _draft_api(artifact_store)
-    facade = WorkflowApi(authoring.context)
+    facade = WorkflowApi(authoring.context, drafts=True)
     input_schema = {
         "type": "object",
         "properties": {"topic": {"type": "string"}},
@@ -1249,7 +1249,7 @@ async def test_create_empty_draft_workspace_isolates_default_schemas(
 ) -> None:
     artifact_store = FileWorkflowArtifactStore(tmp_path / "drafts_schema_isolation")
     _drafts, _service, authoring = _draft_api(artifact_store)
-    facade = WorkflowApi(authoring.context)
+    facade = WorkflowApi(authoring.context, drafts=True)
     input_schema = {
         "type": "object",
         "properties": {"topic": {"type": "string"}},
@@ -1283,7 +1283,7 @@ async def test_create_empty_draft_workspace_reports_duplicate_conflict(
 ) -> None:
     artifact_store = FileWorkflowArtifactStore(tmp_path / "drafts_create_conflict")
     _drafts, _service, authoring = _draft_api(artifact_store)
-    facade = WorkflowApi(authoring.context)
+    facade = WorkflowApi(authoring.context, drafts=True)
     await facade.create_empty_draft_workspace(
         workspace_id="control_first",
         name="control_first",
@@ -1317,7 +1317,7 @@ async def test_create_empty_draft_workspace_rejects_invalid_contract_before_muta
 ) -> None:
     artifact_store = FileWorkflowArtifactStore(tmp_path / "drafts_create_rejected")
     _drafts, _service, authoring = _draft_api(artifact_store)
-    facade = WorkflowApi(authoring.context)
+    facade = WorkflowApi(authoring.context, drafts=True)
 
     with pytest.raises(ValueError):
         await facade.create_empty_draft_workspace(
@@ -1335,7 +1335,7 @@ async def test_set_draft_start_and_contract_replace_top_level_fields_atomically(
 ) -> None:
     artifact_store = FileWorkflowArtifactStore(tmp_path / "drafts_set_lifecycle")
     _drafts, _service, authoring = _draft_api(artifact_store)
-    facade = WorkflowApi(authoring.context)
+    facade = WorkflowApi(authoring.context, drafts=True)
     await facade.create_empty_draft_workspace(
         workspace_id="control_first",
         name="control_first",
@@ -1412,7 +1412,7 @@ async def test_lifecycle_edits_reject_invalid_envelopes_without_mutation(
         tmp_path / f"drafts_lifecycle_rejected_{operation}"
     )
     _drafts, _service, authoring = _draft_api(artifact_store)
-    facade = WorkflowApi(authoring.context)
+    facade = WorkflowApi(authoring.context, drafts=True)
     await facade.create_empty_draft_workspace(
         workspace_id="control_first",
         name="control_first",
@@ -1453,7 +1453,7 @@ async def test_lifecycle_edits_report_stale_revision_without_mutation(
         tmp_path / f"drafts_lifecycle_stale_{operation}"
     )
     _drafts, _service, authoring = _draft_api(artifact_store)
-    facade = WorkflowApi(authoring.context)
+    facade = WorkflowApi(authoring.context, drafts=True)
     await facade.create_empty_draft_workspace(
         workspace_id="control_first",
         name="control_first",
@@ -2187,7 +2187,7 @@ async def test_facade_delegates_semantic_authoring_to_authoring_service(
     service.register_specs("demo.personal", echo_tool, _snapshot_tool)
 
     context = context_from_service(service)
-    facade = WorkflowApi(context)
+    facade = WorkflowApi(context, drafts=True)
 
     assert facade.draft_authoring is not None
     assert isinstance(facade.draft_authoring, WorkflowDraftAuthoringApi)
@@ -3469,7 +3469,7 @@ async def test_set_step_input_bindings_rejects_remote_target_reference_without_m
         workspace_id="remote_target",
         draft=_structured_report_draft("demo.personal.remote_structured_report"),
     )
-    api = WorkflowApi(authoring.context)
+    api = WorkflowApi(authoring.context, drafts=True)
     before = await draft_api.get_draft_workspace(
         workspace_id="remote_target",
         include_draft=True,
@@ -3506,7 +3506,7 @@ async def test_set_step_input_bindings_rejects_non_capability_step_without_mutat
     draft = _structured_report_draft()
     draft["steps"]["report"] = {"join": {}}
     await draft_api.create_draft_workspace(workspace_id="non_capability", draft=draft)
-    api = WorkflowApi(authoring.context)
+    api = WorkflowApi(authoring.context, drafts=True)
     before = await draft_api.get_draft_workspace(
         workspace_id="non_capability",
         include_draft=True,
@@ -4007,7 +4007,7 @@ async def test_add_step_accepts_every_typed_draft_step(
 ) -> None:
     artifact_store = FileWorkflowArtifactStore(tmp_path / f"draft_add_{step_name}")
     draft_api, _service, authoring = _draft_api(artifact_store, register_echo=True)
-    api = WorkflowApi(authoring.context)
+    api = WorkflowApi(authoring.context, drafts=True)
     await draft_api.create_draft_workspace(workspace_id="draft_ws", draft=_echo_draft())
 
     step = TypeAdapter(DraftStep).validate_python(step_payload)
@@ -4033,7 +4033,7 @@ async def test_add_step_routes_incoming_and_outgoing_edges_atomically(
 ) -> None:
     artifact_store = FileWorkflowArtifactStore(tmp_path / "draft_add_routes")
     draft_api, _service, authoring = _draft_api(artifact_store, register_echo=True)
-    api = WorkflowApi(authoring.context)
+    api = WorkflowApi(authoring.context, drafts=True)
     await draft_api.create_draft_workspace(workspace_id="draft_ws", draft=_echo_draft())
 
     step = TypeAdapter(DraftStep).validate_python(
@@ -4062,7 +4062,7 @@ async def test_add_step_stale_revision_wins_over_content_preflight(
 ) -> None:
     artifact_store = FileWorkflowArtifactStore(tmp_path / "draft_add_stale")
     draft_api, _service, authoring = _draft_api(artifact_store, register_echo=True)
-    api = WorkflowApi(authoring.context)
+    api = WorkflowApi(authoring.context, drafts=True)
     await draft_api.create_draft_workspace(workspace_id="draft_ws", draft=_echo_draft())
     before = await draft_api.get_draft_workspace(
         workspace_id="draft_ws", include_draft=True
@@ -4135,7 +4135,7 @@ async def test_add_step_adds_missing_incoming_route_parent_atomically(
 ) -> None:
     artifact_store = FileWorkflowArtifactStore(tmp_path / "draft_add_missing_parent")
     draft_api, _service, authoring = _draft_api(artifact_store, register_echo=True)
-    api = WorkflowApi(authoring.context)
+    api = WorkflowApi(authoring.context, drafts=True)
     draft = _echo_draft()
     draft["routes"] = {}
     await draft_api.create_draft_workspace(workspace_id="draft_ws", draft=draft)
@@ -4164,7 +4164,7 @@ async def test_add_step_distinguishes_missing_and_explicit_empty_routes(
 ) -> None:
     artifact_store = FileWorkflowArtifactStore(tmp_path / "draft_add_empty_routes")
     draft_api, _service, authoring = _draft_api(artifact_store, register_echo=True)
-    api = WorkflowApi(authoring.context)
+    api = WorkflowApi(authoring.context, drafts=True)
     await draft_api.create_draft_workspace(workspace_id="draft_ws", draft=_echo_draft())
 
     step_adapter = TypeAdapter(DraftStep)
@@ -4207,7 +4207,7 @@ async def test_add_step_rejects_unknown_incoming_outcome_without_mutation(
 ) -> None:
     artifact_store = FileWorkflowArtifactStore(tmp_path / "draft_add_bad_incoming")
     draft_api, _service, authoring = _draft_api(artifact_store, register_echo=True)
-    api = WorkflowApi(authoring.context)
+    api = WorkflowApi(authoring.context, drafts=True)
     await draft_api.create_draft_workspace(workspace_id="draft_ws", draft=_echo_draft())
 
     draft_store = authoring.drafts._draft_store()
@@ -4277,7 +4277,7 @@ async def test_add_step_rejects_invalid_routing_inputs_atomically(
 ) -> None:
     artifact_store = FileWorkflowArtifactStore(tmp_path / "draft_add_errors")
     draft_api, _service, authoring = _draft_api(artifact_store, register_echo=True)
-    api = WorkflowApi(authoring.context)
+    api = WorkflowApi(authoring.context, drafts=True)
     await draft_api.create_draft_workspace(workspace_id="draft_ws", draft=_echo_draft())
 
     await _assert_add_step_rejected_without_mutation(
@@ -4338,7 +4338,7 @@ async def test_add_step_rejects_routes_for_non_routable_steps_atomically(
 ) -> None:
     artifact_store = FileWorkflowArtifactStore(tmp_path / "draft_add_forbidden_routes")
     draft_api, _service, authoring = _draft_api(artifact_store, register_echo=True)
-    api = WorkflowApi(authoring.context)
+    api = WorkflowApi(authoring.context, drafts=True)
     await draft_api.create_draft_workspace(workspace_id="draft_ws", draft=_echo_draft())
 
     before = await draft_api.get_draft_workspace(
@@ -4367,7 +4367,7 @@ async def test_add_step_accepts_incomplete_declared_route_subset(
     artifact_store = FileWorkflowArtifactStore(tmp_path / "draft_add_partial_routes")
     draft_api, service, authoring = _draft_api(artifact_store, register_echo=True)
     service.register_specs("demo.personal", echo_tool, _snapshot_tool)
-    api = WorkflowApi(authoring.context)
+    api = WorkflowApi(authoring.context, drafts=True)
     await draft_api.create_draft_workspace(workspace_id="draft_ws", draft=_echo_draft())
 
     step = TypeAdapter(DraftStep).validate_python(
@@ -6300,7 +6300,7 @@ def _browser_click_api(
         _collect_snapshots,
     )
     context = context_from_service(service)
-    return WorkflowApi(context), service
+    return WorkflowApi(context, drafts=True), service
 
 
 @pytest.mark.asyncio

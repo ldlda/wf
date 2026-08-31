@@ -24,7 +24,12 @@ from .methods.source_registry import (
 from .methods.sources import register_methods as register_source_methods
 
 
-def create_rpc_app(server: WorkflowServer, *, rpc_path: str = "/rpc") -> jsonrpc.API:
+def create_rpc_app(
+    server: WorkflowServer,
+    *,
+    rpc_path: str = "/rpc",
+    drafts: bool = False,
+) -> jsonrpc.API:
     """Build a JSON-RPC HTTP app over an existing WorkflowServer.
 
     Transport code owns only JSON-RPC envelope handling. Workflow semantics stay
@@ -49,7 +54,10 @@ def create_rpc_app(server: WorkflowServer, *, rpc_path: str = "/rpc") -> jsonrpc
         }
 
     register_capability_methods(entrypoint, server)
-    register_draft_methods(entrypoint, server)
+    if drafts:
+        if not server.api.drafts_enabled:
+            raise ValueError("cannot enable draft RPC methods on a draft-disabled API")
+        register_draft_methods(entrypoint, server)
     register_artifact_methods(entrypoint, server)
     register_deployment_methods(entrypoint, server)
     register_run_methods(entrypoint, server)

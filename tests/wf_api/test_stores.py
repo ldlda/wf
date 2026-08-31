@@ -10,18 +10,30 @@ from wf_artifacts import (
 )
 
 
-def test_file_workflow_stores_constructs_all_three_file_stores(tmp_path: Path) -> None:
+def test_file_workflow_stores_skips_draft_store_by_default(tmp_path: Path) -> None:
     root = tmp_path / "wf_api_file_workflow_stores"
 
     stores = file_workflow_stores(root)
 
     assert isinstance(stores, WorkflowStores)
     assert isinstance(stores.artifact_store, FileWorkflowArtifactStore)
-    assert isinstance(stores.draft_workspace_store, FileDraftWorkspaceStore)
+    assert stores.draft_workspace_store is None
     assert isinstance(stores.run_store, FileRunStore)
     assert stores.artifact_store.root == root
-    assert stores.draft_workspace_store.root == root
     assert stores.run_store.root == root
+    assert not (root / "draft_workspaces").exists()
+
+
+def test_file_workflow_stores_constructs_draft_store_when_explicitly_enabled(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "wf_api_file_workflow_stores_drafts"
+
+    stores = file_workflow_stores(root, drafts=True)
+
+    assert isinstance(stores.draft_workspace_store, FileDraftWorkspaceStore)
+    assert stores.draft_workspace_store.root == root
+    assert (root / "draft_workspaces").is_dir()
 
 
 def test_wf_api_exports_workflow_stores() -> None:

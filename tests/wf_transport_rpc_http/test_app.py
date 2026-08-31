@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 from typing import Any
 
 import httpx
@@ -21,6 +22,33 @@ from wf_transport_rpc_http.models import (
 )
 
 
+@pytest.fixture(autouse=True)
+def _draft_enabled_composition(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Opt draft-focused RPC tests into the otherwise disabled composition."""
+    build_local = build_local_static_workflow_server
+    build_config = build_workflow_server_from_workflow_config
+    create_app = create_rpc_app
+
+    def draft_local(root, *args, **kwargs):
+        kwargs.setdefault("drafts", True)
+        return build_local(root, *args, **kwargs)
+
+    def draft_config(config, *args, **kwargs):
+        kwargs.setdefault("drafts", True)
+        return build_config(config, *args, **kwargs)
+
+    def draft_app(server, *args, **kwargs):
+        kwargs.setdefault("drafts", True)
+        return create_app(server, *args, **kwargs)
+
+    module = sys.modules[__name__]
+    monkeypatch.setattr(module, "build_local_static_workflow_server", draft_local)
+    monkeypatch.setattr(
+        module, "build_workflow_server_from_workflow_config", draft_config
+    )
+    monkeypatch.setattr(module, "create_rpc_app", draft_app)
+
+
 async def _rpc(
     client: httpx.AsyncClient, method: str, params: dict[str, Any]
 ) -> dict[str, Any]:
@@ -30,6 +58,24 @@ async def _rpc(
     )
     assert response.status_code == 200
     return response.json()
+
+
+def test_rpc_app_can_omit_draft_methods(tmp_path) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+
+    app = create_rpc_app(server, drafts=False)
+    methods = {method["name"] for method in app.get_openrpc()["methods"]}
+
+    assert "workflow.capabilities.list" in methods
+    assert "workflow.draft_workspaces.list" not in methods
+
+
+def test_rpc_app_draft_methods_require_explicit_server_opt_in(tmp_path) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store", drafts=True)
+    app = create_rpc_app(server, drafts=True)
+    methods = {method["name"] for method in app.get_openrpc()["methods"]}
+
+    assert "workflow.draft_workspaces.list" in methods
 
 
 def _rpc_constant_draft() -> dict[str, Any]:
@@ -1331,6 +1377,33 @@ async def test_rpc_create_artifact_from_plan(tmp_path) -> None:
     assert created["result"]["version"] == 1
     assert inspected["result"]["id"] == "rpc_plan"
     assert inspected["result"]["plan"]["name"] == "rpc_constant"
+
+
+async def test_rpc_validate_artifact_plan_does_not_persist(tmp_path) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    app = create_rpc_app(server)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        validated = await _rpc(
+            client,
+            "workflow.artifacts.validate_plan",
+            {
+                "plan": _constant_plan().model_dump(mode="json", by_alias=True),
+                "outcomes": ["ok"],
+                "source_bindings": {},
+            },
+        )
+        listed = await _rpc(
+            client, "workflow.artifacts.list", {"query": "rpc_constant"}
+        )
+
+    assert validated["result"]["status"] == "valid"
+    assert validated["result"]["diagnostics"] == []
+    assert listed["result"] == {
+        "nodes": [],
+        "next_cursor": None,
+        "total": 0,
+    }
 
 
 async def test_rpc_draft_workspace_focused_edit_methods(tmp_path) -> None:

@@ -51,6 +51,7 @@ OpenAPI, or a built-in source. It should see `CapabilitySource` and executable
 | `wf_sources_python` | Trusted Python module registry loading and projection to `CapabilitySource`. | Authoring primitives, registry mutation/apply, sandboxing. |
 | `wf_server` | `WorkflowServer` composition from config/store/source providers. | JSON-RPC method definitions, MCP protocol frontend. |
 | `wf_transport_rpc_http` | JSON-RPC HTTP app/client around an existing `WorkflowServer`. | Server startup policy, source-provider composition. |
+| `wf_client` | Async Python facade over a narrow client port: capability discovery, local authoring, artifact/deployment snapshots, and durable runs. | Draft workspace authoring, server composition, transport registration. |
 | `wf_mcp` | Legacy/special-purpose MCP frontend, broker glue, proxy, compatibility shims. | New durable product behavior unless explicitly retiring old callers. |
 
 ## Data Flow
@@ -63,6 +64,17 @@ wf_config.server.sources[]
   -> WorkflowSpecProvider
   -> WorkflowApi / WorkflowServer
   -> transport or CLI
+```
+
+Python applications consume the same server through `wf_client.App`; the
+client's local builder and immutable snapshots sit above the transport:
+
+```text
+wf_client.App
+  -> WorkflowClientPort
+  -> RpcWorkflowApiClient
+  -> JSON-RPC HTTP
+  -> WorkflowServer / WorkflowApi
 ```
 
 The first shared provider seam is intentionally static:
@@ -212,3 +224,18 @@ Then add:
 
 Do not add source-family branches inside `wf_api` run execution. Source-specific
 logic belongs in the provider package or server composition layer.
+
+## Python client boundary
+
+`wf_client` is a consumer-facing layer, not another server API.
+`App.from_http_jsonrpc()` creates a lazy HTTP transport; the first
+capability/artifact/deployment/run operation performs I/O. `EditableWorkflow`
+keeps graph construction local and uses the port only for remote validation and
+artifact persistence. The server remains responsible for durable artifact,
+deployment, and run stores and for resolving concrete source bindings.
+
+The client intentionally omits draft workspace operations. Drafts are a
+server-side authoring/admin surface, and a server composition must opt in to
+registering their JSON-RPC methods. This keeps a normal Python application
+focused on the stable artifact -> deployment -> run lifecycle while retaining
+the underlying draft implementation for explicit server users.

@@ -27,7 +27,7 @@ def _api(root: Path) -> WorkflowApi:
         ConnectionConfig(id="demo.personal", server="demo", account="personal")
     )
     service.register_specs("demo.personal", echo_tool)
-    return WorkflowApi(context_from_service(service))
+    return WorkflowApi(context_from_service(service), drafts=True)
 
 
 def test_workflow_api_composes_domain_services(tmp_path: Path) -> None:

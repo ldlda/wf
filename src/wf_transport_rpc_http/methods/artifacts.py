@@ -10,6 +10,7 @@ from wf_api.models import (
     DeleteArtifactResult,
     ListArtifactsResult,
     SaveArtifactResult,
+    ValidateArtifactPlanResult,
     WorkflowArtifactPayload,
 )
 from wf_server import WorkflowServer
@@ -21,6 +22,7 @@ from ..models import (
     InspectArtifactParams,
     ListArtifactsParams,
     SaveArtifactParams,
+    ValidateArtifactPlanParams,
 )
 from ..params import RpcParams
 
@@ -60,6 +62,22 @@ def register_methods(
     ) -> SaveArtifactResult:
         try:
             return await server.api.save_artifact(params.artifact)
+        except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:
+            raise_workflow_rpc_error(exc)
+
+    @entrypoint.method(
+        name="workflow.artifacts.validate_plan", errors=[WorkflowRpcError]
+    )
+    async def workflow_artifacts_validate_plan(
+        params: ValidateArtifactPlanParams = RpcParams(),
+    ) -> ValidateArtifactPlanResult:
+        try:
+            return await server.api.validate_artifact_plan(
+                plan=params.plan,
+                outcomes=tuple(params.outcomes),
+                required_capabilities=params.required_capabilities,
+                source_bindings=params.source_bindings,
+            )
         except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:
             raise_workflow_rpc_error(exc)
 

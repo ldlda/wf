@@ -64,7 +64,8 @@ def workflow_server_from_service(
         raise ValueError("MCP-backed WorkflowServer requires workflow stores")
 
     context = context_from_service(service)
-    api: WorkflowApi = durable_workflow_api(context)
+    # MCP's documented workflow server includes mutable draft operations.
+    api: WorkflowApi = durable_workflow_api(context, drafts=True)
     source_diagnostics = SourceDiagnosticsProvider(
         connection_lookup=service.connections.get,
         auth_store=service.auth_store or service.store,

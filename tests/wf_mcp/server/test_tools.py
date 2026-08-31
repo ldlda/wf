@@ -101,7 +101,7 @@ async def test_registered_output_bindings_tool_delegates_typed_bindings_once(
     recorder = RecordingWorkflowHandler()
     monkeypatch.setattr(
         "wf_mcp.workflow_surface.tools.WorkflowApi",
-        lambda _context: recorder,
+        lambda _context, **_kwargs: recorder,
     )
     service = WfMcpService(
         store=FileStore(tmp_path / "tool_invocation_store"),
@@ -167,7 +167,7 @@ async def test_registered_workflow_output_bindings_tool_preserves_union_order(
     recorder = RecordingWorkflowHandler()
     monkeypatch.setattr(
         "wf_mcp.workflow_surface.tools.WorkflowApi",
-        lambda _context: recorder,
+        lambda _context, **_kwargs: recorder,
     )
     service = WfMcpService(
         store=FileStore(tmp_path / "workflow_output_tool_store"),
@@ -242,7 +242,7 @@ async def test_registered_capability_tools_delegate_presence_aware_requests(
     recorder = RecordingWorkflowHandler()
     monkeypatch.setattr(
         "wf_mcp.workflow_surface.tools.WorkflowApi",
-        lambda _context: recorder,
+        lambda _context, **_kwargs: recorder,
     )
     service = WfMcpService(
         store=FileStore(tmp_path / "capability_tool_store"),

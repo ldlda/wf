@@ -19,12 +19,7 @@ WORKFLOW_OUTPUT = [
 
 
 def build_workflow() -> Workflow:
-    """Build the demo workflow with the public authoring API.
-
-    `WorkflowBuilder` does not yet expose a workflow-output setter, so this
-    module adds the final output projection in `_with_workflow_output()` after
-    compiling the graph. Keep that seam small and validated.
-    """
+    """Build the demo workflow with the public authoring API."""
     builder = WorkflowBuilder(
         name="lda_report_case_study",
         input_schema={
@@ -185,13 +180,8 @@ def build_workflow() -> Workflow:
     builder.connect(create_issues, "ok", finalise)
     builder.connect(finalise, "ok", end_completed)
     builder.connect(revision_requested, "ok", end_cancelled)
-    return _with_workflow_output(builder.compile())
-
-
-def _with_workflow_output(workflow: Workflow) -> Workflow:
-    payload = workflow.model_dump(mode="json", by_alias=True)
-    payload["output"] = WORKFLOW_OUTPUT
-    return Workflow.model_validate(payload)
+    builder.set_output(WORKFLOW_OUTPUT)
+    return builder.compile()
 
 
 def workflow_plan_payload() -> dict[str, Any]:

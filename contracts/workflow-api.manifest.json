@@ -218,6 +218,45 @@
         ],
         "type": "string"
       },
+      "ArtifactPlanDiagnosticPayload": {
+        "description": "Stable diagnostic projected when an artifact plan is invalid.",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "repair_hint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "severity": {
+            "enum": [
+              "error",
+              "warning"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "severity",
+          "code",
+          "path",
+          "message",
+          "repair_hint"
+        ],
+        "type": "object"
+      },
       "AuthRecordSummaryPayload": {
         "additionalProperties": false,
         "description": "Auth record summary without credential payload values.\n\n``metadata`` is explicitly non-secret display data. Credential material\nbelongs in the omitted auth payload and is represented only by key names.",
@@ -4387,6 +4426,43 @@
         ],
         "type": "object"
       },
+      "ValidateArtifactPlanResult": {
+        "description": "Non-persisting artifact-plan validation and dependency inventory.",
+        "properties": {
+          "diagnostics": {
+            "items": {
+              "$ref": "#/components/schemas/ArtifactPlanDiagnosticPayload"
+            },
+            "type": "array"
+          },
+          "required_capabilities": {
+            "items": {
+              "$ref": "#/components/schemas/RequiredCapabilityPayload"
+            },
+            "type": "array"
+          },
+          "status": {
+            "enum": [
+              "valid",
+              "invalid"
+            ],
+            "type": "string"
+          },
+          "workflow_dependencies": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object"
+          }
+        },
+        "required": [
+          "status",
+          "diagnostics",
+          "required_capabilities",
+          "workflow_dependencies"
+        ],
+        "type": "object"
+      },
       "ValidateDeploymentResult": {
         "properties": {
           "artifact_id": {
@@ -5711,6 +5787,81 @@
       "result": {
         "schema": {
           "$ref": "#/components/schemas/SaveArtifactResult"
+        }
+      }
+    },
+    {
+      "action": "validate_plan",
+      "errors": [
+        {
+          "$ref": "#/components/errors/5000"
+        }
+      ],
+      "method": "workflow.artifacts.validate_plan",
+      "namespace": [
+        "workflow",
+        "artifacts"
+      ],
+      "params": [
+        {
+          "name": "plan",
+          "required": true,
+          "schema": {
+            "additionalProperties": true,
+            "type": "object"
+          }
+        },
+        {
+          "name": "outcomes",
+          "required": true,
+          "schema": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        {
+          "name": "required_capabilities",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        {
+          "name": "source_bindings",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        }
+      ],
+      "result": {
+        "schema": {
+          "$ref": "#/components/schemas/ValidateArtifactPlanResult"
         }
       }
     },

@@ -21,7 +21,7 @@ from .drafts import (
     patch_workflow_draft,
     validate_workflow_draft,
 )
-from .factory import create_workflow_artifact_from_plan
+from .factory import WorkflowPlanValidationError, create_workflow_artifact_from_plan
 from .models import (
     ArtifactKind,
     AvailableCapability,
@@ -78,6 +78,7 @@ __all__ = [
     "WorkflowArtifact",
     "WorkflowArtifactCatalogEntry",
     "WorkflowArtifactStore",
+    "WorkflowPlanValidationError",
     "WorkflowCapabilityRef",
     "WorkflowDeployment",
     "WorkflowDraftWorkspace",

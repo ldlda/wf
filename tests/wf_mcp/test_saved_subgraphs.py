@@ -177,9 +177,7 @@ def test_interrupted_saved_child_blocks_resume_until_pinned_source_returns(
     assert blocked["status"] == "interrupted"
     assert blocked["resume_readiness"] == "blocked"
     assert blocked["diagnostics"][0]["code"] == "source_disabled"
-    assert (
-        run_store.get_run(paused_run_id).resume_readiness is ResumeReadiness.BLOCKED
-    )
+    assert run_store.get_run(paused_run_id).resume_readiness is ResumeReadiness.BLOCKED
     assert run_store.get_latest_checkpoint(paused_run_id).sequence == 1
 
     handlers.service.capability_sources["demo.personal"].enabled = True

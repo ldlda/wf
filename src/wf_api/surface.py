@@ -45,6 +45,7 @@ from .models import (
     SaveArtifactResult,
     SaveDeploymentResult,
     SourceDiagnosisResult,
+    ValidateArtifactPlanResult,
     ValidateDeploymentResult,
     ValidateDraftResult,
     WorkflowArtifactPayload,
@@ -458,6 +459,15 @@ class WorkflowArtifactSurface(Protocol):
         source_bindings: dict[str, str] | None = None,
         created_from_catalog_version: str | None = None,
     ) -> SaveArtifactResult: ...
+
+    async def validate_artifact_plan(
+        self,
+        *,
+        plan: dict[str, Any],
+        outcomes: Sequence[str],
+        required_capabilities: dict[str, dict[str, Any]] | None = None,
+        source_bindings: dict[str, str] | None = None,
+    ) -> ValidateArtifactPlanResult: ...
 
 
 class WorkflowDeploymentSurface(Protocol):

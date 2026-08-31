@@ -20,6 +20,7 @@ frontends can share.
 | `wf_sources_mcp` | MCP-as-upstream-source implementation: source ids, source registry DTOs, auth/catalog stores, discovery, SDK client/facade, persistent runtime pool, and tool-wrapper helpers. |
 | `wf_mcp` | MCP frontend/compatibility package: old `wf-mcp` server entry points, broker glue around MCP-hosted services, proxy/admin tools, and compatibility shims while callers migrate. |
 | `wf_transport_rpc_http` | JSON-RPC-over-HTTP transport adapter and remote client over `WorkflowApiSurface`, not a reimplementation of workflow business logic. |
+| `wf_client` | Async Python consumer facade over a narrow capability/artifact/deployment/run port. It reconstructs immutable snapshots and keeps representations bounded and inert. |
 | future `wf_http` / WebSocket / MCP server transports | Additional transports over `WorkflowApiSurface`, not new workflow application APIs. |
 | `wf_cli` | CLI frontend over `WorkflowApiSurface`; it may run locally against process-local stores or target a remote JSON-RPC backend. |
 
@@ -107,6 +108,56 @@ Important rules:
 Do not add a catch-all `service` field to the context. If a domain API needs a
 new dependency, add a narrow protocol or explicit field.
 
+## Python client lifecycle
+
+Hypothetically, an application that wants to turn a discovered capability into
+a durable run would use the following complete flow:
+
+```python
+from wf_client import App
+from wf_authoring import input_from, input_value, output_to, state_path
+
+app = App.from_http_jsonrpc("http://localhost:8765/rpc")
+capability = await app.capability("wf.std.constant")
+graph = app.new_workflow(
+    "example",
+    input_schema={"type": "object", "properties": {}},
+    state_schema={"type": "object", "properties": {"value": {"type": "string"}}},
+    output_schema={
+        "type": "object",
+        "properties": {"value": {"type": "string"}},
+        "required": ["value"],
+    },
+)
+step = graph.use(
+    capability,
+    id="constant",
+    input=[input_value("value", "hello")],
+    output=[output_to("value", state_path("value"))],
+)
+end = graph.end("ok", id="end_ok")
+graph.set_entry_point(step)
+graph.connect(step, "ok", end)
+graph.set_output([input_from(state_path("value"), "value")])
+validation = await graph.validate()
+validation.raise_for_errors()
+artifact = await graph.save(version=1)
+run = await artifact.run({})
+```
+
+The graph is an in-process builder. Validation is local structural checking
+plus a server plan check. Saving creates an immutable, versioned artifact; it
+does not execute anything. A deployment is the server's runnable configuration
+for one exact artifact version, including logical-to-concrete source bindings
+and drift policy. A run is a durable execution record for that deployment;
+inspection and bounded trace reads return snapshots, while resume is an
+explicit operation for interrupted runs.
+
+`wf_client` does not expose draft workspaces. Draft API classes remain useful
+to server/admin and console callers, but normal server composition keeps draft
+JSON-RPC registration opt-in so artifact, deployment, and run durability do not
+depend on a draft store.
+
 ## WorkflowApiSurface And Domain Services
 
 `WorkflowApiSurface` is the public application contract shared by local and
@@ -154,8 +205,8 @@ contract itself.
 ```text
 WorkflowApi
   capabilities: WorkflowCapabilityApi
-  drafts: WorkflowDraftApi
-  draft_authoring: WorkflowDraftAuthoringApi
+  drafts: WorkflowDraftApi | None  # only when drafts=True
+  draft_authoring: WorkflowDraftAuthoringApi | None  # only when drafts=True
   artifacts: WorkflowArtifactApi
   deployments: WorkflowDeploymentApi
   runs: WorkflowRunApi

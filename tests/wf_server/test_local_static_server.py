@@ -107,9 +107,7 @@ async def test_local_static_server_runs_deployment_and_persists_run(tmp_path) ->
     assert output["result"] == "hello from server"
     run_id = run_result["run_id"]
     assert isinstance(run_id, str)
-    assert (
-        server.stores.run_store.get_run(run_id).id == run_id
-    )
+    assert server.stores.run_store.get_run(run_id).id == run_id
 
 
 async def test_local_static_server_inspects_and_reads_bounded_trace(tmp_path) -> None:
@@ -191,6 +189,28 @@ def test_local_static_server_has_no_source_registry_admin(tmp_path) -> None:
     server = build_local_static_workflow_server(tmp_path / "store")
 
     assert server.source_registry_admin is None
+
+
+def test_local_static_server_default_composition_has_no_draft_store(tmp_path) -> None:
+    root = tmp_path / "store"
+    server = build_local_static_workflow_server(root)
+
+    assert server.stores.draft_workspace_store is None
+    assert server.context.draft_workspace_store is None
+    assert server.api.drafts_enabled is False
+    assert not (root / "draft_workspaces").exists()
+
+
+def test_local_static_server_explicit_draft_composition_has_draft_store(
+    tmp_path,
+) -> None:
+    root = tmp_path / "store"
+    server = build_local_static_workflow_server(root, drafts=True)
+
+    assert server.stores.draft_workspace_store is not None
+    assert server.context.draft_workspace_store is server.stores.draft_workspace_store
+    assert server.api.drafts_enabled is True
+    assert (root / "draft_workspaces").is_dir()
 
 
 def test_local_static_builtins_are_platform_sources(tmp_path) -> None:

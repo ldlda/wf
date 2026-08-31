@@ -39,7 +39,7 @@ def _capability_api(
         )
         service.register_specs("demo.personal", failing_tool)
     context = context_from_service(service)
-    return WorkflowCapabilityApi(context), service
+    return WorkflowCapabilityApi(context, drafts=True), service
 
 
 @pytest.mark.asyncio
@@ -226,6 +226,7 @@ async def test_create_draft_workspace_from_capability(tmp_path: Path) -> None:
     assert "next_actions" in result
     assert result["wrapper_hints"]["capability_name"] == "demo.personal.echo_tool"
 
+    assert api.drafts is not None
     fetched = await api.drafts.get_draft_workspace(
         workspace_id="echo_ws", include_draft=True
     )

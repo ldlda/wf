@@ -131,7 +131,7 @@ def _artifact_api(
         )
         service.register_specs("demo.personal", echo_tool)
     context = context_from_service(service)
-    return WorkflowArtifactApi(context), service
+    return WorkflowArtifactApi(context, drafts=True), service
 
 
 @pytest.mark.asyncio
@@ -183,6 +183,169 @@ async def test_create_artifact_from_plan_saves_with_observed_node_specs(
     assert result["artifact_id"] == "echo"
     saved = artifact_store.get_artifact("echo", 1)
     assert saved.id == "echo"
+
+
+@pytest.mark.asyncio
+async def test_validate_artifact_plan_does_not_persist(tmp_path: Path) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "artifacts_validate")
+    api, _service = _artifact_api(artifact_store)
+
+    result = await api.validate_artifact_plan(
+        plan=_echo_artifact().plan,
+        outcomes=("completed",),
+        source_bindings={},
+    )
+
+    assert result["status"] == "valid"
+    assert result["diagnostics"] == []
+    assert await api.list_artifacts(query="echo") == {
+        "nodes": [],
+        "next_cursor": None,
+        "total": 0,
+    }
+
+
+@pytest.mark.asyncio
+async def test_validate_artifact_plan_projects_invalid_plan_diagnostic(
+    tmp_path: Path,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "artifacts_invalid")
+    api, _service = _artifact_api(artifact_store)
+    invalid_plan = {**_echo_artifact().plan, "start": "missing"}
+
+    result = await api.validate_artifact_plan(
+        plan=invalid_plan,
+        outcomes=("completed",),
+        source_bindings={},
+    )
+
+    assert result["status"] == "invalid"
+    assert result["diagnostics"] == [
+        {
+            "severity": "error",
+            "code": "artifact_plan_invalid",
+            "path": "plan",
+            "message": "invalid workflow plan: start node 'missing' does not exist",
+            "repair_hint": None,
+        }
+    ]
+    assert await api.list_artifacts(query="echo") == {
+        "nodes": [],
+        "next_cursor": None,
+        "total": 0,
+    }
+
+
+@pytest.mark.asyncio
+async def test_validate_artifact_plan_roots_capability_diagnostic_at_request_field(
+    tmp_path: Path,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "artifacts_requirement")
+    api, _service = _artifact_api(artifact_store)
+
+    result = await api.validate_artifact_plan(
+        plan=_echo_artifact().plan,
+        outcomes=("completed",),
+        required_capabilities={
+            "broken": {
+                "ref": {"source": "demo", "capability_key": "echo"},
+                "kind": "not-a-capability-kind",
+            }
+        },
+        source_bindings={},
+    )
+
+    assert result["status"] == "invalid"
+    assert result["diagnostics"][0]["path"] == "required_capabilities.broken.kind"
+
+
+@pytest.mark.asyncio
+async def test_validate_artifact_plan_propagates_unexpected_value_error(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "artifacts_unexpected")
+    api, _service = _artifact_api(artifact_store)
+
+    def raise_programming_error(_context: object) -> dict[str, object]:
+        raise ValueError("unexpected preparation defect")
+
+    monkeypatch.setattr(
+        "wf_api.artifacts.observed_node_specs",
+        raise_programming_error,
+    )
+
+    with pytest.raises(ValueError, match="unexpected preparation defect"):
+        await api.validate_artifact_plan(
+            plan=_echo_artifact().plan,
+            outcomes=("completed",),
+            source_bindings={},
+        )
+
+
+@pytest.mark.asyncio
+async def test_validate_artifact_plan_derives_saved_workflow_dependencies(
+    tmp_path: Path,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "artifacts_dependency")
+    api, _service = _artifact_api(artifact_store)
+    plan = _echo_artifact().plan
+    plan["start"] = "child"
+    plan["nodes"] = [
+        {
+            "id": "child",
+            "type": "subgraph",
+            "workflow": {"artifact_id": "child_workflow", "version": 7},
+            "input_schema": {"type": "object"},
+            "output_schema": {"type": "object"},
+            "outcomes": ["completed"],
+        }
+    ]
+    plan["edges"] = [{"from": "child", "outcome": "completed", "to": "__end__"}]
+
+    result = await api.validate_artifact_plan(
+        plan=plan,
+        outcomes=("completed",),
+        source_bindings={},
+    )
+
+    assert result["status"] == "valid"
+    assert result["workflow_dependencies"] == {"child_workflow": 7}
+
+
+@pytest.mark.asyncio
+async def test_validate_artifact_plan_rejects_conflicting_child_version_pins(
+    tmp_path: Path,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "artifacts_pin_conflict")
+    api, _service = _artifact_api(artifact_store)
+    plan = _echo_artifact().plan
+    plan["start"] = "child_v1"
+    plan["nodes"] = [
+        {
+            "id": node_id,
+            "type": "subgraph",
+            "workflow": {"artifact_id": "child_workflow", "version": version},
+            "input_schema": {"type": "object"},
+            "output_schema": {"type": "object"},
+            "outcomes": ["completed"],
+        }
+        for node_id, version in (("child_v1", 1), ("child_v2", 2))
+    ]
+    plan["edges"] = [
+        {"from": "child_v1", "outcome": "completed", "to": "child_v2"},
+        {"from": "child_v2", "outcome": "completed", "to": "__end__"},
+    ]
+
+    result = await api.validate_artifact_plan(
+        plan=plan,
+        outcomes=("completed",),
+        source_bindings={},
+    )
+
+    assert result["status"] == "invalid"
+    assert result["diagnostics"][0]["path"] == "plan"
+    assert "conflicting versions 1 and 2" in result["diagnostics"][0]["message"]
 
 
 @pytest.mark.asyncio
@@ -349,7 +512,7 @@ def _api(root: Path) -> WorkflowApi:
         artifact_store=FileWorkflowArtifactStore(root),
         draft_workspace_store=FileDraftWorkspaceStore(mcp_root),
     )
-    return WorkflowApi(context_from_service(service))
+    return WorkflowApi(context_from_service(service), drafts=True)
 
 
 @pytest.mark.asyncio

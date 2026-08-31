@@ -2,11 +2,18 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
+from pydantic import ValidationError
+
 from wf_core import ReducerRef, Workflow
+from wf_core.models.workflow_refs import WorkflowRef
 from wf_platform import CapabilityRef, NodeSpecInventory, hash_json_schema
 
 from .models import ArtifactKind, JsonObject, RequiredCapability, WorkflowArtifact
 from .references import normalize_plan_node_refs
+
+
+class WorkflowPlanValidationError(ValueError):
+    """Expected structural validation failure while preparing a workflow plan."""
 
 
 def create_workflow_artifact_from_plan(
@@ -47,6 +54,7 @@ def create_workflow_artifact_from_plan(
         outcomes=outcomes,
         plan=normalized_plan,
         required_capabilities=list(required.values()),
+        workflow_dependencies=_workflow_dependencies_from_plan(normalized_plan),
         created_from_catalog_version=created_from_catalog_version,
     )
 
@@ -54,19 +62,21 @@ def create_workflow_artifact_from_plan(
 def _required_object_field(plan: JsonObject, field_name: str) -> JsonObject:
     value = plan.get(field_name)
     if not isinstance(value, dict):
-        raise ValueError(f"workflow plan is missing object field {field_name!r}")
+        raise WorkflowPlanValidationError(
+            f"workflow plan is missing object field {field_name!r}"
+        )
     return value
 
 
 def _validate_workflow_plan(plan: JsonObject) -> None:
     try:
         workflow = Workflow.model_validate(plan)
-    except Exception as exc:
-        raise ValueError(f"invalid workflow plan: {exc}") from exc
+    except ValidationError as exc:
+        raise WorkflowPlanValidationError(f"invalid workflow plan: {exc}") from exc
 
     node_ids = {node.id for node in workflow.nodes}
     if workflow.start not in node_ids:
-        raise ValueError(
+        raise WorkflowPlanValidationError(
             f"invalid workflow plan: start node {workflow.start!r} does not exist"
         )
 
@@ -76,13 +86,36 @@ def _validate_workflow_plan(plan: JsonObject) -> None:
     edge_sources = set(node_ids)
     for edge in workflow.edges:
         if edge.from_ not in edge_sources:
-            raise ValueError(
+            raise WorkflowPlanValidationError(
                 f"invalid workflow plan: edge source {edge.from_!r} does not exist"
             )
         if edge.to not in node_ids and edge.to != "__end__":
-            raise ValueError(
+            raise WorkflowPlanValidationError(
                 f"invalid workflow plan: edge destination {edge.to!r} does not exist"
             )
+
+
+def _workflow_dependencies_from_plan(plan: JsonObject) -> dict[str, int]:
+    """Collect immutable artifact pins from native saved-subgraph steps."""
+    nodes = plan.get("nodes")
+    if not isinstance(nodes, list):
+        return {}
+
+    dependencies: dict[str, int] = {}
+    for node in nodes:
+        if not isinstance(node, dict) or node.get("type") != "subgraph":
+            continue
+        workflow_ref = WorkflowRef.model_validate(node.get("workflow"))
+        if workflow_ref.artifact_id is not None and workflow_ref.version is not None:
+            pinned = dependencies.get(workflow_ref.artifact_id)
+            if pinned is not None and pinned != workflow_ref.version:
+                raise WorkflowPlanValidationError(
+                    "invalid workflow plan: conflicting versions "
+                    f"{pinned} and {workflow_ref.version} pinned for child "
+                    f"artifact {workflow_ref.artifact_id!r}"
+                )
+            dependencies[workflow_ref.artifact_id] = workflow_ref.version
+    return dependencies
 
 
 def _required_reducers_from_plan(plan: JsonObject) -> dict[str, RequiredCapability]:

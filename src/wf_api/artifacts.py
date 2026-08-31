@@ -9,10 +9,13 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from typing import Any
 
+from pydantic import ValidationError
+
 from wf_artifacts import (
     ArtifactKind,
     RequiredCapability,
     WorkflowArtifact,
+    WorkflowPlanValidationError,
     artifact_catalog_entry,
 )
 from wf_artifacts import (
@@ -25,6 +28,7 @@ from .capability_requirements import observed_node_specs
 from .drafts import WorkflowDraftApi
 from .listing import matches_query, paged_list_payload
 from .models import (
+    ArtifactPlanDiagnosticPayload,
     CreateArtifactFromWorkspaceResult,
     DeleteArtifactResult,
     JsonProjector,
@@ -33,6 +37,7 @@ from .models import (
     SaveArtifactResult,
     SavedDraftArtifactResult,
     UnsavedDraftArtifactResult,
+    ValidateArtifactPlanResult,
     WorkflowArtifactPayload,
 )
 from .operation_context import WorkflowOperationContext
@@ -41,8 +46,80 @@ _PROJECT_ARTIFACT = JsonProjector(WorkflowArtifactPayload)
 _PROJECT_ARTIFACT_LIST = JsonProjector(ListArtifactsResult)
 _PROJECT_ARTIFACT_SAVE = JsonProjector(SaveArtifactResult)
 _PROJECT_ARTIFACT_DELETE = JsonProjector(DeleteArtifactResult)
+_PROJECT_VALIDATE_ARTIFACT = JsonProjector(ValidateArtifactPlanResult)
 _PROJECT_UNSAVED_DRAFT_ARTIFACT = JsonProjector(UnsavedDraftArtifactResult)
 _PROJECT_SAVED_DRAFT_ARTIFACT = JsonProjector(SavedDraftArtifactResult)
+
+
+def _prepare_artifact_from_plan(
+    context: WorkflowOperationContext,
+    *,
+    artifact_id: str,
+    version: int,
+    title: str,
+    kind: ArtifactKind,
+    description: str | None,
+    plan: RawWorkflowPlan | dict[str, Any],
+    outcomes: Sequence[str],
+    required_capabilities: Mapping[str, RequiredCapability | dict[str, Any]] | None,
+    source_bindings: dict[str, str] | None,
+    created_from_catalog_version: str | None,
+) -> WorkflowArtifact:
+    """Prepare one artifact through the shared plan normalization seam."""
+    typed_plan = (
+        plan
+        if isinstance(plan, RawWorkflowPlan)
+        else RawWorkflowPlan.model_validate(plan)
+    )
+    return build_workflow_artifact_from_plan(
+        artifact_id=artifact_id,
+        version=version,
+        title=title,
+        kind=kind,
+        description=description,
+        plan=typed_plan.model_dump(mode="json", by_alias=True),
+        outcomes=tuple(outcomes),
+        required_capabilities={
+            name: (
+                capability
+                if isinstance(capability, RequiredCapability)
+                else RequiredCapability.model_validate(capability)
+            )
+            for name, capability in (required_capabilities or {}).items()
+        },
+        source_bindings=source_bindings,
+        observed_node_specs=observed_node_specs(context),
+        created_from_catalog_version=created_from_catalog_version,
+    )
+
+
+def _invalid_artifact_plan_payload(
+    diagnostic: ArtifactPlanDiagnosticPayload,
+) -> dict[str, Any]:
+    """Build the complete invalid result, including empty derived inventories."""
+    return {
+        "status": "invalid",
+        "diagnostics": [diagnostic],
+        "required_capabilities": [],
+        "workflow_dependencies": {},
+    }
+
+
+def _diagnostic_from_validation_error(
+    exc: ValidationError,
+    *,
+    root: str = "plan",
+) -> ArtifactPlanDiagnosticPayload:
+    """Project the first typed model error beneath its request-field root."""
+    error = exc.errors()[0]
+    location = ".".join(str(part) for part in error["loc"])
+    return {
+        "severity": "error",
+        "code": "artifact_plan_invalid",
+        "path": f"{root}.{location}" if location else root,
+        "message": str(error["msg"]),
+        "repair_hint": None,
+    }
 
 
 class WorkflowArtifactApi:
@@ -52,9 +129,19 @@ class WorkflowArtifactApi:
     WorkflowOperationContext so this module stays protocol-neutral.
     """
 
-    def __init__(self, context: WorkflowOperationContext) -> None:
+    def __init__(
+        self, context: WorkflowOperationContext, *, drafts: bool = False
+    ) -> None:
         self.context = context
-        self.drafts = WorkflowDraftApi(context)
+        self.drafts: WorkflowDraftApi | None = (
+            WorkflowDraftApi(context) if drafts else None
+        )
+
+    def _require_drafts(self) -> WorkflowDraftApi:
+        """Return draft helpers for the explicitly enabled authoring surface."""
+        if self.drafts is None:
+            raise ValueError("workflow draft APIs are disabled; pass drafts=True")
+        return self.drafts
 
     def _artifact_store(self):
         if self.context.artifact_store is None:
@@ -133,25 +220,17 @@ class WorkflowArtifactApi:
         source_bindings: dict[str, str] | None = None,
         created_from_catalog_version: str | None = None,
     ) -> SaveArtifactResult:
-        typed_plan = (
-            plan
-            if isinstance(plan, RawWorkflowPlan)
-            else RawWorkflowPlan.model_validate(plan)
-        )
-        workflow_artifact = build_workflow_artifact_from_plan(
+        workflow_artifact = _prepare_artifact_from_plan(
+            self.context,
             artifact_id=artifact_id,
             version=version,
             title=title,
             kind=kind,
             description=description,
-            plan=typed_plan.model_dump(mode="json", by_alias=True),
-            outcomes=tuple(outcomes),
-            required_capabilities={
-                name: RequiredCapability.model_validate(capability)
-                for name, capability in (required_capabilities or {}).items()
-            },
+            plan=plan,
+            outcomes=outcomes,
+            required_capabilities=required_capabilities,
             source_bindings=source_bindings,
-            observed_node_specs=observed_node_specs(self.context),
             created_from_catalog_version=created_from_catalog_version,
         )
         self._artifact_store().save_artifact(workflow_artifact)
@@ -169,6 +248,80 @@ class WorkflowArtifactApi:
                 "artifact_id": workflow_artifact.id,
                 "version": workflow_artifact.version,
                 "saved": True,
+            }
+        )
+
+    async def validate_artifact_plan(
+        self,
+        *,
+        plan: dict[str, Any],
+        outcomes: Sequence[str],
+        required_capabilities: dict[str, dict[str, Any]] | None = None,
+        source_bindings: dict[str, str] | None = None,
+    ) -> ValidateArtifactPlanResult:
+        """Validate and inventory a plan without writing the artifact store."""
+        try:
+            typed_plan = RawWorkflowPlan.model_validate(plan)
+        except ValidationError as exc:
+            return _PROJECT_VALIDATE_ARTIFACT(
+                _invalid_artifact_plan_payload(_diagnostic_from_validation_error(exc))
+            )
+
+        typed_requirements: dict[str, RequiredCapability] = {}
+        for name, capability in (required_capabilities or {}).items():
+            try:
+                typed_requirements[name] = RequiredCapability.model_validate(capability)
+            except ValidationError as exc:
+                return _PROJECT_VALIDATE_ARTIFACT(
+                    _invalid_artifact_plan_payload(
+                        _diagnostic_from_validation_error(
+                            exc,
+                            root=f"required_capabilities.{name}",
+                        )
+                    )
+                )
+
+        try:
+            # These identity fields satisfy the shared artifact factory only;
+            # validation never calls the store or emits a saved-artifact event.
+            artifact = _prepare_artifact_from_plan(
+                self.context,
+                artifact_id="__validation__",
+                version=1,
+                title="Validation",
+                kind="workflow",
+                description=None,
+                plan=typed_plan,
+                outcomes=outcomes,
+                required_capabilities=typed_requirements,
+                source_bindings=source_bindings,
+                created_from_catalog_version=None,
+            )
+        except ValidationError as exc:
+            return _PROJECT_VALIDATE_ARTIFACT(
+                _invalid_artifact_plan_payload(_diagnostic_from_validation_error(exc))
+            )
+        except WorkflowPlanValidationError as exc:
+            return _PROJECT_VALIDATE_ARTIFACT(
+                _invalid_artifact_plan_payload(
+                    {
+                        "severity": "error",
+                        "code": "artifact_plan_invalid",
+                        "path": "plan",
+                        "message": str(exc),
+                        "repair_hint": None,
+                    }
+                )
+            )
+        return _PROJECT_VALIDATE_ARTIFACT(
+            {
+                "status": "valid",
+                "diagnostics": [],
+                "required_capabilities": [
+                    capability.model_dump(mode="json")
+                    for capability in artifact.required_capability_map().values()
+                ],
+                "workflow_dependencies": dict(artifact.workflow_dependencies),
             }
         )
 
@@ -253,7 +406,7 @@ class WorkflowArtifactApi:
         if store is None:
             raise KeyError("draft workspace store is not configured")
         workspace = store.get_workspace(workspace_id)
-        validation = await self.drafts.validate_draft(draft=workspace.draft)
+        validation = await self._require_drafts().validate_draft(draft=workspace.draft)
         if validation["status"] != "valid":
             return _PROJECT_UNSAVED_DRAFT_ARTIFACT(
                 {

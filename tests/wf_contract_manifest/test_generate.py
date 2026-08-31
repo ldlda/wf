@@ -90,9 +90,9 @@ def test_generates_the_complete_real_workflow_contract() -> None:
     manifest = generate_manifest()
     schemas = manifest["components"]["schemas"]
 
-    assert len(manifest["operations"]) == 71
-    assert len({operation["method"] for operation in manifest["operations"]}) == 71
-    assert len(schemas) == 140
+    assert len(manifest["operations"]) == 72
+    assert len({operation["method"] for operation in manifest["operations"]}) == 72
+    assert len(schemas) == 142
     assert len(manifest["components"]["errors"]) == 1
     assert all(
         set(operation["result"]["schema"]) == {"$ref"}
@@ -151,9 +151,7 @@ def test_manifest_separates_recursive_step_inputs_from_workflow_outputs() -> Non
     input_binding_schema = schemas["InputExpressionBinding"]
     properties = input_binding_schema.get("properties")
     assert isinstance(properties, dict)
-    assert properties["expression"] == {
-        "$ref": "#/components/schemas/InputExpression"
-    }
+    assert properties["expression"] == {"$ref": "#/components/schemas/InputExpression"}
     expression_schema = schemas["InputExpression"]
     assert expression_schema["discriminator"] == {
         "mapping": {

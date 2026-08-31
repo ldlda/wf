@@ -5,25 +5,27 @@ from .service import WorkflowApi
 from .stores import WorkflowStores
 
 
-def require_workflow_stores(context: WorkflowOperationContext) -> WorkflowStores:
+def require_workflow_stores(
+    context: WorkflowOperationContext,
+    *,
+    drafts: bool = False,
+) -> WorkflowStores:
     """Return required stores or fail before constructing durable frontends.
 
     `WorkflowOperationContext` keeps stores optional for compatibility tests and
-    lightweight MCP surfaces. Durable API surfaces need all stores up front so a
-    run cannot start without somewhere to persist artifacts, drafts, and stopped
-    execution state.
+    lightweight MCP surfaces. Durable API surfaces need artifact/run stores up
+    front; a draft store is only required when draft APIs are enabled.
     """
     missing = []
     if context.artifact_store is None:
         missing.append("artifact_store")
-    if context.draft_workspace_store is None:
+    if drafts and context.draft_workspace_store is None:
         missing.append("draft_workspace_store")
     if context.run_store is None:
         missing.append("run_store")
     if missing:
         raise ValueError("durable workflow API requires stores: " + ", ".join(missing))
     assert context.artifact_store is not None
-    assert context.draft_workspace_store is not None
     assert context.run_store is not None
     return WorkflowStores(
         artifact_store=context.artifact_store,
@@ -32,10 +34,14 @@ def require_workflow_stores(context: WorkflowOperationContext) -> WorkflowStores
     )
 
 
-def durable_workflow_api(context: WorkflowOperationContext) -> WorkflowApi:
-    """Construct a WorkflowApi only after durable store dependencies exist."""
-    require_workflow_stores(context)
-    return WorkflowApi(context)
+def durable_workflow_api(
+    context: WorkflowOperationContext,
+    *,
+    drafts: bool = False,
+) -> WorkflowApi:
+    """Construct a durable API, optionally omitting the draft product surface."""
+    require_workflow_stores(context, drafts=drafts)
+    return WorkflowApi(context, drafts=drafts)
 
 
 __all__ = ["durable_workflow_api", "require_workflow_stores"]

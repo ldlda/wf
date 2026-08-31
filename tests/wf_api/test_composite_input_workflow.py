@@ -42,12 +42,13 @@ def _composite_concat_draft() -> dict[str, object]:
 async def test_composite_concat_runs_through_the_platform_registry(
     tmp_path: Path,
 ) -> None:
-    server = build_local_static_workflow_server(tmp_path / "store")
+    server = build_local_static_workflow_server(tmp_path / "store", drafts=True)
     await server.api.create_draft_workspace(
         workspace_id="composite_concat",
         draft=_composite_concat_draft(),
     )
 
+    assert server.api.draft_authoring is not None
     authored = await server.api.draft_authoring.set_step_input_bindings(
         workspace_id="composite_concat",
         revision=1,

@@ -15,7 +15,9 @@ from .model import ManifestError
 
 
 def _parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Manage the checked workflow API contract manifest.")
+    parser = argparse.ArgumentParser(
+        description="Manage the checked workflow API contract manifest."
+    )
     parser.add_argument("command", choices=("write", "check"))
     return parser
 

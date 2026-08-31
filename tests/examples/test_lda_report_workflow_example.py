@@ -256,9 +256,7 @@ async def test_lda_report_workflow_artifact_interrupt_resume_path(
         "approved",
         "selected_issue_ids",
     }
-    proposed_ids = [
-        issue["id"] for issue in interrupt["payload"]["proposed_issues"]
-    ]
+    proposed_ids = [issue["id"] for issue in interrupt["payload"]["proposed_issues"]]
     assert proposed_ids
     started_run_id = started["run_id"]
     assert isinstance(started_run_id, str)

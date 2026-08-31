@@ -22,6 +22,7 @@ export type WorkflowOperationName =
   | "workflow.artifacts.inspect"
   | "workflow.artifacts.list"
   | "workflow.artifacts.save"
+  | "workflow.artifacts.validate_plan"
   | "workflow.capabilities.call"
   | "workflow.capabilities.inspect"
   | "workflow.capabilities.list"
@@ -95,6 +96,7 @@ export const workflowOperationNames: readonly WorkflowOperationName[] = [
   "workflow.artifacts.inspect",
   "workflow.artifacts.list",
   "workflow.artifacts.save",
+  "workflow.artifacts.validate_plan",
   "workflow.capabilities.call",
   "workflow.capabilities.inspect",
   "workflow.capabilities.list",
@@ -379,6 +381,23 @@ export interface WorkflowContractMap {
       };
     };
     result: SaveArtifactResult;
+  };
+  "workflow.artifacts.validate_plan": {
+    params: {
+      plan: {
+        [k: string]: unknown;
+      };
+      outcomes: string[];
+      required_capabilities?: {
+        [k: string]: {
+          [k: string]: unknown;
+        };
+      } | null;
+      source_bindings?: {
+        [k: string]: string;
+      } | null;
+    };
+    result: ValidateArtifactPlanResult;
   };
   "workflow.capabilities.call": {
     params: {
@@ -1246,6 +1265,35 @@ export interface ArtifactCatalogEntryPayload {
   output_schema: JsonObject;
   required_sources: string[];
   version: number;
+  [k: string]: unknown;
+}
+/**
+ * Non-persisting artifact-plan validation and dependency inventory.
+ *
+ * This interface was referenced by `WorkflowContractMap`'s JSON-Schema
+ * via the `definition` "ValidateArtifactPlanResult".
+ */
+export interface ValidateArtifactPlanResult {
+  diagnostics: ArtifactPlanDiagnosticPayload[];
+  required_capabilities: RequiredCapabilityPayload[];
+  status: "valid" | "invalid";
+  workflow_dependencies: {
+    [k: string]: number;
+  };
+  [k: string]: unknown;
+}
+/**
+ * Stable diagnostic projected when an artifact plan is invalid.
+ *
+ * This interface was referenced by `WorkflowContractMap`'s JSON-Schema
+ * via the `definition` "ArtifactPlanDiagnosticPayload".
+ */
+export interface ArtifactPlanDiagnosticPayload {
+  code: string;
+  message: string;
+  path: string;
+  repair_hint: string | null;
+  severity: "error" | "warning";
   [k: string]: unknown;
 }
 /**

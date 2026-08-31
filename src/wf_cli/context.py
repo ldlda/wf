@@ -97,7 +97,9 @@ def build_workflow_server_from_workflow_config(
     """Build the local server without importing the server runtime at CLI startup."""
     from wf_server.config import build_workflow_server_from_workflow_config as build
 
-    return build(config)
+    # Local CLI exposes the full draft command group, so it is an explicit
+    # draft-bearing composition even though the neutral server default is not.
+    return build(config, drafts=True)
 
 
 def load_cli_context(
@@ -150,7 +152,8 @@ def load_cli_context(
         return CliContext(
             config_path=resolved_config_path,
             service=service,
-            handlers=WorkflowApi(context_from_service(service)),
+            # Legacy MCP CLI commands include draft authoring operations.
+            handlers=WorkflowApi(context_from_service(service), drafts=True),
             source_admin=WorkflowSourceAdminApi(context_from_service(service)),
             admin=WorkflowAdminApi(
                 connections=service.connection_service,

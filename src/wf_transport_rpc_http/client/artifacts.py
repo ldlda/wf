@@ -7,6 +7,7 @@ from wf_api.models import (
     DeleteArtifactResult,
     ListArtifactsResult,
     SaveArtifactResult,
+    ValidateArtifactPlanResult,
     WorkflowArtifactPayload,
 )
 
@@ -64,6 +65,27 @@ class RpcArtifactClientMixin:
             await self._call(
                 "workflow.artifacts.delete",
                 {"artifact_id": artifact_id, "version": version},
+            ),
+        )
+
+    async def validate_artifact_plan(
+        self: RpcCaller,
+        *,
+        plan: dict[str, Any],
+        outcomes: Sequence[str],
+        required_capabilities: dict[str, dict[str, Any]] | None = None,
+        source_bindings: dict[str, str] | None = None,
+    ) -> ValidateArtifactPlanResult:
+        return cast(
+            ValidateArtifactPlanResult,
+            await self._call(
+                "workflow.artifacts.validate_plan",
+                {
+                    "plan": plan,
+                    "outcomes": list(outcomes),
+                    "required_capabilities": required_capabilities,
+                    "source_bindings": source_bindings,
+                },
             ),
         )
 
