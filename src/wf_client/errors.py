@@ -11,6 +11,20 @@ from wf_artifacts import DependencyDiagnostic
 class WorkflowClientError(Exception):
     """Base class for errors that can be handled by workflow callers."""
 
+    code: int | str | None
+    data: object
+
+    def __init__(
+        self,
+        message: str = "",
+        *,
+        code: int | str | None = None,
+        data: object = None,
+    ) -> None:
+        self.code = code
+        self.data = deepcopy(data)
+        super().__init__(message)
+
 
 class TransportError(WorkflowClientError):
     """The client could not communicate with the workflow service."""
@@ -29,10 +43,9 @@ class ProtocolError(WorkflowClientError):
         message: str,
         data: object = None,
     ) -> None:
-        self.code = code
         self.message = message
-        self.data = deepcopy(data)
-        super().__init__(str(self))
+        super().__init__(message, code=code, data=data)
+        self.args = (str(self),)
 
     def __str__(self) -> str:
         if isinstance(self.data, dict) and isinstance(self.data.get("message"), str):

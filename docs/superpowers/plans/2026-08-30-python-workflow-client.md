@@ -1301,7 +1301,13 @@ artifact = await graph.save(version=1)
 run = await artifact.run({})
 ```
 
-State explicitly that drafts are not part of `wf_client` but remain registered in the server until the separate draft opt-out plan is executed. Update `docs/current_roadmap.md` to mark the Python-client slice complete only after every verification step below passes.
+Drafts are not part of `wf_client`. The shipped server composition uses
+`drafts=False` by default, which excludes draft storage, domain modules, and RPC
+registration; real legacy draft consumers opt in explicitly with `drafts=True`.
+The earlier plan assumption that draft methods would remain registered pending a
+separate opt-out slice is historical. Update `docs/current_roadmap.md` to mark
+the Python-client slice complete only after every verification step below
+passes.
 
 - [ ] **Step 6: Run focused and cross-layer verification**
 

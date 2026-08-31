@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from typing import Any
 
 import httpx
@@ -33,11 +34,12 @@ from wf_transport_rpc_http.client.sources import RpcSourceAdminClientMixin
 
 async def test_rpc_client_preserves_structured_jsonrpc_error() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
+        request_id = json.loads(request.content)["id"]
         return httpx.Response(
             200,
             json={
                 "jsonrpc": "2.0",
-                "id": "request",
+                "id": request_id,
                 "error": {
                     "code": "missing_source",
                     "message": "workflow operation failed",
@@ -59,6 +61,31 @@ async def test_rpc_client_preserves_structured_jsonrpc_error() -> None:
         "hint": "bind it",
     }
     assert str(raised.value) == ("workflow operation failed: source is not configured")
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("jsonrpc", "response_id"),
+    [(None, "echo"), ("1.0", "echo"), ("2.0", "wrong")],
+)
+async def test_rpc_client_rejects_malformed_response_envelope(
+    jsonrpc: str | None,
+    response_id: str,
+) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        request_id = json.loads(request.content)["id"]
+        payload: dict[str, object] = {
+            "id": request_id if response_id == "echo" else response_id,
+            "result": {},
+        }
+        if jsonrpc is not None:
+            payload["jsonrpc"] = jsonrpc
+        return httpx.Response(200, json=payload)
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http_client:
+        client = RpcWorkflowApiClient(url="http://test/rpc", http_client=http_client)
+        with pytest.raises(RuntimeError, match="JSON-RPC response"):
+            await client.list_capabilities()
 
 
 def _constant_plan() -> RawWorkflowPlan:

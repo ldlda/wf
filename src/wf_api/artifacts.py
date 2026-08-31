@@ -61,7 +61,7 @@ def _prepare_artifact_from_plan(
     description: str | None,
     plan: RawWorkflowPlan | dict[str, Any],
     outcomes: Sequence[str],
-    required_capabilities: dict[str, dict[str, Any]] | None,
+    required_capabilities: Mapping[str, RequiredCapability | dict[str, Any]] | None,
     source_bindings: dict[str, str] | None,
     created_from_catalog_version: str | None,
 ) -> WorkflowArtifact:
@@ -80,7 +80,11 @@ def _prepare_artifact_from_plan(
         plan=typed_plan.model_dump(mode="json", by_alias=True),
         outcomes=tuple(outcomes),
         required_capabilities={
-            name: RequiredCapability.model_validate(capability)
+            name: (
+                capability
+                if isinstance(capability, RequiredCapability)
+                else RequiredCapability.model_validate(capability)
+            )
             for name, capability in (required_capabilities or {}).items()
         },
         source_bindings=source_bindings,
@@ -103,14 +107,16 @@ def _invalid_artifact_plan_payload(
 
 def _diagnostic_from_validation_error(
     exc: ValidationError,
+    *,
+    root: str = "plan",
 ) -> ArtifactPlanDiagnosticPayload:
-    """Project the first typed model error with a stable plan-rooted path."""
+    """Project the first typed model error beneath its request-field root."""
     error = exc.errors()[0]
     location = ".".join(str(part) for part in error["loc"])
     return {
         "severity": "error",
         "code": "artifact_plan_invalid",
-        "path": f"plan.{location}" if location else "plan",
+        "path": f"{root}.{location}" if location else root,
         "message": str(error["msg"]),
         "repair_hint": None,
     }
@@ -255,6 +261,27 @@ class WorkflowArtifactApi:
     ) -> ValidateArtifactPlanResult:
         """Validate and inventory a plan without writing the artifact store."""
         try:
+            typed_plan = RawWorkflowPlan.model_validate(plan)
+        except ValidationError as exc:
+            return _PROJECT_VALIDATE_ARTIFACT(
+                _invalid_artifact_plan_payload(_diagnostic_from_validation_error(exc))
+            )
+
+        typed_requirements: dict[str, RequiredCapability] = {}
+        for name, capability in (required_capabilities or {}).items():
+            try:
+                typed_requirements[name] = RequiredCapability.model_validate(capability)
+            except ValidationError as exc:
+                return _PROJECT_VALIDATE_ARTIFACT(
+                    _invalid_artifact_plan_payload(
+                        _diagnostic_from_validation_error(
+                            exc,
+                            root=f"required_capabilities.{name}",
+                        )
+                    )
+                )
+
+        try:
             # These identity fields satisfy the shared artifact factory only;
             # validation never calls the store or emits a saved-artifact event.
             artifact = _prepare_artifact_from_plan(
@@ -264,9 +291,9 @@ class WorkflowArtifactApi:
                 title="Validation",
                 kind="workflow",
                 description=None,
-                plan=plan,
+                plan=typed_plan,
                 outcomes=outcomes,
-                required_capabilities=required_capabilities,
+                required_capabilities=typed_requirements,
                 source_bindings=source_bindings,
                 created_from_catalog_version=None,
             )

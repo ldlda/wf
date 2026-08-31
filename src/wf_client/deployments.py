@@ -116,7 +116,7 @@ class Deployment:
             deployment_id=self.deployment_id,
             artifact=f"{self.artifact_id}.v{self.artifact_version}",
             runnable=self.runnable,
-            diagnostics=f"{len(self.diagnostics)} diagnostics",
+            diagnostics=f"{len(self._diagnostics)} diagnostics",
         )
 
     def _repr_html_(self) -> str:
@@ -126,7 +126,7 @@ class Deployment:
             artifact=f"{self.artifact_id}.v{self.artifact_version}",
             bindings=f"{len(self.bindings)} bindings",
             runnable=self.runnable,
-            diagnostics=f"{len(self.diagnostics)} diagnostics",
+            diagnostics=f"{len(self._diagnostics)} diagnostics",
         )
 
     @property

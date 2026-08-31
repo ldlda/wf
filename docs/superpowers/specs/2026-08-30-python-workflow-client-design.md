@@ -633,12 +633,11 @@ capability, expose secrets, or fetch an unbounded trace.
 authoring compiles a complete workflow and saves it through the existing
 artifact-from-plan operation.
 
-Making draft support uninitialized by default is a separate server-composition
-slice. Today `WorkflowApi` constructs draft modules unconditionally, durable
-context validation requires a draft store, and the JSON-RPC app always
-registers draft methods. That follow-up must make draft storage, domain modules,
-and RPC registration opt-in without weakening artifact, deployment, or run
-durability.
+Draft support is uninitialized by default across storage, domain modules, and
+JSON-RPC registration. Normal composition uses `drafts=False`; callers that
+still operate the legacy draft workspace surface must opt in explicitly with
+`drafts=True`. This keeps artifact, deployment, and run durability independent
+from draft storage.
 
 ## Testing Strategy
 

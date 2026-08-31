@@ -150,19 +150,25 @@ async def test_http_app_translates_http_and_json_failures(
 async def test_http_app_translates_known_workflow_protocol_error(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    async def error_post(*args: object, **kwargs: object) -> httpx.Response:
+    async def error_post(
+        _client: object,
+        _url: object,
+        *,
+        json: dict[str, object],
+        **_kwargs: object,
+    ) -> httpx.Response:
         return httpx.Response(
             200,
             request=httpx.Request("POST", "http://test/rpc"),
             json={
                 "jsonrpc": "2.0",
-                "id": "request",
+                "id": json["id"],
                 "error": {
                     "code": 5000,
                     "message": "Workflow operation failed",
                     "data": {
-                        "code": "capability_not_found",
-                        "message": "unknown capability app.default.search",
+                        "code": "KeyError",
+                        "message": "unknown workflow capability 'app.default.search'",
                     },
                 },
             },
@@ -175,7 +181,12 @@ async def test_http_app_translates_known_workflow_protocol_error(
         await app.capability("app.default.search")
 
     assert isinstance(raised.value, CapabilityNotFound)
-    assert "unknown capability" in str(raised.value)
+    assert "unknown workflow capability" in str(raised.value)
+    assert raised.value.code == 5000
+    assert raised.value.data == {
+        "code": "KeyError",
+        "message": "unknown workflow capability 'app.default.search'",
+    }
 
 
 @pytest.mark.asyncio
@@ -184,13 +195,19 @@ async def test_http_app_preserves_unknown_protocol_error_details(
 ) -> None:
     data = {"code": "future_workflow_error", "message": "future detail", "retry": 3}
 
-    async def error_post(*args: object, **kwargs: object) -> httpx.Response:
+    async def error_post(
+        _client: object,
+        _url: object,
+        *,
+        json: dict[str, object],
+        **_kwargs: object,
+    ) -> httpx.Response:
         return httpx.Response(
             200,
             request=httpx.Request("POST", "http://test/rpc"),
             json={
                 "jsonrpc": "2.0",
-                "id": "request",
+                "id": json["id"],
                 "error": {
                     "code": 5999,
                     "message": "Future workflow error",

@@ -29,12 +29,8 @@ from wf_transport_rpc_http.client.base import RpcProtocolError
 
 from .errors import (
     ArtifactNotFound,
-    ArtifactVersionConflict,
     CapabilityNotFound,
-    DeploymentNotRunnable,
-    DeploymentRequired,
     ProtocolError,
-    RevisionConflict,
     TransportError,
     WorkflowClientError,
 )
@@ -64,22 +60,8 @@ def _known_protocol_error(
     operation: str,
     error: RpcProtocolError,
 ) -> WorkflowClientError | None:
-    """Translate only stable codes or exact legacy missing-resource signals."""
+    """Translate only operation-specific errors emitted by the current server."""
     code, detail = _server_detail(error)
-    normalized = code.casefold() if code is not None else ""
-    if normalized in {"capability_not_found", "capabilitynotfound"}:
-        return CapabilityNotFound(detail)
-    if normalized in {"artifact_not_found", "artifactnotfound"}:
-        return ArtifactNotFound(detail)
-    if normalized in {"artifact_version_conflict", "artifactversionconflict"}:
-        return ArtifactVersionConflict(detail)
-    if normalized in {"revision_conflict", "revisionconflict"}:
-        return RevisionConflict(detail)
-    if normalized in {"deployment_required", "deploymentrequired"}:
-        return DeploymentRequired()
-    if normalized in {"deployment_not_runnable", "deploymentnotrunnable"}:
-        return DeploymentNotRunnable(error=detail)
-
     # The current RPC server reports expected application exception class names
     # in ``data.code``. A generic KeyError is safe to specialize only when both
     # the operation and its exact resource phrase agree.
@@ -87,11 +69,11 @@ def _known_protocol_error(
         if operation.startswith("workflow.capabilities.") and (
             "unknown workflow capability" in detail
         ):
-            return CapabilityNotFound(detail)
+            return CapabilityNotFound(detail, code=error.code, data=error.data)
         if operation == "workflow.artifacts.inspect" and (
             "unknown workflow artifact" in detail
         ):
-            return ArtifactNotFound(detail)
+            return ArtifactNotFound(detail, code=error.code, data=error.data)
     return None
 
 

@@ -107,6 +107,13 @@ def _workflow_dependencies_from_plan(plan: JsonObject) -> dict[str, int]:
             continue
         workflow_ref = WorkflowRef.model_validate(node.get("workflow"))
         if workflow_ref.artifact_id is not None and workflow_ref.version is not None:
+            pinned = dependencies.get(workflow_ref.artifact_id)
+            if pinned is not None and pinned != workflow_ref.version:
+                raise WorkflowPlanValidationError(
+                    "invalid workflow plan: conflicting versions "
+                    f"{pinned} and {workflow_ref.version} pinned for child "
+                    f"artifact {workflow_ref.artifact_id!r}"
+                )
             dependencies[workflow_ref.artifact_id] = workflow_ref.version
     return dependencies
 

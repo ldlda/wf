@@ -51,9 +51,10 @@ class RpcClientTransport:
     http_client: httpx.AsyncClient | None = None
 
     async def _call(self, method: str, params: dict[str, Any]) -> dict[str, Any]:
+        request_id = uuid4().hex
         request = {
             "jsonrpc": "2.0",
-            "id": uuid4().hex,
+            "id": request_id,
             "method": method,
             "params": params,
         }
@@ -66,6 +67,10 @@ class RpcClientTransport:
         payload = response.json()
         if not isinstance(payload, dict):
             raise RuntimeError("JSON-RPC response must be an object")
+        if payload.get("jsonrpc") != "2.0":
+            raise RuntimeError("JSON-RPC response must declare version '2.0'")
+        if payload.get("id") != request_id:
+            raise RuntimeError("JSON-RPC response id does not match the request")
         if "error" in payload:
             error = payload["error"]
             if not isinstance(error, dict):
