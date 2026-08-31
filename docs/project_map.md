@@ -134,20 +134,30 @@ arguments may be JSON Schema dictionaries or the application's schema model
 values:
 
 ```python
+from pydantic import BaseModel
+
 from wf_client import App
 from wf_authoring import input_from, input_value, output_to, state_path
+
+
+class Input(BaseModel):
+    request_id: str
+
+
+class State(BaseModel):
+    value: str | None = None
+
+
+class Output(BaseModel):
+    value: str
 
 app = App.from_http_jsonrpc("http://localhost:8765/rpc")
 capability = await app.capability("wf.std.constant")
 graph = app.new_workflow(
     "example",
-    input_schema={"type": "object", "properties": {}},
-    state_schema={"type": "object", "properties": {"value": {"type": "string"}}},
-    output_schema={
-        "type": "object",
-        "properties": {"value": {"type": "string"}},
-        "required": ["value"],
-    },
+    input_schema=Input,
+    state_schema=State,
+    output_schema=Output,
 )
 step = graph.use(
     capability,
@@ -162,12 +172,16 @@ graph.set_output([input_from(state_path("value"), "value")])
 validation = await graph.validate()
 validation.raise_for_errors()
 artifact = await graph.save(version=1)
-run = await artifact.run({})
+run = await artifact.run({"request_id": "request-1"})
 ```
 
 The graph is a local, mutable builder. `validate()` checks its structure locally
 and then asks the server to validate the serialized plan. `save()` persists an
 immutable artifact version; it does not deploy or execute the graph.
+Pydantic models are normalized into canonical schemas. During authoring,
+`set_contract()` can atomically replace selected input, state, output, or
+outcome contracts; it preserves existing bindings so validation can expose any
+paths made invalid by the replacement.
 `artifact.run()` selects or creates a deployment, validates its source bindings,
 and starts a durable run. The returned run is a loaded snapshot; call
 `refresh()`, `resume()`, or bounded `trace(start=..., limit=...)` when more

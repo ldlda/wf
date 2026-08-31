@@ -1,0 +1,41 @@
+{
+  "skill_name": "wf-python",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Write Python code using the new wf_client API to connect to http://localhost:8765/rpc, discover wf.std.constant, build a typed workflow with Pydantic input/state/output models, then halfway through authoring replace the state/output contract with revised Pydantic models, validate, save artifact version 1, and run it. Explain what WorkflowBuilder infers and what must stay explicit.",
+      "expected_output": "A public Python lifecycle using Pydantic contracts and set_contract(), with explicit topology/output and correct validation/save/run behavior.",
+      "files": [],
+      "assertions": [
+        "Uses Pydantic models for workflow contracts instead of hand-written JSON Schema",
+        "Uses graph.set_contract() for mid-authoring replacement",
+        "Keeps entry point, routes, terminal, and final workflow output explicit",
+        "Uses only public wf_client and wf_authoring APIs"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "I have immutable workflow artifact report.v3 on the remote service. Show me Python code using wf_client to load it, edit it with the normal graph builder methods, add a discovered app.default.summarize capability, validate locally and remotely, save version 4, deploy it with a source binding, and start a durable run. Preserve everything I did not edit.",
+      "expected_output": "A lossless artifact.edit()/edit_workflow flow that inspects rather than guesses graph identifiers and keeps artifact, deployment, and run separate.",
+      "files": [],
+      "assertions": [
+        "Loads exact artifact version 3 and edits the seeded builder rather than rebuilding",
+        "Warns that step IDs and state paths must be inspected rather than guessed",
+        "Validates locally and remotely before saving version 4",
+        "Creates and validates a deployment before starting a durable run"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Using only the public Python workflow client, show how to diagnose why artifact invoice.v2 cannot run, select or create a deployment with bindings, validate it, start a run, handle an interrupt, refresh it, and read only 25 trace frames. Include public error handling. Do not use draft workspaces or raw JSON-RPC.",
+      "expected_output": "Public object-based diagnosis with DeploymentRequired, explicit bindings, validation, immutable refresh/resume, and a bounded TracePage.",
+      "files": [],
+      "assertions": [
+        "Uses no draft workspace, raw JSON-RPC, codec, or store API",
+        "Handles DeploymentRequired without guessing bindings",
+        "Uses run.resume(), run.refresh(), and run.trace(start=0, limit=25)",
+        "Uses trace.frames and public WorkflowClientError subclasses accurately"
+      ]
+    }
+  ]
+}

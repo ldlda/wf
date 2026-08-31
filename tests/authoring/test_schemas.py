@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from copy import deepcopy
 from typing import Annotated
 
+import pytest
 from pydantic import BaseModel, Field
 
 from tests.authoring.helpers import (
@@ -25,6 +27,18 @@ class DotAliasState(BaseModel):
     ]
 
 
+class RevisedInput(BaseModel):
+    query: str
+
+
+class RevisedState(BaseModel):
+    result: str | None = None
+
+
+class RevisedOutput(BaseModel):
+    result: str
+
+
 def test_builder_accepts_basemodel_classes_for_workflow_schemas() -> None:
     builder = WorkflowBuilder(
         name="model_schema_demo",
@@ -43,6 +57,50 @@ def test_builder_accepts_basemodel_classes_for_workflow_schemas() -> None:
     assert fields["text"].type == "string"
     assert fields["count"].type == "integer"
     assert fields["tags"].type == "array"
+
+
+def test_set_contract_replaces_selected_fields_from_python_models() -> None:
+    builder = WorkflowBuilder(
+        name="editable_contract",
+        input_schema=WorkflowInput,
+        state_schema=WorkflowState,
+        output_schema=WorkflowOutput,
+        outcomes=("ok",),
+        start="start",
+    )
+    original_input = deepcopy(builder.input_schema)
+
+    builder.set_contract(
+        state_schema=RevisedState,
+        output_schema=RevisedOutput,
+        outcomes=("completed", "rejected"),
+    )
+    workflow = builder.compile()
+
+    assert workflow.input_schema == original_input
+    assert set(workflow.state_schema.field_map()) == {"result"}
+    assert workflow.output_schema.properties["result"]["type"] == "string"
+    assert workflow.outcomes == ["completed", "rejected"]
+
+
+def test_set_contract_replacement_is_atomic_when_normalization_fails() -> None:
+    builder = WorkflowBuilder(
+        name="atomic_contract",
+        input_schema=WorkflowInput,
+        state_schema=WorkflowState,
+        output_schema=WorkflowOutput,
+        outcomes=("ok",),
+        start="start",
+    )
+    original = builder.compile()
+
+    with pytest.raises(ValueError):
+        builder.set_contract(
+            input_schema=RevisedInput,
+            output_schema={"type": "definitely-not-a-json-schema-type"},
+        )
+
+    assert builder.compile() == original
 
 
 def test_builder_accepts_typeddict_for_json_schema_refs() -> None:

@@ -114,20 +114,30 @@ Hypothetically, an application that wants to turn a discovered capability into
 a durable run would use the following complete flow:
 
 ```python
+from pydantic import BaseModel
+
 from wf_client import App
 from wf_authoring import input_from, input_value, output_to, state_path
+
+
+class Input(BaseModel):
+    request_id: str
+
+
+class State(BaseModel):
+    value: str | None = None
+
+
+class Output(BaseModel):
+    value: str
 
 app = App.from_http_jsonrpc("http://localhost:8765/rpc")
 capability = await app.capability("wf.std.constant")
 graph = app.new_workflow(
     "example",
-    input_schema={"type": "object", "properties": {}},
-    state_schema={"type": "object", "properties": {"value": {"type": "string"}}},
-    output_schema={
-        "type": "object",
-        "properties": {"value": {"type": "string"}},
-        "required": ["value"],
-    },
+    input_schema=Input,
+    state_schema=State,
+    output_schema=Output,
 )
 step = graph.use(
     capability,
@@ -142,8 +152,15 @@ graph.set_output([input_from(state_path("value"), "value")])
 validation = await graph.validate()
 validation.raise_for_errors()
 artifact = await graph.save(version=1)
-run = await artifact.run({})
+run = await artifact.run({"request_id": "request-1"})
 ```
+
+Pydantic models, typed mappings, and raw JSON Schema are accepted, but Python
+applications should normally keep their contracts as Python types. If a
+contract changes while the graph is being authored, call
+`graph.set_contract(state_schema=..., output_schema=..., outcomes=...)`.
+Supplied fields replace their whole contract atomically; omitted fields and
+existing graph bindings remain, so validate after the replacement.
 
 The graph is an in-process builder. Validation is local structural checking
 plus a server plan check. Saving creates an immutable, versioned artifact; it

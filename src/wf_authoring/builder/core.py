@@ -483,6 +483,44 @@ class WorkflowBuilder:
             list[InputBinding], normalize_step_input_bindings(bindings)
         )
 
+    def set_contract(
+        self,
+        *,
+        input_schema: SchemaLike | None = None,
+        state_schema: StateSchemaLike | None = None,
+        output_schema: SchemaLike | None = None,
+        outcomes: Sequence[str] | None = None,
+    ) -> None:
+        """Replace selected workflow contract fields atomically.
+
+        Omitted fields retain their current normalized values. Supplied Python
+        models, typed mappings, and raw schema dictionaries pass through the
+        same normalization used by the constructor. Existing graph bindings
+        are left intact so structural validation can report anything the new
+        contract invalidates.
+        """
+        next_input = (
+            self.input_schema
+            if input_schema is None
+            else schema_ref_from(input_schema)
+        )
+        next_state = (
+            self.state_schema
+            if state_schema is None
+            else state_schema_from(state_schema)
+        )
+        next_output = (
+            self.output_schema
+            if output_schema is None
+            else schema_ref_from(output_schema)
+        )
+        next_outcomes = self.outcomes if outcomes is None else tuple(outcomes)
+
+        self.input_schema = next_input
+        self.state_schema = next_state
+        self.output_schema = next_output
+        self.outcomes = next_outcomes
+
     def set_route(self, source: StepRef, outcome: str, target: StepRef) -> None:
         """Replace the unique route for one source/outcome pair."""
         source_id = step_id(source)
