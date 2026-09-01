@@ -175,6 +175,12 @@ to server/admin and console callers, but normal server composition keeps draft
 JSON-RPC registration opt-in so artifact, deployment, and run durability do not
 depend on a draft store.
 
+Existing remote objects can be discovered without eagerly loading their full
+plans, bindings, or traces. `app.artifacts(...)` and `app.runs(...)` return
+paged immutable summary rows; `app.deployments()` returns an immutable tuple.
+Call `app.workflow(id, version=...)`, `app.deployment(id)`, or `app.run(id)` to
+reconstruct the selected rich object.
+
 ## WorkflowApiSurface And Domain Services
 
 `WorkflowApiSurface` is the public application contract shared by local and

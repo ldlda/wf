@@ -31,6 +31,9 @@ class FakeWorkflowClient:
     async def inspect_artifact(self, **params: Any) -> object:
         return self._response("workflow.artifacts.inspect", params)
 
+    async def list_artifacts(self, **params: Any) -> object:
+        return self._response("workflow.artifacts.list", params)
+
     async def save_artifact(self, artifact: dict[str, Any]) -> object:
         return self._response("workflow.artifacts.save", {"artifact": artifact})
 
@@ -54,6 +57,9 @@ class FakeWorkflowClient:
 
     async def run_deployment(self, **params: Any) -> object:
         return self._response("workflow.runs.start", params)
+
+    async def list_runs(self, **params: Any) -> object:
+        return self._response("workflow.runs.list", params)
 
     async def inspect_run(self, **params: Any) -> object:
         return self._response("workflow.runs.inspect", params)

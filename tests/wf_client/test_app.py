@@ -274,6 +274,110 @@ async def test_capability_discovery_returns_rich_page() -> None:
 
 
 @pytest.mark.asyncio
+async def test_app_discovers_existing_artifacts_deployments_and_runs() -> None:
+    """Catch collection methods disappearing while exact loaders still work."""
+
+    class ExistingObjectsPort(_Port):
+        async def list_artifacts(self, **params: Any) -> object:
+            self.calls.append(("artifacts", params))
+            return {
+                "nodes": [
+                    {
+                        "name": "report.v3",
+                        "artifact_id": "report",
+                        "version": 3,
+                        "kind": "workflow",
+                        "display_name": "Report",
+                        "description": None,
+                        "outcomes": ["ok"],
+                        "input_schema": {"type": "object", "properties": {}},
+                        "output_schema": {"type": "object", "properties": {}},
+                        "required_sources": ["app.default"],
+                        "diagnostics": [],
+                    }
+                ],
+                "cursor": "0",
+                "next_cursor": None,
+                "limit": 10,
+                "total": 1,
+            }
+
+        async def list_deployments(self) -> object:
+            self.calls.append(("deployments", {}))
+            return {
+                "deployments": [
+                    {
+                        "id": "report.production",
+                        "artifact_id": "report",
+                        "artifact_version": 3,
+                        "binding_count": 1,
+                        "drift_policy": "block",
+                    }
+                ]
+            }
+
+        async def list_runs(self, **params: Any) -> object:
+            self.calls.append(("runs", params))
+            return {
+                "runs": [
+                    {
+                        "run_id": "run-123",
+                        "deployment_id": "report.production",
+                        "artifact_id": "report",
+                        "artifact_version": 3,
+                        "status": "interrupted",
+                        "resume_readiness": "ready",
+                        "diagnostic_count": 0,
+                        "created_at": "2026-09-02T00:00:00Z",
+                        "updated_at": "2026-09-02T00:01:00Z",
+                    }
+                ],
+                "cursor": None,
+                "next_cursor": "next",
+                "limit": 25,
+                "total": 1,
+            }
+
+    port = ExistingObjectsPort()
+    app = App._from_port(cast(WorkflowClientPort, port))
+
+    artifacts = await app.artifacts(query="report", kind="workflow", limit=10)
+    deployments = await app.deployments()
+    runs = await app.runs(status="interrupted", limit=25)
+
+    assert artifacts.items[0].artifact_id == "report"
+    assert artifacts.items[0].version == 3
+    assert artifacts.total == 1
+    assert deployments[0].deployment_id == "report.production"
+    assert deployments[0].artifact_version == 3
+    assert runs.items[0].run_id == "run-123"
+    assert runs.items[0].status == "interrupted"
+    assert runs.next_cursor == "next"
+    assert port.calls == [
+        (
+            "artifacts",
+            {"query": "report", "kind": "workflow", "cursor": None, "limit": 10},
+        ),
+        ("deployments", {}),
+        ("runs", {"status": "interrupted", "cursor": None, "limit": 25}),
+    ]
+
+
+@pytest.mark.asyncio
+async def test_app_rejects_malformed_existing_object_discovery() -> None:
+    """Catch unvalidated wire dictionaries leaking through collection methods."""
+
+    class MalformedPort(_Port):
+        async def list_runs(self, **params: Any) -> object:
+            return {"runs": [{"run_id": "missing-the-rest"}]}
+
+    app = App._from_port(cast(WorkflowClientPort, MalformedPort()))
+
+    with pytest.raises(InvalidResponse, match="workflow.runs.list"):
+        await app.runs()
+
+
+@pytest.mark.asyncio
 async def test_capability_reconstructs_structural_reference() -> None:
     capability = await _app().capability("app.default.search")
 

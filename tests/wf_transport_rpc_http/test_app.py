@@ -61,8 +61,11 @@ async def _rpc(
 
 
 def test_rpc_app_can_omit_draft_methods(tmp_path) -> None:
-    server = build_local_static_workflow_server(tmp_path / "store")
+    server = build_local_static_workflow_server(tmp_path / "store", drafts=True)
 
+    # Start enabled so this test proves the RPC composition override disables
+    # the surface instead of merely observing the server's default-off state.
+    assert server.api.drafts_enabled is True
     app = create_rpc_app(server, drafts=False)
     methods = {method["name"] for method in app.get_openrpc()["methods"]}
 

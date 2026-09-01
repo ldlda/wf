@@ -12,8 +12,10 @@ import httpx
 from wf_api.models import (
     CapabilityCallResult,
     InspectCapabilityResult,
+    ListArtifactsResult,
     ListCapabilitiesResult,
     ListDeploymentsResult,
+    ListRunsResult,
     RunResult,
     RunTraceResult,
     SaveArtifactResult,
@@ -156,6 +158,23 @@ class PublicErrorWorkflowClientPort:
             version=version,
         )
 
+    async def list_artifacts(
+        self,
+        *,
+        query: str | None = None,
+        kind: Literal["workflow", "wrapper"] | None = None,
+        cursor: str | None = None,
+        limit: int = 50,
+    ) -> ListArtifactsResult:
+        return await self._invoke(
+            "workflow.artifacts.list",
+            self._rpc.list_artifacts,
+            query=query,
+            kind=kind,
+            cursor=cursor,
+            limit=limit,
+        )
+
     async def create_artifact_from_plan(
         self,
         *,
@@ -254,6 +273,21 @@ class PublicErrorWorkflowClientPort:
             "workflow.runs.inspect",
             self._rpc.inspect_run,
             run_id=run_id,
+        )
+
+    async def list_runs(
+        self,
+        *,
+        status: str | None = None,
+        cursor: str | None = None,
+        limit: int = 50,
+    ) -> ListRunsResult:
+        return await self._invoke(
+            "workflow.runs.list",
+            self._rpc.list_runs,
+            status=status,
+            cursor=cursor,
+            limit=limit,
         )
 
     async def resume_run(

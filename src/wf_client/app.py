@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 from wf_platform import CapabilityRef, Page, SourceRef
 from wf_transport_rpc_http import RpcWorkflowApiClient
@@ -14,10 +14,14 @@ from ._identity import require_response_identity
 from .authoring import EditableWorkflow
 from .capabilities import CapabilitySummary, RemoteCapability
 from .codec import (
+    decode_artifacts_page,
     decode_capabilities_page,
     decode_capability_inspect,
+    decode_deployments,
+    decode_runs_page,
     decode_workflow_artifact,
 )
+from .discovery import ArtifactSummary, DeploymentSummary, RunSummary
 from .errors import InvalidResponse
 from .protocols import WorkflowClientPort
 from .workflows import WorkflowArtifact
@@ -144,6 +148,81 @@ class App:
         )
         return Page(
             items=tuple(_summary_from_wire(row) for row in wire["capabilities"]),
+            next_cursor=wire["next_cursor"],
+            total=wire["total"],
+        )
+
+    async def artifacts(
+        self,
+        *,
+        query: str | None = None,
+        kind: Literal["workflow", "wrapper"] | None = None,
+        cursor: str | None = None,
+        limit: int = 50,
+    ) -> Page[ArtifactSummary]:
+        """List lightweight saved artifact versions without reconstructing them."""
+        wire = decode_artifacts_page(
+            await self._port.list_artifacts(
+                query=query, kind=kind, cursor=cursor, limit=limit
+            )
+        )
+        return Page(
+            items=tuple(
+                ArtifactSummary(
+                    artifact_id=row["artifact_id"],
+                    version=row["version"],
+                    kind=row["kind"],
+                    title=row["display_name"],
+                    description=row["description"],
+                    outcomes=tuple(row["outcomes"]),
+                    required_sources=tuple(row["required_sources"]),
+                )
+                for row in wire["nodes"]
+            ),
+            next_cursor=wire["next_cursor"],
+            total=wire["total"],
+        )
+
+    async def deployments(self) -> tuple[DeploymentSummary, ...]:
+        """List lightweight saved deployment rows."""
+        wire = decode_deployments(await self._port.list_deployments())
+        return tuple(
+            DeploymentSummary(
+                deployment_id=row["id"],
+                artifact_id=row["artifact_id"],
+                artifact_version=row["artifact_version"],
+                binding_count=row["binding_count"],
+                drift_policy=row["drift_policy"],
+            )
+            for row in wire["deployments"]
+        )
+
+    async def runs(
+        self,
+        *,
+        status: str | None = None,
+        cursor: str | None = None,
+        limit: int = 50,
+    ) -> Page[RunSummary]:
+        """List lightweight durable-run rows without loading traces."""
+        wire = decode_runs_page(
+            await self._port.list_runs(status=status, cursor=cursor, limit=limit)
+        )
+        return Page(
+            items=tuple(
+                RunSummary(
+                    run_id=row["run_id"],
+                    deployment_id=row["deployment_id"],
+                    artifact_id=row["artifact_id"],
+                    artifact_version=row["artifact_version"],
+                    status=row["status"],
+                    resume_readiness=row["resume_readiness"],
+                    diagnostic_count=row["diagnostic_count"],
+                    created_at=row["created_at"],
+                    updated_at=row["updated_at"],
+                )
+                for row in wire["runs"]
+            ),
             next_cursor=wire["next_cursor"],
             total=wire["total"],
         )

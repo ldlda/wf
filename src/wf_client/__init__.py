@@ -6,6 +6,7 @@ from .app import App
 from .authoring import EditableWorkflow
 from .capabilities import CapabilityResult, CapabilitySummary, RemoteCapability
 from .deployments import Deployment, DeploymentValidation
+from .discovery import ArtifactSummary, DeploymentSummary, RunSummary
 from .errors import (
     ArtifactNotFound,
     ArtifactVersionConflict,
@@ -33,6 +34,7 @@ __all__ = [
     "ArtifactVersionConflict",
     "App",
     "ArtifactRef",
+    "ArtifactSummary",
     "CapabilityNotFound",
     "CapabilityRef",
     "CapabilityResult",
@@ -42,11 +44,13 @@ __all__ = [
     "DeploymentRequired",
     "Deployment",
     "DeploymentValidation",
+    "DeploymentSummary",
     "InvalidResponse",
     "Page",
     "ProtocolError",
     "RemoteCapability",
     "Run",
+    "RunSummary",
     "RevisionConflict",
     "TransportError",
     "ValidationFailed",

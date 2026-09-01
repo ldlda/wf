@@ -54,8 +54,16 @@ async def test_http_app_calls_authors_saves_deploys_and_runs(tmp_path) -> None:
         validation = await graph.validate()
         artifact = await graph.save(version=1, title="HTTP client proof")
         run = await artifact.run({})
+        artifacts = await app.artifacts(query="http_client_proof")
+        deployments = await app.deployments()
+        runs = await app.runs(status="completed", limit=25)
 
     assert validation.ok is True
     assert artifact.ref == ArtifactRef("http_client_proof", 1)
     assert run.status == "completed"
     assert run.output == {"value": "hello"}
+    assert [(item.artifact_id, item.version) for item in artifacts.items] == [
+        ("http_client_proof", 1)
+    ]
+    assert deployments[0].artifact_id == "http_client_proof"
+    assert runs.items[0].run_id == run.run_id

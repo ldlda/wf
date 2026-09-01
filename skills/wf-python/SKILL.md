@@ -25,6 +25,25 @@ Choose the object that matches the operation:
 - `Deployment`: bind one artifact version to concrete sources and validate it.
 - `Run`: inspect, refresh, resume, or trace one durable execution.
 
+Discover existing saved objects as lightweight summaries, then load the exact
+object selected by the application:
+
+```python
+artifacts = await app.artifacts(query="report", kind="workflow")
+deployments = await app.deployments()
+runs = await app.runs(status="interrupted", limit=25)
+
+artifact = await app.workflow(
+    artifacts.items[0].artifact_id,
+    version=artifacts.items[0].version,
+)
+run = await app.run(runs.items[0].run_id)
+```
+
+Artifact and run discovery are paged. Deployment discovery returns an immutable
+tuple because the server operation is not paged. Listing never reconstructs
+full objects or loads run traces.
+
 Do not collapse artifact saving, deployment configuration, and execution into
 one invented "publish" operation.
 

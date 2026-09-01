@@ -12,8 +12,10 @@ from wf_api.models import (
     CapabilityCallResult,
     DependencyDiagnosticPayload,
     InspectCapabilityResult,
+    ListArtifactsResult,
     ListCapabilitiesResult,
     ListDeploymentsResult,
+    ListRunsResult,
     RawWorkflowPlan,
     RunResult,
     RunTraceResult,
@@ -112,6 +114,16 @@ def decode_capabilities_page(payload: object) -> ListCapabilitiesResult:
         ListCapabilitiesResult,
         "workflow.capabilities.list",
     )
+
+
+def decode_artifacts_page(payload: object) -> ListArtifactsResult:
+    """Validate one cursor-paged artifact catalog response."""
+    return _validate(payload, ListArtifactsResult, "workflow.artifacts.list")
+
+
+def decode_runs_page(payload: object) -> ListRunsResult:
+    """Validate one cursor-paged durable-run response."""
+    return _validate(payload, ListRunsResult, "workflow.runs.list")
 
 
 def decode_validate_artifact_plan(payload: object) -> ValidateArtifactPlanResult:

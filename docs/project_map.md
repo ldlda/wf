@@ -189,6 +189,11 @@ server state is needed.
 
 Draft workspaces are intentionally not part of `wf_client`. They are a separate
 server/admin surface and must be explicitly enabled when composing a server.
+
+Use `app.artifacts(...)`, `app.deployments()`, and `app.runs(...)` to discover
+existing remote objects as lightweight immutable summaries. Exact loaders
+(`app.workflow(...)`, `app.deployment(...)`, and `app.run(...)`) reconstruct the
+selected rich object without making collection listing eager or trace-heavy.
 - `examples/agent_challenges/` contains reusable opencode challenge harnesses
   for evaluating whether agents can use the public workflow CLI/server path.
 
