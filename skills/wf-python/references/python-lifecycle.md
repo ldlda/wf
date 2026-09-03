@@ -62,6 +62,47 @@ artifact = await graph.save(version=1, title="Typed example")
 run = await artifact.run({"request_id": "request-1"})
 ```
 
+## Saved Workflow As A Native Subgraph
+
+Load the exact child artifact before authoring the parent. Its public contract
+is copied into the parent boundary for local validation; its artifact ID and
+version remain the runtime dependency.
+
+```python
+from wf_authoring import input_from, input_path, output_to, state_path
+
+child = await app.workflow("child", version=2)
+parent = app.new_workflow(
+    "parent",
+    input_schema=ParentInput,
+    state_schema=ParentState,
+    output_schema=ParentOutput,
+)
+run_child = parent.subgraph(
+    child,
+    id="run_child",
+    input=[input_from(input_path("prompt"), "prompt")],
+    output=[output_to("value", state_path("result"))],
+)
+parent.set_entry_point(run_child)
+parent.connect(run_child, "ok", parent.end("ok", id="parent_done"))
+parent.set_output([input_from(state_path("result"), "result")])
+
+parent.validate_local().raise_for_errors()
+(await parent.validate()).raise_for_errors()
+parent_v1 = await parent.save(version=1)
+
+deployment = await parent_v1.deploy("parent.production")
+readiness = await deployment.validate()
+if not readiness.runnable:
+    raise RuntimeError(readiness.diagnostics)
+run = await deployment.run({"prompt": "hello"})
+```
+
+Choose binding paths from `child.inspect()` and the parent models. Saving the
+parent does not duplicate the child plan: the saved parent retains the exact
+`child.v2` dependency, which deployment validation and execution resolve.
+
 ## Lossless Editing
 
 ```python

@@ -117,7 +117,7 @@ a durable run would use the following complete flow:
 from pydantic import BaseModel
 
 from wf_client import App
-from wf_authoring import input_from, input_value, output_to, state_path
+from wf_authoring import input_from, input_path, input_value, output_to, state_path
 
 
 class Input(BaseModel):
@@ -180,6 +180,21 @@ plans, bindings, or traces. `app.artifacts(...)` and `app.runs(...)` return
 paged immutable summary rows; `app.deployments()` returns an immutable tuple.
 Call `app.workflow(id, version=...)`, `app.deployment(id)`, or `app.run(id)` to
 reconstruct the selected rich object.
+
+A saved workflow artifact can be used directly as a native subgraph:
+
+```python
+child = await app.workflow("child", version=2)
+child_step = parent.subgraph(
+    child,
+    input=[input_from(input_path("prompt"), "prompt")],
+    output=[output_to("value", state_path("result"))],
+)
+```
+
+The boundary snapshots the child's public input/output contract for local
+validation. The saved parent retains the exact child artifact ID and version;
+deployment validation and execution resolve that separate saved dependency.
 
 ## WorkflowApiSurface And Domain Services
 
