@@ -260,6 +260,33 @@ state, records trace, and persists runs predictably even when individual
 capabilities call nondeterministic tools, APIs, Python code, or LLMs.
 _Avoid_: Deterministic external tools, deterministic LLM output
 
+**Fork**:
+An explicit workflow control step that creates several concurrent branch
+activations. A fork is distinct from an ordinary outcome, which selects exactly
+one continuation.
+_Avoid_: Multiple matching edges, implicit broadcast, async handler call
+
+**Gather**:
+An explicit workflow control step that waits for compatible activation tokens
+at every declared local input slot, merges their lineage-local state according
+to reducers and gather policy, and emits one continuation. Several alternative
+edges may satisfy one slot.
+_Avoid_: Pass-through join marker, arbitrary graph convergence, reference to one
+originating fork
+
+**Activation Token**:
+A runtime value identifying one control-flow arrival, its workflow scope,
+lineage worldview, activation context, and merge provenance. Compatible tokens
+can rendezvous at a gather without mixing loop iterations, subgraph
+invocations, or repeated fork activations.
+_Avoid_: Static edge, node output payload, scheduler position
+
+**Gather Slot**:
+A named local rendezvous requirement on a gather. A gather requires all of its
+slots, while any one compatible incoming edge assigned to a slot can satisfy
+that slot.
+_Avoid_: Fork branch reference, positional input, executable edge predicate
+
 **Planner Efficiency**:
 The degree to which the platform reduces LLM trial-and-error when creating or
 running workflows. Typed schemas, source catalogs, validation errors, dry
@@ -442,12 +469,6 @@ Future execution of deployed workflows without an active chat or CLI session.
 Persisted deployments and server-side execution make scheduling plausible, but
 scheduling itself is not implemented yet.
 _Avoid_: Claiming production background scheduling exists today
-
-**Fork/Gather Workflow Control**:
-Future workflow control for parallel branches and explicit gather/join behavior.
-The current product should not claim general fork/gather orchestration yet.
-_Avoid_: Treating current foreach or serial graph execution as full parallel
-workflow orchestration
 
 **Scheduler Foundation**:
 The runtime model that selects runnable frames and advances workflow execution without assuming there is only one active cursor.

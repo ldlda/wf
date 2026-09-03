@@ -796,7 +796,8 @@ stable.
 - Native subgraph polish: optional per-use-site child deployment overrides and
   clearer child trace inspection.
 - Concurrent foreach polish: reuse barrier/lineage machinery for future
-  fork/gather.
+  fork/gather. The proposed control semantics are recorded in
+  [`ADR-0006`](adr/0006-explicit-fork-and-topology-driven-gather.md).
 - Protocol-native progress: investigate MCP tasks/progress or WebSocket/SSE only
   after polling `wf run watch` proves insufficient.
 - OpenAPI sources: continue from [`openapi capability sources`](openapi_capability_source.md)

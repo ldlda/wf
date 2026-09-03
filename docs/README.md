@@ -112,6 +112,8 @@ docs as the active references:
   scheduler foundation decision.
 - [`adr/0002-concurrent-foreach-policy-and-barrier-commits.md`](adr/0002-concurrent-foreach-policy-and-barrier-commits.md):
   concurrent foreach policy and barrier commit semantics.
+- [`adr/0006-explicit-fork-and-topology-driven-gather.md`](adr/0006-explicit-fork-and-topology-driven-gather.md):
+  proposed explicit fork, gather-slot, and activation-token semantics.
 - [`superpowers/specs/2026-05-24-native-subgraphs-design.md`](superpowers/specs/2026-05-24-native-subgraphs-design.md):
   native subgraph design.
 - [`superpowers/specs/2026-05-26-durable-workflow-runs-and-resume-design.md`](superpowers/specs/2026-05-26-durable-workflow-runs-and-resume-design.md):
