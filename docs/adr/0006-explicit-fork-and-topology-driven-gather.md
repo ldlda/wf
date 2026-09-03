@@ -59,6 +59,21 @@ one token per slot for an activation, waits until all slots are present, then
 merges their lineage-local patches. Its result is a new continuation token that
 preserves combined provenance and can enter another gather.
 
+Runtime identity follows one canonical dependency chain. A runtime scope is one
+workflow invocation and its committed state universe. A lineage belongs to
+exactly one scope and represents one isolated state worldview inside it. An
+execution frame is a schedulable graph cursor that executes against one
+lineage, so the frame's scope and parent lineage are derived through that
+lineage rather than independently stored relationships. Frame ancestry remains
+separate: a parent frame expresses scheduling ownership and block/wake behavior,
+not state ancestry.
+
+Lineages are not owned by frames. A completed branch frame may leave its
+lineage waiting at a gather, and a later continuation frame may execute against
+the lineage produced by a merge. Activation tokens bind a control-flow arrival
+to its lineage plus the correlation and provenance needed by gathers; they do
+not duplicate the lineage's scope membership.
+
 Lineage remains a virtual worldview: committed scope state plus writes visible
 to one branch. Gathering several lineages does not require turning lineage
 ancestry into a multi-parent graph. A partial gather can create an intermediate
@@ -81,6 +96,21 @@ Branch execution order may be deterministic in the synchronous runtime and
 overlap in the asynchronous runtime. Both modes must produce equivalent graph
 semantics. Scheduler order decides when compatible work progresses, never which
 arrivals belong together.
+
+`END` means completion of the current execution frame, not necessarily
+completion of the whole run. The frame owner determines the consequence: a
+root frame completes its workflow invocation, a subgraph root returns to its
+parent boundary, and a foreach item reports completion to its parent barrier.
+For a foreach, normal item-frame completion therefore allows the controller to
+admit or resume the next item without introducing a separate continue node.
+
+General break and race behavior are not part of the first fork/gather design.
+The existing foreach `fail`, `skip`, and `collect` policies describe the
+disposition of runtime item failures; they are distinct from completion
+policies such as first-completed, first-error, or all-completed. A future break
+feature would require an operational signal to the owning foreach and an
+explicit policy for already admitted concurrent items. No `BreakNode` is added
+without that use case and policy.
 
 The current `JoinNode` will not be silently upgraded. Before implementation we
 will verify whether real persisted artifacts use it. With no real compatibility
@@ -106,6 +136,16 @@ AND across slots and OR within a slot.
 belongs to activation tokens; an intermediate merged worldview can remain a
 child of the compatible inputs' common lineage parent.
 
+**Store scope and parent-lineage identity on every frame.** Rejected because
+those relationships are canonical on the lineage and duplicated frame fields
+can disagree with them. Runtime operations should resolve and validate a
+frame's lineage and scope together.
+
+**Model normal foreach completion as a continue node.** Rejected because
+completion of an item frame already returns control to the owning foreach.
+Break and race semantics remain separate future policies rather than additional
+meanings assigned to ordinary outcomes.
+
 **Reuse or rename `JoinNode`.** Rejected as the default because the existing
 node is a pass-through marker with no barrier contract.
 
@@ -118,6 +158,12 @@ node is a pass-through marker with no barrier contract.
   `(node, outcome)` pair.
 - Checkpoints must persist pending gather arrivals and activation provenance so
   interruption/resume cannot mix loop iterations or subgraph invocations.
+- Runtime operations should resolve a frame, its lineage, and its scope through
+  one internal interface instead of accepting several independently supplied
+  identifiers.
+- Persisted frame state should not duplicate scope or parent-lineage
+  relationships once real checkpoint compatibility has been checked and any
+  required migration has been defined.
 - Trace output must make fork activation, branch identity, gather waiting, and
   merged continuation inspectable without treating scheduler bookkeeping as
   ordinary node output.
@@ -129,8 +175,8 @@ node is a pass-through marker with no barrier contract.
 ## Open Questions
 
 - The exact serialized edge field and authoring name for a gather slot.
-- The minimal activation-context and provenance representation that supports
-  loops, nested forks, subgraphs, partial gathers, and cross-merges.
+- The minimal activation-correlation and provenance representation that
+  supports loops, nested forks, subgraphs, partial gathers, and cross-merges.
 - Whether a gather resumes an existing blocked frame or creates a dedicated
   continuation frame in each topology shape.
 - The trace representation for waiting and merging without excessive internal

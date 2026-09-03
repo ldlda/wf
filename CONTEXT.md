@@ -260,6 +260,27 @@ state, records trace, and persists runs predictably even when individual
 capabilities call nondeterministic tools, APIs, Python code, or LLMs.
 _Avoid_: Deterministic external tools, deterministic LLM output
 
+**Runtime Scope**:
+The state universe for one workflow invocation, containing its input and
+committed state. Every state lineage belongs to exactly one runtime scope.
+_Avoid_: Execution frame, branch, global run state
+
+**State Lineage**:
+One isolated state worldview inside a runtime scope. Its ancestry describes
+state visibility, independently of which execution frame currently uses it.
+_Avoid_: Execution frame, scheduler task, activation token
+
+**Execution Frame**:
+A schedulable graph cursor that executes against one state lineage. Frame
+ancestry describes scheduling ownership and block/wake behavior, not state
+ancestry.
+_Avoid_: State lineage, workflow invocation, operating-system thread
+
+**Frame Completion**:
+The end of one execution frame. Its owner determines whether this completes a
+workflow invocation, returns from a subgraph, or completes one foreach item.
+_Avoid_: Always completing the run, domain outcome, implicit break
+
 **Fork**:
 An explicit workflow control step that creates several concurrent branch
 activations. A fork is distinct from an ordinary outcome, which selects exactly
@@ -275,10 +296,10 @@ _Avoid_: Pass-through join marker, arbitrary graph convergence, reference to one
 originating fork
 
 **Activation Token**:
-A runtime value identifying one control-flow arrival, its workflow scope,
-lineage worldview, activation context, and merge provenance. Compatible tokens
-can rendezvous at a gather without mixing loop iterations, subgraph
-invocations, or repeated fork activations.
+A runtime value identifying one control-flow arrival, its state lineage,
+activation context, and merge provenance. Compatible tokens can rendezvous at
+a gather without mixing loop iterations, subgraph invocations, or repeated
+fork activations. The lineage determines the token's runtime scope.
 _Avoid_: Static edge, node output payload, scheduler position
 
 **Gather Slot**:
@@ -534,14 +555,6 @@ _Avoid_: Global committed state
 A merge boundary that waits for multiple child or upstream frames and combines their lineage patches before continuation.
 _Avoid_: Noop join
 
-**Gather Node**:
-A future graph step that exposes an explicit barrier for waiting on multiple branches and merging their results.
-_Avoid_: Promise.all node, converge node
-
-**Lineage Token**:
-A future runtime marker for one branch lineage that can be consumed and merged by gather-style barriers.
-_Avoid_: Edge id
-
 **Run**:
 One execution attempt of a workflow with input, state, frames, trace, and final output.
 _Avoid_: Job, invocation
@@ -549,6 +562,11 @@ _Avoid_: Job, invocation
 ## Relationships
 
 - A **Run** owns one or more **Frames**.
+- Every **State Lineage** belongs to exactly one **Runtime Scope**.
+- Every **Execution Frame** executes against one **State Lineage** and derives
+  its runtime scope through that lineage.
+- Frame ancestry expresses scheduling ownership; lineage ancestry expresses
+  state visibility.
 - A **Frame Set** is the source of truth for runtime cursors.
 - The **Scheduler Foundation** selects one **Runnable Frame** at a time in the
   first pass.
