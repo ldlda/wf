@@ -276,6 +276,11 @@ ancestry describes scheduling ownership and block/wake behavior, not state
 ancestry.
 _Avoid_: State lineage, workflow invocation, operating-system thread
 
+**Control Region**:
+The one static foreach-owner stack assigned to a workflow node use from graph
+entry. A node use cannot belong to several control regions.
+_Avoid_: Execution frame, state lineage, dynamic call stack
+
 **Frame Completion**:
 The end of one execution frame. Its owner determines whether this completes a
 workflow invocation, returns from a subgraph, or completes one foreach item.
@@ -286,6 +291,11 @@ Completion of one foreach item through a graph back-edge targeting the item's
 owning foreach. The owner resumes its serial controller or concurrent barrier;
 the item does not execute the foreach node again.
 _Avoid_: Workflow end, generic graph cycle, implicit break
+
+**Foreach Activation**:
+One dynamic visit to a foreach controller, owning that visit's barrier and item
+executions. Re-entering the same node use creates another activation.
+_Avoid_: Foreach node use, control region, item frame
 
 **Fork**:
 An explicit workflow control step that creates several concurrent branch
@@ -573,6 +583,9 @@ _Avoid_: Job, invocation
   its runtime scope through that lineage.
 - Frame ancestry expresses scheduling ownership; lineage ancestry expresses
   state visibility.
+- Every workflow node use belongs to exactly one static **Control Region**.
+- Each dynamic visit to a foreach node use creates a distinct **Foreach
+  Activation** whose item frames share that activation identity.
 - A **Foreach Return** completes an item frame and returns control to its owning
   foreach without ending the workflow scope.
 - A **Frame Set** is the source of truth for runtime cursors.

@@ -149,8 +149,10 @@ execution-frame semantics:
 - always-available frame keys may be suggested for every executable step;
 - foreach keys are suggested when the selected step is proven to execute in the
   child frame entered through a foreach `loop` route;
-- a node reachable both inside and outside that frame receives conditional
-  entries with a warning rather than a false guarantee;
+- the approved [foreach back-edge design](2026-09-04-foreach-back-edge-design.md)
+  rejects a node reachable both inside and outside that frame as a
+  control-region conflict, rather than representing two owner stacks as
+  conditional context;
 - ambiguous or malformed control flow never produces a guaranteed scoped key;
   and
 - nested foreach scopes expose only the keys actually carried by the current
@@ -162,7 +164,8 @@ This analysis is intentionally conservative and advisory. Existing validation
 accepts syntactically valid custom `context.*` paths because the runtime may
 provide extensions that static analysis does not know. Runtime resolution
 therefore remains authoritative; this slice does not claim strict static
-context-scope enforcement.
+context-path enforcement. Structural foreach control-region validation is the
+separate responsibility specified by the later foreach back-edge design.
 
 ## Source And Target Picker
 
@@ -278,7 +281,7 @@ The implementation must include:
 
 - unit tests for schema flattening and normalized inventory entries;
 - graph-scope tests for common context, serial/concurrent foreach bodies,
-  aliases, nested foreach, mixed reachability, and malformed graphs;
+  aliases, nested foreach, control-region conflicts, and malformed graphs;
 - operation-model, protocol dispatch, generated-schema parity, and browser
   allowlist tests for inventory inspection;
 - picker tests for grouping, search, nested fields, compatibility, conditional
