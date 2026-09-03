@@ -114,6 +114,8 @@ docs as the active references:
   concurrent foreach policy and barrier commit semantics.
 - [`adr/0006-explicit-fork-and-topology-driven-gather.md`](adr/0006-explicit-fork-and-topology-driven-gather.md):
   proposed explicit fork, gather-slot, and activation-token semantics.
+- [`superpowers/specs/2026-09-04-foreach-back-edge-design.md`](superpowers/specs/2026-09-04-foreach-back-edge-design.md):
+  approved canonical foreach body-return and validation semantics.
 - [`superpowers/specs/2026-05-24-native-subgraphs-design.md`](superpowers/specs/2026-05-24-native-subgraphs-design.md):
   native subgraph design.
 - [`superpowers/specs/2026-05-26-durable-workflow-runs-and-resume-design.md`](superpowers/specs/2026-05-26-durable-workflow-runs-and-resume-design.md):

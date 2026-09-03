@@ -281,6 +281,12 @@ The end of one execution frame. Its owner determines whether this completes a
 workflow invocation, returns from a subgraph, or completes one foreach item.
 _Avoid_: Always completing the run, domain outcome, implicit break
 
+**Foreach Return**:
+Completion of one foreach item through a graph back-edge targeting the item's
+owning foreach. The owner resumes its serial controller or concurrent barrier;
+the item does not execute the foreach node again.
+_Avoid_: Workflow end, generic graph cycle, implicit break
+
 **Fork**:
 An explicit workflow control step that creates several concurrent branch
 activations. A fork is distinct from an ordinary outcome, which selects exactly
@@ -567,6 +573,8 @@ _Avoid_: Job, invocation
   its runtime scope through that lineage.
 - Frame ancestry expresses scheduling ownership; lineage ancestry expresses
   state visibility.
+- A **Foreach Return** completes an item frame and returns control to its owning
+  foreach without ending the workflow scope.
 - A **Frame Set** is the source of truth for runtime cursors.
 - The **Scheduler Foundation** selects one **Runnable Frame** at a time in the
   first pass.

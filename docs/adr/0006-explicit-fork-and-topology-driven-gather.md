@@ -97,12 +97,12 @@ overlap in the asynchronous runtime. Both modes must produce equivalent graph
 semantics. Scheduler order decides when compatible work progresses, never which
 arrivals belong together.
 
-`END` means completion of the current execution frame, not necessarily
-completion of the whole run. The frame owner determines the consequence: a
-root frame completes its workflow invocation, a subgraph root returns to its
-parent boundary, and a foreach item reports completion to its parent barrier.
-For a foreach, normal item-frame completion therefore allows the controller to
-admit or resume the next item without introducing a separate continue node.
+`END` and explicit `EndNode` represent workflow/subgraph termination, not a
+generic way to complete any child frame. A foreach item returns through a
+back-edge targeting its owning `ForeachNode`; the runtime completes that item
+frame and wakes its parent barrier without executing the controller inside the
+child. Future fork branches likewise converge through explicit gathers rather
+than independently terminating the containing workflow scope.
 
 General break and race behavior are not part of the first fork/gather design.
 The existing foreach `fail`, `skip`, and `collect` policies describe the
@@ -141,10 +141,10 @@ those relationships are canonical on the lineage and duplicated frame fields
 can disagree with them. Runtime operations should resolve and validate a
 frame's lineage and scope together.
 
-**Model normal foreach completion as a continue node.** Rejected because
-completion of an item frame already returns control to the owning foreach.
-Break and race semantics remain separate future policies rather than additional
-meanings assigned to ordinary outcomes.
+**Model normal foreach completion as a continue node.** Rejected because an
+ordinary back-edge to the owning foreach already expresses item return in the
+canonical graph. Break and race semantics remain separate future policies
+rather than additional meanings assigned to ordinary outcomes.
 
 **Reuse or rename `JoinNode`.** Rejected as the default because the existing
 node is a pass-through marker with no barrier contract.

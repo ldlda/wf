@@ -795,7 +795,10 @@ stable.
 
 - Native subgraph polish: optional per-use-site child deployment overrides and
   clearer child trace inspection.
-- Concurrent foreach polish: reuse barrier/lineage machinery for future
+- Active concurrent foreach correction: replace item-body `END` routes with
+  canonical back-edges to the owning foreach. The approved semantics are in the
+  [`foreach back-edge design`](superpowers/specs/2026-09-04-foreach-back-edge-design.md).
+- After that correction, reuse the foreach barrier/lineage machinery for
   fork/gather. The proposed control semantics are recorded in
   [`ADR-0006`](adr/0006-explicit-fork-and-topology-driven-gather.md).
 - Protocol-native progress: investigate MCP tasks/progress or WebSocket/SSE only

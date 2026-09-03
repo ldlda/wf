@@ -185,6 +185,29 @@ Future foreach metadata should evolve into inherited structured lineage context:
 - normal node authors should receive foreach values through mapped input;
   inspecting runtime context is an advanced escape hatch
 
+## Iteration Body Return
+
+An iteration body returns through an ordinary edge targeting its owning
+`ForeachNode`. The runtime recognizes that target using the item frame's typed
+owner metadata, completes the child frame, and wakes the parent barrier. It does
+not execute the foreach controller inside the child frame.
+
+`END` and explicit `EndNode` are workflow/subgraph terminals, not foreach item
+returns. Validation rejects either terminal while traversing an active foreach
+item context. This replaces the earlier implementation convention in which an
+item reached `END` to wake its parent.
+
+The canonical graph therefore uses:
+
+```text
+foreach.loop -> body
+body -> foreach
+foreach.done -> continuation
+```
+
+The exact runtime, validation, migration, and nested-context rules are specified
+in the [foreach back-edge design](../superpowers/specs/2026-09-04-foreach-back-edge-design.md).
+
 ## Deferred Work
 
 Explicit Fork/Gather is deferred. A future `GatherNode` should expose explicit
