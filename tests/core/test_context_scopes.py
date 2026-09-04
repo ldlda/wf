@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+from jsonschema import Draft202012Validator
 
 from wf_core import END, Edge, ForeachNode, NodeUse, SchemaRef, StateSchema, Workflow
 from wf_core.analysis.context_scopes import (
@@ -471,17 +472,18 @@ def _composer_workflow() -> Workflow:
     )
 
 
-def test_ref_sibling_metadata_survives_inlining() -> None:
+def test_ref_sibling_metadata_and_properties_survive_projection() -> None:
     from wf_core.analysis.context_scopes import context_schema_for_node
+    from wf_core.schema_navigation import SchemaNavigator
 
     schema = context_schema_for_node(_composer_workflow(), "body")
-    item = schema["properties"]["foreach"]["properties"]["orders"]["properties"][
-        "item"
-    ]
+    item = schema["properties"]["foreach"]["properties"]["orders"]["properties"]["item"]
     assert set(item["properties"]) == {"sku", "nick"}
     nick = item["properties"]["nick"]
     assert nick["description"] == "Short display name"
-    assert set(nick["properties"]) == {"name", "label"}
+    navigator = SchemaNavigator(item)
+    assert navigator.first_unknown(("nick", "name")) == (None, "")
+    assert navigator.first_unknown(("nick", "label")) == (None, "")
 
 
 def test_recursive_item_schema_carries_definitions() -> None:
@@ -524,5 +526,111 @@ def test_recursive_item_schema_carries_definitions() -> None:
     )
     schema = context_schema_for_node(workflow, "body")
     item = schema["properties"]["foreach"]["properties"]["cats"]["properties"]["item"]
-    # The cut recursion keeps its definitions table instead of a bare $ref.
+    # The detached item is a resource with the definitions its refs require.
     assert item["$defs"]["Category"]["properties"]["name"] == {"type": "string"}
+
+
+@pytest.mark.parametrize(
+    ("definitions_key", "reference_prefix"),
+    [("$defs", "#/$defs/"), ("definitions", "#/definitions/")],
+)
+def test_recursive_context_schema_is_standalone(
+    definitions_key: str, reference_prefix: str
+) -> None:
+    """Recursive item refs must resolve from the complete emitted schema."""
+    from wf_core.analysis.context_scopes import context_schema_for_node
+
+    workflow = _workflow(
+        start="cats",
+        nodes=[
+            _foreach("cats", over="state.cats", alias="cat"),
+            _node("body"),
+        ],
+        edges=[
+            {"from": "cats", "outcome": "loop", "to": "body"},
+            {"from": "body", "outcome": "ok", "to": "cats"},
+            {"from": "cats", "outcome": "done", "to": END},
+        ],
+        state_schema={
+            "type": "object",
+            "properties": {
+                "cats": {
+                    "type": "array",
+                    "items": {"$ref": reference_prefix + "Category"},
+                },
+            },
+            definitions_key: {
+                "Category": {
+                    "type": "object",
+                    "properties": {
+                        "name": {"type": "string"},
+                        "parent": {"$ref": reference_prefix + "Category"},
+                    },
+                    "required": ["name"],
+                },
+            },
+        },
+    )
+    schema = context_schema_for_node(workflow, "body")
+    item_value = {"name": "kitten", "parent": {"name": "cat"}}
+    context_value = {
+        "prior_outcome": None,
+        "activated_incoming_edge": None,
+        "scope_id": "root",
+        "lineage_id": "item-lineage",
+        "parent_lineage_id": "root",
+        "foreach": {
+            "cats": {
+                "node_id": "cats",
+                "activation_id": "activation",
+                "frame_id": "item-frame",
+                "scope_id": "root",
+                "lineage_id": "item-lineage",
+                "index": 0,
+                "item": item_value,
+            }
+        },
+        "loop_item": item_value,
+        "loop_index": 0,
+        "cat": item_value,
+    }
+
+    Draft202012Validator.check_schema(schema)
+    assert Draft202012Validator(schema).is_valid(context_value)
+
+
+def test_ref_sibling_constraints_remain_conjunctive() -> None:
+    """A sibling keyword may tighten, but never replace, its referenced target."""
+    from wf_core.analysis.context_scopes import context_schema_for_node
+
+    workflow = _workflow(
+        start="names",
+        nodes=[
+            _foreach("names", over="state.names", alias="name"),
+            _node("body"),
+        ],
+        edges=[
+            {"from": "names", "outcome": "loop", "to": "body"},
+            {"from": "body", "outcome": "ok", "to": "names"},
+            {"from": "names", "outcome": "done", "to": END},
+        ],
+        state_schema={
+            "type": "object",
+            "properties": {
+                "names": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/$defs/ShortName",
+                        "maxLength": 10,
+                    },
+                },
+            },
+            "$defs": {"ShortName": {"type": "string", "maxLength": 5}},
+        },
+    )
+    schema = context_schema_for_node(workflow, "body")
+    item = schema["properties"]["foreach"]["properties"]["names"]["properties"]["item"]
+    validator = Draft202012Validator(item)
+
+    assert validator.is_valid("12345")
+    assert not validator.is_valid("123456")

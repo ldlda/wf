@@ -5,9 +5,7 @@ from typing import Any
 
 from wf_core.analysis.context_scopes import (
     ContextSchema,
-    resolve_schema_reference,
     root_context_schema,
-    schema_union_branches,
 )
 from wf_core.analysis.control_regions import ControlRegionAnalysis
 from wf_core.context_contracts import RESERVED_CONTEXT_KEYS
@@ -38,6 +36,7 @@ from wf_core.models.steps import (
 )
 from wf_core.models.workflow import Workflow
 from wf_core.paths import GraphSourcePath
+from wf_core.schema_navigation import SchemaNavigator
 from wf_core.validation.issues import ValidationIssueCode, ValidationReport
 
 
@@ -204,77 +203,12 @@ def _failing_segment(
     """Return the first unknown segment plus the keys available there.
 
     Returns ``(None, "")`` when the path walks declared properties (or
-    permissive unconstrained schemas). Dangling ``$ref`` values resolve
-    against the nearest enclosing ``$defs`` table (kept by recursive item
-    schemas); unresolvable refs fail closed. Composition keywords are a
-    union: a path is readable when some branch declares it.
+    permissive unconstrained schemas). Reference resolution is delegated to
+    the shared Draft 2020-12 navigator; unresolvable refs fail closed.
+    Composition is a union for path availability: a path is readable when
+    some structural branch declares it.
     """
-    if not parts:
-        return None, ""
-    table = schema.get("$defs")
-    definitions = table if isinstance(table, Mapping) else {}
-    return _walk_schema(schema, parts, definitions)
-
-
-def _walk_schema(
-    node: Any,
-    parts: tuple[str, ...],
-    definitions: Mapping[str, Any],
-) -> tuple[str | None, str]:
-    """Walk one schema level: normalize, resolve refs, try union branches."""
-    if not parts:
-        return None, ""
-    if not isinstance(node, Mapping):
-        return parts[0], ""
-    table = node.get("$defs")
-    if isinstance(table, Mapping):
-        definitions = table
-    if isinstance(node.get("$ref"), str):
-        resolved = resolve_schema_reference(definitions, node)
-        if resolved is node:
-            return parts[0], ""
-        return _walk_schema(resolved, parts, definitions)
-    failures: list[tuple[str, str]] = []
-    for branch in schema_union_branches(node):
-        failing, available = _walk_branch(branch, parts, definitions)
-        if failing is None:
-            return None, ""
-        failures.append((failing, available))
-    # Prefer the failure that names available keys; single-branch schemas
-    # behave exactly as before.
-    for failing, available in failures:
-        if available:
-            return failing, available
-    return failures[0]
-
-
-def _walk_branch(
-    branch: Mapping[str, Any],
-    parts: tuple[str, ...],
-    definitions: Mapping[str, Any],
-) -> tuple[str | None, str]:
-    """Walk literal parts through one branch's declared properties."""
-    if isinstance(branch.get("$ref"), str):
-        # A referenced branch resolves first so recursion through definitions
-        # tables validates; unresolvable branches simply cannot accept.
-        resolved = resolve_schema_reference(definitions, branch)
-        if resolved is branch:
-            return parts[0], ""
-        return _walk_schema(resolved, parts, definitions)
-    part = parts[0]
-    properties = branch.get("properties")
-    if not isinstance(properties, Mapping):
-        if branch == {}:
-            return None, ""
-        if (
-            branch.get("type") == "object"
-            and branch.get("additionalProperties", True) is not False
-        ):
-            return None, ""
-        return part, ""
-    if part not in properties:
-        return part, ",".join(sorted(str(key) for key in properties))
-    return _walk_schema(properties[part], parts[1:], definitions)
+    return SchemaNavigator(schema).first_unknown(parts)
 
 
 def _validate_workflow_output(workflow: Workflow, report: ValidationReport) -> None:

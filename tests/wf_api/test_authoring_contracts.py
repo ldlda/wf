@@ -633,7 +633,12 @@ def _composer_inventory_workflow():
         start="orders",
         nodes=[
             ForeachNode.model_validate(
-                {"id": "orders", "type": "foreach", "over": "state.orders", "as": "order"}
+                {
+                    "id": "orders",
+                    "type": "foreach",
+                    "over": "state.orders",
+                    "as": "order",
+                }
             ),
             NodeUse(id="body", type="node", node="noop"),
         ],

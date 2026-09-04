@@ -37,9 +37,7 @@ def eval_condition(
             context=context,
         )
     if isinstance(condition, NotCondition):
-        return not eval_condition(
-            condition.arg, state, workflow_input, context=context
-        )
+        return not eval_condition(condition.arg, state, workflow_input, context=context)
     if isinstance(condition, VariadicCondition):
         values = [
             eval_condition(arg, state, workflow_input, context=context)
@@ -48,9 +46,7 @@ def eval_condition(
         return all(values) if condition.op == "and" else any(values)
     if isinstance(condition, BinaryCondition):
         left = resolve_operand(condition.left, state, workflow_input, context=context)
-        right = resolve_operand(
-            condition.right, state, workflow_input, context=context
-        )
+        right = resolve_operand(condition.right, state, workflow_input, context=context)
         if condition.op == "eq":
             return left == right
         if condition.op == "ne":

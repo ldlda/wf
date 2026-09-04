@@ -8,12 +8,10 @@ from wf_core.analysis.context_scopes import (
     ContextFieldAvailability,
     context_analysis_warnings,
     context_fields_by_node,
-    normalize_definition_reference,
-    resolve_schema_reference,
-    schema_union_branches,
 )
 from wf_core.models.workflow import Workflow
 from wf_core.paths import GraphSourcePath
+from wf_core.schema_navigation import SchemaNavigator, SchemaView
 
 from .models.authoring_contracts import (
     AuthoringContractInventoryPayload,
@@ -292,105 +290,41 @@ def _nested_item_subpaths(
     *,
     depth: int,
     prefix_parts: tuple[str, ...] = (),
-    definitions: Mapping[str, Any] | None = None,
-    active_refs: frozenset[str] = frozenset(),
 ) -> list[AuthoringPathOptionPayload]:
     """Emit bounded object children beneath one foreach ``item`` schema.
 
-    Dangling ``$ref`` values resolve against the nearest enclosing ``$defs``
-    table (kept by recursive item schemas); a repeated reference stays
-    selectable at its own path but is not expanded again, mirroring the
-    input/state inventory. Composition keywords are a union: children come
-    from every object branch, deduplicated by path.
+    The shared navigator owns reference and composition semantics. A repeated
+    reference stays selectable at its own path but is not expanded again,
+    mirroring the input/state inventory.
     """
-    from .models.authoring_contracts import AuthoringPathOptionPayload as _Payload
-
-    if depth >= _MAX_LOCAL_SCHEMA_REFERENCE_DEPTH:
-        return []
-    table = item_schema.get("$defs")
-    if isinstance(table, Mapping):
-        definitions = table
-    elif definitions is None:
-        definitions = {}
-    options: list[_Payload] = []
-    for branch in schema_union_branches(item_schema):
-        options.extend(
-            _branch_item_children(
-                branch,
-                owner_id,
-                availability,
-                depth=depth,
-                prefix_parts=prefix_parts,
-                definitions=definitions,
-                active_refs=active_refs,
-            )
-        )
-    seen: set[str] = set()
-    deduped: list[_Payload] = []
-    for option in options:
-        if option["path"] not in seen:
-            seen.add(option["path"])
-            deduped.append(option)
-    return deduped
+    return _nested_item_view_subpaths(
+        SchemaNavigator(item_schema).root,
+        owner_id,
+        availability,
+        depth=depth,
+        prefix_parts=prefix_parts,
+        active_references=frozenset(),
+    )
 
 
-def _branch_item_children(
-    branch: Mapping[str, Any],
+def _nested_item_view_subpaths(
+    view: SchemaView,
     owner_id: str,
     availability: str,
     *,
     depth: int,
     prefix_parts: tuple[str, ...],
-    definitions: Mapping[str, Any],
-    active_refs: frozenset[str],
+    active_references: frozenset[int],
 ) -> list[AuthoringPathOptionPayload]:
+    """Project one resolver-aware item view into bounded authoring options."""
     from .models.authoring_contracts import AuthoringPathOptionPayload as _Payload
 
-    if isinstance(branch.get("$ref"), str):
-        reference = normalize_definition_reference(branch["$ref"])
-        if reference in active_refs:
-            return []
-        resolved = resolve_schema_reference(definitions, branch)
-        if resolved is branch:
-            return []
-        return _nested_item_subpaths(
-            resolved,
-            owner_id,
-            availability,
-            depth=depth,
-            prefix_parts=prefix_parts,
-            definitions=definitions,
-            active_refs=active_refs | {reference},
-        )
-    properties = branch.get("properties")
-    if not isinstance(properties, Mapping):
+    if depth >= _MAX_LOCAL_SCHEMA_REFERENCE_DEPTH:
         return []
     options: list[_Payload] = []
-    for name, sub_schema in properties.items():
-        if not isinstance(name, str) or not isinstance(sub_schema, Mapping):
-            continue
-        if (
-            isinstance(sub_schema.get("type"), str)
-            and sub_schema.get("type") == "array"
-        ):
-            # Arrays are whole values; item indexes need real runtime indexes.
-            path = str(
-                GraphSourcePath(
-                    "context", ("foreach", owner_id, "item", *prefix_parts, name)
-                )
-            )
-            options.append(
-                {
-                    "path": path,
-                    "label": name.replace("_", " ").replace("-", " ").title(),
-                    "origin": "runtime_context",
-                    "schema": deepcopy(dict(sub_schema)),
-                    "required": False,
-                    "availability": availability,  # type: ignore[typeddict-item]
-                    "uses": ["step_input"],
-                }
-            )
-            continue
+    for child in view.object_children(active_references=active_references):
+        name = child.name
+        child_schema = child.view.standalone_schema()
         path = str(
             GraphSourcePath(
                 "context", ("foreach", owner_id, "item", *prefix_parts, name)
@@ -401,24 +335,30 @@ def _branch_item_children(
                 "path": path,
                 "label": name.replace("_", " ").replace("-", " ").title(),
                 "origin": "runtime_context",
-                "schema": deepcopy(dict(sub_schema)),
+                "schema": child_schema,
                 "required": False,
                 "availability": availability,  # type: ignore[typeddict-item]
                 "uses": ["step_input"],
             }
         )
-        options.extend(
-            _nested_item_subpaths(
-                sub_schema,
-                owner_id,
-                availability,
-                depth=depth + 1,
-                prefix_parts=(*prefix_parts, name),
-                definitions=definitions,
-                active_refs=active_refs,
+        if not child.view.is_array():
+            options.extend(
+                _nested_item_view_subpaths(
+                    child.view,
+                    owner_id,
+                    availability,
+                    depth=depth + 1,
+                    prefix_parts=(*prefix_parts, name),
+                    active_references=child.active_references,
+                )
             )
-        )
-    return options
+    seen: set[str] = set()
+    deduped: list[_Payload] = []
+    for option in options:
+        if option["path"] not in seen:
+            seen.add(option["path"])
+            deduped.append(option)
+    return deduped
 
 
 def _context_entries_for_inventory(
