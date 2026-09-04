@@ -533,3 +533,62 @@ def test_object_expression_and_nested_conditions_report_exact_paths() -> None:
         )
         is not None
     )
+
+
+def _nested_ref_workflow(*, work_path: str) -> Workflow:
+    workflow = _base_workflow(work_path=work_path)
+    workflow.state_schema = StateSchema.model_validate(
+        {
+            "type": "object",
+            "properties": {
+                "items": {"type": "array", "items": {"type": "string"}},
+                "orders_list": {
+                    "type": "array",
+                    "items": {"$ref": "#/$defs/Order"},
+                },
+            },
+            "$defs": {
+                "Order": {
+                    "type": "object",
+                    "properties": {
+                        "sku": {"type": "string"},
+                        "detail": {"$ref": "#/$defs/Detail"},
+                    },
+                    "required": ["sku", "detail"],
+                },
+                "Detail": {
+                    "type": "object",
+                    "properties": {"name": {"type": "string"}},
+                    "required": ["name"],
+                },
+            },
+        }
+    )
+    return workflow
+
+
+def test_nested_ref_item_subpath_is_accepted() -> None:
+    from wf_core.validation import validate_workflow
+
+    workflow = _nested_ref_workflow(work_path="context.foreach.orders.item.detail.name")
+    report = validate_workflow(workflow)
+    assert [
+        issue
+        for issue in report.errors
+        if issue.code == ValidationIssueCode.INVALID_CONTEXT_PATH
+    ] == []
+
+
+def test_nested_ref_item_unknown_leaf_reports_available_keys() -> None:
+    from wf_core.validation import validate_workflow
+
+    workflow = _nested_ref_workflow(
+        work_path="context.foreach.orders.item.detail.bogus"
+    )
+    report = validate_workflow(workflow)
+    issue = _issue(
+        report, ValidationIssueCode.INVALID_CONTEXT_PATH, "nodes[2].input[0].path"
+    )
+    assert issue is not None
+    assert "'bogus'" in issue.message
+    assert "available: name" in issue.message

@@ -218,6 +218,9 @@ def _available_fields(
     """
     contracts = list(STANDARD_CONTEXT_FIELDS)
     if not stack:
+        # The empty foreach map stays readable at root, matching
+        # ``root_context_schema`` and the validation pass.
+        contracts.append(structured_foreach_contract({}))
         return tuple(
             ContextFieldAvailability(
                 contract=ContextFieldContract(
@@ -371,20 +374,18 @@ def _foreach_item_schema(
     items = source_schema.get("items")
     if not is_array or not isinstance(items, Mapping):
         return {}
+    document = _schema_document(
+        workflow,
+        foreach.over.root,
+        stack=controller_stack,
+        foreach_nodes=foreach_nodes,
+        owner_stack_by_node=owner_stack_by_node,
+    )
     try:
-        resolved_items = _resolve_local_reference(
-            _schema_document(
-                workflow,
-                foreach.over.root,
-                stack=controller_stack,
-                foreach_nodes=foreach_nodes,
-                owner_stack_by_node=owner_stack_by_node,
-            ),
-            items,
-        )
+        resolved_items = _resolve_local_reference(document, items)
     except ValueError:
         return {}
-    return deepcopy(dict(resolved_items))
+    return deepcopy(dict(_inline_local_refs(document, resolved_items)))
 
 
 def _schema_at_path(
@@ -475,6 +476,60 @@ def _schema_document(
                             current[field.name] = field.schema
         return {"type": "object", "properties": current}
     return {}
+
+
+def _inline_local_refs(
+    root_schema: Mapping[str, object],
+    candidate: Mapping[str, object],
+) -> Mapping[str, object]:
+    """Return ``candidate`` with nested local refs resolved inline.
+
+    :func:`_foreach_item_schema` detaches the resolved item schema from its
+    source document, which would strand nested ``$ref`` pointers whose
+    ``$defs`` live at the document root. Inlining here keeps every downstream
+    schema walker (validation, authoring inventory) working on plain
+    ``properties`` without threading definition tables through per-node
+    schemas. Cyclic or otherwise unresolvable refs are left in place:
+    downstream walkers already treat a bare ``$ref`` as fail-closed.
+    """
+
+    def inline(node: object, active: frozenset[str], depth: int) -> object:
+        if depth > _MAX_LOCAL_SCHEMA_REFERENCE_DEPTH:
+            return node
+        if isinstance(node, list):
+            return [inline(item, active, depth + 1) for item in node]
+        if not isinstance(node, Mapping):
+            return node
+        reference = node.get("$ref")
+        if isinstance(reference, str):
+            if reference in active:
+                return node
+            try:
+                resolved = _resolve_local_reference(root_schema, node)
+            except ValueError:
+                return node
+            return inline(resolved, active | {reference}, depth + 1)
+        inlined = dict(node)
+        properties = inlined.get("properties")
+        if isinstance(properties, Mapping):
+            inlined["properties"] = {
+                name: inline(sub, active, depth + 1) for name, sub in properties.items()
+            }
+        items = inlined.get("items")
+        if isinstance(items, (Mapping, list)):
+            inlined["items"] = inline(items, active, depth + 1)
+        additional = inlined.get("additionalProperties")
+        if isinstance(additional, (Mapping, list)):
+            inlined["additionalProperties"] = inline(additional, active, depth + 1)
+        prefix = inlined.get("prefixItems")
+        if isinstance(prefix, list):
+            inlined["prefixItems"] = inline(prefix, active, depth + 1)
+        return inlined
+
+    inlined = inline(candidate, frozenset(), 0)
+    if not isinstance(inlined, Mapping):
+        return candidate
+    return inlined
 
 
 def _resolve_local_reference(
