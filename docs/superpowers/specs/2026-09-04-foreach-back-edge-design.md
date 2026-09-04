@@ -432,9 +432,10 @@ may independently return and complete the item.
 ## State and Failure Behavior
 
 Back-edge return changes control representation, not state semantics.
-Iteration writes remain buffered in the item lineage. Serial behavior and the
-concurrent barrier continue to commit or merge those writes according to the
-accepted concurrent-foreach ADR and declared reducers. One shared helper
+Concurrent iteration writes remain buffered in the item lineage for the
+barrier to merge, while serial owners pass writes outward to the scope
+root, which commits them according to the accepted concurrent-foreach ADR
+and declared reducers. One shared helper
 routes every item write: it climbs through each serial owner to the scope
 root, where it commits, or stops at the first concurrent item boundary,
 where it buffers for that barrier to merge (the concurrent barrier finish

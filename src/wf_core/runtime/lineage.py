@@ -98,8 +98,11 @@ def commit_foreach_aware_patch(
     climbs through every serial item owner until it reaches either the
     workflow/subgraph scope root, where it commits, or a concurrent item
     boundary, where it buffers in that item lineage for the barrier to
-    merge. Malformed ownership, missing parents, parent cycles, and closed
-    or superseded activations fail closed.
+    merge. The whole ancestry is validated first: the write lands only
+    after the chain reaches an acyclic non-item ancestor, so a parent
+    cycle fails closed even when it passes through a concurrent
+    boundary. Malformed ownership, missing parents, parent cycles, and
+    closed or superseded activations fail closed.
     """
     from wf_core.runtime.foreach_state import (
         item_frame_owner,
@@ -108,10 +111,11 @@ def commit_foreach_aware_patch(
 
     current = frame
     seen: set[str] = set()
+    buffer_in: ExecutionFrame | None = None
     while True:
         owner = item_frame_owner(current)
         if owner is None:
-            return commit_patch_for_frame(run, current, patch)
+            break
         if current.id in seen:
             raise WorkflowExecutionError(
                 f"cycle detected in foreach parent chain at frame {current.id!r}"
@@ -126,15 +130,18 @@ def commit_foreach_aware_patch(
         activation = require_foreach_activation(
             parent_frame, owner.foreach_node_id, owner.activation_id
         )
-        if activation.barrier.mode == "concurrent":
-            append_lineage_writes(
-                run,
-                scope_id=current.scope_id,
-                lineage_id=current.lineage_id,
-                writes=patch.writes,
-            )
-            return {}
+        if buffer_in is None and activation.barrier.mode == "concurrent":
+            buffer_in = current
         current = parent_frame
+    if buffer_in is not None:
+        append_lineage_writes(
+            run,
+            scope_id=buffer_in.scope_id,
+            lineage_id=buffer_in.lineage_id,
+            writes=patch.writes,
+        )
+        return {}
+    return commit_patch_for_frame(run, current, patch)
 
 
 def scope_state_for_frame(run: RunState, frame: ExecutionFrame) -> dict[str, Any]:

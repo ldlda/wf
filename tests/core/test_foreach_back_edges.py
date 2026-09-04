@@ -497,22 +497,26 @@ def _nested_mode_workflow(*, outer_mode: str, inner_mode: str) -> Workflow:
 
 
 @pytest.mark.parametrize(
-    ("outer_mode", "inner_mode"),
+    ("outer_mode", "inner_mode", "exact_order"),
     [
-        ("serial", "serial"),
-        ("serial", "concurrent"),
-        ("concurrent", "serial"),
-        ("concurrent", "concurrent"),
+        ("serial", "serial", True),
+        ("serial", "concurrent", True),
+        ("concurrent", "serial", False),
+        ("concurrent", "concurrent", False),
     ],
 )
 def test_nested_foreach_preserves_inner_writes_in_all_modes(
-    outer_mode: str, inner_mode: str
+    outer_mode: str, inner_mode: str, exact_order: bool
 ) -> None:
     """Inner writes must reach root state whatever the nesting modes are.
 
     Serial owners commit through the scope root; concurrent owners buffer
     for their barrier. Every inner write (1, 2 per outer item) must survive
     even with no intermediate writer to replay-rescue stranded lineages.
+
+    Serial outer admission is strictly ordered, so the sequence is exactly
+    [1, 2, 1, 2]. Concurrent outer completion order depends on scheduling,
+    so only the multiset is contractual there.
     """
     workflow = _nested_mode_workflow(outer_mode=outer_mode, inner_mode=inner_mode)
 
@@ -528,9 +532,11 @@ def test_nested_foreach_preserves_inner_writes_in_all_modes(
     )
 
     assert run.status == RunStatus.COMPLETED
-    assert sorted(run.state.get("seen") or [], key=repr) == sorted(
-        [1, 2, 1, 2], key=repr
-    )
+    seen = run.state.get("seen") or []
+    if exact_order:
+        assert seen == [1, 2, 1, 2]
+    else:
+        assert sorted(seen, key=repr) == sorted([1, 2, 1, 2], key=repr)
 
 
 def test_item_frame_owner_rejects_missing_parent_frame() -> None:
@@ -593,6 +599,98 @@ def test_foreach_aware_patch_rejects_parent_cycle() -> None:
 
     with pytest.raises(WorkflowExecutionError, match="cycle"):
         commit_foreach_aware_patch(run, frame_a, StatePatch(changes={}))
+
+
+def test_foreach_aware_patch_rejects_concurrent_self_cycle() -> None:
+    """A self-parented item with a concurrent owner must fail, not buffer."""
+    from wf_core.run_state import LineageState
+    from wf_core.runtime.foreach_state import load_or_begin_foreach_activation
+    from wf_core.runtime.lineage import commit_foreach_aware_patch
+    from wf_core.runtime.ops.state import StatePatch
+
+    frame = ExecutionFrame(
+        id="self",
+        kind="foreach_iteration",
+        node_id="work",
+        scope_id="root",
+        lineage_id="root",
+    )
+    activation = load_or_begin_foreach_activation(frame, "each", mode="concurrent")
+    frame.parent_frame_id = "self"
+    frame.metadata.update(
+        {
+            "foreach_node_id": "each",
+            "activation_id": activation.id,
+            "loop_index": 0,
+            "loop_item": "a",
+            "loop_alias": "item",
+        }
+    )
+    run = RunState(
+        workflow_name="concurrent_self_cycle",
+        status=RunStatus.RUNNING,
+        workflow_input={},
+        state={},
+        frames={"self": frame},
+        lineages={"root": LineageState(id="root", scope_id="root")},
+    )
+
+    with pytest.raises(WorkflowExecutionError, match="cycle"):
+        commit_foreach_aware_patch(run, frame, StatePatch(changes={}))
+    assert run.lineages["root"].writes == []
+
+
+def test_foreach_aware_patch_rejects_cycle_through_concurrent_boundary() -> None:
+    """A parent cycle spanning a concurrent boundary must fail, not buffer."""
+    from wf_core.run_state import LineageState
+    from wf_core.runtime.foreach_state import load_or_begin_foreach_activation
+    from wf_core.runtime.lineage import commit_foreach_aware_patch
+    from wf_core.runtime.ops.state import StatePatch
+
+    frame_a = ExecutionFrame(
+        id="frame-a",
+        kind="foreach_iteration",
+        node_id="work",
+        scope_id="root",
+        lineage_id="root",
+    )
+    frame_b = ExecutionFrame(id="frame-b", kind="foreach_iteration", node_id="work")
+    activation_on_b = load_or_begin_foreach_activation(
+        frame_b, "each", mode="concurrent"
+    )
+    activation_on_a = load_or_begin_foreach_activation(frame_a, "each", mode="serial")
+    frame_a.parent_frame_id = "frame-b"
+    frame_a.metadata.update(
+        {
+            "foreach_node_id": "each",
+            "activation_id": activation_on_b.id,
+            "loop_index": 0,
+            "loop_item": "a",
+            "loop_alias": "item",
+        }
+    )
+    frame_b.parent_frame_id = "frame-a"
+    frame_b.metadata.update(
+        {
+            "foreach_node_id": "each",
+            "activation_id": activation_on_a.id,
+            "loop_index": 0,
+            "loop_item": "a",
+            "loop_alias": "item",
+        }
+    )
+    run = RunState(
+        workflow_name="mixed_mode_cycle",
+        status=RunStatus.RUNNING,
+        workflow_input={},
+        state={},
+        frames={"frame-a": frame_a, "frame-b": frame_b},
+        lineages={"root": LineageState(id="root", scope_id="root")},
+    )
+
+    with pytest.raises(WorkflowExecutionError, match="cycle"):
+        commit_foreach_aware_patch(run, frame_a, StatePatch(changes={}))
+    assert run.lineages["root"].writes == []
 
 
 def test_reentering_foreach_uses_fresh_activation_and_item_frames() -> None:
