@@ -20,7 +20,7 @@ sugar.
 JSON Schema, pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
 
 **Spec:**
-[`docs/superpowers/specs/2026-09-04-structured-runtime-context-design.md`](../../superpowers/specs/2026-09-04-structured-runtime-context-design.md)
+[`docs/superpowers/specs/2026-09-04-structured-runtime-context-design.md`](../../../superpowers/specs/2026-09-04-structured-runtime-context-design.md)
 
 ## Global Constraints
 
