@@ -20,7 +20,7 @@ from wf_core.runtime.lineage import (
     commit_foreach_aware_patch,
     scope_input_for_frame,
 )
-from wf_core.runtime.ops.frames import frame_context_values
+from wf_core.runtime.ops.frames import frame_context_view
 from wf_core.runtime.ops.merges import ReducerDefinition
 from wf_core.runtime.ops.overlays import state_view_for_frame
 from wf_core.runtime.ops.schemas import validate_payload_against_schema
@@ -54,7 +54,8 @@ def _resolve_node_execution(
     node_def: NodeDef,
     platform: object | None = None,
 ) -> tuple[dict[str, Any], RuntimeContext, dict[str, Any]]:
-    context_values = frame_context_values(frame)
+    context_view = frame_context_view(run, frame)
+    context_values = context_view.graph
     state_view = state_view_for_frame(run, frame)
     resolved_input = resolve_step_input_bindings(
         node.input,
@@ -76,6 +77,7 @@ def _resolve_node_execution(
         prior_outcome=frame.prior_outcome,
         activated_incoming_edge=frame.activated_incoming_edge,
         metadata=dict(frame.metadata),
+        foreach=dict(context_view.foreach),
         platform=platform,
     )
     return resolved_input, context, state_view

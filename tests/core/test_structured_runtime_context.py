@@ -3,7 +3,13 @@ from __future__ import annotations
 import pytest
 
 from wf_core.errors import WorkflowExecutionError
-from wf_core.run_state import ExecutionFrame, ForeachContext, RunState, RunStatus
+from wf_core.run_state import (
+    ExecutionFrame,
+    ForeachContext,
+    RunState,
+    RunStatus,
+    RuntimeContext,
+)
 from wf_core.runtime.ops.frames import frame_context_view
 
 
@@ -299,3 +305,403 @@ def test_context_read_does_not_mutate_run_state() -> None:
     before = run.to_dict()
     frame_context_view(run, run.frames["outer-item"])
     assert run.to_dict() == before
+
+
+def _nested_workflow(*, inner_over: str = "state.orders_list"):
+    from wf_core import END, Edge, ForeachNode, NodeDef, NodeUse, SchemaRef, Workflow
+    from wf_core.models.schemas import StateField, StateSchema
+
+    customers = ForeachNode.model_validate(
+        {
+            "id": "customers",
+            "type": "foreach",
+            "over": "state.customers",
+            "as": "customer",
+            "mode": "serial",
+        }
+    )
+    orders = ForeachNode.model_validate(
+        {
+            "id": "orders",
+            "type": "foreach",
+            "over": inner_over,
+            "as": "order",
+            "mode": "serial",
+        }
+    )
+    return Workflow(
+        name="nested_structured",
+        input_schema=SchemaRef(type="object", properties={}),
+        state_schema=StateSchema.from_field_map(
+            {
+                "customers": StateField(type="array"),
+                "orders_list": StateField(type="array"),
+            }
+        ),
+        output_schema=SchemaRef(type="object", properties={}),
+        node_defs=[
+            NodeDef(
+                name="record",
+                input_schema=SchemaRef(
+                    type="object", properties={"value": {}}, required=["value"]
+                ),
+                output_schema=SchemaRef(type="object", properties={}),
+                outcomes=["ok"],
+            )
+        ],
+        start="customers",
+        nodes=[
+            customers,
+            orders,
+            NodeUse.model_validate(
+                {
+                    "id": "work",
+                    "type": "node",
+                    "node": "record",
+                    "input": [{"target": "value", "path": "context.order"}],
+                    "output": [],
+                }
+            ),
+        ],
+        edges=[
+            Edge.model_validate(
+                {"from": "customers", "outcome": "loop", "to": "orders"}
+            ),
+            Edge.model_validate({"from": "orders", "outcome": "loop", "to": "work"}),
+            Edge.model_validate({"from": "work", "outcome": "ok", "to": "orders"}),
+            Edge.model_validate({"from": "orders", "outcome": "done", "to": "customers"}),
+            Edge.model_validate({"from": "customers", "outcome": "done", "to": END}),
+        ],
+    )
+
+
+def test_nested_handler_receives_outer_and_inner_typed_entries() -> None:
+    from wf_core import execute_workflow
+
+    seen: list[tuple[tuple[str, ...], object, object, int]] = []
+
+    def record(_payload: dict[str, object], ctx: RuntimeContext) -> dict[str, object]:
+        seen.append(
+            (
+                tuple(ctx.foreach),
+                ctx.foreach["customers"].item,
+                ctx.foreach["orders"].item,
+                ctx.foreach["orders"].index,
+            )
+        )
+        return {"outcome": "ok", "output": {}}
+
+    workflow = _nested_workflow()
+    run = execute_workflow(
+        workflow,
+        {"customers": [{"name": "Ada"}], "orders_list": [{"sku": "A-17"}]},
+        {"record": record},
+    )
+    assert run.status == RunStatus.COMPLETED
+    assert seen == [
+        (("customers", "orders"), {"name": "Ada"}, {"sku": "A-17"}, 0)
+    ]
+
+
+def test_nested_graph_bindings_resolve_outer_and_inner_items() -> None:
+    from wf_core import (
+        END,
+        Edge,
+        ForeachNode,
+        NodeDef,
+        NodeUse,
+        SchemaRef,
+        Workflow,
+        execute_workflow,
+    )
+    from wf_core.models.schemas import StateField, StateSchema
+
+    customers = ForeachNode.model_validate(
+        {
+            "id": "customers",
+            "type": "foreach",
+            "over": "state.customers",
+            "as": "customer",
+            "mode": "serial",
+        }
+    )
+    orders = ForeachNode.model_validate(
+        {
+            "id": "orders",
+            "type": "foreach",
+            "over": "state.orders_list",
+            "as": "order",
+            "mode": "serial",
+        }
+    )
+    workflow = Workflow(
+        name="nested_bindings",
+        input_schema=SchemaRef(type="object", properties={}),
+        state_schema=StateSchema.from_field_map(
+            {
+                "customers": StateField(type="array"),
+                "orders_list": StateField(type="array"),
+            }
+        ),
+        output_schema=SchemaRef(type="object", properties={}),
+        node_defs=[
+            NodeDef(
+                name="record",
+                input_schema=SchemaRef(
+                    type="object",
+                    properties={"outer": {}, "inner": {}},
+                    required=["outer", "inner"],
+                ),
+                output_schema=SchemaRef(type="object", properties={}),
+                outcomes=["ok"],
+            )
+        ],
+        start="customers",
+        nodes=[
+            customers,
+            orders,
+            NodeUse.model_validate(
+                {
+                    "id": "work",
+                    "type": "node",
+                    "node": "record",
+                    "input": [
+                        {
+                            "target": "outer",
+                            "path": "context.foreach.customers.item",
+                        },
+                        {
+                            "target": "inner",
+                            "path": "context.foreach.orders.item",
+                        },
+                    ],
+                    "output": [],
+                }
+            ),
+        ],
+        edges=[
+            Edge.model_validate(
+                {"from": "customers", "outcome": "loop", "to": "orders"}
+            ),
+            Edge.model_validate({"from": "orders", "outcome": "loop", "to": "work"}),
+            Edge.model_validate({"from": "work", "outcome": "ok", "to": "orders"}),
+            Edge.model_validate(
+                {"from": "orders", "outcome": "done", "to": "customers"}
+            ),
+            Edge.model_validate({"from": "customers", "outcome": "done", "to": END}),
+        ],
+    )
+    captured: list[dict[str, object]] = []
+
+    def record(payload: dict[str, object], _ctx: RuntimeContext) -> dict[str, object]:
+        captured.append(dict(payload))
+        return {"outcome": "ok", "output": {}}
+
+    run = execute_workflow(
+        workflow,
+        {"customers": [{"name": "Ada"}], "orders_list": [{"sku": "A-17"}]},
+        {"record": record},
+    )
+    assert run.status == RunStatus.COMPLETED
+    assert captured == [{"outer": {"name": "Ada"}, "inner": {"sku": "A-17"}}]
+
+
+def test_inner_completion_restores_outer_context() -> None:
+    from wf_core import (
+        END,
+        Edge,
+        ForeachNode,
+        NodeDef,
+        NodeUse,
+        SchemaRef,
+        Workflow,
+        execute_workflow,
+    )
+    from wf_core.models.schemas import StateField, StateSchema
+
+    workflow = Workflow(
+        name="restore_outer",
+        input_schema=SchemaRef(type="object", properties={}),
+        state_schema=StateSchema.from_field_map(
+            {
+                "customers": StateField(type="array"),
+                "orders_list": StateField(type="array"),
+            }
+        ),
+        output_schema=SchemaRef(type="object", properties={}),
+        node_defs=[
+            NodeDef(
+                name="record",
+                input_schema=SchemaRef(type="object", properties={"value": {}}),
+                output_schema=SchemaRef(type="object", properties={}),
+                outcomes=["ok"],
+            )
+        ],
+        start="customers",
+        nodes=[
+            ForeachNode.model_validate(
+                {
+                    "id": "customers",
+                    "type": "foreach",
+                    "over": "state.customers",
+                    "as": "customer",
+                    "mode": "serial",
+                }
+            ),
+            ForeachNode.model_validate(
+                {
+                    "id": "orders",
+                    "type": "foreach",
+                    "over": "state.orders_list",
+                    "as": "order",
+                    "mode": "serial",
+                }
+            ),
+            NodeUse.model_validate(
+                {
+                    "id": "work",
+                    "type": "node",
+                    "node": "record",
+                    "input": [{"target": "value", "path": "context.order"}],
+                    "output": [],
+                }
+            ),
+            NodeUse.model_validate(
+                {
+                    "id": "after_inner",
+                    "type": "node",
+                    "node": "record",
+                    "input": [{"target": "value", "path": "context.customer"}],
+                    "output": [],
+                }
+            ),
+        ],
+        edges=[
+            Edge.model_validate(
+                {"from": "customers", "outcome": "loop", "to": "orders"}
+            ),
+            Edge.model_validate({"from": "orders", "outcome": "loop", "to": "work"}),
+            Edge.model_validate({"from": "work", "outcome": "ok", "to": "orders"}),
+            Edge.model_validate(
+                {"from": "orders", "outcome": "done", "to": "after_inner"}
+            ),
+            Edge.model_validate(
+                {"from": "after_inner", "outcome": "ok", "to": "customers"}
+            ),
+            Edge.model_validate({"from": "customers", "outcome": "done", "to": END}),
+        ],
+    )
+    keys: list[tuple[str, tuple[str, ...]]] = []
+
+    def record(_payload: dict[str, object], ctx: RuntimeContext) -> dict[str, object]:
+        keys.append((ctx.current_node_id, tuple(ctx.foreach)))
+        return {"outcome": "ok", "output": {}}
+
+    run = execute_workflow(
+        workflow,
+        {"customers": [{"name": "Ada"}], "orders_list": [{"sku": "A-17"}]},
+        {"record": record},
+    )
+    assert run.status == RunStatus.COMPLETED
+    by_node = {node: keys_tuple for node, keys_tuple in keys}
+    assert by_node["work"] == ("customers", "orders")
+    assert by_node["after_inner"] == ("customers",)
+
+
+def test_concurrent_items_receive_distinct_frame_and_lineage_context() -> None:
+    from wf_core import (
+        END,
+        Edge,
+        ForeachNode,
+        NodeDef,
+        NodeUse,
+        SchemaRef,
+        Workflow,
+        execute_workflow,
+    )
+    from wf_core.models.schemas import StateField, StateSchema
+
+    workflow = Workflow(
+        name="concurrent_ctx",
+        input_schema=SchemaRef(type="object", properties={}),
+        state_schema=StateSchema.from_field_map(
+            {
+                "items": StateField(type="array"),
+            }
+        ),
+        output_schema=SchemaRef(type="object", properties={}),
+        node_defs=[
+            NodeDef(
+                name="record",
+                input_schema=SchemaRef(type="object", properties={"value": {}}),
+                output_schema=SchemaRef(type="object", properties={}),
+                outcomes=["ok"],
+            )
+        ],
+        start="each",
+        nodes=[
+            ForeachNode.model_validate(
+                {
+                    "id": "each",
+                    "type": "foreach",
+                    "over": "state.items",
+                    "as": "item",
+                    "mode": "concurrent",
+                    "concurrent": {"max_active": 2, "max_outstanding": 2},
+                }
+            ),
+            NodeUse.model_validate(
+                {
+                    "id": "work",
+                    "type": "node",
+                    "node": "record",
+                    "input": [{"target": "value", "path": "context.item"}],
+                    "output": [],
+                }
+            ),
+        ],
+        edges=[
+            Edge.model_validate({"from": "each", "outcome": "loop", "to": "work"}),
+            Edge.model_validate({"from": "work", "outcome": "ok", "to": "each"}),
+            Edge.model_validate({"from": "each", "outcome": "done", "to": END}),
+        ],
+    )
+    contexts: list[ForeachContext] = []
+
+    def record(_payload: dict[str, object], ctx: RuntimeContext) -> dict[str, object]:
+        contexts.append(ctx.foreach["each"])
+        return {"outcome": "ok", "output": {}}
+
+    run = execute_workflow(
+        workflow, {"items": ["a", "b"]}, {"record": record}
+    )
+    assert run.status == RunStatus.COMPLETED
+    assert len(contexts) == 2
+    assert contexts[0].activation_id == contexts[1].activation_id
+    assert contexts[0].frame_id != contexts[1].frame_id
+    assert contexts[0].lineage_id != contexts[1].lineage_id
+    assert sorted([c.item for c in contexts]) == ["a", "b"]
+
+
+def test_nested_foreach_over_resolves_structured_outer_item_path() -> None:
+    from wf_core import execute_workflow
+
+    workflow = _nested_workflow(
+        inner_over="context.foreach.customers.item.orders"
+    )
+    captured: list[object] = []
+
+    def record(payload: dict[str, object], _ctx: RuntimeContext) -> dict[str, object]:
+        captured.append(payload["value"])
+        return {"outcome": "ok", "output": {}}
+
+    run = execute_workflow(
+        workflow,
+        {
+            "customers": [{"name": "Ada", "orders": [{"sku": "A-17"}]}],
+            "orders_list": [],
+        },
+        {"record": record},
+    )
+    assert run.status == RunStatus.COMPLETED
+    assert captured == [{"sku": "A-17"}]

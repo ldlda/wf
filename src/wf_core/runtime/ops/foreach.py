@@ -23,7 +23,7 @@ from wf_core.runtime.lineage import (
     scope_input_for_frame,
 )
 from wf_core.runtime.ops.flow import advance_frame, append_step_result_trace
-from wf_core.runtime.ops.frames import frame_context_values
+from wf_core.runtime.ops.frames import frame_context_view
 from wf_core.runtime.ops.index import WorkflowIndex
 from wf_core.runtime.ops.merges import ReducerDefinition
 from wf_core.runtime.ops.overlays import state_view_for_frame
@@ -174,7 +174,7 @@ def _resolve_foreach_iterable(
         str(step.over),
         state=state_view_for_frame(run, frame),
         workflow_input=scope_input_for_frame(run, frame),
-        context=frame_context_values(frame),
+        context=frame_context_view(run, frame).graph,
     )
     if not isinstance(iterable, list):
         raise WorkflowExecutionError(

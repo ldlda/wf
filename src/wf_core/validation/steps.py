@@ -329,7 +329,12 @@ def validate_foreach_node(
     input_root_fields: set[str],
     workflow: Workflow,
 ) -> None:
-    if not is_valid_source_path(node.over, state_root_fields, input_root_fields):
+    # Interim permissive gate: context-rooted `over` paths reach runtime, where
+    # structured ancestry resolution handles them. Task 5 replaces this with
+    # location-aware validation against the consuming node's context schema.
+    if not is_valid_source_path(
+        node.over, state_root_fields, input_root_fields, allow_context=True
+    ):
         report.add(
             ValidationIssueCode.INVALID_FOREACH_SOURCE,
             f"nodes[{index}].over",

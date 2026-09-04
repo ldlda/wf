@@ -14,7 +14,7 @@ from wf_core.run_state import (
 )
 from wf_core.runtime.lineage import scope_input_for_frame
 from wf_core.runtime.ops.flow import append_trace
-from wf_core.runtime.ops.frames import frame_context_values
+from wf_core.runtime.ops.frames import frame_context_view
 from wf_core.runtime.ops.interrupts import build_interrupt_request
 from wf_core.runtime.ops.overlays import state_view_for_frame
 
@@ -75,7 +75,7 @@ def handle_interrupt_step(
         frame_id=frame.id,
         state=state_view_for_frame(run, frame),
         workflow_input=scope_input_for_frame(run, frame),
-        context=frame_context_values(frame),
+        context=dict(frame_context_view(run, frame).graph),
         public_frame_id=public_frame.id,
         public_node_id=public_frame.node_id,
         route=route,

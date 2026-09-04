@@ -161,10 +161,22 @@ def _foreach_ancestor_ids(run: RunState, frame: ExecutionFrame) -> list[str]:
 def finalize_run(workflow: Workflow, run: RunState) -> RunState:
     if run.outcome is None:
         run.outcome = "ok"
+    # Root workflow output keeps standard root facts consistent by projecting
+    # against the root frame's derived context rather than an empty mapping.
+    from wf_core.run_state import ROOT_FRAME_ID
+    from wf_core.runtime.ops.frames import frame_context_view
+
+    root_frame = run.frames.get(ROOT_FRAME_ID)
+    root_context: dict[str, Any] = (
+        dict(frame_context_view(run, root_frame).graph)
+        if root_frame is not None
+        else {}
+    )
     run.output = project_output(
         workflow,
         run.state,
         workflow_input=run.workflow_input,
+        context=root_context,
     )
     validate_payload_against_schema(
         workflow.output_schema, run.output, "workflow output"

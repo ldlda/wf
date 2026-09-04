@@ -18,7 +18,7 @@ from wf_core.run_state import (
 )
 from wf_core.runtime.input_bindings import resolve_step_input_bindings
 from wf_core.runtime.lineage import commit_foreach_aware_patch
-from wf_core.runtime.ops.frames import frame_context_values
+from wf_core.runtime.ops.frames import frame_context_view
 from wf_core.runtime.ops.merges import ReducerDefinition
 from wf_core.runtime.ops.overlays import state_view_for_frame
 from wf_core.runtime.ops.runs import initial_state
@@ -140,7 +140,7 @@ def _start_subgraph(
         step.input,
         state=state_view_for_frame(run, frame),
         workflow_input=parent_scope.workflow_input,
-        context=frame_context_values(frame),
+        context=frame_context_view(run, frame).graph,
         label=f"subgraph {step.id!r}",
     )
     validate_payload_against_schema(
@@ -218,7 +218,7 @@ def _finish_subgraph(
         prepared.workflow,
         child_scope.committed_state,
         workflow_input=child_scope.workflow_input,
-        context=frame_context_values(child_frame),
+        context=frame_context_view(run, child_frame).graph,
     )
     validate_payload_against_schema(
         prepared.workflow.output_schema,
