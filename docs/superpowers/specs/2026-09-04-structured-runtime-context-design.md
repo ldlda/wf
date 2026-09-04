@@ -414,7 +414,8 @@ compatibility promise.
 - `loop_item` and `loop_index` select the innermost entry.
 - Unique outer and inner aliases remain available together.
 - Inner completion restores the outer entry and removes the inner entry.
-- Concurrent item frames receive distinct activation/frame/lineage values.
+- Concurrent item frames share one visit activation but receive distinct
+  frame/lineage values.
 - Interrupt resume recreates the same structured entries from persisted state.
 - Malformed persisted foreach metadata fails closed.
 

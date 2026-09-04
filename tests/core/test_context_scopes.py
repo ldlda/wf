@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from wf_core import END, Edge, ForeachNode, NodeUse, SchemaRef, StateSchema, Workflow
 from wf_core.analysis.context_scopes import (
     ContextFieldAvailability,
@@ -7,9 +9,10 @@ from wf_core.analysis.context_scopes import (
     context_fields_by_node,
 )
 from wf_core.context_contracts import STANDARD_CONTEXT_FIELDS, foreach_context_fields
+from wf_core.errors import WorkflowExecutionError
 from wf_core.models.steps import Step
-from wf_core.run_state import ExecutionFrame
-from wf_core.runtime.ops.frames import frame_context_values
+from wf_core.run_state import ExecutionFrame, RunState, RunStatus
+from wf_core.runtime.ops.frames import frame_context_view
 
 
 def _node(node_id: str) -> NodeUse:
@@ -66,30 +69,48 @@ def _field_map(workflow: Workflow, node_id: str) -> dict[str, ContextFieldAvaila
     }
 
 
-def test_frame_context_values_uses_standard_and_foreach_contract_keys() -> None:
-    ordinary = frame_context_values(
-        ExecutionFrame(
-            id="root",
-            kind="root",
-            node_id="plain",
-            prior_outcome="ok",
-            activated_incoming_edge="start",
-        )
+def _run_with(*frames: ExecutionFrame) -> RunState:
+    run = RunState(
+        workflow_name="demo",
+        status=RunStatus.RUNNING,
+        workflow_input={},
+        state={},
     )
+    for frame in frames:
+        run.frames[frame.id] = frame
+    return run
+
+
+def test_frame_context_view_uses_standard_and_foreach_contract_keys() -> None:
+    root = ExecutionFrame(
+        id="root",
+        kind="root",
+        node_id="plain",
+        prior_outcome="ok",
+        activated_incoming_edge="start",
+    )
+    ordinary = frame_context_view(_run_with(root), root).graph
     assert ordinary["prior_outcome"] == "ok"
     assert ordinary["activated_incoming_edge"] == "start"
     assert ordinary["scope_id"] == "root"
     assert ordinary["lineage_id"] == "root"
     assert ordinary["parent_lineage_id"] is None
+    assert ordinary["foreach"] == {}
     assert "loop_item" not in ordinary
 
     iteration = ExecutionFrame(
         id="root:each:0",
         kind="foreach_iteration",
         node_id="body",
-        metadata={"loop_item": "a", "loop_index": 0, "loop_alias": "item"},
+        metadata={
+            "foreach_node_id": "each",
+            "activation_id": "act-1",
+            "loop_item": "a",
+            "loop_index": 0,
+            "loop_alias": "item",
+        },
     )
-    context = frame_context_values(iteration)
+    context = frame_context_view(_run_with(iteration), iteration).graph
     assert context["loop_item"] == "a"
     assert context["loop_index"] == 0
     assert context["item"] == "a"
@@ -104,13 +125,6 @@ def test_context_contracts_deduplicate_aliases_that_are_standard_loop_keys() -> 
 
 
 def test_all_standard_context_names_are_reserved_from_foreach_aliases() -> None:
-    expected_values = {
-        "prior_outcome": "ok",
-        "activated_incoming_edge": "start",
-        "scope_id": "scope",
-        "lineage_id": "lineage",
-        "parent_lineage_id": "parent",
-    }
     standard_names = {field.name for field in STANDARD_CONTEXT_FIELDS}
 
     for name in standard_names:
@@ -118,20 +132,27 @@ def test_all_standard_context_names_are_reserved_from_foreach_aliases() -> None:
             field.name for field in foreach_context_fields(name, {"type": "string"})
         }
         assert name not in foreach_names
-        context = frame_context_values(
-            ExecutionFrame(
-                id="child",
-                kind="foreach_iteration",
-                node_id="body",
-                scope_id="scope",
-                lineage_id="lineage",
-                parent_lineage_id="parent",
-                prior_outcome="ok",
-                activated_incoming_edge="start",
-                metadata={"loop_item": "item", "loop_index": 0, "loop_alias": name},
-            )
+        # A reserved alias can never back a runtime entry: the derived view
+        # fails closed instead of silently shadowing the standard key.
+        frame = ExecutionFrame(
+            id="child",
+            kind="foreach_iteration",
+            node_id="body",
+            scope_id="scope",
+            lineage_id="lineage",
+            parent_lineage_id="parent",
+            prior_outcome="ok",
+            activated_incoming_edge="start",
+            metadata={
+                "foreach_node_id": "each",
+                "activation_id": "act-1",
+                "loop_item": "item",
+                "loop_index": 0,
+                "loop_alias": name,
+            },
         )
-        assert context[name] == expected_values[name]
+        with pytest.raises(WorkflowExecutionError, match="reserved context keys"):
+            frame_context_view(_run_with(frame), frame)
 
 
 def test_serial_and_concurrent_foreach_expose_the_same_scoped_context() -> None:

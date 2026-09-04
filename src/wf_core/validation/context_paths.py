@@ -199,8 +199,9 @@ def _failing_segment(
     """Return the first unknown segment plus the keys available there.
 
     Returns ``(None, "")`` when the path walks declared properties (or
-    permissive unconstrained schemas). Diagnostics only; validity follows
-    the same walk as :func:`_path_in_schema`.
+    permissive unconstrained schemas). A bare ``$ref`` fails closed: generated
+    per-node schemas are inline except for cyclic shapes, which cannot be
+    proven valid statically.
     """
     if not parts:
         return None, ""
@@ -224,46 +225,6 @@ def _failing_segment(
             return part, ",".join(sorted(str(key) for key in properties))
         current = properties[part]
     return None, ""
-
-
-def _path_in_schema(schema: Mapping[str, Any], parts: tuple[str, ...]) -> bool:
-    """Return whether literal parts walk declared object properties.
-
-    The whole ``context`` object (no parts) and the ``foreach`` map itself
-    are readable. Unknown segments fail closed, except beneath an
-    unconstrained item schema (``{}`` or an open object with no declared
-    properties): a generic ``array`` collection infers ``{}``, and runtime
-    values may carry fields the static schema cannot see, so such subpaths
-    stay permissive. Closed maps with ``additionalProperties: False`` (like
-    the ``foreach`` map itself) still reject unknown keys.
-    """
-    if not parts:
-        return True
-    current: Any = schema
-    for part in parts:
-        if not isinstance(current, Mapping):
-            return False
-        # Resolve local $ref if present (defensive; generated schemas are inline).
-        while isinstance(current.get("$ref"), str):
-            # Generated context schemas keep entry schemas inline, so an
-            # unresolvable ref here means the path cannot be proven valid.
-            return False
-        properties = current.get("properties")
-        if not isinstance(properties, Mapping):
-            # No declared properties: unconstrained `{}` or an open object
-            # allows subpaths; scalar or closed schemas do not.
-            if current == {}:
-                return True
-            if (
-                current.get("type") == "object"
-                and current.get("additionalProperties", True) is not False
-            ):
-                return True
-            return False
-        if part not in properties:
-            return False
-        current = properties[part]
-    return True
 
 
 def _validate_workflow_output(workflow: Workflow, report: ValidationReport) -> None:

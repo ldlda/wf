@@ -20,7 +20,7 @@ sugar.
 JSON Schema, pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
 
 **Spec:**
-[`docs/superpowers/specs/2026-09-04-structured-runtime-context-design.md`](../specs/2026-09-04-structured-runtime-context-design.md)
+[`docs/superpowers/specs/2026-09-04-structured-runtime-context-design.md`](../../superpowers/specs/2026-09-04-structured-runtime-context-design.md)
 
 ## Global Constraints
 
@@ -100,7 +100,7 @@ JSON Schema, pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
 - `FrameContextView.graph` exposes a JSON-compatible `foreach` mapping, all
   unique active aliases, and innermost `loop_item`/`loop_index` values.
 
-- [ ] **Step 1: Write failing model and ancestry tests**
+- [x] **Step 1: Write failing model and ancestry tests**
 
   Add focused helpers that construct a `RunState` with explicit frames, then
   add tests named:
@@ -133,7 +133,7 @@ JSON Schema, pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
   For the scope-boundary case, give the child root a scheduling parent in the
   caller's foreach frame and assert that the child context remains `{}`.
 
-- [ ] **Step 2: Run the focused tests and confirm the missing API fails**
+- [x] **Step 2: Run the focused tests and confirm the missing API fails**
 
   Run:
 
@@ -144,7 +144,7 @@ JSON Schema, pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
   Expected: collection or assertions fail because `ForeachContext` and the
   ancestry-aware helper do not exist.
 
-- [ ] **Step 3: Add the typed context value and validate frame metadata once**
+- [x] **Step 3: Add the typed context value and validate frame metadata once**
 
   Add `ForeachContext` beside `RuntimeContext` and export it through
   `wf_core.__init__`. Keep `ForeachIterationMetadata` as the typed decoder for
@@ -164,7 +164,7 @@ JSON Schema, pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
       )
   ```
 
-- [ ] **Step 4: Implement fail-closed same-scope ancestry traversal**
+- [x] **Step 4: Implement fail-closed same-scope ancestry traversal**
 
   Walk from the selected frame through `parent_frame_id` while scope ids match.
   Validate the full chain before returning materialized values:
@@ -226,7 +226,7 @@ JSON Schema, pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
       graph[LOOP_INDEX_CONTEXT_KEY] = innermost.index
   ```
 
-- [ ] **Step 5: Add corruption and collision regressions**
+- [x] **Step 5: Add corruption and collision regressions**
 
   Add:
 
@@ -241,7 +241,7 @@ JSON Schema, pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
   `run.to_dict()` before the read-only test and assert it remains equal after
   deriving context.
 
-- [ ] **Step 6: Run and commit the focused model slice**
+- [x] **Step 6: Run and commit the focused model slice**
 
   Run:
 
@@ -285,7 +285,7 @@ JSON Schema, pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
 - `RuntimeContext.metadata` remains a defensive copy of the selected frame's
   metadata; `RuntimeContext.foreach` is the canonical typed view.
 
-- [ ] **Step 1: Write failing end-to-end runtime tests**
+- [x] **Step 1: Write failing end-to-end runtime tests**
 
   Extend `test_structured_runtime_context.py` with:
 
@@ -317,7 +317,7 @@ JSON Schema, pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
   Build the binding test with canonical `InputPathBinding` values for
   `context.foreach.customers.item` and `context.foreach.orders.item`.
 
-- [ ] **Step 2: Run the end-to-end tests and observe innermost-only behavior**
+- [x] **Step 2: Run the end-to-end tests and observe innermost-only behavior**
 
   Run:
 
@@ -329,7 +329,7 @@ JSON Schema, pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
   Expected: the new end-to-end tests fail because runtime consumers still use
   innermost frame-only context and handlers do not receive `.foreach`.
 
-- [ ] **Step 3: Update all graph-visible context call sites together**
+- [x] **Step 3: Update all graph-visible context call sites together**
 
   Replace every old call and verify with search:
 
@@ -349,7 +349,7 @@ JSON Schema, pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
   Root workflow output receives `frame_context_view(run, root_frame).graph`
   rather than an omitted context so standard root facts remain consistent.
 
-- [ ] **Step 4: Give Python handlers the same typed projection**
+- [x] **Step 4: Give Python handlers the same typed projection**
 
   In `_resolve_node_execution`, materialize the view once and pass its two
   projections to their consumers:
@@ -374,14 +374,14 @@ JSON Schema, pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
   Resolve graph bindings against `context_view.graph`. Do not reconstruct
   `ForeachContext` from the graph-visible dictionary.
 
-- [ ] **Step 5: Update old focused tests to pass `RunState` explicitly**
+- [x] **Step 5: Update old focused tests to pass `RunState` explicitly**
 
   Replace direct frame-only context calls in scheduler/context tests with a run
   containing that frame. Keep assertions for existing standard and
   compatibility keys; add structured assertions rather than deleting old
   coverage.
 
-- [ ] **Step 6: Run and commit the runtime integration slice**
+- [x] **Step 6: Run and commit the runtime integration slice**
 
   Run:
 
@@ -433,7 +433,7 @@ JSON Schema, pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
   `GraphSourcePath.context(self.id)` because that helper parses dots as path
   separators.
 
-- [ ] **Step 1: Write failing path and serialization tests**
+- [x] **Step 1: Write failing path and serialization tests**
 
   Add:
 
@@ -455,7 +455,7 @@ JSON Schema, pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
   assert "index" not in each.model_dump(mode="json")
   ```
 
-- [ ] **Step 2: Write failing node and subgraph binding tests**
+- [x] **Step 2: Write failing node and subgraph binding tests**
 
   Use the computed ref directly in both authoring boundaries:
 
@@ -473,12 +473,12 @@ JSON Schema, pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
   Assert both compiled bindings serialize their path as
   `context.foreach.orders.item`.
 
-- [ ] **Step 3: Implement only the two computed properties**
+- [x] **Step 3: Implement only the two computed properties**
 
   Add the properties directly to `ForeachNode`. Do not create `ForeachRef`, a
   node-address type, or field-selection sugar beneath `.item`.
 
-- [ ] **Step 4: Run and commit the authoring slice**
+- [x] **Step 4: Run and commit the authoring slice**
 
   Run:
 
@@ -596,7 +596,7 @@ JSON Schema, pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
   Keep entry schemas inline unless a measured schema-size problem requires
   `$defs`; the observable field types and required paths are contractual.
 
-- [ ] **Step 1: Replace innermost-only tests with full-stack expectations**
+- [x] **Step 1: Replace innermost-only tests with full-stack expectations**
 
   Update the existing nested test instead of adding contradictory coverage:
 
@@ -617,7 +617,7 @@ JSON Schema, pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
   Add `test_inner_completion_schema_restores_outer_structured_entry` and assert
   `after_inner` contains only the outer structured entry.
 
-- [ ] **Step 2: Run static analysis tests and confirm the old projection fails**
+- [x] **Step 2: Run static analysis tests and confirm the old projection fails**
 
   Run:
 
@@ -628,7 +628,7 @@ JSON Schema, pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
   Expected: nested assertions fail because `_available_fields` uses only
   `stack[-1]`.
 
-- [ ] **Step 3: Build contracts from the whole owner stack**
+- [x] **Step 3: Build contracts from the whole owner stack**
 
   Change `_available_fields` to accept the complete `ForeachOwnerStack`. For
   every owner id, infer its item schema in the controller's own outer region,
@@ -643,7 +643,7 @@ JSON Schema, pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
   resolve `over=context.foreach.outer.item.children` without claiming its own
   not-yet-active entry.
 
-- [ ] **Step 4: Keep context schema construction reusable and bounded**
+- [x] **Step 4: Keep context schema construction reusable and bounded**
 
   Implement `context_schemas_by_node` by composing the returned contracts, not
   by running a second graph traversal. `context_schema_for_node` is the
@@ -652,7 +652,7 @@ JSON Schema, pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
   generated per-node schema; callers treat that absence as invalid, not as
   root context.
 
-- [ ] **Step 5: Expose structured paths through authoring inventory**
+- [x] **Step 5: Expose structured paths through authoring inventory**
 
   Add tests showing `context_path_options_for_node(workflow, "inner_body")`
   includes at least:
@@ -671,7 +671,7 @@ JSON Schema, pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
   quoting. Do not hand-concatenate a dotted foreach id; format literal segments
   through `GraphSourcePath`.
 
-- [ ] **Step 6: Run and commit the static projection slice**
+- [x] **Step 6: Run and commit the static projection slice**
 
   Run:
 
@@ -730,7 +730,7 @@ JSON Schema, pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
 - Ordinary input/state validation remains where it is. The new pass owns the
   stronger, program-location-aware meaning of `context.*`.
 
-- [ ] **Step 1: Write failing context-path validation tests**
+- [x] **Step 1: Write failing context-path validation tests**
 
   Add:
 
@@ -755,7 +755,7 @@ JSON Schema, pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
   assert "work" in issue.message
   ```
 
-- [ ] **Step 2: Cover every model surface that can contain a graph path**
+- [x] **Step 2: Cover every model surface that can contain a graph path**
 
   Parameterize invalid `context.foreach.missing.item` references through:
 
@@ -770,7 +770,7 @@ JSON Schema, pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
   prevents a future path-bearing model from accidentally retaining the current
   permissive `allow_context=True` behavior.
 
-- [ ] **Step 3: Add one bounded structural path walker**
+- [x] **Step 3: Add one bounded structural path walker**
 
   In `validation/context_paths.py`, use small typed walkers for conditions and
   input expressions:
@@ -797,7 +797,7 @@ JSON Schema, pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
   for every step kind; do not duplicate context validation in each existing
   step validator.
 
-- [ ] **Step 4: Validate context paths against the consuming location**
+- [x] **Step 4: Validate context paths against the consuming location**
 
   For paths whose root is `context`, walk their literal `parts` through the
   consuming node's generated schema. A path is valid only if every segment is
@@ -811,7 +811,7 @@ JSON Schema, pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
   Change `validate_foreach_node` so context-rooted `over` paths reach this pass
   instead of being rejected by the old input/state-only check.
 
-- [ ] **Step 5: Write failing alias-collision tests**
+- [x] **Step 5: Write failing alias-collision tests**
 
   Add:
 
@@ -823,7 +823,7 @@ JSON Schema, pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
   and `loop_index`. The nested failure points to the inner foreach's `as`
   field. Siblings in separate control regions may reuse an alias.
 
-- [ ] **Step 6: Share control-region analysis during validation**
+- [x] **Step 6: Share control-region analysis during validation**
 
   In `validate_workflow`, run `analyze_control_regions(workflow)` once. Feed the
   result to context schema construction, translate its issues as today, then
@@ -831,7 +831,7 @@ JSON Schema, pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
   `context_fields_by_node`; add an optional internal `control_regions=` input if
   necessary while keeping the existing public call form valid.
 
-- [ ] **Step 7: Run and commit the validation slice**
+- [x] **Step 7: Run and commit the validation slice**
 
   Run:
 
@@ -879,7 +879,7 @@ JSON Schema, pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
   `foreach_ref.item`, while documenting `RuntimeContext.foreach` as the advanced
   handler escape hatch.
 
-- [ ] **Step 1: Write the interrupt-resume identity regression**
+- [x] **Step 1: Write the interrupt-resume identity regression**
 
   Build `outer.loop -> inner.loop -> ask -> inner -> outer`, interrupt one
   inner item, serialize it with `dump_run_state`, restore it with
@@ -899,7 +899,7 @@ JSON Schema, pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
   Do not reuse the original in-memory `RunState`; the loaded value is the
   resume input so reconstruction is genuinely tested.
 
-- [ ] **Step 2: Write the complete subgraph scope-boundary test**
+- [x] **Step 2: Write the complete subgraph scope-boundary test**
 
   Build a parent foreach and map `each.item` into a saved child subgraph's
   declared input. Give both parent and child a foreach node with id `orders`.
@@ -916,7 +916,7 @@ JSON Schema, pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
   `child_ctx.foreach == {}`. This proves the caller entry was not inherited and
   the reused static id does not collide.
 
-- [ ] **Step 3: Run the persistence and scope pressure tests**
+- [x] **Step 3: Run the persistence and scope pressure tests**
 
   Run:
 
@@ -927,7 +927,7 @@ JSON Schema, pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
 
   Expected: all commands pass.
 
-- [ ] **Step 4: Document the preferred authoring and advanced Python forms**
+- [x] **Step 4: Document the preferred authoring and advanced Python forms**
 
   Add this shape to `docs/wf_authoring_control_flow.md` and the Python skill:
 
@@ -953,7 +953,7 @@ JSON Schema, pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
   - child workflows do not inherit caller context and must receive input;
   - `loop_item`, `loop_index`, and aliases are migration conveniences.
 
-- [ ] **Step 5: Mark the implementation current and retire the live plan**
+- [x] **Step 5: Mark the implementation current and retire the live plan**
 
   Change the spec status from approved to implemented, replace the roadmap's
   proposed wording with a completed current-runtime statement, and move this
@@ -965,7 +965,7 @@ JSON Schema, pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
     docs skills
   ```
 
-- [ ] **Step 6: Run full verification**
+- [x] **Step 6: Run full verification**
 
   Run:
 
@@ -988,7 +988,7 @@ JSON Schema, pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
   remains the only failure, record its exact failing test and verify it also
   fails at the plan's starting commit before treating it as baseline.
 
-- [ ] **Step 7: Commit the integration and documentation slice**
+- [x] **Step 7: Commit the integration and documentation slice**
 
   Stage exact paths so the user's `docs/AGENTS.md` edit remains untouched:
 
