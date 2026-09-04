@@ -241,25 +241,25 @@ def _finish_subgraph(
     # item writes stay buffered in the item lineage for barrier merge.
     from wf_core.runtime.foreach_state import (
         item_frame_owner,
-        load_foreach_activation,
+        require_foreach_activation,
     )
 
     commit_frame = frame
-    try:
-        owner = item_frame_owner(frame)
-    except Exception:
-        owner = None
+    owner = item_frame_owner(frame)
     if owner is not None:
         parent_frame = run.frames.get(owner.parent_frame_id)
-        if parent_frame is not None:
-            foreach_activation = load_foreach_activation(
-                parent_frame, owner.foreach_node_id, owner.activation_id
+        if parent_frame is None:
+            raise WorkflowExecutionError(
+                "subgraph state references missing parent frame "
+                f"{owner.parent_frame_id!r} for child frame {frame.id!r}"
             )
-            if (
-                foreach_activation is not None
-                and foreach_activation.barrier.mode == "serial"
-            ):
-                commit_frame = parent_frame
+        # Fail closed when the child names a closed or superseded
+        # activation: its output must not land in a later visit's state.
+        foreach_activation = require_foreach_activation(
+            parent_frame, owner.foreach_node_id, owner.activation_id
+        )
+        if foreach_activation.barrier.mode == "serial":
+            commit_frame = parent_frame
     state_changes = commit_patch_for_frame(run, commit_frame, patch)
     return StepExecutionResult(
         outcome=child_outcome,

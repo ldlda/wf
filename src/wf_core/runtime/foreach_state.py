@@ -4,13 +4,9 @@ from dataclasses import dataclass, field
 from typing import Any, Literal
 
 from wf_core.errors import WorkflowExecutionError
-from wf_core.models.reducers import ReducerRef
-from wf_core.paths import StatePath
-from wf_core.run_state import ExecutionFrame, StateWrite
-from wf_core.runtime.ops.state import StatePatch
+from wf_core.run_state import ExecutionFrame, RunState
 from wf_core.runtime.scheduler import ForeachIterationMetadata
 
-_BARRIER_METADATA_KEY = "foreach_barriers"
 _ACTIVATION_METADATA_KEY = "foreach_activations"
 
 
@@ -93,16 +89,14 @@ class ItemErrorRecord:
 class PendingItemResult:
     """Buffered item result waiting for a future foreach barrier commit.
 
-    New concurrent foreach execution stores item writes in `RunState.lineages`
-    and records `lineage_id` here. `patch` remains for old serialized barrier
-    metadata and direct unit tests that still construct pending patches.
+    Concurrent item writes live in `RunState.lineages`; the barrier keeps
+    only the lineage identity per item index.
     """
 
     index: int
     frame_id: str
     status: Literal["succeeded", "failed"]
     lineage_id: str | None = None
-    patch: StatePatch = field(default_factory=StatePatch)
     error: ItemErrorRecord | None = None
 
     @classmethod
@@ -117,34 +111,23 @@ class PendingItemResult:
             raise WorkflowExecutionError(
                 f"malformed pending foreach result missing {exc.args[0]!r}"
             ) from exc
-        patch_changes = raw.get("patch_changes", {})
-        patch_writes = raw.get("patch_writes")
         lineage_id = raw.get("lineage_id")
         if not isinstance(index, int) or index < 0:
             raise WorkflowExecutionError("malformed pending foreach result index")
         if not isinstance(frame_id, str):
             raise WorkflowExecutionError("malformed pending foreach result frame id")
+        if status == "succeeded" and not isinstance(lineage_id, str):
+            raise WorkflowExecutionError("malformed pending foreach result lineage id")
         if lineage_id is not None and not isinstance(lineage_id, str):
             raise WorkflowExecutionError("malformed pending foreach result lineage id")
         if status not in {"succeeded", "failed"}:
             raise WorkflowExecutionError("malformed pending foreach result status")
-        if not isinstance(patch_changes, dict):
-            raise WorkflowExecutionError("malformed pending foreach result patch")
-        if patch_writes is not None and not isinstance(patch_writes, list):
-            raise WorkflowExecutionError("malformed pending foreach result writes")
         raw_error = raw.get("error")
         return cls(
             index=index,
             frame_id=frame_id,
             status=status,
             lineage_id=lineage_id,
-            patch=(
-                StatePatch(
-                    writes=[_state_write_from_metadata(item) for item in patch_writes]
-                )
-                if patch_writes is not None
-                else StatePatch(changes=patch_changes)
-            ),
             error=(
                 ItemErrorRecord.from_metadata(raw_error)
                 if raw_error is not None
@@ -158,10 +141,6 @@ class PendingItemResult:
             "frame_id": self.frame_id,
             "status": self.status,
             "lineage_id": self.lineage_id,
-            "patch_changes": dict(self.patch.changes),
-            "patch_writes": [
-                _state_write_to_metadata(write) for write in self.patch.writes
-            ],
             "error": self.error.to_metadata() if self.error is not None else None,
         }
 
@@ -175,33 +154,6 @@ class ForeachBarrierState:
     active_frame_ids: tuple[str, ...] = ()
     outstanding_frame_ids: tuple[str, ...] = ()
     pending_results: dict[int, PendingItemResult] = field(default_factory=dict)
-
-    @classmethod
-    def from_frame(
-        cls,
-        frame: ExecutionFrame,
-        foreach_node_id: str,
-    ) -> ForeachBarrierState | None:
-        """Load one foreach barrier state from frame metadata.
-
-        Missing metadata means the foreach has not started on this frame yet.
-        Malformed metadata means runtime state is corrupt and should fail fast.
-        """
-        all_barriers = frame.metadata.get(_BARRIER_METADATA_KEY)
-        if all_barriers is None:
-            return None
-        if not isinstance(all_barriers, dict):
-            raise WorkflowExecutionError(
-                f"malformed foreach barrier table for frame {frame.id!r}"
-            )
-        raw = all_barriers.get(foreach_node_id)
-        if raw is None:
-            return None
-        if not isinstance(raw, dict):
-            raise WorkflowExecutionError(
-                f"malformed foreach barrier state for frame {frame.id!r}"
-            )
-        return cls.from_metadata(raw)
 
     @classmethod
     def from_metadata(cls, raw: object) -> ForeachBarrierState:
@@ -234,20 +186,6 @@ class ForeachBarrierState:
             outstanding_frame_ids=outstanding_frame_ids,
             pending_results=parsed_results,
         )
-
-    def save_to_frame(self, frame: ExecutionFrame, foreach_node_id: str) -> None:
-        """Store this barrier state in frame metadata under its foreach node id."""
-        existing = frame.metadata.get(_BARRIER_METADATA_KEY)
-        if existing is None:
-            frame.metadata[_BARRIER_METADATA_KEY] = {
-                foreach_node_id: self.to_metadata()
-            }
-            return
-        if not isinstance(existing, dict):
-            raise WorkflowExecutionError(
-                f"malformed foreach barrier table for frame {frame.id!r}"
-            )
-        existing[foreach_node_id] = self.to_metadata()
 
     def to_metadata(self) -> dict[str, Any]:
         return {
@@ -291,15 +229,13 @@ class ForeachBarrierState:
         *,
         index: int,
         frame_id: str,
-        patch: StatePatch,
-        lineage_id: str | None = None,
+        lineage_id: str,
     ) -> None:
-        """Buffer or extend successful item patches by item index.
+        """Record one completed concurrent item by lineage identity.
 
-        New runtime paths pass an empty patch and use `lineage_id`; legacy
-        callers may still accumulate patches here and replay them at the
-        barrier. Do not merge `_prepared_writes`: the barrier replays public
-        write records against one staged parent state.
+        Registration is idempotent for the same frame and lineage so the
+        owner back-edge can own it regardless of which operation ran last.
+        Any conflicting identity fails closed.
         """
         existing = self.pending_results.get(index)
         if existing is None:
@@ -308,7 +244,6 @@ class ForeachBarrierState:
                 frame_id=frame_id,
                 status="succeeded",
                 lineage_id=lineage_id,
-                patch=patch,
             )
             return
         if existing.frame_id != frame_id:
@@ -316,14 +251,11 @@ class ForeachBarrierState:
                 f"foreach item result for index {index!r} belongs to frame "
                 f"{existing.frame_id!r}, got {frame_id!r}"
             )
-        if lineage_id is not None and existing.lineage_id not in {None, lineage_id}:
+        if existing.lineage_id != lineage_id:
             raise WorkflowExecutionError(
                 f"foreach item result for index {index!r} belongs to lineage "
                 f"{existing.lineage_id!r}, got {lineage_id!r}"
             )
-        if existing.lineage_id is None:
-            existing.lineage_id = lineage_id
-        existing.patch.extend(patch)
 
     def add_failure(self, *, error: ItemErrorRecord) -> None:
         """Buffer one handled item failure for the foreach barrier.
@@ -547,53 +479,30 @@ def _string_tuple(raw: object) -> tuple[str, ...]:
     raise WorkflowExecutionError("malformed foreach barrier frame id list")
 
 
-def _state_write_from_metadata(raw: object) -> StateWrite:
-    """Parse one persisted item-lineage write record.
+def register_foreach_item_success(
+    run: RunState, frame: ExecutionFrame, owner: ForeachItemOwner
+) -> None:
+    """Record one completed concurrent item at its owner back-edge.
 
-    Barrier metadata must keep reducer-visible values across interrupt/resume;
-    reconstructing from `patch_changes` would downgrade reducer writes to
-    replace-style incoming values.
+    Registration keys off the returning frame, so it works regardless of
+    which operation ran last in the item (node, subgraph, or nested
+    control). Serial items commit through the parent at operation time and
+    need no barrier entry. A closed or superseded activation fails closed.
     """
-    if not isinstance(raw, dict):
-        raise WorkflowExecutionError("malformed pending foreach write")
-    try:
-        path = raw["path"]
-        incoming_value = raw["incoming_value"]
-        visible_value = raw["visible_value"]
-        reducer = raw["reducer"]
-    except KeyError as exc:
+    parent_frame = run.frames.get(owner.parent_frame_id)
+    if parent_frame is None:
         raise WorkflowExecutionError(
-            f"malformed pending foreach write missing {exc.args[0]!r}"
-        ) from exc
-    try:
-        return StateWrite(
-            path=_state_path_from_metadata(path),
-            incoming_value=incoming_value,
-            visible_value=visible_value,
-            reducer=ReducerRef.model_validate(reducer),
+            "foreach lineage state references missing parent frame "
+            f"{owner.parent_frame_id!r} for child frame {frame.id!r}"
         )
-    except WorkflowExecutionError:
-        raise
-    except (TypeError, ValueError) as exc:
-        raise WorkflowExecutionError(f"malformed pending foreach write: {exc}") from exc
-
-
-def _state_write_to_metadata(write: StateWrite) -> dict[str, Any]:
-    """Serialize one item-lineage write without relying on dotted display paths."""
-    return {
-        "path": {"root": "state", "parts": list(write.path.parts)},
-        "incoming_value": write.incoming_value,
-        "visible_value": write.visible_value,
-        "reducer": write.reducer.model_dump(mode="json"),
-    }
-
-
-def _state_path_from_metadata(raw: object) -> StatePath:
-    if isinstance(raw, str):
-        return StatePath.parse(raw)
-    if not isinstance(raw, dict) or raw.get("root") != "state":
-        raise WorkflowExecutionError("malformed pending foreach write path")
-    parts = raw.get("parts")
-    if not isinstance(parts, list) or not all(isinstance(part, str) for part in parts):
-        raise WorkflowExecutionError("malformed pending foreach write path")
-    return StatePath(tuple(parts))
+    activation = require_foreach_activation(
+        parent_frame, owner.foreach_node_id, owner.activation_id
+    )
+    if activation.barrier.mode != "concurrent":
+        return
+    activation.barrier.add_success_patch(
+        index=owner.item_index,
+        frame_id=frame.id,
+        lineage_id=frame.lineage_id,
+    )
+    save_foreach_activation(parent_frame, activation)

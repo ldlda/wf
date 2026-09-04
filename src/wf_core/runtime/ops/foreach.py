@@ -96,40 +96,16 @@ def _step_foreach_serial(
 
     loop_start = index.next_node_id(frame.node_id, "loop")
     item = iterable[loop_index]
-    barrier.next_index = loop_index + 1
+    loop_start, child_id = _admit_item_frame(
+        run=run,
+        frame=frame,
+        step=step,
+        index=index,
+        activation=activation,
+        loop_index=loop_index,
+        item=item,
+    )
     save_foreach_activation(frame, activation)
-    child_id = _child_frame_id(activation, loop_index)
-    child_lineage_id = _child_lineage_id(activation, loop_index)
-    # Serial items still own a lineage so nested subgraph/boundary commits have
-    # a parent lineage to buffer into; top-level serial writes commit through
-    # the parent scope root.
-    add_lineage(
-        run,
-        scope_id=frame.scope_id,
-        lineage_id=child_lineage_id,
-        parent_id=frame.lineage_id,
-    )
-    add_frame(
-        run,
-        ExecutionFrame(
-            id=child_id,
-            kind="foreach_iteration",
-            node_id=loop_start,
-            status=FrameStatus.PENDING,
-            parent_frame_id=frame.id,
-            scope_id=frame.scope_id,
-            lineage_id=child_lineage_id,
-            parent_lineage_id=frame.lineage_id,
-            metadata=ForeachIterationMetadata(
-                foreach_node_id=step.id,
-                activation_id=activation.id,
-                loop_index=loop_index,
-                loop_item=item,
-                loop_alias=step.as_,
-            ).to_metadata(),
-        ),
-        ready=True,
-    )
     block_frame_on_children(run, frame.id, (child_id,))
     append_step_result_trace(
         run,
@@ -251,6 +227,58 @@ def _item_error_record(child: ExecutionFrame) -> ItemErrorRecord:
     )
 
 
+def _admit_item_frame(
+    *,
+    run: RunState,
+    frame: ExecutionFrame,
+    step: ForeachNode,
+    index: WorkflowIndex,
+    activation: ForeachActivationState,
+    loop_index: int,
+    item: object,
+) -> tuple[str, str]:
+    """Create one activation-qualified child frame and lineage.
+
+    Every item owns a lineage so nested subgraph/boundary commits have a
+    parent lineage to buffer into; top-level serial writes still commit
+    through the parent scope root. Returns the loop start node and child id;
+    barrier child bookkeeping stays with the caller. Compare ids by name;
+    never parse them.
+    """
+    loop_start = index.next_node_id(frame.node_id, "loop")
+    child_id = _child_frame_id(activation, loop_index)
+    child_lineage_id = _child_lineage_id(activation, loop_index)
+    add_lineage(
+        run,
+        scope_id=frame.scope_id,
+        lineage_id=child_lineage_id,
+        parent_id=frame.lineage_id,
+    )
+    activation.barrier.next_index = loop_index + 1
+    add_frame(
+        run,
+        ExecutionFrame(
+            id=child_id,
+            kind="foreach_iteration",
+            node_id=loop_start,
+            status=FrameStatus.PENDING,
+            parent_frame_id=frame.id,
+            scope_id=frame.scope_id,
+            lineage_id=child_lineage_id,
+            parent_lineage_id=frame.lineage_id,
+            metadata=ForeachIterationMetadata(
+                foreach_node_id=step.id,
+                activation_id=activation.id,
+                loop_index=loop_index,
+                loop_item=item,
+                loop_alias=step.as_,
+            ).to_metadata(),
+        ),
+        ready=True,
+    )
+    return loop_start, child_id
+
+
 def _admit_concurrent_children(
     *,
     run: RunState,
@@ -272,38 +300,17 @@ def _admit_concurrent_children(
     ):
         loop_index = barrier.next_index
         item = iterable[loop_index]
-        child_id = _child_frame_id(activation, loop_index)
-        child_lineage_id = _child_lineage_id(activation, loop_index)
-        add_lineage(
-            run,
-            scope_id=frame.scope_id,
-            lineage_id=child_lineage_id,
-            parent_id=frame.lineage_id,
-        )
         active_count = len(barrier.active_frame_ids)
-        barrier.next_index = loop_index + 1
-        barrier.start_child(child_id)
-        add_frame(
-            run,
-            ExecutionFrame(
-                id=child_id,
-                kind="foreach_iteration",
-                node_id=loop_start,
-                status=FrameStatus.PENDING,
-                parent_frame_id=frame.id,
-                scope_id=frame.scope_id,
-                lineage_id=child_lineage_id,
-                parent_lineage_id=frame.lineage_id,
-                metadata=ForeachIterationMetadata(
-                    foreach_node_id=step.id,
-                    activation_id=activation.id,
-                    loop_index=loop_index,
-                    loop_item=item,
-                    loop_alias=step.as_,
-                ).to_metadata(),
-            ),
-            ready=True,
+        loop_start, child_id = _admit_item_frame(
+            run=run,
+            frame=frame,
+            step=step,
+            index=index,
+            activation=activation,
+            loop_index=loop_index,
+            item=item,
         )
+        barrier.start_child(child_id)
         append_step_result_trace(
             run,
             frame_id=frame.id,
@@ -417,14 +424,16 @@ def _patch_for_successful_item(
 ) -> StatePatch:
     """Return the replayable patch for a completed foreach item.
 
-    New concurrent foreach results store writes in `RunState.lineages` and keep
-    only lineage metadata in the barrier. Old serialized barrier metadata may
-    still carry `result.patch`, so keep that as the compatibility fallback.
+    Item writes live in `RunState.lineages`; a success without a known
+    lineage is corrupt state and fails closed.
     """
-    if result.lineage_id is not None and result.lineage_id in run.lineages:
-        return lineage_patch(
-            run,
-            scope_id=frame.scope_id,
-            lineage_id=result.lineage_id,
+    if result.lineage_id is None or result.lineage_id not in run.lineages:
+        raise WorkflowExecutionError(
+            f"foreach item result for index {result.index!r} references "
+            f"unknown lineage {result.lineage_id!r}"
         )
-    return result.patch
+    return lineage_patch(
+        run,
+        scope_id=frame.scope_id,
+        lineage_id=result.lineage_id,
+    )

@@ -203,9 +203,10 @@ foreach_owner_stack)` rather than merely looking for graph cycles:
 A node use therefore belongs to one static control region, while remaining free
 to execute in any number of dynamic frames, lineages, or items. When the same
 capability is needed at two program locations, authoring creates two node uses
-with distinct identifiers. Existing context-contract analysis may still report
-fields as conditional because multiple paths can reach a node within its one
-region; it must not use multiple owner stacks to represent that case.
+with distinct identifiers. Context-contract analysis reports one field set per
+static region: fields are available when the region is inside a foreach body
+and absent outside it. A node reached under two stacks is a region conflict
+and receives no foreach fields rather than a conditional union.
 
 The unique-owner rule rejects both ways of crossing a foreach boundary. An
 outside edge into a body node reaches that node under both the outer and item
@@ -433,7 +434,11 @@ may independently return and complete the item.
 Back-edge return changes control representation, not state semantics.
 Iteration writes remain buffered in the item lineage. Serial behavior and the
 concurrent barrier continue to commit or merge those writes according to the
-accepted concurrent-foreach ADR and declared reducers.
+accepted concurrent-foreach ADR and declared reducers. The completed item is
+registered with its barrier at the owner back-edge, keyed by the returning
+frame rather than by whichever operation ran last, so node, subgraph, and
+nested-control endings all count. A return naming a closed or superseded
+activation fails closed instead of buffering into the wrong visit.
 
 An ordinary node outcome named `error` remains domain control. An exception
 remains a runtime item failure handled by `fail`, `skip`, or `collect`. Neither
@@ -490,7 +495,7 @@ semantics also run through the runtime.
 | Closed body cycle | Reject missing owner return | N/A |
 | Unreachable nodes | Reject each node | N/A |
 | Re-enter foreach after `done` | Accept | Fresh activation and children |
-| Subgraph inside foreach | Accept | Child `END`, then item return |
+| Subgraph inside foreach | Accept | Child `END`, then item return (serial and concurrent) |
 | Interrupt inside foreach | Accept | Resume the same item activation |
 | Future fork in foreach | Deferred with fork/gather | Gather before return |
 

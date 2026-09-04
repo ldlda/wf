@@ -80,7 +80,10 @@ def advance_frame(
     # Foreach back-edge return is an ownership check, not generic cycle
     # detection. Only the frame's immediate recorded owner completes the item;
     # a root frame targeting the same foreach enters it normally.
-    from wf_core.runtime.foreach_state import item_frame_owner
+    from wf_core.runtime.foreach_state import (
+        item_frame_owner,
+        register_foreach_item_success,
+    )
 
     owner = item_frame_owner(frame)
     if owner is not None:
@@ -91,6 +94,10 @@ def advance_frame(
             )
         if next_node_id == owner.foreach_node_id:
             source_node_id = frame.node_id
+            # Register the completed item with its barrier before completing
+            # the child, so every final operation (node, subgraph, nested
+            # control) counts. Closed or superseded activations fail closed.
+            register_foreach_item_success(run, frame, owner)
             frame.prior_outcome = outcome
             frame.activated_incoming_edge = source_node_id
             frame.node_id = owner.foreach_node_id

@@ -68,11 +68,12 @@ def context_fields_by_node(
 ) -> dict[str, tuple[ContextFieldAvailability, ...]]:
     """Return runtime context contracts for every reachable graph node.
 
-    This is an abstract execution-frame analysis rather than ordinary graph
-    reachability: the same node can execute in the root frame and in a
-    foreach child frame, and those frames expose different context keys.
-    The traversal memoizes both node id and active frame scope so cyclic
-    graphs terminate without granting aliases from an impossible scope.
+    This is an abstract execution-frame analysis keyed by static control
+    region: each node use belongs to exactly one foreach-owner stack, and
+    that stack decides which foreach aliases the node exposes. A node
+    reachable under two stacks is a region conflict and receives no foreach
+    fields. The traversal still memoizes node id and owner stack so cyclic
+    graphs terminate.
     """
     return _analyze(workflow).fields_by_node
 

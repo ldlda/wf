@@ -642,6 +642,106 @@ def test_subgraph_end_returns_to_subgraph_node_then_foreach_owner() -> None:
     assert run.state["seen"] == ["a", "b"]
 
 
+def test_concurrent_subgraph_item_returns_through_owner() -> None:
+    from wf_core import PreparedSubgraph
+
+    child = Workflow(
+        name="child",
+        input_schema=SchemaRef(type="object", properties={"value": {}}),
+        state_schema=StateSchema.from_field_map({"seen": StateField(type="string")}),
+        output_schema=SchemaRef(type="object", properties={"seen": {}}),
+        node_defs=[
+            NodeDef(
+                name="inner_record",
+                input_schema=SchemaRef(
+                    type="object", properties={"value": {}}, required=["value"]
+                ),
+                output_schema=SchemaRef(
+                    type="object", properties={"seen": {}}, required=["seen"]
+                ),
+                outcomes=["ok"],
+            )
+        ],
+        start="inner_record",
+        nodes=[
+            NodeUse.model_validate(
+                {
+                    "id": "inner_record",
+                    "type": "node",
+                    "node": "inner_record",
+                    "input": [{"target": "value", "path": "input.value"}],
+                    "output": [{"source": "seen", "target": "state.seen"}],
+                }
+            )
+        ],
+        edges=[
+            Edge.model_validate({"from": "inner_record", "outcome": "ok", "to": END})
+        ],
+    )
+    foreach = ForeachNode.model_validate(
+        {
+            "id": "each",
+            "type": "foreach",
+            "over": "state.items",
+            "as": "item",
+            "mode": "concurrent",
+            "concurrent": {"max_active": 2, "max_outstanding": 2},
+        }
+    )
+    workflow = Workflow(
+        name="foreach_concurrent_subgraph",
+        input_schema=SchemaRef(type="object", properties={"items": {"type": "array"}}),
+        state_schema=StateSchema.from_field_map(
+            {
+                "items": StateField(type="array"),
+                "seen": StateField(
+                    type="array", reducer=ReducerRef(name="wf.std.append")
+                ),
+            }
+        ),
+        output_schema=SchemaRef(type="object", properties={"seen": {"type": "array"}}),
+        node_defs=[],
+        start="each",
+        nodes=[
+            foreach,
+            SubgraphNode.model_validate(
+                {
+                    "id": "child",
+                    "type": "subgraph",
+                    "workflow": "child.workflow",
+                    "input_schema": {"type": "object", "properties": {"value": {}}},
+                    "output_schema": {"type": "object", "properties": {"seen": {}}},
+                    "input": [{"target": "value", "path": "context.item"}],
+                    "output": [{"source": "seen", "target": "state.seen"}],
+                    "outcomes": ["ok"],
+                }
+            ),
+        ],
+        edges=[
+            Edge.model_validate({"from": "each", "outcome": "loop", "to": "child"}),
+            Edge.model_validate({"from": "child", "outcome": "ok", "to": "each"}),
+            Edge.model_validate({"from": "each", "outcome": "done", "to": END}),
+        ],
+    )
+
+    run = execute_workflow(
+        workflow,
+        {"items": ["a", "b"]},
+        {},
+        subgraphs={
+            "child.workflow": PreparedSubgraph(
+                workflow=child,
+                registry={
+                    "inner_record": lambda payload, _ctx: {"seen": payload["value"]}
+                },
+            )
+        },
+    )
+
+    assert run.status == RunStatus.COMPLETED
+    assert sorted(run.state["seen"]) == ["a", "b"]
+
+
 def test_nonlocal_runtime_return_fails_closed_when_validation_is_bypassed() -> None:
     run = RunState(
         workflow_name="nonlocal",

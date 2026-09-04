@@ -18,7 +18,6 @@ from wf_core.run_state import (
 from wf_core.runtime.foreach_state import (
     item_frame_owner,
     require_foreach_activation,
-    save_foreach_activation,
 )
 from wf_core.runtime.input_bindings import resolve_step_input_bindings
 from wf_core.runtime.lineage import (
@@ -30,7 +29,7 @@ from wf_core.runtime.ops.frames import frame_context_values
 from wf_core.runtime.ops.merges import ReducerDefinition
 from wf_core.runtime.ops.overlays import state_view_for_frame
 from wf_core.runtime.ops.schemas import validate_payload_against_schema
-from wf_core.runtime.ops.state import StatePatch, build_output_patch
+from wf_core.runtime.ops.state import build_output_patch
 
 NodeHandler = Callable[[dict[str, Any], RuntimeContext], NodeResult | dict[str, Any]]
 AsyncNodeHandler = Callable[
@@ -120,29 +119,26 @@ def _finalize_node_execution(
     if owner is None:
         state_changes = commit_patch_for_frame(run, frame, patch)
     else:
-        parent_frame = run.frames[owner.parent_frame_id]
+        parent_frame = run.frames.get(owner.parent_frame_id)
+        if parent_frame is None:
+            raise WorkflowExecutionError(
+                "foreach item state references missing parent frame "
+                f"{owner.parent_frame_id!r} for child frame {frame.id!r}"
+            )
         # Fail closed when the child names a closed or superseded activation:
         # its writes must not land in a later visit's barrier.
         activation = require_foreach_activation(
             parent_frame, owner.foreach_node_id, owner.activation_id
         )
-        barrier = activation.barrier
-        if barrier.mode == "concurrent":
-            # New concurrent foreach stores writes in the child lineage; the
-            # barrier keeps only result metadata plus old patch fallback.
+        if activation.barrier.mode == "concurrent":
+            # Concurrent writes stay buffered in the child lineage; the owner
+            # back-edge registers the completed item with the barrier.
             append_lineage_writes(
                 run,
                 scope_id=frame.scope_id,
                 lineage_id=frame.lineage_id,
                 writes=patch.writes,
             )
-            barrier.add_success_patch(
-                index=owner.item_index,
-                frame_id=frame.id,
-                patch=StatePatch(),
-                lineage_id=frame.lineage_id,
-            )
-            save_foreach_activation(parent_frame, activation)
             state_changes = {}
         else:
             state_changes = commit_patch_for_frame(run, parent_frame, patch)
