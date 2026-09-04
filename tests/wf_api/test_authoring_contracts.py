@@ -510,3 +510,79 @@ def test_structured_foreach_paths_appear_in_authoring_inventory() -> None:
         if option["path"].startswith("context.foreach."):
             assert option["origin"] == "runtime_context"
             assert option["uses"] == ["step_input"]
+
+
+def _ref_inventory_workflow(*, alias: str = "order"):
+    from wf_core import END, Edge, ForeachNode, NodeUse, SchemaRef, Workflow
+    from wf_core.models.schemas import StateSchema
+
+    return Workflow(
+        name="inventory_nested_ref",
+        input_schema=SchemaRef(type="object"),
+        state_schema=StateSchema.model_validate(
+            {
+                "type": "object",
+                "properties": {
+                    "orders": {
+                        "type": "array",
+                        "items": {"$ref": "#/$defs/Order"},
+                    },
+                },
+                "$defs": {
+                    "Order": {
+                        "type": "object",
+                        "properties": {
+                            "sku": {"type": "string"},
+                            "detail": {"$ref": "#/$defs/Detail"},
+                        },
+                    },
+                    "Detail": {
+                        "type": "object",
+                        "properties": {"name": {"type": "string"}},
+                    },
+                },
+            }
+        ),
+        output_schema=SchemaRef(type="object"),
+        start="orders",
+        nodes=[
+            ForeachNode.model_validate(
+                {"id": "orders", "type": "foreach", "over": "state.orders", "as": alias}
+            ),
+            NodeUse(id="body", type="node", node="noop"),
+        ],
+        edges=[
+            Edge.model_validate({"from": "orders", "outcome": "loop", "to": "body"}),
+            Edge.model_validate({"from": "body", "outcome": "ok", "to": "orders"}),
+            Edge.model_validate({"from": "orders", "outcome": "done", "to": END}),
+        ],
+    )
+
+
+def test_nested_ref_item_children_appear_in_authoring_inventory() -> None:
+    from wf_api.authoring_contracts import context_path_options_for_node
+
+    options = context_path_options_for_node(_ref_inventory_workflow(), "body")
+    paths = {option["path"] for option in options}
+    assert "context.foreach.orders.item.sku" in paths
+    assert "context.foreach.orders.item.detail.name" in paths
+
+
+def test_dotted_alias_produces_quoted_authoring_path() -> None:
+    from wf_api.authoring_contracts import context_path_options_for_node
+
+    options = context_path_options_for_node(
+        _ref_inventory_workflow(alias="item.alias"), "body"
+    )
+    paths = {option["path"] for option in options}
+    assert 'context."item.alias"' in paths
+    assert "context.item.alias" not in paths
+
+
+def test_root_inventory_offers_foreach_map() -> None:
+    from wf_api.authoring_contracts import context_path_options_for_node
+
+    options = context_path_options_for_node(_ref_inventory_workflow(), "orders")
+    paths = {option["path"] for option in options}
+    assert "context.foreach" in paths
+    assert "context.prior_outcome" in paths

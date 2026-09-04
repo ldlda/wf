@@ -202,7 +202,9 @@ def context_path_options(
             reason = raw_reason if isinstance(raw_reason, str) else None
 
         option: AuthoringPathOptionPayload = {
-            "path": f"context.{name}",
+            # Field names are literal path segments: dotted foreach aliases
+            # must stay quoted as one segment, never split on ".".
+            "path": str(GraphSourcePath("context", (name,))),
             "label": name.replace("_", " ").replace("-", " ").title(),
             "origin": "runtime_context",
             "schema": deepcopy(dict(schema)),
