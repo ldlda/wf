@@ -427,6 +427,174 @@ def test_nested_foreach_returns_inner_then_outer() -> None:
     assert run.state["seen"][:3] == [1, 2, "a"]
 
 
+def _nested_mode_workflow(*, outer_mode: str, inner_mode: str) -> Workflow:
+    def _foreach(node_id: str, *, over: str, alias: str, mode: str) -> ForeachNode:
+        payload: dict[str, Any] = {
+            "id": node_id,
+            "type": "foreach",
+            "over": over,
+            "as": alias,
+            "mode": mode,
+        }
+        if mode == "concurrent":
+            payload["concurrent"] = {"max_active": 2, "max_outstanding": 2}
+        return ForeachNode.model_validate(payload)
+
+    return Workflow(
+        name="nested_foreach_modes",
+        input_schema=SchemaRef(type="object", properties={}),
+        state_schema=StateSchema.from_field_map(
+            {
+                "items": StateField(type="array"),
+                "inner_items": StateField(type="array"),
+                "seen": StateField(
+                    type="array", reducer=ReducerRef(name="wf.std.append")
+                ),
+            }
+        ),
+        output_schema=SchemaRef(type="object", properties={"seen": {"type": "array"}}),
+        node_defs=[
+            NodeDef(
+                name="work",
+                input_schema=SchemaRef(
+                    type="object", properties={"value": {}}, required=["value"]
+                ),
+                output_schema=SchemaRef(
+                    type="object", properties={"seen": {}}, required=["seen"]
+                ),
+                outcomes=["ok"],
+            )
+        ],
+        start="outer",
+        nodes=[
+            _foreach("outer", over="state.items", alias="outer_item", mode=outer_mode),
+            _foreach(
+                "inner",
+                over="state.inner_items",
+                alias="inner_item",
+                mode=inner_mode,
+            ),
+            NodeUse.model_validate(
+                {
+                    "id": "work",
+                    "type": "node",
+                    "node": "work",
+                    "input": [{"target": "value", "path": "context.inner_item"}],
+                    "output": [{"source": "seen", "target": "state.seen"}],
+                }
+            ),
+        ],
+        edges=[
+            Edge.model_validate({"from": "outer", "outcome": "loop", "to": "inner"}),
+            Edge.model_validate({"from": "inner", "outcome": "loop", "to": "work"}),
+            Edge.model_validate({"from": "work", "outcome": "ok", "to": "inner"}),
+            # No intermediate writer: the inner barrier (or serial return)
+            # must route inner writes to the scope root on its own.
+            Edge.model_validate({"from": "inner", "outcome": "done", "to": "outer"}),
+            Edge.model_validate({"from": "outer", "outcome": "done", "to": END}),
+        ],
+    )
+
+
+@pytest.mark.parametrize(
+    ("outer_mode", "inner_mode"),
+    [
+        ("serial", "serial"),
+        ("serial", "concurrent"),
+        ("concurrent", "serial"),
+        ("concurrent", "concurrent"),
+    ],
+)
+def test_nested_foreach_preserves_inner_writes_in_all_modes(
+    outer_mode: str, inner_mode: str
+) -> None:
+    """Inner writes must reach root state whatever the nesting modes are.
+
+    Serial owners commit through the scope root; concurrent owners buffer
+    for their barrier. Every inner write (1, 2 per outer item) must survive
+    even with no intermediate writer to replay-rescue stranded lineages.
+    """
+    workflow = _nested_mode_workflow(outer_mode=outer_mode, inner_mode=inner_mode)
+
+    run = execute_workflow(
+        workflow,
+        {"items": ["a", "b"], "inner_items": [1, 2]},
+        {
+            "work": lambda payload, _ctx: {
+                "outcome": "ok",
+                "output": {"seen": payload["value"]},
+            }
+        },
+    )
+
+    assert run.status == RunStatus.COMPLETED
+    assert sorted(run.state.get("seen") or [], key=repr) == sorted(
+        [1, 2, 1, 2], key=repr
+    )
+
+
+def test_item_frame_owner_rejects_missing_parent_frame() -> None:
+    """A foreach_iteration frame without a parent is malformed, not ordinary."""
+    frame = ExecutionFrame(
+        id="orphan",
+        kind="foreach_iteration",
+        node_id="work",
+        parent_frame_id=None,
+        metadata={
+            "foreach_node_id": "each",
+            "activation_id": "root:each#0",
+            "loop_index": 0,
+            "loop_item": "a",
+            "loop_alias": "item",
+        },
+    )
+
+    with pytest.raises(WorkflowExecutionError, match="parent"):
+        item_frame_owner(frame)
+
+
+def test_foreach_aware_patch_rejects_parent_cycle() -> None:
+    """A cyclic item-parent chain fails closed instead of looping forever."""
+    from wf_core.runtime.foreach_state import load_or_begin_foreach_activation
+    from wf_core.runtime.lineage import commit_foreach_aware_patch
+    from wf_core.runtime.ops.state import StatePatch
+
+    frame_a = ExecutionFrame(id="frame-a", kind="foreach_iteration", node_id="work")
+    frame_b = ExecutionFrame(id="frame-b", kind="foreach_iteration", node_id="work")
+    activation_on_b = load_or_begin_foreach_activation(frame_b, "each", mode="serial")
+    activation_on_a = load_or_begin_foreach_activation(frame_a, "each", mode="serial")
+    frame_a.parent_frame_id = "frame-b"
+    frame_a.metadata.update(
+        {
+            "foreach_node_id": "each",
+            "activation_id": activation_on_b.id,
+            "loop_index": 0,
+            "loop_item": "a",
+            "loop_alias": "item",
+        }
+    )
+    frame_b.parent_frame_id = "frame-a"
+    frame_b.metadata.update(
+        {
+            "foreach_node_id": "each",
+            "activation_id": activation_on_a.id,
+            "loop_index": 0,
+            "loop_item": "a",
+            "loop_alias": "item",
+        }
+    )
+    run = RunState(
+        workflow_name="parent_cycle",
+        status=RunStatus.RUNNING,
+        workflow_input={},
+        state={},
+        frames={"frame-a": frame_a, "frame-b": frame_b},
+    )
+
+    with pytest.raises(WorkflowExecutionError, match="cycle"):
+        commit_foreach_aware_patch(run, frame_a, StatePatch(changes={}))
+
+
 def test_reentering_foreach_uses_fresh_activation_and_item_frames() -> None:
     workflow = Workflow(
         name="foreach_reentry",

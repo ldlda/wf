@@ -340,3 +340,51 @@ def test_pending_item_result_rejects_index_key_mismatch() -> None:
 
     with pytest.raises(WorkflowExecutionError, match="index mismatch"):
         ForeachBarrierState.from_metadata(raw["each"]["active"]["barrier"])
+
+
+def _failed_result(
+    *, index: int, frame_id: str, error_index: int, error_frame: str
+) -> dict:
+    return {
+        "index": index,
+        "frame_id": frame_id,
+        "status": "failed",
+        "lineage_id": None,
+        "error": {
+            "index": error_index,
+            "frame_id": error_frame,
+            "node_id": "work",
+            "error_type": "ValueError",
+            "message": "bad",
+        },
+    }
+
+
+def test_pending_item_result_rejects_error_index_mismatch() -> None:
+    with pytest.raises(WorkflowExecutionError, match="error.*index|index.*error"):
+        PendingItemResult.from_metadata(
+            _failed_result(
+                index=0, frame_id="child-0", error_index=7, error_frame="child-0"
+            )
+        )
+
+
+def test_pending_item_result_rejects_error_frame_mismatch() -> None:
+    with pytest.raises(WorkflowExecutionError, match="error.*frame|frame.*error"):
+        PendingItemResult.from_metadata(
+            _failed_result(
+                index=0, frame_id="child-0", error_index=0, error_frame="other"
+            )
+        )
+
+
+def test_pending_item_result_accepts_matching_error_identity() -> None:
+    result = PendingItemResult.from_metadata(
+        _failed_result(
+            index=0, frame_id="child-0", error_index=0, error_frame="child-0"
+        )
+    )
+
+    assert result.error is not None
+    assert result.error.index == 0
+    assert result.error.frame_id == "child-0"

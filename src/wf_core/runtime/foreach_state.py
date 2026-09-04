@@ -138,16 +138,21 @@ class PendingItemResult:
                 raise WorkflowExecutionError(
                     "malformed pending foreach result lineage id"
                 )
+        error = (
+            ItemErrorRecord.from_metadata(raw_error) if raw_error is not None else None
+        )
+        if error is not None and (error.index != index or error.frame_id != frame_id):
+            raise WorkflowExecutionError(
+                "malformed pending foreach result: error identity "
+                f"(index {error.index!r}, frame {error.frame_id!r}) does not "
+                f"match enclosing result (index {index!r}, frame {frame_id!r})"
+            )
         return cls(
             index=index,
             frame_id=frame_id,
             status=status,
             lineage_id=lineage_id,
-            error=(
-                ItemErrorRecord.from_metadata(raw_error)
-                if raw_error is not None
-                else None
-            ),
+            error=error,
         )
 
     def to_metadata(self) -> dict[str, Any]:
@@ -443,10 +448,16 @@ def item_frame_owner(frame: ExecutionFrame) -> ForeachItemOwner | None:
     """Return the named foreach ownership record for item frames.
 
     Malformed item metadata fails closed via ``ForeachIterationMetadata``;
-    only non-item frames return ``None``.
+    only genuinely non-item frames return ``None``. An item frame without
+    a parent is corrupt state and raises rather than masquerading as an
+    ordinary frame.
     """
-    if frame.kind != "foreach_iteration" or frame.parent_frame_id is None:
+    if frame.kind != "foreach_iteration":
         return None
+    if frame.parent_frame_id is None:
+        raise WorkflowExecutionError(
+            f"foreach item frame {frame.id!r} is missing its parent frame"
+        )
     metadata = ForeachIterationMetadata.from_frame(frame)
     if metadata is None:
         return None

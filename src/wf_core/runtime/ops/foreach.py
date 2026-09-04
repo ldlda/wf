@@ -18,7 +18,7 @@ from wf_core.runtime.foreach_state import (
 )
 from wf_core.runtime.lineage import (
     add_lineage,
-    commit_patch_for_frame,
+    commit_foreach_aware_patch,
     lineage_patch,
     scope_input_for_frame,
 )
@@ -379,7 +379,7 @@ def _finish_concurrent_foreach(
         state_view_for_frame(run, frame),
         reducers=reducers,
     )
-    state_changes = commit_patch_for_frame(run, frame, combined)
+    state_changes = commit_foreach_aware_patch(run, frame, combined)
     append_step_result_trace(
         run,
         frame_id=frame.id,

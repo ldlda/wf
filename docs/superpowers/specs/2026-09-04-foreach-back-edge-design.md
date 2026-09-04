@@ -434,7 +434,14 @@ may independently return and complete the item.
 Back-edge return changes control representation, not state semantics.
 Iteration writes remain buffered in the item lineage. Serial behavior and the
 concurrent barrier continue to commit or merge those writes according to the
-accepted concurrent-foreach ADR and declared reducers. The completed item is
+accepted concurrent-foreach ADR and declared reducers. One shared helper
+routes every item write: it climbs through each serial owner to the scope
+root, where it commits, or stops at the first concurrent item boundary,
+where it buffers for that barrier to merge (the concurrent barrier finish
+routes its combined patch through the same helper, so nested serial owners
+cannot strand it). Parent cycles, missing parents, and orphaned item frames
+fail closed. Buffered failure records must carry an error whose index and
+frame match the enclosing result. The completed item is
 registered with its barrier at the owner back-edge, keyed by the returning
 frame rather than by whichever operation ran last, so node, subgraph, and
 nested-control endings all count. A return naming a closed or superseded
