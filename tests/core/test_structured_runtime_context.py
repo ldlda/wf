@@ -923,3 +923,152 @@ def test_bool_loop_index_metadata_fails_closed() -> None:
     )
     with pytest.raises(WorkflowExecutionError, match="malformed foreach loop index"):
         frame_context_view(run, run.frames["bad"])
+
+
+def test_condition_exists_reads_structured_foreach_item() -> None:
+    from wf_core import END, Edge, ForeachNode, Workflow, execute_workflow
+    from wf_core.models.schemas import SchemaRef, StateField, StateSchema
+    from wf_core.models.steps import ConditionNode
+
+    pick = ConditionNode.model_validate(
+        {
+            "id": "pick",
+            "type": "condition",
+            "check": {"op": "exists", "path": "context.foreach.each.item"},
+        }
+    )
+    workflow = Workflow(
+        name="condition_structured_exists",
+        input_schema=SchemaRef(type="object", properties={}),
+        state_schema=StateSchema.from_field_map({"items": StateField(type="array")}),
+        output_schema=SchemaRef(type="object", properties={}),
+        node_defs=[],
+        start="each",
+        nodes=[
+            ForeachNode.model_validate(
+                {
+                    "id": "each",
+                    "type": "foreach",
+                    "over": "state.items",
+                    "as": "item",
+                    "mode": "serial",
+                }
+            ),
+            pick,
+        ],
+        edges=[
+            Edge.model_validate({"from": "each", "outcome": "loop", "to": "pick"}),
+            Edge.model_validate({"from": "pick", "outcome": "true", "to": "each"}),
+            Edge.model_validate({"from": "pick", "outcome": "false", "to": "each"}),
+            Edge.model_validate({"from": "each", "outcome": "done", "to": END}),
+        ],
+    )
+    run = execute_workflow(workflow, {"items": ["a"]}, {})
+    assert run.status == RunStatus.COMPLETED
+    # The item exists, so the validated structured path must take true.
+    assert ("pick", "true") in [(t.node_id, t.outcome) for t in run.trace]
+
+
+def test_condition_eq_reads_loop_alias_per_item() -> None:
+    from wf_core import END, Edge, ForeachNode, Workflow, execute_workflow
+    from wf_core.models.schemas import SchemaRef, StateField, StateSchema
+    from wf_core.models.steps import ConditionNode
+
+    pick = ConditionNode.model_validate(
+        {
+            "id": "pick",
+            "type": "condition",
+            "check": {
+                "op": "eq",
+                "left": {"path": "context.item"},
+                "right": {"value": "a"},
+            },
+        }
+    )
+    workflow = Workflow(
+        name="condition_structured_eq",
+        input_schema=SchemaRef(type="object", properties={}),
+        state_schema=StateSchema.from_field_map({"items": StateField(type="array")}),
+        output_schema=SchemaRef(type="object", properties={}),
+        node_defs=[],
+        start="each",
+        nodes=[
+            ForeachNode.model_validate(
+                {
+                    "id": "each",
+                    "type": "foreach",
+                    "over": "state.items",
+                    "as": "item",
+                    "mode": "serial",
+                }
+            ),
+            pick,
+        ],
+        edges=[
+            Edge.model_validate({"from": "each", "outcome": "loop", "to": "pick"}),
+            Edge.model_validate({"from": "pick", "outcome": "true", "to": "each"}),
+            Edge.model_validate({"from": "pick", "outcome": "false", "to": "each"}),
+            Edge.model_validate({"from": "each", "outcome": "done", "to": END}),
+        ],
+    )
+    run = execute_workflow(workflow, {"items": ["a", "b"]}, {})
+    assert run.status == RunStatus.COMPLETED
+    pick_outcomes = [t.outcome for t in run.trace if t.node_id == "pick"]
+    assert pick_outcomes == ["true", "false"]
+
+
+def test_condition_still_reads_prior_outcome() -> None:
+    from wf_core import END, Edge, NodeDef, NodeUse, Workflow, execute_workflow
+    from wf_core.models.schemas import SchemaRef, StateSchema
+    from wf_core.models.steps import ConditionNode
+
+    pick = ConditionNode.model_validate(
+        {
+            "id": "pick",
+            "type": "condition",
+            "check": {
+                "op": "eq",
+                "left": {"path": "context.prior_outcome"},
+                "right": {"value": "ok"},
+            },
+        }
+    )
+    workflow = Workflow(
+        name="condition_prior_outcome",
+        input_schema=SchemaRef(type="object", properties={}),
+        state_schema=StateSchema(fields={}),
+        output_schema=SchemaRef(type="object", properties={}),
+        node_defs=[
+            NodeDef(
+                name="record",
+                input_schema=SchemaRef(type="object", properties={"value": {}}),
+                output_schema=SchemaRef(type="object", properties={}),
+                outcomes=["ok"],
+            )
+        ],
+        start="work",
+        nodes=[
+            NodeUse.model_validate(
+                {
+                    "id": "work",
+                    "type": "node",
+                    "node": "record",
+                    "input": [{"target": "value", "value": 1}],
+                    "output": [],
+                }
+            ),
+            pick,
+        ],
+        edges=[
+            Edge.model_validate({"from": "work", "outcome": "ok", "to": "pick"}),
+            Edge.model_validate({"from": "pick", "outcome": "true", "to": END}),
+            Edge.model_validate({"from": "pick", "outcome": "false", "to": END}),
+        ],
+    )
+
+    def record(payload: dict[str, object], ctx: RuntimeContext) -> dict[str, object]:
+        return {"outcome": "ok", "output": {}}
+
+    run = execute_workflow(workflow, {}, {"record": record})
+    assert run.status == RunStatus.COMPLETED
+    assert ("pick", "true") in [(t.node_id, t.outcome) for t in run.trace]
