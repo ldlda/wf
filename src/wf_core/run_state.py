@@ -86,6 +86,25 @@ class ExecutionFrame:
     finished_at_node_id: str | None = None
 
 
+@dataclass(frozen=True, slots=True)
+class ForeachContext:
+    """Typed view of one active same-scope foreach iteration.
+
+    The mapping key in ``RuntimeContext.foreach`` is the static
+    ``ForeachNode.id`` within the current workflow scope. Identity fields
+    disclose the dynamic activation/frame/scope/lineage when advanced
+    runtime code needs them; normal node authors should use mapped inputs.
+    """
+
+    node_id: str
+    activation_id: str
+    frame_id: str
+    scope_id: str
+    lineage_id: str
+    index: int
+    item: Any
+
+
 @dataclass(slots=True)
 class RuntimeContext:
     current_node_id: str
@@ -98,6 +117,7 @@ class RuntimeContext:
     activated_incoming_edge: str | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
     platform: object | None = None
+    foreach: dict[str, ForeachContext] = field(default_factory=dict)
 
 
 @dataclass(slots=True)

@@ -35,6 +35,7 @@ from .models import (
 from .run_codec import PersistedRunState, dump_run_state, load_run_state
 from .run_state import (
     ExecutionFrame,
+    ForeachContext,
     FrameStatus,
     InterruptRequest,
     InterruptRoute,
@@ -76,6 +77,7 @@ __all__ = [
     "Edge",
     "EndNode",
     "ExecutionFrame",
+    "ForeachContext",
     "ForeachConcurrentPolicy",
     "ForeachItemErrorPolicy",
     "ForeachNode",

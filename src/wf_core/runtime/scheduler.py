@@ -5,7 +5,13 @@ from dataclasses import dataclass
 from typing import Any
 
 from wf_core.errors import WorkflowExecutionError
-from wf_core.run_state import ExecutionFrame, FrameStatus, RunState, RunStatus
+from wf_core.run_state import (
+    ExecutionFrame,
+    ForeachContext,
+    FrameStatus,
+    RunState,
+    RunStatus,
+)
 
 
 @dataclass(slots=True, frozen=True)
@@ -96,6 +102,23 @@ class ForeachIterationMetadata:
             "loop_item": self.loop_item,
             "loop_alias": self.loop_alias,
         }
+
+    def to_context(self, frame: ExecutionFrame) -> ForeachContext:
+        """Convert validated item metadata into the typed runtime context value.
+
+        Field names are mapped once here so ancestry-traversal call sites do
+        not copy them. ``frame`` supplies the dynamic scope/lineage/frame
+        identities for the entry.
+        """
+        return ForeachContext(
+            node_id=self.foreach_node_id,
+            activation_id=self.activation_id,
+            frame_id=frame.id,
+            scope_id=frame.scope_id,
+            lineage_id=frame.lineage_id,
+            index=self.loop_index,
+            item=self.loop_item,
+        )
 
 
 def add_frame(run: RunState, frame: ExecutionFrame, *, ready: bool = False) -> None:
