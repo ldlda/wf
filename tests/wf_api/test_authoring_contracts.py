@@ -586,3 +586,134 @@ def test_root_inventory_offers_foreach_map() -> None:
     paths = {option["path"] for option in options}
     assert "context.foreach" in paths
     assert "context.prior_outcome" in paths
+
+
+def _composer_inventory_workflow():
+    from wf_core import END, Edge, ForeachNode, NodeUse, SchemaRef, Workflow
+    from wf_core.models.schemas import StateSchema
+
+    return Workflow(
+        name="inventory_composer_refs",
+        input_schema=SchemaRef(type="object"),
+        state_schema=StateSchema.model_validate(
+            {
+                "type": "object",
+                "properties": {
+                    "orders": {
+                        "type": "array",
+                        "items": {"$ref": "#/$defs/Order"},
+                    },
+                },
+                "$defs": {
+                    "Order": {
+                        "type": "object",
+                        "properties": {
+                            "sku": {"type": "string"},
+                            "detail": {
+                                "anyOf": [
+                                    {"$ref": "#/$defs/Detail"},
+                                    {"type": "null"},
+                                ]
+                            },
+                            "nick": {
+                                "$ref": "#/$defs/Detail",
+                                "description": "Short display name",
+                                "properties": {"label": {"type": "string"}},
+                            },
+                        },
+                    },
+                    "Detail": {
+                        "type": "object",
+                        "properties": {"name": {"type": "string"}},
+                    },
+                },
+            }
+        ),
+        output_schema=SchemaRef(type="object"),
+        start="orders",
+        nodes=[
+            ForeachNode.model_validate(
+                {"id": "orders", "type": "foreach", "over": "state.orders", "as": "order"}
+            ),
+            NodeUse(id="body", type="node", node="noop"),
+        ],
+        edges=[
+            Edge.model_validate({"from": "orders", "outcome": "loop", "to": "body"}),
+            Edge.model_validate({"from": "body", "outcome": "ok", "to": "orders"}),
+            Edge.model_validate({"from": "orders", "outcome": "done", "to": END}),
+        ],
+    )
+
+
+def test_composer_ref_children_appear_in_authoring_inventory() -> None:
+    from wf_api.authoring_contracts import context_path_options_for_node
+
+    options = context_path_options_for_node(_composer_inventory_workflow(), "body")
+    paths = {option["path"] for option in options}
+    assert "context.foreach.orders.item.detail.name" in paths
+    assert "context.foreach.orders.item.nick.name" in paths
+    assert "context.foreach.orders.item.nick.label" in paths
+
+
+def _recursive_inventory_workflow():
+    from wf_core import END, Edge, ForeachNode, NodeUse, SchemaRef, Workflow
+    from wf_core.models.schemas import StateSchema
+
+    return Workflow(
+        name="inventory_recursive_refs",
+        input_schema=SchemaRef(type="object"),
+        state_schema=StateSchema.model_validate(
+            {
+                "type": "object",
+                "properties": {
+                    "cats": {
+                        "type": "array",
+                        "items": {"$ref": "#/$defs/Category"},
+                    },
+                },
+                "$defs": {
+                    "Category": {
+                        "type": "object",
+                        "properties": {
+                            "name": {"type": "string"},
+                            "parent": {
+                                "anyOf": [
+                                    {"$ref": "#/$defs/Category"},
+                                    {"type": "null"},
+                                ]
+                            },
+                            "children": {
+                                "type": "array",
+                                "items": {"$ref": "#/$defs/Category"},
+                            },
+                        },
+                    },
+                },
+            }
+        ),
+        output_schema=SchemaRef(type="object"),
+        start="cats",
+        nodes=[
+            ForeachNode.model_validate(
+                {"id": "cats", "type": "foreach", "over": "state.cats", "as": "cat"}
+            ),
+            NodeUse(id="body", type="node", node="noop"),
+        ],
+        edges=[
+            Edge.model_validate({"from": "cats", "outcome": "loop", "to": "body"}),
+            Edge.model_validate({"from": "body", "outcome": "ok", "to": "cats"}),
+            Edge.model_validate({"from": "cats", "outcome": "done", "to": END}),
+        ],
+    )
+
+
+def test_recursive_ref_inventory_stays_bounded() -> None:
+    from wf_api.authoring_contracts import context_path_options_for_node
+
+    options = context_path_options_for_node(_recursive_inventory_workflow(), "body")
+    paths = {option["path"] for option in options}
+    assert "context.foreach.cats.item.parent.name" in paths
+    assert "context.foreach.cats.item.children" in paths
+    # The repeated reference stays selectable but is not expanded again.
+    assert "context.foreach.cats.item.parent.parent" in paths
+    assert "context.foreach.cats.item.parent.parent.name" not in paths

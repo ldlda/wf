@@ -592,3 +592,143 @@ def test_nested_ref_item_unknown_leaf_reports_available_keys() -> None:
     assert issue is not None
     assert "'bogus'" in issue.message
     assert "available: name" in issue.message
+
+
+def _composer_ref_workflow(*, work_path: str) -> Workflow:
+    """State schema with anyOf-optional, sibling-extended, recursive shapes."""
+    workflow = _base_workflow(work_path=work_path)
+    workflow.state_schema = StateSchema.model_validate(
+        {
+            "type": "object",
+            "properties": {
+                "items": {"type": "array", "items": {"type": "string"}},
+                "orders_list": {
+                    "type": "array",
+                    "items": {"$ref": "#/$defs/Order"},
+                },
+            },
+            "$defs": {
+                "Order": {
+                    "type": "object",
+                    "properties": {
+                        "sku": {"type": "string"},
+                        "detail": {
+                            "anyOf": [
+                                {"$ref": "#/$defs/Detail"},
+                                {"type": "null"},
+                            ]
+                        },
+                        "nick": {
+                            "$ref": "#/$defs/Detail",
+                            "description": "Short display name",
+                            "properties": {"label": {"type": "string"}},
+                        },
+                    },
+                    "required": ["sku"],
+                },
+                "Detail": {
+                    "type": "object",
+                    "properties": {"name": {"type": "string"}},
+                    "required": ["name"],
+                },
+            },
+        }
+    )
+    return workflow
+
+
+def test_optional_nested_model_subpath_is_accepted() -> None:
+    from wf_core.validation import validate_workflow
+
+    workflow = _composer_ref_workflow(
+        work_path="context.foreach.orders.item.detail.name"
+    )
+    report = validate_workflow(workflow)
+    assert [
+        issue
+        for issue in report.errors
+        if issue.code == ValidationIssueCode.INVALID_CONTEXT_PATH
+    ] == []
+
+
+def test_ref_sibling_properties_extend_the_target() -> None:
+    from wf_core.validation import validate_workflow
+
+    for work_path in (
+        "context.foreach.orders.item.nick.name",
+        "context.foreach.orders.item.nick.label",
+    ):
+        workflow = _composer_ref_workflow(work_path=work_path)
+        report = validate_workflow(workflow)
+        assert [
+            issue
+            for issue in report.errors
+            if issue.code == ValidationIssueCode.INVALID_CONTEXT_PATH
+        ] == []
+
+
+def _recursive_ref_workflow(*, work_path: str) -> Workflow:
+    workflow = _base_workflow(work_path=work_path)
+    workflow.state_schema = StateSchema.model_validate(
+        {
+            "type": "object",
+            "properties": {
+                "items": {"type": "array", "items": {"type": "string"}},
+                "orders_list": {
+                    "type": "array",
+                    "items": {"$ref": "#/$defs/Category"},
+                },
+            },
+            "$defs": {
+                "Category": {
+                    "type": "object",
+                    "properties": {
+                        "name": {"type": "string"},
+                        "parent": {
+                            "anyOf": [
+                                {"$ref": "#/$defs/Category"},
+                                {"type": "null"},
+                            ]
+                        },
+                        "children": {
+                            "type": "array",
+                            "items": {"$ref": "#/$defs/Category"},
+                        },
+                    },
+                    "required": ["name"],
+                },
+            },
+        }
+    )
+    return workflow
+
+
+def test_recursive_ref_paths_validate_through_definitions() -> None:
+    from wf_core.validation import validate_workflow
+
+    for work_path in (
+        "context.foreach.orders.item.parent.name",
+        "context.foreach.orders.item.children",
+    ):
+        workflow = _recursive_ref_workflow(work_path=work_path)
+        report = validate_workflow(workflow)
+        assert [
+            issue
+            for issue in report.errors
+            if issue.code == ValidationIssueCode.INVALID_CONTEXT_PATH
+        ] == []
+
+
+def test_recursive_ref_unknown_leaf_reports_defined_keys() -> None:
+    from wf_core.validation import validate_workflow
+
+    workflow = _recursive_ref_workflow(
+        work_path="context.foreach.orders.item.parent.bogus"
+    )
+    report = validate_workflow(workflow)
+    issue = _issue(
+        report, ValidationIssueCode.INVALID_CONTEXT_PATH, "nodes[2].input[0].path"
+    )
+    assert issue is not None
+    assert "'bogus'" in issue.message
+    assert "available: children,name,parent" in issue.message

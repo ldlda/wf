@@ -8,6 +8,9 @@ from wf_core.analysis.context_scopes import (
     ContextFieldAvailability,
     context_analysis_warnings,
     context_fields_by_node,
+    normalize_definition_reference,
+    resolve_schema_reference,
+    schema_union_branches,
 )
 from wf_core.models.workflow import Workflow
 from wf_core.paths import GraphSourcePath
@@ -289,13 +292,77 @@ def _nested_item_subpaths(
     *,
     depth: int,
     prefix_parts: tuple[str, ...] = (),
+    definitions: Mapping[str, Any] | None = None,
+    active_refs: frozenset[str] = frozenset(),
 ) -> list[AuthoringPathOptionPayload]:
-    """Emit bounded object children beneath one foreach ``item`` schema."""
+    """Emit bounded object children beneath one foreach ``item`` schema.
+
+    Dangling ``$ref`` values resolve against the nearest enclosing ``$defs``
+    table (kept by recursive item schemas); a repeated reference stays
+    selectable at its own path but is not expanded again, mirroring the
+    input/state inventory. Composition keywords are a union: children come
+    from every object branch, deduplicated by path.
+    """
     from .models.authoring_contracts import AuthoringPathOptionPayload as _Payload
 
     if depth >= _MAX_LOCAL_SCHEMA_REFERENCE_DEPTH:
         return []
-    properties = item_schema.get("properties")
+    table = item_schema.get("$defs")
+    if isinstance(table, Mapping):
+        definitions = table
+    elif definitions is None:
+        definitions = {}
+    options: list[_Payload] = []
+    for branch in schema_union_branches(item_schema):
+        options.extend(
+            _branch_item_children(
+                branch,
+                owner_id,
+                availability,
+                depth=depth,
+                prefix_parts=prefix_parts,
+                definitions=definitions,
+                active_refs=active_refs,
+            )
+        )
+    seen: set[str] = set()
+    deduped: list[_Payload] = []
+    for option in options:
+        if option["path"] not in seen:
+            seen.add(option["path"])
+            deduped.append(option)
+    return deduped
+
+
+def _branch_item_children(
+    branch: Mapping[str, Any],
+    owner_id: str,
+    availability: str,
+    *,
+    depth: int,
+    prefix_parts: tuple[str, ...],
+    definitions: Mapping[str, Any],
+    active_refs: frozenset[str],
+) -> list[AuthoringPathOptionPayload]:
+    from .models.authoring_contracts import AuthoringPathOptionPayload as _Payload
+
+    if isinstance(branch.get("$ref"), str):
+        reference = normalize_definition_reference(branch["$ref"])
+        if reference in active_refs:
+            return []
+        resolved = resolve_schema_reference(definitions, branch)
+        if resolved is branch:
+            return []
+        return _nested_item_subpaths(
+            resolved,
+            owner_id,
+            availability,
+            depth=depth,
+            prefix_parts=prefix_parts,
+            definitions=definitions,
+            active_refs=active_refs | {reference},
+        )
+    properties = branch.get("properties")
     if not isinstance(properties, Mapping):
         return []
     options: list[_Payload] = []
@@ -347,6 +414,8 @@ def _nested_item_subpaths(
                 availability,
                 depth=depth + 1,
                 prefix_parts=(*prefix_parts, name),
+                definitions=definitions,
+                active_refs=active_refs,
             )
         )
     return options

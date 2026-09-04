@@ -424,3 +424,105 @@ def test_scoped_cycle_terminates_and_preserves_scoped_field_availability() -> No
     # A canonical back-edge pops the item stack, so the controller itself
     # stays in the outer region and exposes no item alias.
     assert "item" not in _field_map(workflow, "each")
+
+
+def _composer_state_schema() -> dict[str, object]:
+    return {
+        "type": "object",
+        "properties": {
+            "orders_list": {
+                "type": "array",
+                "items": {"$ref": "#/$defs/Order"},
+            },
+        },
+        "$defs": {
+            "Order": {
+                "type": "object",
+                "properties": {
+                    "sku": {"type": "string"},
+                    "nick": {
+                        "$ref": "#/$defs/Detail",
+                        "description": "Short display name",
+                        "properties": {"label": {"type": "string"}},
+                    },
+                },
+            },
+            "Detail": {
+                "type": "object",
+                "properties": {"name": {"type": "string"}},
+            },
+        },
+    }
+
+
+def _composer_workflow() -> Workflow:
+    return _workflow(
+        start="orders",
+        nodes=[
+            _foreach("orders", over="state.orders_list", alias="order"),
+            _node("body"),
+        ],
+        edges=[
+            {"from": "orders", "outcome": "loop", "to": "body"},
+            {"from": "body", "outcome": "ok", "to": "orders"},
+            {"from": "orders", "outcome": "done", "to": END},
+        ],
+        state_schema=_composer_state_schema(),
+    )
+
+
+def test_ref_sibling_metadata_survives_inlining() -> None:
+    from wf_core.analysis.context_scopes import context_schema_for_node
+
+    schema = context_schema_for_node(_composer_workflow(), "body")
+    item = schema["properties"]["foreach"]["properties"]["orders"]["properties"][
+        "item"
+    ]
+    assert set(item["properties"]) == {"sku", "nick"}
+    nick = item["properties"]["nick"]
+    assert nick["description"] == "Short display name"
+    assert set(nick["properties"]) == {"name", "label"}
+
+
+def test_recursive_item_schema_carries_definitions() -> None:
+    from wf_core.analysis.context_scopes import context_schema_for_node
+
+    workflow = _workflow(
+        start="cats",
+        nodes=[
+            _foreach("cats", over="state.cats", alias="cat"),
+            _node("body"),
+        ],
+        edges=[
+            {"from": "cats", "outcome": "loop", "to": "body"},
+            {"from": "body", "outcome": "ok", "to": "cats"},
+            {"from": "cats", "outcome": "done", "to": END},
+        ],
+        state_schema={
+            "type": "object",
+            "properties": {
+                "cats": {
+                    "type": "array",
+                    "items": {"$ref": "#/$defs/Category"},
+                },
+            },
+            "$defs": {
+                "Category": {
+                    "type": "object",
+                    "properties": {
+                        "name": {"type": "string"},
+                        "parent": {
+                            "anyOf": [
+                                {"$ref": "#/$defs/Category"},
+                                {"type": "null"},
+                            ]
+                        },
+                    },
+                },
+            },
+        },
+    )
+    schema = context_schema_for_node(workflow, "body")
+    item = schema["properties"]["foreach"]["properties"]["cats"]["properties"]["item"]
+    # The cut recursion keeps its definitions table instead of a bare $ref.
+    assert item["$defs"]["Category"]["properties"]["name"] == {"type": "string"}

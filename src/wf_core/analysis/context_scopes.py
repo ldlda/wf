@@ -385,7 +385,14 @@ def _foreach_item_schema(
         resolved_items = _resolve_local_reference(document, items)
     except ValueError:
         return {}
-    return deepcopy(dict(_inline_local_refs(document, resolved_items)))
+    result = dict(_inline_local_refs(document, resolved_items))
+    if _has_dangling_ref(result):
+        # Cut recursions keep their definitions table so downstream walkers
+        # can resolve through them instead of meeting a bare `$ref`.
+        definitions = _collect_definitions(document)
+        if definitions:
+            result["$defs"] = definitions
+    return deepcopy(result)
 
 
 def _schema_at_path(
@@ -478,6 +485,133 @@ def _schema_document(
     return {}
 
 
+def normalize_definition_reference(reference: str) -> str:
+    """Normalize legacy ``#/definitions/`` refs to ``#/$defs/`` form."""
+    if reference.startswith("#/definitions/"):
+        return "#/$defs/" + reference.removeprefix("#/definitions/")
+    return reference
+
+
+def _merge_ref_siblings(
+    target: Mapping[str, object], node: Mapping[str, object]
+) -> dict[str, object]:
+    """Merge ``$ref`` siblings over the resolved target (2020-12 conjunction).
+
+    Scalar siblings (``description``, ``title``) override; ``properties`` union
+    per key with the sibling winning; ``required`` unions. ``$ref`` itself is
+    consumed unless the target chains to another reference.
+    """
+    merged = dict(target)
+    for key, value in node.items():
+        if key == "$ref":
+            continue
+        existing_properties = merged.get("properties")
+        if (
+            key == "properties"
+            and isinstance(value, Mapping)
+            and isinstance(existing_properties, Mapping)
+        ):
+            merged["properties"] = {**existing_properties, **value}
+            continue
+        existing_required = merged.get("required")
+        if (
+            key == "required"
+            and isinstance(value, list)
+            and isinstance(existing_required, list)
+        ):
+            merged["required"] = [
+                *existing_required,
+                *[item for item in value if item not in existing_required],
+            ]
+            continue
+        merged[key] = value
+    return merged
+
+
+def _lookup_definition(
+    definitions: Mapping[str, object], reference: str
+) -> Mapping[str, object] | None:
+    """Walk a definition pointer beneath a merged definitions table, leniently.
+
+    Only definition-table pointers resolve here; anything else returns
+    ``None`` so callers fail closed.
+    """
+    normalized = normalize_definition_reference(reference)
+    if not normalized.startswith("#/$defs/"):
+        return None
+    current: object = definitions
+    for raw_part in normalized.removeprefix("#/$defs/").split("/"):
+        part = raw_part.replace("~1", "/").replace("~0", "~")
+        if not isinstance(current, Mapping) or part not in current:
+            return None
+        current = current[part]
+    return current if isinstance(current, Mapping) else None
+
+
+def resolve_schema_reference(
+    definitions: Mapping[str, object], node: Mapping[str, object]
+) -> Mapping[str, object]:
+    """Leniently resolve one node's ``$ref`` chain against a definitions table.
+
+    Unresolvable, external, or cyclic references return ``node`` unchanged so
+    schema walkers fail closed. Sibling constraints merge like the strict
+    resolver.
+    """
+    current = node
+    seen: set[str] = set()
+    while True:
+        raw = current.get("$ref")
+        if not isinstance(raw, str):
+            return current
+        reference = normalize_definition_reference(raw)
+        if reference in seen or len(seen) >= _MAX_LOCAL_SCHEMA_REFERENCE_DEPTH:
+            return node
+        seen.add(reference)
+        target = _lookup_definition(definitions, reference)
+        if target is None:
+            return node
+        current = _merge_ref_siblings(target, current)
+
+
+def schema_union_branches(node: Mapping[str, object]) -> list[Mapping[str, object]]:
+    """Return object-candidate branches: the node plus anyOf/oneOf/allOf members.
+
+    Composition keywords are a union approximation for path walking: a path is
+    readable when some branch declares it. This matches ``Optional[X]``
+    (pydantic ``anyOf``) and subclass ``allOf`` shapes; exotic intersections
+    may over-accept, which path allowlisting prefers to false rejection.
+    """
+    branches = [node]
+    for key in ("anyOf", "oneOf", "allOf"):
+        members = node.get(key)
+        if isinstance(members, list):
+            branches.extend(member for member in members if isinstance(member, Mapping))
+    return branches
+
+
+def _subtree_references(node: object) -> set[str]:
+    """Collect normalized ``$ref`` strings in a subtree (bounded scan)."""
+    found: set[str] = set()
+    seen: set[int] = set()
+    stack: list[object] = [node]
+    while stack:
+        current = stack.pop()
+        if isinstance(current, Mapping):
+            if id(current) in seen:
+                continue
+            seen.add(id(current))
+            reference = current.get("$ref")
+            if isinstance(reference, str):
+                found.add(normalize_definition_reference(reference))
+            stack.extend(current.values())
+        elif isinstance(current, list):
+            if id(current) in seen:
+                continue
+            seen.add(id(current))
+            stack.extend(current)
+    return found
+
+
 def _inline_local_refs(
     root_schema: Mapping[str, object],
     candidate: Mapping[str, object],
@@ -486,11 +620,12 @@ def _inline_local_refs(
 
     :func:`_foreach_item_schema` detaches the resolved item schema from its
     source document, which would strand nested ``$ref`` pointers whose
-    ``$defs`` live at the document root. Inlining here keeps every downstream
-    schema walker (validation, authoring inventory) working on plain
-    ``properties`` without threading definition tables through per-node
-    schemas. Cyclic or otherwise unresolvable refs are left in place:
-    downstream walkers already treat a bare ``$ref`` as fail-closed.
+    ``$defs`` live at the document root. Inlining here resolves the
+    acyclic majority (including ``anyOf``/``allOf``/``oneOf`` composition and
+    ``$ref`` siblings) so downstream walkers mostly see plain ``properties``.
+    Cut recursions keep a normalized dangling ``$ref``; their definitions
+    table travels with the item schema (see :func:`_foreach_item_schema`) for
+    ref-aware walkers.
     """
 
     def inline(node: object, active: frozenset[str], depth: int) -> object:
@@ -502,13 +637,27 @@ def _inline_local_refs(
             return node
         reference = node.get("$ref")
         if isinstance(reference, str):
-            if reference in active:
-                return node
+            lookup = normalize_definition_reference(reference)
+            if lookup in active:
+                rewritten = dict(node)
+                rewritten["$ref"] = lookup
+                return rewritten
             try:
                 resolved = _resolve_local_reference(root_schema, node)
             except ValueError:
-                return node
-            return inline(resolved, active | {reference}, depth + 1)
+                rewritten = dict(node)
+                if lookup != reference:
+                    rewritten["$ref"] = lookup
+                return rewritten
+            target_refs = _subtree_references(resolved)
+            if lookup in target_refs or not target_refs.isdisjoint(active):
+                # Recursive shape: expanding would re-enter this reference or
+                # an ancestor, so keep it dangling and let the attached
+                # definitions table serve ref-aware walkers instead.
+                rewritten = dict(node)
+                rewritten["$ref"] = lookup
+                return rewritten
+            return inline(resolved, active | {lookup}, depth + 1)
         inlined = dict(node)
         properties = inlined.get("properties")
         if isinstance(properties, Mapping):
@@ -524,6 +673,10 @@ def _inline_local_refs(
         prefix = inlined.get("prefixItems")
         if isinstance(prefix, list):
             inlined["prefixItems"] = inline(prefix, active, depth + 1)
+        for key in ("anyOf", "oneOf", "allOf"):
+            members = inlined.get(key)
+            if isinstance(members, list):
+                inlined[key] = [inline(member, active, depth + 1) for member in members]
         return inlined
 
     inlined = inline(candidate, frozenset(), 0)
@@ -532,11 +685,49 @@ def _inline_local_refs(
     return inlined
 
 
+def _has_dangling_ref(node: object) -> bool:
+    """Return whether any nested mapping still carries a string ``$ref``."""
+    seen: set[int] = set()
+    stack: list[object] = [node]
+    while stack:
+        current = stack.pop()
+        if isinstance(current, Mapping):
+            if id(current) in seen:
+                continue
+            seen.add(id(current))
+            if isinstance(current.get("$ref"), str):
+                return True
+            stack.extend(current.values())
+        elif isinstance(current, list):
+            if id(current) in seen:
+                continue
+            seen.add(id(current))
+            stack.extend(current)
+    return False
+
+
+def _collect_definitions(document: Mapping[str, object]) -> dict[str, object]:
+    """Merge a document's ``definitions``/``$defs`` tables (``$defs`` wins)."""
+    collected: dict[str, object] = {}
+    legacy = document.get("definitions")
+    if isinstance(legacy, Mapping):
+        collected.update(legacy)
+    modern = document.get("$defs")
+    if isinstance(modern, Mapping):
+        collected.update(modern)
+    return collected
+
+
 def _resolve_local_reference(
     root_schema: Mapping[str, object],
     candidate: Mapping[str, object],
 ) -> Mapping[str, object]:
-    """Resolve bounded repository-local refs without becoming a full resolver."""
+    """Resolve bounded repository-local refs without becoming a full resolver.
+
+    ``$ref`` siblings merge over the resolved target (JSON Schema 2020-12
+    conjunction, bounded to scalar override plus ``properties``/``required``
+    union); the merged result keeps resolving when the target chains.
+    """
     current = candidate
     seen: set[str] = set()
     while "$ref" in current:
@@ -563,5 +754,5 @@ def _resolve_local_reference(
             resolved = resolved[part]
         if not isinstance(resolved, Mapping):
             raise ValueError(f"schema reference {reference!r} is not an object")
-        current = resolved
+        current = _merge_ref_siblings(resolved, current)
     return current
