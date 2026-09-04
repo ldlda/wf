@@ -82,6 +82,33 @@ def _run_with(*frames: ExecutionFrame) -> RunState:
     return run
 
 
+def _nested_foreach_workflow() -> Workflow:
+    return _workflow(
+        start="outer",
+        nodes=[
+            _foreach("outer", alias="outer_item"),
+            _foreach("inner", alias="inner_item", over="state.inner_items"),
+            _node("inner_body"),
+            _node("after_inner"),
+        ],
+        edges=[
+            {"from": "outer", "outcome": "loop", "to": "inner"},
+            {"from": "inner", "outcome": "loop", "to": "inner_body"},
+            {"from": "inner", "outcome": "done", "to": "after_inner"},
+            {"from": "inner_body", "outcome": "ok", "to": "inner"},
+            {"from": "after_inner", "outcome": "ok", "to": "outer"},
+            {"from": "outer", "outcome": "done", "to": END},
+        ],
+        state_schema={
+            "type": "object",
+            "properties": {
+                "items": {"type": "array", "items": {"type": "string"}},
+                "inner_items": {"type": "array", "items": {"type": "integer"}},
+            },
+        },
+    )
+
+
 def test_frame_context_view_uses_standard_and_foreach_contract_keys() -> None:
     root = ExecutionFrame(
         id="root",
@@ -280,30 +307,7 @@ def test_region_conflicted_node_receives_no_guaranteed_foreach_fields() -> None:
 
 
 def test_nested_foreach_replaces_inner_scope_and_restores_outer_scope() -> None:
-    workflow = _workflow(
-        start="outer",
-        nodes=[
-            _foreach("outer", alias="outer_item"),
-            _foreach("inner", alias="inner_item", over="state.inner_items"),
-            _node("inner_body"),
-            _node("after_inner"),
-        ],
-        edges=[
-            {"from": "outer", "outcome": "loop", "to": "inner"},
-            {"from": "inner", "outcome": "loop", "to": "inner_body"},
-            {"from": "inner", "outcome": "done", "to": "after_inner"},
-            {"from": "inner_body", "outcome": "ok", "to": "inner"},
-            {"from": "after_inner", "outcome": "ok", "to": "outer"},
-            {"from": "outer", "outcome": "done", "to": END},
-        ],
-        state_schema={
-            "type": "object",
-            "properties": {
-                "items": {"type": "array", "items": {"type": "string"}},
-                "inner_items": {"type": "array", "items": {"type": "integer"}},
-            },
-        },
-    )
+    workflow = _nested_foreach_workflow()
 
     inner = _field_map(workflow, "inner_body")
     after_inner = _field_map(workflow, "after_inner")
@@ -326,30 +330,7 @@ def test_nested_foreach_replaces_inner_scope_and_restores_outer_scope() -> None:
 
 
 def test_inner_completion_schema_restores_outer_structured_entry() -> None:
-    workflow = _workflow(
-        start="outer",
-        nodes=[
-            _foreach("outer", alias="outer_item"),
-            _foreach("inner", alias="inner_item", over="state.inner_items"),
-            _node("inner_body"),
-            _node("after_inner"),
-        ],
-        edges=[
-            {"from": "outer", "outcome": "loop", "to": "inner"},
-            {"from": "inner", "outcome": "loop", "to": "inner_body"},
-            {"from": "inner", "outcome": "done", "to": "after_inner"},
-            {"from": "inner_body", "outcome": "ok", "to": "inner"},
-            {"from": "after_inner", "outcome": "ok", "to": "outer"},
-            {"from": "outer", "outcome": "done", "to": END},
-        ],
-        state_schema={
-            "type": "object",
-            "properties": {
-                "items": {"type": "array", "items": {"type": "string"}},
-                "inner_items": {"type": "array", "items": {"type": "integer"}},
-            },
-        },
-    )
+    workflow = _nested_foreach_workflow()
     after_inner = _field_map(workflow, "after_inner")
     foreach_schema = after_inner["foreach"].schema
     assert set(foreach_schema["properties"]) == {"outer"}
@@ -646,16 +627,17 @@ def test_ref_sibling_constraints_remain_conjunctive() -> None:
                     "type": "array",
                     "items": {
                         "$ref": "#/$defs/ShortName",
-                        "maxLength": 10,
+                        "maxLength": 3,
                     },
                 },
             },
-            "$defs": {"ShortName": {"type": "string", "maxLength": 5}},
+            "$defs": {"ShortName": {"type": "string", "pattern": "^[A-Z]+$"}},
         },
     )
     schema = context_schema_for_node(workflow, "body")
     item = schema["properties"]["foreach"]["properties"]["names"]["properties"]["item"]
     validator = Draft202012Validator(item)
 
-    assert validator.is_valid("12345")
-    assert not validator.is_valid("123456")
+    assert validator.is_valid("ABC")
+    assert not validator.is_valid("ABCD")  # Sibling maxLength still applies.
+    assert not validator.is_valid("abc")  # Referenced pattern still applies.

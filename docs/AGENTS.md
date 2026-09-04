@@ -45,11 +45,16 @@ docstring at the code seam. Future agents usually encounter code first.
 Run Markdown lint on the exact files you changed:
 
 ```powershell
-pnpx markdownlint-cli2 'docs/AGENTS.md' 'docs/current_roadmap.md'
+$changedMarkdown = @(
+    'docs/path/to/changed-file.md'
+    'skills/path/to/another-changed-file.md'
+)
+pnpx markdownlint-cli2 $changedMarkdown
 ```
 
-Use narrow lint or fix targets. Broad autofixes can rewrite historical files or
-unrelated user changes.
+Replace the example paths with every Markdown file changed in the current
+worktree. Use narrow lint or fix targets. Broad autofixes can rewrite
+historical files or unrelated user changes.
 
 Follow CommonMark list indentation. When a Markdown example contains fenced
 code, wrap the outer example in a fence of four or more backticks.

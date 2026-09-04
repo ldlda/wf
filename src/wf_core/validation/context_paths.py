@@ -79,7 +79,7 @@ def validate_context_paths(
             # Context-rooted `over` paths reach this pass; the old
             # input/state-only check stays permissive for them.
             if node.over.root == "context":
-                _validate_one_context_path(
+                _validate_context_foreach_source(
                     node.over, f"nodes[{idx}].over", node.id, schema, report
                 )
         elif isinstance(node, InterruptNode):
@@ -194,6 +194,30 @@ def _validate_one_context_path(
             location,
             f"invalid context path {str(path)!r} at {node_id or location!r}: "
             f"unknown segment {failing!r}{listed}",
+        )
+
+
+def _validate_context_foreach_source(
+    path: GraphSourcePath,
+    location: str,
+    node_id: str,
+    schema: ContextSchema | None,
+    report: ValidationReport,
+) -> None:
+    """Require an existing context path to declare an array source.
+
+    Missing paths keep the more precise ``INVALID_CONTEXT_PATH`` diagnostic;
+    this adds the foreach-specific error only after the path resolves.
+    """
+    _validate_one_context_path(path, location, node_id, schema, report)
+    if schema is None:
+        return
+    source = SchemaNavigator(schema).at_path(path.parts)
+    if source is not None and not source.is_array():
+        report.add(
+            ValidationIssueCode.INVALID_FOREACH_SOURCE,
+            location,
+            f"foreach source {str(path)!r} must resolve to an array",
         )
 
 

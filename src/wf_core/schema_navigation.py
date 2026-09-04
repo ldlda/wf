@@ -115,11 +115,7 @@ class SchemaView:
         """Return the first declared homogeneous item schema for an array."""
         for cursor in self._cursors:
             for branch, _ in _structural_branches(cursor, frozenset()):
-                schema_type = branch.contents.get("type")
-                is_array = schema_type == "array" or (
-                    isinstance(schema_type, list) and "array" in schema_type
-                )
-                if not is_array:
+                if not _declares_array(branch.contents):
                     continue
                 child = branch.child(branch.contents.get("items"))
                 if child is not None:
@@ -127,8 +123,16 @@ class SchemaView:
         return None
 
     def is_array(self) -> bool:
-        """Return whether any structural branch declares an array."""
-        return self.array_items() is not None
+        """Return whether any structural branch declares an array type.
+
+        JSON Schema permits arrays without an ``items`` keyword; those are
+        still arrays whose element schema is unconstrained.
+        """
+        return any(
+            _declares_array(branch.contents)
+            for cursor in self._cursors
+            for branch, _ in _structural_branches(cursor, frozenset())
+        )
 
     def standalone_schema(self) -> dict[str, Any]:
         """Detach this view as a valid Draft 2020-12 schema resource.
@@ -206,6 +210,13 @@ class SchemaNavigator:
                 tuple(cursor for match in matches for cursor in match._cursors)
             )
         return None, ""
+
+
+def _declares_array(schema: JsonSchema) -> bool:
+    schema_type = schema.get("type")
+    return schema_type == "array" or (
+        isinstance(schema_type, list) and "array" in schema_type
+    )
 
 
 def _structural_branches(

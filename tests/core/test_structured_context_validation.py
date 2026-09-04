@@ -96,6 +96,61 @@ def test_active_structured_foreach_item_path_is_valid() -> None:
     )
 
 
+def test_context_foreach_source_rejects_declared_scalar() -> None:
+    """A readable context path is not iterable merely because it exists."""
+    from wf_core.validation import validate_workflow
+
+    workflow = _base_workflow()
+    workflow.nodes[1] = _foreach(
+        "orders",
+        over="context.foreach.customers.index",
+        alias="order",
+    )
+
+    report = validate_workflow(workflow)
+
+    assert (
+        _issue(
+            report,
+            ValidationIssueCode.INVALID_FOREACH_SOURCE,
+            "nodes[1].over",
+        )
+        is not None
+    )
+
+
+def test_context_foreach_source_accepts_array_without_item_schema() -> None:
+    """An array remains iterable when its element type is unconstrained."""
+    from wf_core.validation import validate_workflow
+
+    workflow = _base_workflow()
+    workflow.state_schema = StateSchema.model_validate(
+        {
+            "type": "object",
+            "properties": {
+                "items": {"type": "array", "items": {"type": "array"}},
+                "orders_list": {"type": "array"},
+            },
+        }
+    )
+    workflow.nodes[1] = _foreach(
+        "orders",
+        over="context.foreach.customers.item",
+        alias="order",
+    )
+
+    report = validate_workflow(workflow)
+
+    assert (
+        _issue(
+            report,
+            ValidationIssueCode.INVALID_FOREACH_SOURCE,
+            "nodes[1].over",
+        )
+        is None
+    )
+
+
 def test_nested_body_can_read_outer_and_inner_entries() -> None:
     from wf_core.validation import validate_workflow
 
@@ -267,8 +322,6 @@ def test_all_model_surfaces_reject_missing_foreach_id() -> None:
 
     # Foreach over
     workflow = _base_workflow()
-    foreach = workflow.nodes[1]
-    assert isinstance(foreach, ForeachNode)
     workflow.nodes[1] = ForeachNode.model_validate(
         {"id": "orders", "type": "foreach", "over": bad, "as": "order"}
     )
