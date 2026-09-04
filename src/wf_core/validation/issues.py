@@ -32,6 +32,8 @@ class ValidationIssueCode(StrEnum):
     INVALID_FOREACH_TERMINAL = "invalid_foreach_terminal"
     EMPTY_FOREACH_BODY = "empty_foreach_body"
     FOREACH_BODY_NO_RETURN = "foreach_body_no_return"
+    INVALID_CONTEXT_PATH = "invalid_context_path"
+    FOREACH_CONTEXT_ALIAS_CONFLICT = "foreach_context_alias_conflict"
 
 
 @dataclass(slots=True)

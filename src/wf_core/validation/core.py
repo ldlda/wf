@@ -28,10 +28,14 @@ def validate_workflow(workflow: Workflow) -> ValidationReport:
     """Coordinate structural validation including foreach control regions.
 
     Ordinary node/edge checks run first; the pure control-region analysis runs
-    once afterwards and its diagnostics are translated verbatim. No second
-    graph traversal lives inside validation.
+    once afterwards and its diagnostics are translated verbatim. The same
+    analysis feeds structured context-schema construction and the
+    location-aware context-path pass, so no second traversal hides inside
+    context helpers. No second graph traversal lives inside validation.
     """
+    from wf_core.analysis.context_scopes import context_schemas_by_node
     from wf_core.analysis.control_regions import analyze_control_regions
+    from wf_core.validation.context_paths import validate_context_paths
 
     report = ValidationReport()
 
@@ -41,12 +45,19 @@ def validate_workflow(workflow: Workflow) -> ValidationReport:
     _validate_start(workflow, nodes_by_id, report)
     outgoing = _validate_edges(workflow, nodes_by_id, node_defs, report)
     _validate_reachable_outcomes(workflow, nodes_by_id, node_defs, outgoing, report)
-    for issue in analyze_control_regions(workflow).issues:
+    analysis = analyze_control_regions(workflow)
+    for issue in analysis.issues:
         report.add(
             ValidationIssueCode(issue.kind.value),
             issue.path,
             issue.message,
         )
+    context_schemas = context_schemas_by_node(
+        workflow, control_regions=analysis
+    )
+    validate_context_paths(
+        workflow, context_schemas=context_schemas, report=report
+    )
 
     return report
 
