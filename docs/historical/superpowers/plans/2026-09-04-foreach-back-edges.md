@@ -19,7 +19,7 @@ back-edge as item completion.
 pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
 
 **Spec:**
-[`docs/superpowers/specs/2026-09-04-foreach-back-edge-design.md`](../../superpowers/specs/2026-09-04-foreach-back-edge-design.md)
+[`docs/superpowers/specs/2026-09-04-foreach-back-edge-design.md`](../../../superpowers/specs/2026-09-04-foreach-back-edge-design.md)
 
 ## Global Constraints
 

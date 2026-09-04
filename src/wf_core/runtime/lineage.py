@@ -89,6 +89,45 @@ def commit_patch_for_frame(
     return {}
 
 
+def commit_foreach_aware_patch(
+    run: RunState, frame: ExecutionFrame, patch: StatePatch
+) -> dict[str, Any]:
+    """Commit one write patch with foreach-aware routing.
+
+    Ordinary frames commit (or buffer) through their own lineage. Serial
+    item writes commit through the parent scope so they land in root state;
+    concurrent item writes stay buffered in the item lineage for the barrier
+    to merge. Malformed ownership, missing parents, and closed or
+    superseded activations fail closed.
+    """
+    from wf_core.runtime.foreach_state import (
+        item_frame_owner,
+        require_foreach_activation,
+    )
+
+    owner = item_frame_owner(frame)
+    if owner is None:
+        return commit_patch_for_frame(run, frame, patch)
+    parent_frame = run.frames.get(owner.parent_frame_id)
+    if parent_frame is None:
+        raise WorkflowExecutionError(
+            "foreach item state references missing parent frame "
+            f"{owner.parent_frame_id!r} for child frame {frame.id!r}"
+        )
+    activation = require_foreach_activation(
+        parent_frame, owner.foreach_node_id, owner.activation_id
+    )
+    if activation.barrier.mode == "concurrent":
+        append_lineage_writes(
+            run,
+            scope_id=frame.scope_id,
+            lineage_id=frame.lineage_id,
+            writes=patch.writes,
+        )
+        return {}
+    return commit_patch_for_frame(run, parent_frame, patch)
+
+
 def scope_state_for_frame(run: RunState, frame: ExecutionFrame) -> dict[str, Any]:
     """Return the committed state root for the frame's runtime scope."""
     scope = run.scopes.get(frame.scope_id)

@@ -9,6 +9,7 @@ from wf_core import (
     ConditionNode,
     Edge,
     ForeachNode,
+    InterruptNode,
     NodeDef,
     NodeUse,
     ReducerRef,
@@ -19,6 +20,8 @@ from wf_core import (
     Workflow,
     WorkflowExecutionError,
     execute_workflow,
+    execute_workflow_async,
+    resume_workflow_async,
 )
 from wf_core.run_state import ExecutionFrame, FrameStatus, RunState, RunStatus
 from wf_core.runtime.foreach_state import item_frame_owner
@@ -740,6 +743,67 @@ def test_concurrent_subgraph_item_returns_through_owner() -> None:
 
     assert run.status == RunStatus.COMPLETED
     assert sorted(run.state["seen"]) == ["a", "b"]
+
+
+async def test_serial_interrupt_resume_commits_answer_to_parent_state() -> None:
+    """A serial item resume must land in parent state, not the child lineage."""
+    foreach = ForeachNode.model_validate(
+        {
+            "id": "each",
+            "type": "foreach",
+            "over": "state.items",
+            "as": "item",
+            "mode": "serial",
+        }
+    )
+    workflow = Workflow(
+        name="foreach_serial_interrupt",
+        input_schema=SchemaRef(type="object", properties={"items": {"type": "array"}}),
+        state_schema=StateSchema.from_field_map(
+            {
+                "items": StateField(type="array"),
+                "answers": StateField(
+                    type="array", reducer=ReducerRef(name="wf.std.append")
+                ),
+            }
+        ),
+        output_schema=SchemaRef(
+            type="object", properties={"answers": {"type": "array"}}
+        ),
+        node_defs=[],
+        start="each",
+        nodes=[
+            foreach,
+            InterruptNode.model_validate(
+                {
+                    "id": "ask",
+                    "type": "interrupt",
+                    "kind": "approval",
+                    "request": [{"target": "item", "path": "context.item"}],
+                    "resume": [{"source": "answer", "target": "state.answers"}],
+                }
+            ),
+        ],
+        edges=[
+            Edge.model_validate({"from": "each", "outcome": "loop", "to": "ask"}),
+            Edge.model_validate({"from": "ask", "outcome": "submitted", "to": "each"}),
+            Edge.model_validate({"from": "each", "outcome": "done", "to": END}),
+        ],
+    )
+
+    run = await execute_workflow_async(workflow, {"items": ["a", "b"]}, {})
+    assert run.status == RunStatus.INTERRUPTED
+
+    resumed = await resume_workflow_async(
+        workflow, run, {}, resume_payload={"answer": "a"}
+    )
+    assert resumed.status == RunStatus.INTERRUPTED
+
+    finished = await resume_workflow_async(
+        workflow, resumed, {}, resume_payload={"answer": "b"}
+    )
+    assert finished.status == RunStatus.COMPLETED
+    assert finished.state["answers"] == ["a", "b"]
 
 
 def test_nonlocal_runtime_return_fails_closed_when_validation_is_bypassed() -> None:

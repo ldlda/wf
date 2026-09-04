@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from copy import deepcopy
+
 import pytest
 
 from wf_core.errors import WorkflowExecutionError
@@ -290,3 +292,51 @@ def test_pending_item_result_requires_lineage_for_success() -> None:
                 "lineage_id": None,
             }
         )
+
+
+def test_pending_item_result_rejects_error_on_success() -> None:
+    with pytest.raises(WorkflowExecutionError, match="must not carry an error"):
+        PendingItemResult.from_metadata(
+            {
+                "index": 0,
+                "frame_id": "child",
+                "status": "succeeded",
+                "lineage_id": "root:each#0[0]",
+                "error": {
+                    "index": 0,
+                    "frame_id": "child",
+                    "node_id": "work",
+                    "error_type": "ValueError",
+                    "message": "bad",
+                },
+            }
+        )
+
+
+def test_pending_item_result_requires_error_for_failure() -> None:
+    with pytest.raises(WorkflowExecutionError, match="requires an error"):
+        PendingItemResult.from_metadata(
+            {
+                "index": 0,
+                "frame_id": "child",
+                "status": "failed",
+                "lineage_id": None,
+                "error": None,
+            }
+        )
+
+
+def test_pending_item_result_rejects_index_key_mismatch() -> None:
+    frame = ExecutionFrame(id="root", kind="root", node_id="each")
+    activation = load_or_begin_foreach_activation(frame, "each", mode="concurrent")
+    activation.barrier.add_success_patch(
+        index=0, frame_id="child-0", lineage_id="root:each#0[0]"
+    )
+    save_foreach_activation(frame, activation)
+    raw = deepcopy(frame.metadata["foreach_activations"])
+    raw["each"]["active"]["barrier"]["pending_results"] = {
+        "7": raw["each"]["active"]["barrier"]["pending_results"]["0"]
+    }
+
+    with pytest.raises(WorkflowExecutionError, match="index mismatch"):
+        ForeachBarrierState.from_metadata(raw["each"]["active"]["barrier"])

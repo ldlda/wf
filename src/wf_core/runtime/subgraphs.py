@@ -17,7 +17,7 @@ from wf_core.run_state import (
     StepExecutionResult,
 )
 from wf_core.runtime.input_bindings import resolve_step_input_bindings
-from wf_core.runtime.lineage import commit_patch_for_frame
+from wf_core.runtime.lineage import commit_foreach_aware_patch
 from wf_core.runtime.ops.frames import frame_context_values
 from wf_core.runtime.ops.merges import ReducerDefinition
 from wf_core.runtime.ops.overlays import state_view_for_frame
@@ -236,31 +236,10 @@ def _finish_subgraph(
         reducers=reducers,
         missing_field_message="subgraph output did not include required field {field}",
     )
-    # Match node execution: serial item writes commit through the parent
-    # scope so top-level serial subgraphs land in root state; concurrent
-    # item writes stay buffered in the item lineage for barrier merge.
-    from wf_core.runtime.foreach_state import (
-        item_frame_owner,
-        require_foreach_activation,
-    )
-
-    commit_frame = frame
-    owner = item_frame_owner(frame)
-    if owner is not None:
-        parent_frame = run.frames.get(owner.parent_frame_id)
-        if parent_frame is None:
-            raise WorkflowExecutionError(
-                "subgraph state references missing parent frame "
-                f"{owner.parent_frame_id!r} for child frame {frame.id!r}"
-            )
-        # Fail closed when the child names a closed or superseded
-        # activation: its output must not land in a later visit's state.
-        foreach_activation = require_foreach_activation(
-            parent_frame, owner.foreach_node_id, owner.activation_id
-        )
-        if foreach_activation.barrier.mode == "serial":
-            commit_frame = parent_frame
-    state_changes = commit_patch_for_frame(run, commit_frame, patch)
+    # Foreach-aware routing (root, serial parent, concurrent lineage) is
+    # owned by the shared helper so subgraph output commits exactly like
+    # node output. Closed or superseded activations fail closed inside.
+    state_changes = commit_foreach_aware_patch(run, frame, patch)
     return StepExecutionResult(
         outcome=child_outcome,
         resolved_input=activation.child_input,

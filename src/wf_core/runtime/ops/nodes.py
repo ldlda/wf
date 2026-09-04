@@ -15,14 +15,9 @@ from wf_core.run_state import (
     RuntimeContext,
     StepExecutionResult,
 )
-from wf_core.runtime.foreach_state import (
-    item_frame_owner,
-    require_foreach_activation,
-)
 from wf_core.runtime.input_bindings import resolve_step_input_bindings
 from wf_core.runtime.lineage import (
-    append_lineage_writes,
-    commit_patch_for_frame,
+    commit_foreach_aware_patch,
     scope_input_for_frame,
 )
 from wf_core.runtime.ops.frames import frame_context_values
@@ -115,33 +110,10 @@ def _finalize_node_execution(
         state_view,
         reducers=reducers,
     )
-    owner = item_frame_owner(frame)
-    if owner is None:
-        state_changes = commit_patch_for_frame(run, frame, patch)
-    else:
-        parent_frame = run.frames.get(owner.parent_frame_id)
-        if parent_frame is None:
-            raise WorkflowExecutionError(
-                "foreach item state references missing parent frame "
-                f"{owner.parent_frame_id!r} for child frame {frame.id!r}"
-            )
-        # Fail closed when the child names a closed or superseded activation:
-        # its writes must not land in a later visit's barrier.
-        activation = require_foreach_activation(
-            parent_frame, owner.foreach_node_id, owner.activation_id
-        )
-        if activation.barrier.mode == "concurrent":
-            # Concurrent writes stay buffered in the child lineage; the owner
-            # back-edge registers the completed item with the barrier.
-            append_lineage_writes(
-                run,
-                scope_id=frame.scope_id,
-                lineage_id=frame.lineage_id,
-                writes=patch.writes,
-            )
-            state_changes = {}
-        else:
-            state_changes = commit_patch_for_frame(run, parent_frame, patch)
+    # Foreach-aware routing (root, serial parent, concurrent lineage) is
+    # owned by the shared helper so every operation commits the same way.
+    # Closed or superseded activations fail closed inside.
+    state_changes = commit_foreach_aware_patch(run, frame, patch)
     return StepExecutionResult(
         outcome=result.outcome,
         resolved_input=resolved_input,

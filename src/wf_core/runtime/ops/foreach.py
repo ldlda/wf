@@ -341,13 +341,18 @@ def _finish_concurrent_foreach(
     reducers: Mapping[str, ReducerDefinition] | None = None,
 ) -> RunState:
     barrier = activation.barrier
-    error_records = [
-        result.error.to_metadata()
-        for result in sorted(
-            barrier.pending_results.values(), key=lambda item: item.index
-        )
-        if result.status == "failed" and result.error is not None
-    ]
+    # Coherence is enforced at load, but re-check here: a failed result
+    # without an error must never silent-commit as `done`.
+    error_records = []
+    for result in sorted(barrier.pending_results.values(), key=lambda item: item.index):
+        if result.status != "failed":
+            continue
+        if result.error is None:
+            raise WorkflowExecutionError(
+                f"foreach item result for index {result.index!r} is failed "
+                "but carries no error"
+            )
+        error_records.append(result.error.to_metadata())
     outcome = "completed_with_errors" if error_records else "done"
     next_node_id = index.next_node_id(frame.node_id, outcome)
     success_patches = [

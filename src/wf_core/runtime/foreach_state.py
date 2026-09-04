@@ -112,17 +112,32 @@ class PendingItemResult:
                 f"malformed pending foreach result missing {exc.args[0]!r}"
             ) from exc
         lineage_id = raw.get("lineage_id")
+        raw_error = raw.get("error")
         if not isinstance(index, int) or index < 0:
             raise WorkflowExecutionError("malformed pending foreach result index")
         if not isinstance(frame_id, str):
             raise WorkflowExecutionError("malformed pending foreach result frame id")
-        if status == "succeeded" and not isinstance(lineage_id, str):
-            raise WorkflowExecutionError("malformed pending foreach result lineage id")
-        if lineage_id is not None and not isinstance(lineage_id, str):
-            raise WorkflowExecutionError("malformed pending foreach result lineage id")
         if status not in {"succeeded", "failed"}:
             raise WorkflowExecutionError("malformed pending foreach result status")
-        raw_error = raw.get("error")
+        if status == "succeeded":
+            if not isinstance(lineage_id, str):
+                raise WorkflowExecutionError(
+                    "malformed pending foreach result lineage id"
+                )
+            if raw_error is not None:
+                raise WorkflowExecutionError(
+                    "malformed pending foreach result: succeeded result must not "
+                    "carry an error"
+                )
+        else:
+            if raw_error is None:
+                raise WorkflowExecutionError(
+                    "malformed pending foreach result: failed result requires an error"
+                )
+            if lineage_id is not None and not isinstance(lineage_id, str):
+                raise WorkflowExecutionError(
+                    "malformed pending foreach result lineage id"
+                )
         return cls(
             index=index,
             frame_id=frame_id,
@@ -178,7 +193,12 @@ class ForeachBarrierState:
                 raise WorkflowExecutionError(
                     "malformed foreach barrier pending result index"
                 ) from exc
-            parsed_results[index] = PendingItemResult.from_metadata(raw_result)
+            parsed = PendingItemResult.from_metadata(raw_result)
+            if parsed.index != index:
+                raise WorkflowExecutionError(
+                    "malformed foreach barrier pending result index mismatch"
+                )
+            parsed_results[index] = parsed
         return cls(
             next_index=next_index,
             mode=mode,
