@@ -1,985 +1,157 @@
-# Current Roadmap
+# Current roadmap
 
-This is the live, short roadmap. Completed implementation plans and long slice
-history live under [`historical/`](historical/). Current architecture references:
+This roadmap records the product shape, active implementation order, and
+constraints that must survive future work. Completed narratives and executable
+plans live under [`historical/`](historical/).
 
-- [`wf_api_architecture.md`](wf_api_architecture.md): workflow API, server,
-  transport, and source package boundaries.
-- [`project_map.md`](project_map.md): package map and entrypoints.
-- [`wf_cli.md`](wf_cli.md): current CLI usage.
+Use these references for orientation:
 
-## Current Product Shape
+- [`project_map.md`](project_map.md): package map and entry points
+- [`wf_api_architecture.md`](wf_api_architecture.md): application programming
+  interface (API), server, transport, and source boundaries
+- [`wf_core_architecture.md`](wf_core_architecture.md): workflow model and
+  runtime architecture
+- [`wf_cli.md`](wf_cli.md): current command-line interface (CLI) usage
+
+## Current product shape
+
+The durable product path uses a neutral server composition behind local or
+remote clients:
 
 ```text
-wf_cli
-  -> local WorkflowApi or wf_transport_rpc_http.RpcWorkflowApiClient
+wf_client / wf_cli / web console
+  -> local WorkflowApi or JSON-RPC client
   -> wf_server.WorkflowServer
-  -> wf_api.WorkflowApi / admin surfaces
-  -> wf_core / wf_artifacts / wf_sources_mcp
+  -> wf_api application and administration surfaces
+  -> wf_core / wf_artifacts / source providers
 ```
 
-The durable product path is now `wf-rpc-server` plus neutral `wf_config` /
-`wf_server` composition. The old `wf-mcp` script remains a legacy/special-purpose
-MCP entrypoint and compatibility surface.
+`wf-rpc-server` is the durable remote entry point. The old `wf-mcp` entry point
+remains a legacy or special-purpose Model Context Protocol (MCP) surface.
 
-Completed: the async `wf_client` Python slice is verified against the real
-JSON-RPC ASGI application and the full repository suite. It covers capability
-discovery, local graph authoring, remote validation, immutable artifact save,
-deployment selection, and durable run execution. Rich client objects have
-bounded, secret-safe `repr()` and `_repr_html_()` views that never perform
-remote I/O. Draft workspaces remain a separate server/admin surface and are not
-part of the client; server registration is explicit so the artifact ->
-deployment -> run path does not require draft storage.
+The Python client covers capability discovery, local graph authoring, remote
+validation, immutable artifact save, deployment selection, and durable runs.
+Draft workspaces remain a separate administration surface. The primary saved
+workflow lifecycle stays:
 
-## Active Initiative: Workflow Console And Defense Demo
+```text
+author -> validate -> save artifact -> deploy -> run -> inspect or resume
+```
 
-The next product-facing push is a local-first web console and defense demo that
-shows the lifecycle without forcing viewers to read raw JSON. It connects to a
-loopback `wf-rpc-server` through JSON-RPC, displays lifecycle records and traces,
-and runs a prepared `lda.chat` report workflow with a typed human approval
-interrupt.
+## Active runtime sequence
 
-Design contracts:
+The next three slices build on the foreach control-region, scheduler, lineage,
+and barrier foundations in this order.
 
-- [`workflow console, agent demo, and defense presentation`](superpowers/specs/2026-07-01-workflow-console-agent-demo.md)
-- [`self-describing interrupt contracts`](superpowers/specs/2026-07-01-self-describing-interrupt-contracts.md)
-- [`workflow console lifecycle explorer`](superpowers/specs/2026-07-02-workflow-console-lifecycle-explorer.md)
-- [`demo autoplay and replay`](superpowers/specs/2026-07-03-demo-autoplay-replay.md)
-- [`defense presentation storyboard`](historical/superpowers/specs/2026-07-04-defense-presentation-storyboard-design.md)
-- [`adaptive presentation canvas and evidence inspector`](superpowers/specs/2026-07-05-adaptive-presentation-canvas-design.md)
-- [`Scene 10 guided product moment`](superpowers/specs/2026-07-09-scene-10-guided-product-moment-design.md)
-- [`presentation live/replay truth`](superpowers/specs/2026-07-09-presentation-live-replay-truth-design.md)
-- [`presentation lifecycle story expansion`](historical/superpowers/specs/2026-07-09-presentation-lifecycle-story-expansion-design.md)
-- [`presentation opening visuals`](superpowers/specs/2026-07-10-presentation-opening-visuals-design.md)
-- [`presentation evaluation and closing`](superpowers/specs/2026-07-10-presentation-evaluation-closing-design.md)
+### 1. Review and merge structured runtime context
 
-Implementation order:
+The implementation plan is ready and its feature branch is under review:
 
-1. Completed: self-describing interrupt request/resume schemas are carried
-   through core execution, persisted run inspection, and resume validation.
-2. Completed: deterministic `examples/lda_report_workflow/` case study with
-   local document, report, issue-board sources, and typed issue-review
-   interrupt.
-3. Completed: add a top-level `web/` pnpm workspace with a React/Vite console,
-   Hono local server, Effect JSON-RPC boundary, loopback connection flow,
-   source inventory, protocol evidence, and production static serving. Design:
-   [`workflow console foundation`](superpowers/specs/2026-07-01-workflow-console-foundation-design.md).
-   Implementation:
-   [`workflow console foundation plan`](historical/superpowers/plans/2026-07-02-workflow-console-foundation.md).
-4. Completed: add the generic console lifecycle explorer, exercised first through
-   the artifact -> deployment -> run -> trace path, with interactive graph and raw
-   RPC evidence. Design:
-   [`workflow console lifecycle explorer`](superpowers/specs/2026-07-02-workflow-console-lifecycle-explorer.md).
-   Implementation:
-   [`workflow console lifecycle explorer plan`](historical/superpowers/plans/2026-07-02-workflow-console-lifecycle-explorer.md).
-   Draft workspace inspection reuses the same shell after the first vertical
-   path. Slice 1 is complete: the routed console now provides real-server
-   capability discovery and read-only draft workspace inspection with desktop
-   and mobile acceptance coverage. Implementation:
-   [`workflow console workspace foundation plan`](historical/superpowers/plans/2026-08-04-workflow-console-workspace-foundation.md).
-   Slice 2 is complete: the console now provides draft graph authoring through
-   real mutation RPCs, schema-backed capability forms, route editing,
-   validation diagnostics, operation evidence, and responsive graph-first
-   mobile sheets. Design:
-   [`draft authoring workbench`](superpowers/specs/2026-08-05-workflow-console-draft-authoring-workbench-design.md).
-   Implementation:
-   [`draft authoring workbench plan`](historical/superpowers/plans/2026-08-09-workflow-console-draft-authoring-workbench.md).
-   Slice 3 is complete: selected capability steps now expose Setup, Inputs, and
-   Outputs editing with canonical whole-list replacement, malformed-row repair
-   gating, truthful graph binding summaries, and mobile mounted-inspector state
-   preservation. Design:
-   [`selected-step dataflow`](superpowers/specs/2026-08-09-workflow-console-selected-step-dataflow-design.md).
-   Implementation:
-   [`selected-step dataflow plan`](historical/superpowers/plans/2026-08-09-workflow-console-selected-step-dataflow.md).
-   Planned authoring slices, in order:
-   - Slice 4 is complete: the Discover capability playground resolves
-     self-contained local JSON Schema `$ref` / `$defs` references and exposes
-     the existing `workflow.capabilities.call` operation through a generated
-     input form with typed output, diagnostics, bounded/redacted evidence, and
-     durable inline failure receipts. Direct capability calls are isolated
-     smoke tests, not persisted workflow runs: they create no workflow state,
-     routes, run records, or trace frames. Implementation:
-     [`capability playground plan`](historical/superpowers/plans/2026-08-11-workflow-console-capability-playground.md).
-   - The console review remediation gate is complete. The final verified
-     dispositions are recorded in
-     [`workflow console review remediation`](historical/workflow-console-review-remediation.md).
-   - Slice 5 is complete: composite input values extend canonical step-input bindings with
-     a deliberate recursive literal/path expression model for arrays and
-     objects. Start by exposing per-item Literal/Path controls in existing array
-     editors, preserving order and schema-validating every element. Do not
-     encode array assembly as synthetic targets such as `items.0`; retain the
-     current simple path/literal bindings for ordinary fields. Design:
-     [`composite input expressions`](superpowers/specs/2026-08-12-composite-input-expressions-design.md).
-     Implementation:
-     [`composite input expressions plan`](historical/superpowers/plans/2026-08-12-composite-input-expressions.md).
-   - Slice 6 is complete: workflow contract graph adds selectable Input, State,
-     Output, and Outcomes projections with focused forms for workflow
-     contracts, explicit outcomes, entry point, and final workflow output
-     bindings. One backend-owned, node-scoped authoring contract inventory
-     supplies discoverable input, state, selected-step, and applicable
-     runtime-context choices without high-level hardcoding or raw JSON hunting.
-     The standalone capability playground remains literal-only until it has a
-     real workflow scope. Design:
-     [`workflow contract graph`](superpowers/specs/2026-08-14-workflow-console-contract-graph-design.md).
-     Implementation:
-     [`workflow contract graph plan`](historical/superpowers/plans/2026-08-14-workflow-console-contract-graph.md).
-   - Slice 7: explicit End authoring and a typed Add step palette. End nodes are
-     real stored steps; Input, State, Output, and Outcomes remain graph
-     projections of workflow-level contracts rather than fake runtime steps.
-   - Slice 8: typed forms for interrupt, condition/choose/match, subgraph, and
-     foreach/join steps, built on the focused draft operations already exposed
-     by the workflow API.
-   - Slice 9: direct graph gestures. Typed handles and drag-to-connect lower
-     through the same canonical route and binding mutations used by inspector
-     forms; the graph never owns an independent editable document.
-5. Completed: the web console can operate the prepared
-   `examples/lda_report_workflow/` deployment through run start, typed
-   `issue_review` interrupt, resume, trace, and final output inspection.
-6. Completed: lifecycle autoplay, typed approval, issue-board output, and replay.
-   Design:
-   [`demo autoplay and replay`](superpowers/specs/2026-07-03-demo-autoplay-replay.md).
-   Implementation:
-   [`demo autoplay and replay plan`](historical/superpowers/plans/2026-07-03-demo-autoplay-replay.md).
-7. Completed: React presentation mode foundation for the prepared workflow demo.
-   Make the report workflow story primary, demote lifecycle evidence to
-   supporting panels, and keep the layout usable on a 720p display. Decision:
-   [`React presentation mode before Astro`](adr/0003-react-presentation-mode-before-astro.md).
-   Design:
-   [`React presentation mode`](superpowers/specs/2026-07-03-react-presentation-mode-design.md).
-   Implementation:
-   [`React presentation mode plan`](historical/superpowers/plans/2026-07-03-react-presentation-mode.md).
-8. Completed: constrained demo agent that invokes one prepared recipe macro.
-   This agent driver remains replay-only. A separate presentation runtime added
-   live prepared-run activation in a later slice.
-   Design:
-   [`constrained demo agent`](superpowers/specs/2026-07-03-constrained-demo-agent-design.md).
-   Implementation:
-   [`constrained demo agent plan`](historical/superpowers/plans/2026-07-03-constrained-demo-agent.md).
-9. Completed: implement the original 12-scene defense storyboard as a no-scroll
-   720p compositor. Later slices expanded and then consolidated the current deck to 13 scenes. Content
-   and evidence freeze before chat replacement, visual polish, or motion tuning.
-   Design:
-   [`defense presentation storyboard`](historical/superpowers/specs/2026-07-04-defense-presentation-storyboard-design.md).
-   Implementation:
-   [`defense storyboard compositor plan`](historical/superpowers/plans/2026-07-04-defense-storyboard-compositor.md).
-10. Completed: make the workflow execution handoff the visual center of Scenes
-    9 and 10. The canonical replay now drives an interpreted operation surface,
-    persistent execution graph, typed interrupt contract, and raw evidence
-    drawer. Design:
-    [`workflow takes the stage`](historical/superpowers/specs/2026-07-05-workflow-takes-stage-visual-design.md).
-    Implementation:
-    [`workflow takes the stage plan`](historical/superpowers/plans/2026-07-05-workflow-takes-stage-visual.md).
-11. Completed: replace whole-stage theme switching with one scalable Editorial
-    Canvas and prove the reusable recursive Interactive Figure through Scene 6.
-    Design:
-    [`defense presentation storyboard`](historical/superpowers/specs/2026-07-04-defense-presentation-storyboard-design.md).
-    Implementation:
-    [`editorial canvas and Interactive Figure plan`](historical/superpowers/plans/2026-07-05-editorial-canvas-interactive-figure.md).
-12. Completed: adapt the logical presentation canvas continuously from `4:3` to
-    `16:9` and replace the resizing evidence drawer with a progress-row receipt
-    and centered inspector. Design:
-    [`adaptive presentation canvas and evidence inspector`](superpowers/specs/2026-07-05-adaptive-presentation-canvas-design.md).
-    Implementation:
-    [`adaptive presentation canvas plan`](historical/superpowers/plans/2026-07-06-adaptive-presentation-canvas.md).
-13. Completed: address the presentation CodeRabbit review pass covering
-    reducer state semantics, agent approval cleanup, discussion modal
-    accessibility, figure validation, keyboard roving focus, and stale demo
-    agent spec wording. Implementation:
-    [`presentation CodeRabbit fixes`](historical/superpowers/plans/2026-07-08-presentation-coderabbit-fixes.md).
-14. Completed: presentation chat uses source-owned AI Elements-style
-    conversation, message, tool, and prompt-action primitives against existing
-    `AgentMessagePart` / `TimelineAgent` contracts. Live AI SDK driver remains
-    deferred; the current chat runs the deterministic timeline agent.
-    Implementation:
-    [`presentation AI chat surface`](historical/superpowers/plans/2026-07-09-presentation-ai-chat-surface.md).
-15. Completed: schema approval surface for typed interrupt/resume decisions.
-    Scene 10 and prepared-agent approval requests now render schema/payload
-    approval UI instead of raw `{ "type": "object" }` as the primary product
-    proof. Implementation:
-    [`schema approval surface`](historical/superpowers/plans/2026-07-09-schema-approval-surface.md).
-16. Completed: presentation chat now drives the prepared workflow timeline.
-    The chat run action, schema approval submit/revision, graph, evidence, and
-    live/replay execution all share `useDemoTimeline`; AI SDK remains a later
-    driver for the same seam. Implementation:
-    [`presentation chat timeline bridge`](historical/superpowers/plans/2026-07-09-presentation-chat-timeline-bridge.md).
-17. Completed: guided run beat gates connect Scene 10 schema approval, chat
-    approval, graph focus, and evidence transitions into one deterministic
-    presenter sequence. Implementation:
-    [`guided run beat gates`](historical/superpowers/plans/2026-07-09-guided-run-beat-gates.md).
-18. Completed: Scene 10 guided product moment primes replay state for direct
-    hashes and stages approval, resume, output, and trace as one readable
-    product flow. Design:
-    [`Scene 10 guided product moment`](superpowers/specs/2026-07-09-scene-10-guided-product-moment-design.md).
-    Implementation:
-    [`Scene 10 guided product moment plan`](historical/superpowers/plans/2026-07-09-scene-10-guided-product-moment.md).
-19. Completed: presentation live/replay truth surface distinguishes reviewed
-    replay evidence, live target readiness, live active run state, and replay
-    fallback. Design:
-    [`presentation live/replay truth`](superpowers/specs/2026-07-09-presentation-live-replay-truth-design.md).
-    Implementation:
-    [`presentation live/replay truth plan`](historical/superpowers/plans/2026-07-09-presentation-live-replay-truth.md).
-20. Completed: Scene 10 now presents factual run state: workflow input,
-    interrupt payload, operator resume decision, output, and trace frame facts.
-    The live workflow contract supports a same-run negative outcome; the
-    current prepared revision recording uses a separate run identity and is
-    documented as a factual follow-up. Implementation:
-    [`Scene 10 factual run state`](historical/superpowers/plans/2026-07-09-scene-10-factual-run-state.md).
-21. Completed: presentation lifecycle story expansion splits the demo climax
-    into prepared lifecycle, run start, typed human boundary, and
-    resume/output/evidence scenes so Draft -> Artifact -> Deployment -> Run is
-    visible before the run inspector details. Design:
-    [`presentation lifecycle story expansion`](historical/superpowers/specs/2026-07-09-presentation-lifecycle-story-expansion-design.md).
-    Implementation:
-    [`presentation lifecycle story expansion plan`](historical/superpowers/plans/2026-07-09-presentation-lifecycle-story-expansion.md).
-22. Completed: presentation demo proof composition makes scenes 9-12 factual
-    and readable: the workflow graph reflects the prepared plan, approval
-    shows input/interruption/decision only, and resume/output/trace expose
-    scroll-contained proof panes. Implementation:
-    [`presentation demo proof composition`](historical/superpowers/plans/2026-07-09-presentation-demo-proof-composition.md).
-23. Future: presenter companion and defense evidence assets.
-24. Add a static slide/appendix shell only after presentation mode is clear.
-    Astro remains an option, not the default next surface.
-25. Completed: presentation agent authoring story creates a canonical prepared
-    authoring recording, Scene 7 as an authentic single-beat full-screen
-    conversation, and Scene 8 as a 6-beat lifecycle with route-level coverage
-    that never calls workflow authoring RPC operations during Scene 8
-    navigation. Implementation:
-    [`presentation agent authoring story`](historical/superpowers/plans/2026-07-11-presentation-agent-authoring-story.md).
-26. Completed: compress Scene 10 typed approval and Scene 11 resume/output/trace
-    evidence into a decision-led, continuation-led presentation, and restore
-    live prepared-run activation against the configured JSON-RPC target.
-    Implementation plan:
-    [`Scene 11-12 evidence and live activation`](historical/superpowers/plans/2026-07-11-scene-11-12-live-evidence.md).
+- [`structured runtime context design`](superpowers/specs/2026-09-04-structured-runtime-context-design.md)
+- [`structured runtime context implementation plan`](superpowers/plans/2026-09-04-structured-runtime-context.md)
 
-Presentation visual audit, July 11:
+This slice gives runtime code, expressions, validation, and authoring references
+one model for run data and same-scope foreach activations. Subgraphs continue to
+cross an explicit input boundary rather than inheriting a parent's context.
 
-- Baseline-good: Scenes 3, 4, and 5 are good enough for now. Do not churn them
-  unless a later rehearsal exposes a concrete problem.
-- Completed: Scene 1 introduces the agent-shaped product goal through
-  `Planner -> Tool surface -> Runner / platform`, then identifies the last
-  role as the implemented contribution. Scene 2 remains responsible for the
-  automation problem. Scenes 2, 6, and 7 retain their concrete focal artifacts,
-  and Scenes 7-9 share a prepared authoring/run spine. Implementation:
-  [`presentation opening title`](historical/superpowers/plans/2026-07-11-presentation-opening-title.md).
-- Completed: Scenes 10-11 now use decision-led approval, continuation-led
-  resume/output, and compact factual trace rows so approval, resume, output,
-  and trace remain factual without competing panels or repeated low-signal
-  values. A healthy prepared target remains live; failed health probes switch
-  the presentation back to the offline recording.
- - Completed: Scenes 12 and 13 now close with a bounded evaluation board,
-  contribution boundary/future-work map, and canonical defense-question index.
+### 2. Add a persisted run step budget
 
-## Completed: Presentation Recomposition And Authoring Story
+After structured context is stable, implement the proposed run-wide limit:
 
-Scenes 7 and 8 now present an external-agent request through a scripted
-presentation surface and factual prepared-authoring proof. Scene 7 is one local
-request-to-first-turn beat; its obsolete `/handoff` route fails closed. Scene 8
-keeps a persistent prepared assistant pane beside six factual phase visuals in
-an adaptive approximately 26/74 split. The obsolete receipt/trace modal and
-lower chat dock were removed. Plans:
-[`presentation agent authoring story`](historical/superpowers/plans/2026-07-11-presentation-agent-authoring-story.md)
-and
-[`Scene 9 assistant pane`](historical/superpowers/plans/2026-07-12-scene-9-assistant-modal.md).
-The staged message-box completion is recorded in
-[`Scene 9 staged message box`](historical/superpowers/plans/2026-07-12-scene-9-staged-message-box.md).
+- [`run step budget design`](superpowers/specs/2026-09-04-run-step-budget-design.md)
 
-Recommended next visual slices:
+The budget must cover every frame and subgraph scope in one run, survive
+checkpoint and resume, and stop valid but non-terminating graph cycles with a
+clear runtime failure.
 
-1. Completed: Opening visuals rebuilt Scenes 1 and 2 around concrete diagrams
-   for "AI-agent pursuit -> workflow substrate" and "direct actions are not
-   reusable automation". Design:
-   [`presentation opening visuals`](superpowers/specs/2026-07-10-presentation-opening-visuals-design.md).
-   Implementation:
-   [`presentation opening visuals plan`](historical/superpowers/plans/2026-07-10-presentation-opening-visuals.md).
-2. Completed: Presentation coherence pass added a 13-scene visual matrix,
-   corrected Scene 2's direct-action metaphor into a chat/tool transcript, and
-   marked demo beats with primary/support surface metadata so Scenes 7-11 can
-   keep one dominant product proof at a time. Implementation:
-   [`presentation coherence pass`](historical/superpowers/plans/2026-07-10-presentation-coherence-pass.md).
-3. Completed: Scene 2 visual craft pass made the one-off side read as a
-   chat/tool transcript and the reusable side read as a durable workflow
-   blueprint, while preserving simple vocabulary and 720p readability.
-   Implementation:
-   [`Scene 2 tool-loop visual craft`](historical/superpowers/plans/2026-07-10-scene-2-tool-loop-visual-craft.md).
-4. Completed: guided proof scene composition cleanup made approval, resume,
-   output, and trace beats read as product evidence without chat competing for
-   space. Implementation:
-   [`guided proof scene composition cleanup`](historical/superpowers/plans/2026-07-10-guided-proof-scene-composition-cleanup.md).
-5. Completed: Evidence and closing visuals make Scenes 12 and 13 readable as a
-    defense artifact: bounded evaluation board, claim boundaries, future-work
-    map, and canonical examiner-question index. Design:
-    [`presentation evaluation and closing`](superpowers/specs/2026-07-10-presentation-evaluation-closing-design.md).
-    Implementation:
-    [`presentation evaluation and closing plan`](historical/superpowers/plans/2026-07-10-presentation-evaluation-closing.md).
-6. Completed: Presentation agent authoring story rebuilds Scenes 7 and 8 as a
-    scripted surface representing an external-agent handoff and factual
-    prepared-authoring proof.
-    Implementation:
-    [`presentation agent authoring story plan`](historical/superpowers/plans/2026-07-11-presentation-agent-authoring-story.md).
-7. Completed: Scene 1 now introduces the agent-shaped product goal through
-   `Planner -> Tool surface -> Runner / platform`, then identifies the last role
-   as the implemented contribution. Scene 2 remains responsible for the
-   automation problem. Implementation:
-   [`presentation opening title`](historical/superpowers/plans/2026-07-11-presentation-opening-title.md).
-8. Completed: harden the live/replay defense rehearsal path with visible live
-   start readiness, submitted and revision-requested outcome evidence,
-   deterministic replay fallback, current deep links, and reset instructions.
-   The live contract is same-run; the prepared revision branch uses a separate
-   recording and is disclosed in the rehearsal log.
-   Implementation:
-   [`defense presentation rehearsal`](historical/superpowers/plans/2026-07-12-defense-presentation-rehearsal.md).
-9. Completed: Scenes 7-9 now use one dominant factual artifact per beat on the
-   Editorial Canvas: authoring/repair evidence, a scripted light agent chat,
-   and a light prepared lifecycle canvas with synchronized secondary chat.
-   Implementation:
-   [`Scenes 7-9 editorial focal proof`](historical/superpowers/plans/2026-07-12-scenes-7-9-editorial-focal-proof.md).
-10. Completed: revise the remaining visual outliers only when a screenshot
-    identifies a concrete hierarchy, overflow, or factual-readability problem.
-    Implementation:
-    [`presentation follow-up visual/story pass`](historical/superpowers/plans/2026-07-13-presentation-followup-visual-story-pass.md).
+### 3. Implement explicit fork and gather
 
-## Next: Scene 7–13 Defense Recomposition
+Reuse the scheduler, activation, lineage, and reducer-aware barrier machinery:
 
-The next presentation work is intentionally split into six implementation
-slices followed by a rehearsal gate. The broader story-flow review remains a
-separate activity after these surfaces are stable.
+- [`ADR-0006: explicit fork and topology-driven gather`](adr/0006-explicit-fork-and-topology-driven-gather.md)
 
-1. **Completed: Scene 8 chat entry:** replaced the standalone run button with
-   a full-screen assistant-style chat entry. The local composer/send action
-   reveals the first prepared authoring conversation without starting a
-   workflow run. Implementation:
-   [`Scene 8 chat entry`](historical/superpowers/plans/2026-07-12-scene-8-chat-entry.md).
-2. **Completed: Scene 9 staged message box:** kept one message box visible
-   across Discover, Draft, Validate, Artifact, and Deployment; Draft and
-   Artifact Send advance the prepared lifecycle while preserving edited user
-   turns, and Deployment Send records a truthful local run request without
-   execution or RPC. Implementation:
-   [`Scene 9 staged message box`](historical/superpowers/plans/2026-07-12-scene-9-staged-message-box.md).
-   The boundary is explicit: the compact demo footer may start the prepared run
-    from Scenes 7–11, while Scenes 9–11 own run, decision, resume, output, and
-   trace evidence.
-3. **Completed: Live/replay truth and run activation:** the compact footer rail
-    across Scenes 7–11 exposes the prepared-run action, retries the existing
-    health probe, starts live execution explicitly, and keeps direct links and
-    failed services on truthful replay evidence. Scene 9 remains the semantic
-   start of execution evidence. Implementation:
-   [`presentation live/replay activation`](historical/superpowers/plans/2026-07-12-presentation-live-replay-activation.md).
-4. **Completed: Scene 11 compression:** reduce the typed-human-boundary scene to two
-   beats: interrupt context and approval decision. Cancellation remains a
-    decision outcome rather than a near-duplicate presentation beat.
-   Implementation plan:
-   [`Scene 11 decision beat compression`](historical/superpowers/plans/2026-07-12-scene-11-decision-beat-compression.md).
-5. **Completed: Scene 10 factual proof and graph composition:** the factual
-   graph, selected input files, and proof layout are now implemented. The
-   completed plan is [`Scene 10 factual graph and proof layout`](historical/superpowers/plans/2026-07-12-scene-10-factual-graph-and-proof-layout.md).
-   File-preview rendering remains explicitly deferred as a separate follow-up.
-6. **Completed: presentation demo-chrome ownership:** Scenes 7–11 share one
-   route-projected footer rail for run, replay fallback, retry, paused, and
-   terminal states. Design:
-   [`presentation demo-chrome ownership`](superpowers/specs/2026-07-12-demo-chrome-ownership-design.md).
-   Implementation:
-   [`presentation demo-chrome ownership plan`](historical/superpowers/plans/2026-07-12-presentation-demo-chrome-ownership.md).
-7. **Completed: visual scale and color pass:** removed unwanted blue from Scenes 2 and 13,
-   shorten Scene 2's two-column composition, enlarge the focal diagrams in
-    Scenes 7, 8, 12, and 13, separate Diagnose from Repair visuals, and
-   improve Scene 1 title-box padding and contrast. Design:
-    [`presentation visual scale and color pass`](historical/superpowers/specs/2026-07-12-presentation-visual-scale-color-pass-design.md).
-   Implementation:
-   [`presentation visual scale and color pass plan`](historical/superpowers/plans/2026-07-12-presentation-visual-scale-color-pass.md).
-8. **Completed: defense rehearsal gate:** all 13 scenes have paired `1280x720`
-   and `1024x768` replay captures, and the rehearsal matrix, log, and story
-   audit are recorded. The live end-to-end path remains blocked, the prepared
-   revision branch has a separate recorded run identity, and the full web test
-   gate passes after route-contract stabilization. Historical implementation plan:
-   [`defense rehearsal gate`](historical/superpowers/plans/2026-07-13-defense-rehearsal-gate.md).
-   Route matrix: [`presentation rehearsal matrix`](runbooks/presentation-rehearsal-matrix.md);
-   Story-flow audit: [`presentation story audit`](runbooks/presentation-story-audit.md);
-   dated evidence: [`presentation rehearsal log`](runbooks/presentation-rehearsal-log.md).
+Outcomes continue to choose one transition. Forks create concurrent branch
+activations. Gathers wait on declared incoming topology, merge compatible
+lineages according to policy, and emit one continuation.
 
-9. **Completed: factual input file browser:** Scene 9 presents the run-selected
-   documents as a read-only browser with selectable prepared-fixture Markdown
-   excerpts and a separately labelled output destination. The preview states
-   that it is not execution evidence; the UI does not claim per-file reads
-   because the current trace recording does not expose them.
+## Runtime work after fork and gather
 
-10. **Completed: presentation follow-up visual/story pass:** clarified Scene 1
-     and the lifecycle-to-authoring narrative, gave Scenes 7 and 8 a stronger
-     dominant artifact, made the Scene 9 graph easier to present, and densified
-    Evaluation and Conclusion beats without inventing evidence. The dated
-    review records the remaining factual input-browser, live-E2E, and full
-    screenshot-inspection follow-ups:
-    [`presentation follow-up visual review`](runbooks/presentation-followup-visual-review.md).
-    Implementation plan:
-     [`presentation follow-up visual/story pass`](historical/superpowers/plans/2026-07-13-presentation-followup-visual-story-pass.md).
-11. Completed: presenter speech and live documentation reconciliation. The
-    typed catalog, live runbooks, README, and active contracts use the
-    consolidated 13-scene story. The audience route passed the 1280x720,
-    1024x768, and 1920x1080 browser gate, including the six-step lifecycle,
-    right-column discussion rail, and optional NodeUse deep link. Implementation:
-    [`consolidated authoring story`](historical/superpowers/plans/2026-07-13-consolidated-authoring-story.md).
+Defer these slices until the active sequence exposes a concrete need:
 
-Presentation wishlist / defense readiness:
+- Add optional per-use child deployment overrides and clearer child trace
+  inspection for native subgraphs
+- Investigate protocol-native progress or streaming only if polling through
+  `wf run watch` proves inadequate
+- Continue [`OpenAPI capability sources`](openapi_capability_source.md) when a
+  real non-MCP source requires them
 
-### Completed: Simpler Speech
+## Durable platform constraints
 
-1. Completed: gave every beat one audience goal and one to three anchor terms,
-   then simplified the timed presenter path through Scenes 1-8 to one suggested
-   sentence per beat. Keep essential vocabulary such as Workflow API and
-   lifecycle record names, while moving detailed qualification into optional
-   notes or Q&A. The current catalog contains a 9:27 must-say path with a
-   500-700 word budget and a 10:42 complete-deck target. Implementation:
-   [`defense speech simplification`](historical/superpowers/plans/2026-07-13-defense-speech-simplification.md).
+These rules describe current boundaries. New work should preserve them.
 
-### Completed: Factual Scene 8 Evidence
+### Run and resume correctness
 
-Scene 8 now presents six factual reviewed evidence variants. Diagnose records
-`missing_outcome_edge` at `nodes[analyze]` in revision 3; Repair records the
-exact `wf draft set-route lda_report_workflow --revision 3 --step analyze
---outcome ok --to __end__` command and a valid revision 4 result with zero
-diagnostics. Direct-hash route assertions cover the Diagnose and Repair beats.
-Implementation:
-[`Scene 8 product evidence`](historical/superpowers/plans/2026-07-13-scene-8-product-evidence.md).
+Persisted interrupted runs, bounded trace reads, dependency revalidation,
+process-rebuild resume, and same-process resume serialization exist.
 
-Design:
-[`defense speech and Scene 8 product evidence`](superpowers/specs/2026-07-13-defense-speech-and-scene-8-evidence-design.md).
-
-### Completed: Distance-Readable Scene 8 Diagrams
-
-Each prepared lifecycle beat now gives its primary meaning to a large diagram:
-source discovery, one continuous Draft/Diagnose/Repair workflow graph, artifact
-freezing, and deployment binding. Exact reviewed commands, diagnostics, IDs,
-and counts remain available as compact secondary receipts. Dagre reserves graph
-ranks for route-state labels, while React Flow refits after scene-column resize.
-Implementation:
-[`authoring lifecycle diagram pass`](historical/superpowers/plans/2026-07-14-authoring-lifecycle-diagram-pass.md).
-
-- Completed: visual pass for Scenes 6, 7, and 10 fixed architecture figure
-  scale, authoring-loop clarity, interrupt/evidence emphasis, and presenter-note
-  treatment. Implementation:
-  [`defense presentation visual pass`](historical/superpowers/plans/2026-07-08-defense-presentation-visual-pass.md).
-- Next presentation visual slices:
-  1. Completed: contrast and readability fix pass repaired dark-on-dark text in
-     the Scene 7 authoring loop and the Scene 10 chat rail, and ignored local
-     `.visual-smoke/` screenshots. Implementation:
-     [`presentation contrast readability`](historical/superpowers/plans/2026-07-08-presentation-contrast-readability.md).
-  2. Completed: surface theme normalization pass made light chat, discussion
-     modals, and Q&A branches use the same editorial presentation surface.
-     Implementation:
-     [`presentation surface theme normalization`](historical/superpowers/plans/2026-07-08-presentation-surface-theme-normalization.md).
-   3. Completed: scene composition pass expanded the positioning map,
-      planner/runtime boundary, lifecycle rail, and Scene 10 demo
-      graph/contract readability. Implementation:
-      [`presentation scene composition`](historical/superpowers/plans/2026-07-08-presentation-scene-composition.md).
-   4. Completed: alignment/layout polish fixed Scene 6 figure dimensions,
-      settled React Flow fitting, Scene 3 chip/evidence collision, narrow
-      chat rail behavior, and Scene 10 smoke route. Implementation:
-      [`presentation alignment and layout polish`](historical/superpowers/plans/2026-07-08-presentation-alignment-layout-polish.md).
-   5. Completed: demo climax craft pass made Scenes 9 and 10 read as one
-      continuous product demonstration from agent handoff, to persisted run, to
-      typed interrupt, to resume/output/evidence. Implementation:
-      [`demo climax craft pass`](historical/superpowers/plans/2026-07-08-demo-climax-craft-pass.md).
-   6. Completed: demo product proof layout pass hid chat during graph-heavy
-      beats, kept workflow graph nodes in frame, added run-proof labels inside
-      the graph, and cleared outcome panels below the receipt row. Implementation:
-      [`demo product proof layout`](historical/superpowers/plans/2026-07-09-demo-product-proof-layout.md).
-   7. Completed: demo interrupt layout focus pass made approval/interrupt beats
-      contract-first, reduced the graph to compact context where appropriate,
-      and removed the remaining three-column crowding. Implementation:
-      [`demo interrupt layout focus`](historical/superpowers/plans/2026-07-09-demo-interrupt-layout-focus.md).
-    8. Completed: discussion craft pass replaced detached branch chips with a
-       presenter question rail and rebuilt Q&A modals around answer,
-       provenance, and presenter-note hierarchy. Implementation:
-       [`presentation discussion craft`](historical/superpowers/plans/2026-07-09-presentation-discussion-craft.md).
-   9. Completed: discussion modal composition pass made Q&A and context-only
-      routes stage-aware, with body/support/action regions instead of plain
-      document cards. Implementation:
-      [`presentation discussion modal composition`](historical/superpowers/plans/2026-07-09-presentation-discussion-modal-composition.md).
-   10. Completed: Scene 10 guided product moment primes replay state for direct
-        hashes and stages approval, resume, output, and trace as one readable
-        product flow. Design:
-        [`Scene 10 guided product moment`](superpowers/specs/2026-07-09-scene-10-guided-product-moment-design.md).
-        Implementation:
-        [`Scene 10 guided product moment plan`](historical/superpowers/plans/2026-07-09-scene-10-guided-product-moment.md).
-11. Completed: presentation demo proof composition makes scenes 9-12 factual
-        and readable: the workflow graph reflects the prepared plan, approval
-        shows input/interruption/decision only, and resume/output/trace expose
-        scroll-contained proof panes. Implementation:
-        [`presentation demo proof composition`](historical/superpowers/plans/2026-07-09-presentation-demo-proof-composition.md).
-    12. Completed: hardened the replay/live evidence handoff so the trace beat
-        consistently renders canonical frames without stale or empty state.
-        Implementation:
-        [`presentation evidence handoff`](historical/superpowers/plans/2026-07-11-presentation-evidence-handoff.md).
-   13. Completed: deck hierarchy pass gave Scenes 1, 2, 6, 7, 8-12, and 13-14
-       one focal artifact per beat, reused factual authoring/demo projections,
-       kept one editorial canvas, and froze Scenes 3-5. Implementation:
-       [`defense deck hierarchy pass`](historical/superpowers/plans/2026-07-11-defense-deck-hierarchy-pass.md).
-- Presenter runbook:
-  [`defense presentation runbook`](runbooks/defense-presentation.md) covers
-  exact URLs, keyboard controls, live RPC/demo fallback steps, story spine,
-  timing, and short speaker notes for what to say if the live demo fails.
-  [`defense speech and claim audit`](runbooks/defense-speech-and-claim-audit.md)
-  provides the current 9:27 speech plus navigation buffer, evidence qualifications, and
-  prioritized 12-minute Q&A.
-  Completed: [`defense story reweighting`](historical/superpowers/plans/2026-07-13-defense-story-reweighting.md)
-  now provides a typed 39-beat presenter-note catalog, a 500-700-word must-say
-  path, evidence warnings, and a 10:42 complete-deck timing contract. Completed:
-  [`interactive graphs and Scenes 3-6 choreography`](historical/superpowers/plans/2026-07-13-scenes-3-6-kernel-choreography.md)
-  adds restrained Scene 3-5 choreography, a semantic-zoom architecture map,
-  the readable `wf_core` and NodeUse figures, and a factual prepared-run graph
-  inspector. Completed:
-  [`read-only presenter route`](historical/superpowers/plans/2026-07-13-read-only-presenter-route.md)
-  provides a static speech, evidence, timing, fallback, and Q&A reader without
-  RPC, replay, or audience-window synchronization.
-- Defense Q&A branch set:
-  [`defense Q&A runbook`](runbooks/defense-qna.md) collects answers for
-  "Where is the AI agent?", evaluation validity, security boundaries, demo
-  reliability, and other likely examiner questions. Completed projection into
-  `/present` discussion branches:
-  [`defense Q&A branch projection`](historical/superpowers/plans/2026-07-08-defense-qna-branch-projection.md).
-- Chat surface replacement: make the prepared demo agent feel operable from a
-  real chat surface, not from custom slide chrome. The chat should own the
-  "run prepared agent" affordance, render tool calls/results with a standard
-  modern AI-app vocabulary, and expose approval requests as normal chat events
-  that can also drive presentation actions.
-- Completed: guided run beat gates connect Scene 10 schema approval, chat
-  approval, graph focus, and evidence transitions into one deterministic
-  presenter sequence. Implementation:
-  [`guided run beat gates`](historical/superpowers/plans/2026-07-09-guided-run-beat-gates.md).
-- Completed: Scene 10 guided product moment removes delayed direct-link readiness
-  and gives approval, resume, output, and trace one dominant proof surface each.
-  Design:
-  [`Scene 10 guided product moment`](superpowers/specs/2026-07-09-scene-10-guided-product-moment-design.md).
-  Implementation:
-  [`Scene 10 guided product moment plan`](historical/superpowers/plans/2026-07-09-scene-10-guided-product-moment.md).
-- Completed: presentation lifecycle story expansion makes the demo climax less
-  run-only by adding explicit prepared lifecycle scenes before the run,
-  interrupt, output, and trace proof. Design:
-   [`presentation lifecycle story expansion`](historical/superpowers/specs/2026-07-09-presentation-lifecycle-story-expansion-design.md).
-  Implementation:
-  [`presentation lifecycle story expansion plan`](historical/superpowers/plans/2026-07-09-presentation-lifecycle-story-expansion.md).
-- Evidence assets and rehearsal timing: prepare fallback screenshots/recordings,
-  expected run states, and a timed walkthrough checklist for a 15-minute defense.
-- Completed: LAN presentation synchronization pairs `/present` and
-  `/presenter` through an ephemeral bidirectional room with uniform code/QR/URL
-  pairing, revision-ordered location updates, reconnect behavior, and explicit
-  presenter termination. Public-internet TLS is not part of the first slice:
-  [`LAN presentation synchronization design`](superpowers/specs/2026-07-14-lan-presentation-sync-design.md).
-  Implementation:
-  [`LAN presentation synchronization plan`](historical/superpowers/plans/2026-07-14-lan-presentation-sync.md).
-
-Boundaries: this is not a production admin panel, generic visual workflow
-editor, scheduler, external Google Drive/mail integration, or benchmark evidence
-for free-form autonomous planning.
-
-## Priority 1: Product Smoke And Status UX
-
-The platform is usable enough to test as a product. Next work should focus on
-clear operator feedback before adding more architecture.
-
-- Completed: `wf status` is a compact read-only target/server status command,
-  including durable run counts and the latest run summary when available.
-- Completed: a real CLI smoke pass against `wf-rpc-server --config wf.config.json`
-  is captured in
-  [`2026-06-09 product smoke RPC CLI`](superpowers/research/2026-06-09-product-smoke-rpc-cli.md).
-- Completed: `wf artifact inspect` now accepts `--version` as an alias for the
-  positional version argument.
-- Completed: `wf artifact delete <artifact_id> <version> --confirm` deletes
-  unreferenced artifact versions and rejects versions still referenced by
-  deployments. Implementation:
-  [`wf artifact delete`](historical/superpowers/plans/2026-06-09-wf-artifact-delete.md).
-- Completed: `wf draft delete <workspace_id> --confirm` exposes existing draft
-  workspace deletion as a safe CLI command. Implementation:
-  [`wf draft delete CLI/RPC`](historical/superpowers/plans/2026-06-09-wf-draft-delete-cli-rpc.md).
-- Completed: bounded RPC CLI smoke runbook with cleanup commands:
-  [`RPC CLI smoke runbook`](runbooks/rpc-cli-smoke.md).
-- Completed: automated RPC CLI smoke example:
-  [`RPC CLI smoke example`](historical/superpowers/plans/2026-06-09-rpc-cli-smoke-example.md).
-- Completed: `cap call` output is safer for humans through compact/text modes
-  without changing default JSON semantics. Implementation:
-  [`cap call output safety`](historical/superpowers/plans/2026-06-09-cap-call-output-safety.md).
-- Completed: raw JSON/YAML workflow plans can be turned into artifacts through
-  JSON-RPC and `wf artifact create-from-plan`, allowing agent/evidence harnesses
-  to use the product-facing CLI path.
-- Completed: the opencode browser-click challenge harness is local-first via
-  `wf --config examples/browser_click_workflow/wf.config.json --local`, with
-  optional `--start-server` / `--server-url` modes for JSON-RPC-path trials.
-- Completed: focused draft edit helpers are exposed through RPC/CLI, and
-  `wf deploy create` is accepted as an alias for `wf deploy save`. Docs now
-  distinguish draft shape from raw plan shape for agent authoring.
-- Completed: capability-free draft lifecycle authoring now spans the Python
-  API, JSON-RPC, remote client, and `wf` CLI. Callers can create an empty
-  revisioned workspace, set its entry point, and replace whole workflow
-  schemas or outcomes without RFC 6902 patches. Implementation:
-  [`draft workspace lifecycle authoring`](historical/superpowers/plans/2026-07-21-draft-workspace-lifecycle-authoring.md).
-- Completed: semantic draft edits now gate workspace and capability preflight
-  on the expected revision, so stale callers consistently receive
-  `revision_conflict` while the patch path retains its mutation-time race
-  guard. Implementation:
-  [`draft semantic revision precedence`](historical/superpowers/plans/2026-07-22-draft-semantic-revision-precedence.md).
-- Completed: focused draft bind and capability-step insertion now preserve
-  nested node-local paths and project nested capability schemas through one
-  shared bounded JSON Schema path module. CLI and agent guidance distinguish
-  rooted bind endpoints from implied rootless map targets. Implementation:
-  [`nested local draft bindings`](historical/superpowers/plans/2026-07-22-nested-local-draft-bindings.md).
-- Completed: `wf draft set-input` and `wf draft set-output` now accept
-  `--merge`, preserving existing bindings when agents split map edits across
-  multiple revisions.
-- Completed: `wf schema` now lists workflow document/component models, emits
-  compact JSON outlines for agent discovery, and emits valid self-contained
-  JSON Schema with `--verbose`.
-- Completed: `wf draft bind --from ... --to ...` composes input/state/output
-  schema projection with step binding merge, replacing the prior narrower
-  output-to-state helper and reducing manual draft patch repairs in agent
-  challenge runs.
-- Completed: draft CLI vocabulary now uses `wf draft create --capability` and
-  the typed `wf draft add <kind>` command tree. All nine draft step kinds have
-  dedicated commands; capability insertion retains schema projection, while
-  interrupt and subgraph commands preserve their explicit boundary contracts.
-  Generic insertion is exposed through Python and JSON-RPC with atomic incoming
-  and outgoing route wiring. Implementation:
-  [`generic draft step authoring`](historical/superpowers/plans/2026-07-20-generic-draft-add-step.md).
-- Completed: `wf draft branch` and `wf draft handle` provide atomic route
-  editing for existing draft steps without rewriting the full routes object.
-- Completed: `wf draft compile` returns the compiled raw plan plus required
-  capabilities without mutating or saving the draft workspace.
-- Completed: draft validation now preserves structured core validation issues
-  and adds exact `wf draft bind` repair hints for missing state fields.
-- Completed: `wf explain` now covers draft/workflow validation codes such as
-  `unknown_edge_destination`, `invalid_source_path`, and `patch_invalid`.
-  Implementation plan:
-  [`draft explain diagnostics`](historical/superpowers/plans/2026-06-28-explain-draft-diagnostics.md).
-- Completed: draft workspaces can persist invalid intermediate route states,
-  allowing agents to add missing target steps before final validation/save.
-  Implementation:
-  [`invalid intermediate draft authoring`](historical/superpowers/plans/2026-06-28-draft-invalid-intermediate-authoring.md).
-- Completed: draft workspaces expose focused remove commands for routes, steps,
-  and step bindings so agents can recover from bad edits without raw JSON Patch.
-  Implementation:
-  [`draft remove commands`](historical/superpowers/plans/2026-06-28-draft-remove-commands.md).
-- Completed: `wf draft set-workflow-output` and full-stack API/RPC/CLI support
-  for editing top-level workflow output bindings. The compatibility map
-  adapter remains available for existing callers. Implementation:
-  [`set-workflow-output API/RPC/CLI`](historical/superpowers/plans/2026-06-29-set-workflow-output.md).
-- Completed: canonical workflow-output replacement now preserves ordered
-  path/value bindings across Python, JSON-RPC, MCP, and CLI; nested input/state
-  sources can project missing output schemas, while literals and `context.*`
-  require declared targets. Empty replacement restores implicit same-name state
-  fallback; compatibility `--merge --map` remains intentionally lossy.
-  Implementation:
-  [`atomic workflow output bindings`](historical/superpowers/plans/2026-07-23-atomic-workflow-output-bindings.md).
-- Completed: compatibility map merges now reject canonical input/output
-  bindings they cannot preserve, and local or remote CLI users can export an
-  exact draft document and revision-check its import into an existing
-  workspace. Structurally valid imports receive fresh semantic diagnostics and
-  remain repairable when invalid. Implementation:
-  [`safe compatibility merges`](historical/superpowers/plans/2026-07-29-safe-compatibility-merges.md)
+- Broken pinned dependencies produce blocked readiness and diagnostics
+- Live tool or source failures produce failed runs, not implicit pauses
+- Store-level concurrency must follow the
+  [`store transaction boundary`](superpowers/specs/2026-06-09-store-transaction-boundary.md)
+- The current contracts are
+  [`persisted run and resume`](superpowers/specs/2026-06-03-persisted-run-resume-contract.md)
   and
-  [`draft document transfer`](historical/superpowers/plans/2026-07-29-draft-document-transfer.md).
-- Completed: challenge-driven output UX polish makes `set-workflow-output`
-  project missing top-level output schema fields from declared `input.*` and
-  `state.*` sources, and challenge prompt templates now always include
-  `ux_issues_found: []` so debug-profile reports do not fail by omission.
-- Completed: `wf draft bind` now reuses existing workflow input/state schema
-  fields when binding to step-local inputs, avoiding redundant-schema failures
-  found by debug challenge runs. Implementation:
-  [`idempotent draft bind inputs`](historical/superpowers/plans/2026-06-29-idempotent-draft-bind-inputs.md).
-- Keep status read-only; do not mutate registry, auth, config, or stores.
+  [`durable workflow runs`](superpowers/specs/2026-05-26-durable-workflow-runs-and-resume-design.md)
 
-## Priority 2: Durable Run/Resume Hardening
+### Source, authentication, and configuration boundaries
 
-The v1 durable run and resume path exists, including persisted interrupted runs,
-bounded trace reads, dependency revalidation, and process-rebuild resume tests.
-Remaining hardening should focus on correctness under real server use.
+Source registry state, static configuration, runtime source sessions, and
+authentication records remain separate concerns.
 
-- Completed: same-process `resume_run` calls are serialized per run id.
-  Implementation:
-  [`resume run concurrency guard`](historical/superpowers/plans/2026-06-09-resume-run-concurrency-guard.md).
-- Completed: store-level locking/transaction expectations are documented for
-  current file stores and future transactional stores:
-  [`store transaction boundary`](superpowers/specs/2026-06-09-store-transaction-boundary.md).
-- Completed: paged `wf run list` exposes compact persisted stopped-run
-  summaries without trace or checkpoint state. Implementation:
-  [`run list API/RPC/CLI`](historical/superpowers/plans/2026-06-11-run-list-api-rpc-cli.md).
-- Preserve existing semantics: broken pinned dependencies return blocked
-  readiness and diagnostics; ordinary live tool/source failures are failed runs,
-  not implicit pauses.
-- Active specs:
-  - [`persisted run/resume contract`](superpowers/specs/2026-06-03-persisted-run-resume-contract.md)
-  - [`durable workflow runs and resume`](superpowers/specs/2026-05-26-durable-workflow-runs-and-resume-design.md)
+- Keep configuration bootstrap separate from mutable source registry state
+- Keep secret payload values write-only; inspection may expose metadata and
+  payload keys
+- Keep role-specific stores filesystem-backed until a real database or secret
+  manager slice is planned
+- Add new source families through the generic
+  [`runtime source lifecycle`](superpowers/specs/2026-06-09-runtime-source-lifecycle.md)
+  instead of forcing them through MCP connection configuration
+- Preserve the
+  [`server and transport boundary`](superpowers/specs/2026-06-10-server-cli-transport-boundary.md)
 
-## Priority 3: Source/Auth/Config Polish
+Current source contracts:
 
-Source registry, neutral MCP source config, role-specific stores, and local/dev
-auth admin are implemented. The next work is polish, not new broad surfaces.
+- [`workflow configuration and sources`](superpowers/specs/2026-06-03-workflow-config-targets-and-sources.md)
+- [`store-backed source registry`](superpowers/specs/2026-06-03-store-backed-source-registry-design.md)
+- [`authentication and source secrets`](superpowers/specs/2026-06-06-auth-source-secrets-boundary.md)
 
-- Keep config bootstrap separate from mutable store-backed source registry state.
-- Keep auth payload values write-only; display summaries must show metadata and
-  payload keys only.
-- Keep role-specific stores filesystem-only until a real SQL/secret-manager slice
-  is planned.
-- New source families should follow the generic runtime source lifecycle rather
-  than being forced through MCP `ConnectionConfig`:
-  [`runtime source lifecycle`](superpowers/specs/2026-06-09-runtime-source-lifecycle.md).
-- Completed: static config `kind: "python"` sources can load trusted local
-  `NodeSpec` registries and expose them through WorkflowServer. Implementation:
-  [`static Python sources`](historical/superpowers/plans/2026-06-11-static-python-sources.md).
-- Completed: `wf config validate` preflights neutral workflow config files,
-  including config-relative path resolution and trusted static Python source
-  imports. MCP sources are shape-validated only; live upstream checks remain a
-  server/status concern.
-- Completed: Python source operator docs and RPC integration coverage now prove
-  `ops.py` source config, capability call, draft artifact creation, deployment,
-  and workflow run. Runbook:
-  [`Python source`](runbooks/python-source.md).
-- Completed: static source inventory providers now have an explicit
-  `WorkflowSourceProvider.load_sources()` seam in `wf_server`, and Python
-  source loading is behind `PythonSourceProvider`.
-- Completed: `wf --local --config <workflow-config>` now composes configured
-  neutral server sources in-process instead of falling back to built-in static
-  sources only. `--local` is process-local server composition, not local-only
-  source transports or shared in-memory source sessions.
-- Completed: server startup policy moved to `wf_server.cli`; JSON-RPC HTTP
-  remains in `wf_transport_rpc_http`:
-  [`server CLI and transport boundary`](superpowers/specs/2026-06-10-server-cli-transport-boundary.md).
-- Next auth work: typed/discriminated auth records and source-owned auth binders
-  (`McpAuthBinder` first) are now completed. Remaining: Google Drive MCP smoke
-  through `https://drivemcp.googleapis.com/mcp/v1` (manual/local-only, requires
-  Google OAuth client credentials). OAuth refresh-token support and provider
-  profiles are now implemented. Production secret manager integration and
-  encrypted-at-rest file format remain deferred.
-- Completed source auth diagnostics: `wf source diagnose <source_id>` now reports
-  transport/auth/catalog state without exposing secret payloads.
-- Completed source provider docs: `docs/source_provider_guide.md` now covers
-  MCP HTTP, MCP stdio, Python sources, auth refs, OAuth refresh-token setup,
-  diagnostics, and the Google Drive MCP caveat.
-- Completed platform source policy: documented fixed-id sources such as `wf.std`
-  and `wf.source` are platform sources. They resolve by fixed source id, do not
-  require self-bindings, and legacy explicit self-bindings such as
-  `wf.std=wf.std` are accepted as no-op compatibility. Deployment validation
-  still rejects non-self platform-source bindings as stale configuration. Other
-  `wf.*` namespaces are described by their own source docs/policies.
-- Completed `wf.source.read_resource`: resource refs are inert pass-by-value
-  data using `logical_source`; explicit platform helper nodes dereference them
-  through runtime/platform context with bounded output.
-- Completed source inventory CLI polish: `wf source resources` and
-  `wf source prompts` list source-owned resource/prompt names without fetching
-  content.
-- Active specs:
-  - [`workflow config targets and sources`](superpowers/specs/2026-06-03-workflow-config-targets-and-sources.md)
-  - [`store-backed source registry`](superpowers/specs/2026-06-03-store-backed-source-registry-design.md)
-  - [`runtime source lifecycle`](superpowers/specs/2026-06-09-runtime-source-lifecycle.md)
-  - [`server CLI and transport boundary`](superpowers/specs/2026-06-10-server-cli-transport-boundary.md)
-  - [`auth/source secrets boundary`](superpowers/specs/2026-06-06-auth-source-secrets-boundary.md)
+### MCP package ownership
 
-## Priority 4: MCP Package Split Finish Line
+`wf_sources_mcp` owns upstream MCP source implementation. Keep durable server
+and transport packages independent of the combined `wf_mcp` facade. Retain
+compatibility shims only for real callers, move code only when ownership is
+clear, and keep MCP application or widget metadata out of durable workflow
+transports.
 
-`wf_sources_mcp` now owns upstream MCP source implementation pieces: ids,
-registry DTOs, auth/catalog stores, discovery/catalog DTOs, SDK adapter/facade,
-runtime pool, schema helpers, tool events, wrappers, and adapter lookup.
+## Established runtime baseline
 
-Next split work should be selective:
+The active sequence can assume these foundations:
 
-- Avoid new dependencies on the combined `wf_mcp` facade from durable server or
-  transport packages.
-- Keep `wf_mcp` compatibility shims until callers are retired deliberately.
-- Move only pieces with clear package ownership. Do not move proxy/UI/App
-  metadata support into workflow transports by accident.
-- MCP UI/App metadata remains source/proxy metadata only; do not advertise MCP
-  Apps/widget support through durable workflow transports yet.
+- Native subgraph scopes and durable return to the parent node
+- Concurrent foreach with activation barriers and reducer-aware lineage merges
+- Validated foreach back-edges with one static control region per node use
+- Durable stopped-run inspection and resume
+- Python client reconstruction of capabilities, artifacts, deployments, and
+  runs through the API
 
-## Priority 5: Runtime/Core Polish Later
+The current foreach return contract is
+[`foreach back-edge design`](superpowers/specs/2026-09-04-foreach-back-edge-design.md).
 
-Core runtime foundations for native subgraphs, concurrent foreach, lineage state,
-and durable stopped-run resume exist. Return here after product/server UX is
-stable.
+## Historical entry points
 
-- Native subgraph polish: optional per-use-site child deployment overrides and
-  clearer child trace inspection.
-- Proposed follow-up: replace innermost-only foreach values with same-scope
-  [`structured runtime context`](superpowers/specs/2026-09-04-structured-runtime-context-design.md),
-  including typed Python lookup, graph paths, schema analysis, authoring refs,
-  and explicit subgraph input boundaries.
-- Proposed runtime guard: add a persisted, run-wide
-  [`step budget`](superpowers/specs/2026-09-04-run-step-budget-design.md) for
-  valid graph cycles that cannot be proven terminating during validation.
-- Next, reuse the foreach barrier/lineage machinery for
-  fork/gather. The proposed control semantics are recorded in
-  [`ADR-0006`](adr/0006-explicit-fork-and-topology-driven-gather.md).
-- Protocol-native progress: investigate MCP tasks/progress or WebSocket/SSE only
-  after polling `wf run watch` proves insufficient.
-- OpenAPI sources: continue from [`openapi capability sources`](openapi_capability_source.md)
-  when a real non-MCP source is needed.
+Use these completed roadmaps when implementation history matters:
 
-## Recently Completed Platform Milestones
-
-- Completed: the composed Python OpenRPC contract now has a checked,
-  transport-neutral manifest with a deterministic drift gate. Design:
-  [`workflow contract manifest design`](superpowers/specs/2026-08-01-workflow-contract-manifest-design.md).
-  Artifact: [`workflow-api.manifest.json`](../contracts/workflow-api.manifest.json).
-- Completed: `@lda/workflow-rpc` generates all 70 wire operation names plus raw
-  parameter/result types from the checked manifest. The generated artifact has
-  its own deterministic drift check and proves the 16 authored Effect RPCs are
-  a subset without broadening browser authorization.
-- Completed: a fail-closed representative JSON Schema-to-Effect translator
-  handles constrained primitives, objects, arrays, `anyOf`, local references,
-  and structurally guarded recursive synthetic schemas, with representative
-  checked-manifest coverage. Unsupported union and conditional semantics remain
-  typed translation failures. No runtime RPC or browser authorization behavior
-  changed; runtime TypeScript parity is not complete.
-- Completed: a test-only parity harness translates all 32 payload/result sides
-  of the 16 authored Effect RPCs. Health, sources, artifacts, deployments, and
-  run-list fixtures agree; eight bidirectional result mismatches are pinned for
-  the current representative run inspect/start/resume interrupt fixtures and
-  the compact run-trace envelope/frame shape.
-  No runtime decoder or browser authorization behavior changed.
-- Completed: all 16 current Effect RPCs now use generated runtime decoders from
-  the checked manifest. Run inspect/start/resume use the complete persisted
-  interrupt contract; run trace uses the full run envelope and canonical frame
-  identifiers. The checked generator embeds only those operation schemas and
-  reachable components, and a 64-container guard rejects adversarial request
-  or response nesting before recursive JSON decoding. The authored browser
-  allowlist remains unchanged.
-- Completed: duplicated Effect-client operation-name unions and guards now come
-  from the authored operation metadata registry, with every name checked
-  against the generated 70-operation inventory. The Hono browser proxy retains
-  an independently authored, typed 16-operation allowlist so future client
-  expansion does not broaden browser authorization implicitly.
-- `WorkflowApiSurface` is the protocol-neutral workflow operation contract.
-- `wf_transport_rpc_http` exposes local/static and MCP-backed `WorkflowServer`
-  over JSON-RPC HTTP.
-- `wf` can target local or remote workflow APIs for capability discovery, draft
-  authoring, artifact/deployment operations, run, inspect, bounded trace,
-  resume, and `cap call`.
-- Desired source registry reads, mutations, and explicit apply/reload are exposed
-  through JSON-RPC and CLI.
-- Neutral `wf_config` can express MCP sources, role-specific filesystem stores,
-  and client/server target separation.
-- `wf config migrate-mcp` converts legacy broker configs to neutral workflow
-  config without mutating the original.
-- `McpRuntimePool` is shared for stateful upstream MCP operations and has
-  JSON-RPC E2E coverage proving session reuse across workflow runs.
-- `wf run watch` provides polling-based progress UX.
-- CLI expected errors are compact by default; `wf --verbose ...` preserves raw
-  tracebacks for debugging.
-- Completed thesis case-study evidence bundle: `examples/report_workflow/`
-  provides a deterministic report workflow with Python source, fixture input,
-  config, runbook, and tests.
-- Completed thesis system-design draft: `docs/thesis/system-design-implementation.md`
-  now frames the platform as a formal system design/implementation report backed
-  by `docs/thesis/evidence-index.md` and the report-workflow case study.
-- Completed supplemental browser-click workflow example with serial multi-node lifecycle evidence.
-- Completed: an opencode browser-click challenge harness captures external
-  agent trials against the deterministic browser-click workflow example without
-  changing product runtime code. The old staged-server modes were replaced by
-  per-trial local configs in the generic V2 harness.
-- Completed: `skills/`, runbooks, and challenge prompt templates are treated as
-  the agent instruction layer. Challenge reports now track when trials rely on
-  product code, prior stores, adjacent attempts, or existing example solutions.
-- Completed: workflow/CLI agent instructions now form an explicit copyable
-  bundle for controlled challenge profiles, use `wf schema` for public shape
-  discovery, and avoid implementation/test-file guidance.
-- Completed: the generic agent challenge harness now supports data-driven
-  manifests, layered prompts, explicit `none|skills|all|debug` profiles,
-  one-hour hard ceilings, normalized OpenCode tool/token evidence, policy
-  findings, and manual-audited reports. Two data-driven challenges exist:
-  browser-click and report-workflow. The central `run_trials.py` runner accepts
-  any challenge manifest. The `debug` profile is opt-in and captures
-  evidence-backed UX issue reports separately from normal benchmark scoring.
-- Completed: report projections generate bounded Markdown and JSON reports for
-  every V2 trial and regenerate both after audit without mutating raw evidence.
-  Implementation:
-  [`report projections`](historical/superpowers/plans/2026-06-23-agent-challenge-report-projections.md).
-- Completed: challenge trial collection now supports bounded concurrency through
-  `run_trials.py --concurrency` and a Python matrix runner,
-  `examples/agent_challenges/run_matrix.py`. The PowerShell matrix helper now
-  delegates to the Python runner.
-- Completed: shared agent challenge evaluation runbook documents trial
-  execution, instruction profiles, manual audit, and the distinction between
-  evaluation validity and policy coverage:
-  [`agent challenge evaluation`](runbooks/agent-challenge-evaluation.md).
-- Completed: challenge matrix operations now have compact OpenCode thread
-  titles, policy handling for canonical skill-document reads, and a central
-  `summarize_trials.py` command for audited result tables.
-- Completed: agent challenge results now record OpenCode session metadata and
-  resume commands, so incomplete provider runs can be continued without
-  mutating original raw evidence.
-- Completed: canonical TOML path strings are the emitted workflow path form.
-  Paths now serialize as `"input.text"`, `"state.echoed"`, and `"message"`
-  (local). Structural `{"root": "input", "parts": ["text"]}` path objects
-  remain accepted and are now advertised in generated schemas as an input form.
-- Completed: challenge-driven CLI UX fixes now provide exact available
-  deployment binding suggestions, reject bare `--bind-output` state targets
-  before RPC with compact guidance, and accept `wf schema --full` as an alias
-  for `--verbose`.
-- Completed: `wf draft bind` with `--from local.x --to output.y` now lowers
-  through state
-  atomically (projecting into both state_schema and output_schema), and
-  validation repair hints cover undeclared workflow input source paths.
-  Implementation plan:
-  [`bind repair hints`](historical/superpowers/plans/2026-06-29-draft-bind-repair-hints.md).
-- Completed: capability-backed draft creation now auto-binds required inputs
-  only; optional inputs are surfaced in wrapper-hint notes for explicit binding.
-  Implementation plan:
-  [`required-only wrapper inputs`](historical/superpowers/plans/2026-06-29-required-only-wrapper-inputs.md).
-- Completed: `wf draft set-input` rejects `local.x` targets before RPC and
-  shows the equivalent bare-target mapping.
-- Completed: `wf draft add capability --route` errors include declared outcomes and
-  direct add/remove repair guidance.
-- Completed: repeated idempotent `wf draft bind input/state -> local` behavior
-  is covered by regression tests.
-- Completed: capability-aware canonical step-input replacement now supports
-  structured assembly, literals, explicit null, fan-out, whole-payload
-  projection, local/remote CLI modes, JSON-RPC, and MCP. Compatibility map
-  merge remains available but intentionally lossy. Implementation plan:
-  [`atomic step input bindings`](historical/superpowers/plans/2026-07-22-atomic-step-input-bindings.md).
-- Completed: capability-aware canonical step-output replacement now preserves
-  ordered repeated-source fan-out, projects missing state schemas atomically,
-  and is available through Python, JSON-RPC, MCP, and local/remote CLI modes.
-  Compatibility map merges remain available but inherently lossy. Implementation
-  plan: [`atomic step output bindings`](historical/superpowers/plans/2026-07-23-atomic-step-output-bindings.md).
-- Completed: capability-step creation now accepts metadata and ordered
-  path/literal inputs, while focused presence-aware updates can clear selected
-  metadata or atomically replace canonical inputs without changing `use`,
-  routes, or outputs. Python, JSON-RPC, MCP, and local/remote CLI surfaces are
-  aligned. Implementation plan:
-  [`capability step updates`](historical/superpowers/plans/2026-07-26-capability-step-update.md).
-- Completed: foreach bodies now return through validated back-edges to their
-  immediate owner, with unique static control regions and fresh persisted
-  activation identities for every dynamic visit. Design:
-  [`foreach back-edge design`](superpowers/specs/2026-09-04-foreach-back-edge-design.md).
-  Fork/gather remains explicitly deferred.
-
-Agent evaluation cohort status and policy:
-
-- Treat trials collected while product code, prompts, fixtures, harness logic,
-  or workspace isolation were changing as formative evaluation. Preserve them
-  as qualitative evidence linking observed agent failures to product/harness
-  fixes, but do not pool their timing, token, or success metrics with a frozen
-  cohort.
-- Completed: the primary longitudinal campaign now has N=3 per cell / 36
-  manually audited trials across two challenges, two models, and
-  `none|skills|all` profiles. The explicit cohort manifest, aggregate Markdown,
-  and SVG/PDF figures live in `docs/thesis/`.
-- The 36 trials span repository snapshots and a base-prompt change before the
-  third wave. Treat the aggregate as longitudinal product/prompt engineering
-  evidence, not as a frozen model comparison or causal profile experiment.
-- Keep product code, challenge prompts, supplied skill bundle, model variants,
-  timeout, concurrency, fixtures, and enabled tool set fixed if a future
-  controlled cohort is collected. Record the product baseline and rendered
-  prompt hashes with every result.
-- Keep manual audit authoritative for final pass/fail/invalid interpretation.
-  Automatic policy findings remain review inputs, not bespoke exceptions or
-  final benchmark outcomes.
-
-Planned challenge-driven UX follow-ups:
-
-- Composite binding and data shaping is now tracked as console authoring Slice
-  5 above. It covers mixed literal/path arrays as well as the underlying model
-  needed later to map state fields into structured objects such as `report`.
-
-## Historical References
-
-- [`wf_api extraction roadmap`](historical/superpowers/plans/2026-06-01-wf-api-extraction-roadmap.md)
-- [`source registry next slices`](historical/superpowers/plans/2026-06-03-source-registry-next-slices.md)
+- [`API extraction roadmap`](historical/superpowers/plans/2026-06-01-wf-api-extraction-roadmap.md)
+- [`source registry slices`](historical/superpowers/plans/2026-06-03-source-registry-next-slices.md)
 - [`MCP source connection seam`](historical/superpowers/plans/2026-06-07-mcp-source-connection-seam.md)
-- [`MCP runtime RPC session reuse E2E`](historical/superpowers/plans/2026-06-08-mcp-runtime-rpc-session-reuse-e2e.md)
+- [`MCP runtime session reuse`](historical/superpowers/plans/2026-06-08-mcp-runtime-rpc-session-reuse-e2e.md)

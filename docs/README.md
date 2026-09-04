@@ -14,8 +14,8 @@ implementation plans are kept for context, not as active instructions.
   maintained thesis/report document.
 - [`thesis/evidence-index.md`](thesis/evidence-index.md): claim-to-code and
   claim-to-test evidence map for the thesis.
-- [`current_roadmap.md`](current_roadmap.md): active next-work list after the
-  core type-shape cleanup.
+- [`current_roadmap.md`](current_roadmap.md): active implementation order,
+  durable constraints, and links to historical context.
 - [`wf_core_architecture.md`](wf_core_architecture.md): kernel package
   boundaries, runtime flow, validation flow, and known runtime gaps.
 - [`wf_api_architecture.md`](wf_api_architecture.md): workflow application API,
