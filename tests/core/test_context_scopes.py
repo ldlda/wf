@@ -146,7 +146,7 @@ def test_serial_and_concurrent_foreach_expose_the_same_scoped_context() -> None:
             edges=[
                 {"from": "each", "outcome": "loop", "to": "body"},
                 {"from": "each", "outcome": "done", "to": "tail"},
-                {"from": "body", "outcome": "ok", "to": END},
+                {"from": "body", "outcome": "ok", "to": "each"},
                 {"from": "tail", "outcome": "ok", "to": END},
             ],
         )
@@ -164,7 +164,7 @@ def test_foreach_item_schema_and_configured_alias_are_reported() -> None:
         nodes=[_foreach("each", alias="record"), _node("body")],
         edges=[
             {"from": "each", "outcome": "loop", "to": "body"},
-            {"from": "body", "outcome": "ok", "to": END},
+            {"from": "body", "outcome": "ok", "to": "each"},
             {"from": "each", "outcome": "done", "to": END},
         ],
     )
@@ -181,7 +181,7 @@ def test_foreach_item_schema_resolves_bounded_local_array_reference() -> None:
         nodes=[_foreach("each", alias="record"), _node("body")],
         edges=[
             {"from": "each", "outcome": "loop", "to": "body"},
-            {"from": "body", "outcome": "ok", "to": END},
+            {"from": "body", "outcome": "ok", "to": "each"},
             {"from": "each", "outcome": "done", "to": END},
         ],
         state_schema={
@@ -209,7 +209,7 @@ def test_foreach_item_schema_resolves_bounded_local_array_reference() -> None:
     assert fields["record"].contract.schema["properties"] == {"id": {"type": "string"}}
 
 
-def test_only_foreach_reachable_node_has_available_context() -> None:
+def test_region_conflicted_node_receives_no_guaranteed_foreach_fields() -> None:
     workflow = _workflow(
         start="start",
         nodes=[_node("start"), _foreach("each", alias="item"), _node("body")],
@@ -218,12 +218,18 @@ def test_only_foreach_reachable_node_has_available_context() -> None:
             {"from": "start", "outcome": "loop", "to": "each"},
             {"from": "each", "outcome": "loop", "to": "body"},
             {"from": "each", "outcome": "done", "to": END},
-            {"from": "body", "outcome": "ok", "to": END},
+            {"from": "body", "outcome": "ok", "to": "each"},
         ],
     )
 
-    assert _field_map(workflow, "body")["item"].availability == "conditional"
-    assert _field_map(workflow, "body")["item"].reason
+    fields = context_fields_by_node(workflow)
+    assert "body" not in fields or "item" not in {
+        field.contract.name for field in fields.get("body", ())
+    }
+    warnings = context_analysis_warnings(workflow)
+    assert any(
+        "control region" in warning or "conflict" in warning for warning in warnings
+    )
 
 
 def test_nested_foreach_replaces_inner_scope_and_restores_outer_scope() -> None:
@@ -239,8 +245,8 @@ def test_nested_foreach_replaces_inner_scope_and_restores_outer_scope() -> None:
             {"from": "outer", "outcome": "loop", "to": "inner"},
             {"from": "inner", "outcome": "loop", "to": "inner_body"},
             {"from": "inner", "outcome": "done", "to": "after_inner"},
-            {"from": "inner_body", "outcome": "ok", "to": END},
-            {"from": "after_inner", "outcome": "ok", "to": END},
+            {"from": "inner_body", "outcome": "ok", "to": "inner"},
+            {"from": "after_inner", "outcome": "ok", "to": "outer"},
             {"from": "outer", "outcome": "done", "to": END},
         ],
         state_schema={
@@ -267,12 +273,14 @@ def test_nested_foreach_preserves_context_backed_item_schema() -> None:
             _foreach("outer", alias="outer_item"),
             _foreach("inner", alias="inner_item", over="context.outer_item"),
             _node("inner_body"),
+            _node("after_inner"),
         ],
         edges=[
             {"from": "outer", "outcome": "loop", "to": "inner"},
             {"from": "inner", "outcome": "loop", "to": "inner_body"},
-            {"from": "inner", "outcome": "done", "to": END},
-            {"from": "inner_body", "outcome": "ok", "to": END},
+            {"from": "inner", "outcome": "done", "to": "after_inner"},
+            {"from": "inner_body", "outcome": "ok", "to": "inner"},
+            {"from": "after_inner", "outcome": "ok", "to": "outer"},
             {"from": "outer", "outcome": "done", "to": END},
         ],
         state_schema={
@@ -350,4 +358,6 @@ def test_scoped_cycle_terminates_and_preserves_scoped_field_availability() -> No
     fields = context_fields_by_node(workflow)
     assert fields["body"]
     assert _field_map(workflow, "body")["item"].availability == "available"
-    assert _field_map(workflow, "each")["item"].availability == "conditional"
+    # A canonical back-edge pops the item stack, so the controller itself
+    # stays in the outer region and exposes no item alias.
+    assert "item" not in _field_map(workflow, "each")
