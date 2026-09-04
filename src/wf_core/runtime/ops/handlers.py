@@ -28,7 +28,6 @@ def handle_condition_step(
         step.check,
         state_view_for_frame(run, frame),
         scope_input_for_frame(run, frame),
-        frame.prior_outcome,
         # Structured context must match what validation blesses: conditions
         # inside a foreach body can read context.foreach.* / loop aliases.
         context=frame_context_view(run, frame).graph,

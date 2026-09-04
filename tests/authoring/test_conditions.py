@@ -45,5 +45,5 @@ def test_condition_dsl_supports_not_ge_and_ne() -> None:
         compiled,
         state={"score": 7, "status": "ready"},
         workflow_input={},
-        context_data=None,
+        context={"prior_outcome": None},
     )

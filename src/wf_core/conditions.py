@@ -20,43 +20,36 @@ def eval_condition(
     condition: Condition,
     state: Mapping[str, Any],
     workflow_input: Mapping[str, Any],
-    context_data: str | None,
     *,
-    context: Mapping[str, Any] | None = None,
+    context: Mapping[str, Any],
 ) -> bool:
     """Evaluate a condition against state, input, and context.
 
     ``context`` is the frame's structured context graph (see
-    ``frame_context_view``); when omitted, evaluation falls back to the
-    legacy ``{"prior_outcome": context_data}`` stub so direct unit callers
-    keep working. The graph always carries ``prior_outcome``, so passing it
-    preserves legacy behavior while also resolving structured paths such as
-    ``context.foreach.<id>.item``.
+    ``frame_context_view``); it always carries ``prior_outcome`` alongside the
+    structured ``foreach`` entries, aliases, and loop keys.
     """
-    resolved = context if context is not None else {"prior_outcome": context_data}
     if isinstance(condition, ExistsCondition):
         return path_exists(
             condition.path,
             state=state,
             workflow_input=workflow_input,
-            context=resolved,
+            context=context,
         )
     if isinstance(condition, NotCondition):
         return not eval_condition(
-            condition.arg, state, workflow_input, context_data, context=resolved
+            condition.arg, state, workflow_input, context=context
         )
     if isinstance(condition, VariadicCondition):
         values = [
-            eval_condition(arg, state, workflow_input, context_data, context=resolved)
+            eval_condition(arg, state, workflow_input, context=context)
             for arg in condition.args
         ]
         return all(values) if condition.op == "and" else any(values)
     if isinstance(condition, BinaryCondition):
-        left = resolve_operand(
-            condition.left, state, workflow_input, context_data, context=resolved
-        )
+        left = resolve_operand(condition.left, state, workflow_input, context=context)
         right = resolve_operand(
-            condition.right, state, workflow_input, context_data, context=resolved
+            condition.right, state, workflow_input, context=context
         )
         if condition.op == "eq":
             return left == right
@@ -77,9 +70,8 @@ def resolve_operand(
     operand: PathOperand | LiteralOperand,
     state: Mapping[str, Any],
     workflow_input: Mapping[str, Any],
-    context_data: str | None,
     *,
-    context: Mapping[str, Any] | None = None,
+    context: Mapping[str, Any],
 ) -> Any:
     if isinstance(operand, LiteralOperand):
         return operand.value
@@ -87,7 +79,7 @@ def resolve_operand(
         str(operand.path),
         state=state,
         workflow_input=workflow_input,
-        context=context if context is not None else {"prior_outcome": context_data},
+        context=context,
     )
 
 
