@@ -142,6 +142,30 @@ def analyze_control_regions(workflow: Workflow) -> ControlRegionAnalysis:
                 continue
             is_terminal = target_id == END or isinstance(target_node, EndNode)
             if is_terminal:
+                # Explicit end nodes are still program locations with one
+                # static region; record them so they are not also reported as
+                # unreachable. The `END` token has no node to record.
+                if isinstance(target_node, EndNode):
+                    visited_nodes.add(target_id)
+                    recorded_target = owner_stack_by_node.get(target_id)
+                    if recorded_target is None:
+                        owner_stack_by_node[target_id] = target_stack
+                    elif recorded_target != target_stack:
+                        del owner_stack_by_node[target_id]
+                        if target_id not in conflicted:
+                            conflicted.add(target_id)
+                            issues.append(
+                                ControlRegionIssue(
+                                    kind=ControlRegionIssueKind.FOREACH_REGION_CONFLICT,
+                                    path=f"nodes[{target_id}]",
+                                    message=(
+                                        f"node {target_id!r} is reachable under "
+                                        "two foreach control regions"
+                                    ),
+                                )
+                            )
+                        for prior_stack in (recorded_target, target_stack):
+                            mark_ambiguous(prior_stack)
                 if target_stack:
                     issues.append(
                         ControlRegionIssue(
