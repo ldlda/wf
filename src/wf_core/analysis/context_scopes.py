@@ -14,6 +14,7 @@ from wf_core.context_contracts import (
     FOREACH_CONTEXT_KEY,
     LOOP_INDEX_CONTEXT_KEY,
     LOOP_ITEM_CONTEXT_KEY,
+    RESERVED_CONTEXT_KEYS,
     STANDARD_CONTEXT_FIELDS,
     ContextFieldContract,
     ContextSchema,
@@ -319,7 +320,11 @@ def _context_schema_for_stack(
             required.extend([LOOP_ITEM_CONTEXT_KEY, LOOP_INDEX_CONTEXT_KEY])
         for owner_id in stack:
             foreach = foreach_nodes.get(owner_id)
-            if foreach is not None and foreach.as_:
+            if (
+                foreach is not None
+                and foreach.as_
+                and foreach.as_ not in RESERVED_CONTEXT_KEYS
+            ):
                 properties[foreach.as_] = deepcopy(
                     _foreach_item_schema(
                         workflow, foreach, foreach_nodes, owner_stack_by_node

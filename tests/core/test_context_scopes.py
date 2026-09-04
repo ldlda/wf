@@ -156,6 +156,31 @@ def test_all_standard_context_names_are_reserved_from_foreach_aliases() -> None:
             frame_context_view(_run_with(frame), frame)
 
 
+@pytest.mark.parametrize("alias", ["prior_outcome", "foreach"])
+def test_reserved_alias_does_not_overwrite_generated_context_schema(alias: str) -> None:
+    """Invalid aliases still leave secondary context diagnostics coherent."""
+    from wf_core.analysis.context_scopes import context_schema_for_node
+
+    workflow = _workflow(
+        start="each",
+        nodes=[_foreach("each", alias=alias), _node("body")],
+        edges=[
+            {"from": "each", "outcome": "loop", "to": "body"},
+            {"from": "body", "outcome": "ok", "to": "each"},
+            {"from": "each", "outcome": "done", "to": END},
+        ],
+    )
+    generated = context_schema_for_node(workflow, "body")["properties"][alias]
+    analyzed = _field_map(workflow, "body")[alias].schema
+
+    assert generated == analyzed
+    if alias == "prior_outcome":
+        assert generated == {"type": ["string", "null"]}
+    else:
+        assert generated["type"] == "object"
+        assert set(generated["properties"]) == {"each"}
+
+
 def test_serial_and_concurrent_foreach_expose_the_same_scoped_context() -> None:
     for mode in ("serial", "concurrent"):
         workflow = _workflow(
