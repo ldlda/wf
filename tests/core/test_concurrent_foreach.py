@@ -19,7 +19,11 @@ from wf_core import (
     execute_workflow,
 )
 from wf_core.run_state import ExecutionFrame, RunState, RuntimeContext
-from wf_core.runtime.foreach_state import ForeachBarrierState
+from wf_core.runtime.foreach_state import (
+    ForeachItemOwner,
+    item_frame_owner,
+    load_or_begin_foreach_activation,
+)
 from wf_core.runtime.scheduler import ForeachIterationMetadata
 
 
@@ -143,7 +147,11 @@ def test_concurrent_foreach_item_frames_use_distinct_lineages() -> None:
     assert run.frames["root"].lineage_id == "root"
     assert run.frames["root"].parent_lineage_id is None
     assert len(item_frames) == 2
-    assert item_lineage_ids == {"root/each[0]", "root/each[1]"}
+    assert item_lineage_ids == {"root:each#0[0]", "root:each#0[1]"}
+    for frame in item_frames:
+        owner = item_frame_owner(frame)
+        assert isinstance(owner, ForeachItemOwner)
+        assert owner.activation_id == "root:each#0"
     assert set(context_lineage_ids) == item_lineage_ids
     assert all(frame.scope_id == "root" for frame in item_frames)
     assert all(frame.parent_lineage_id == "root" for frame in item_frames)
@@ -162,15 +170,27 @@ def test_nested_concurrent_foreach_records_parent_child_lineages() -> None:
     inner_frames = _foreach_frames(run, "inner_each")
 
     assert {frame.lineage_id for frame in outer_frames} == {
-        "root/outer_each[0]",
-        "root/outer_each[1]",
+        "root:outer_each#0[0]",
+        "root:outer_each#0[1]",
     }
     assert all(frame.parent_lineage_id == "root" for frame in outer_frames)
     assert {(frame.parent_lineage_id, frame.lineage_id) for frame in inner_frames} == {
-        ("root/outer_each[0]", "root/outer_each[0]/inner_each[0]"),
-        ("root/outer_each[0]", "root/outer_each[0]/inner_each[1]"),
-        ("root/outer_each[1]", "root/outer_each[1]/inner_each[0]"),
-        ("root/outer_each[1]", "root/outer_each[1]/inner_each[1]"),
+        (
+            "root:outer_each#0[0]",
+            "root:outer_each#0:0:inner_each#0[0]",
+        ),
+        (
+            "root:outer_each#0[0]",
+            "root:outer_each#0:0:inner_each#0[1]",
+        ),
+        (
+            "root:outer_each#0[1]",
+            "root:outer_each#0:1:inner_each#0[0]",
+        ),
+        (
+            "root:outer_each#0[1]",
+            "root:outer_each#0:1:inner_each#0[1]",
+        ),
     }
 
 
@@ -264,12 +284,16 @@ def test_sync_concurrent_foreach_barrier_replays_add_reducer_inputs() -> None:
 
     assert run.state["number"] == 6
     assert run.output["number"] == 6
-    assert run.lineages["root/each[0]"].writes[0].incoming_value == 3
-    assert run.lineages["root/each[1]"].writes[0].incoming_value == 1
-    barrier = ForeachBarrierState.from_frame(run.frames["root"], "each")
-    assert barrier is not None
-    assert barrier.pending_results[0].lineage_id == "root/each[0]"
-    assert barrier.pending_results[0].patch.writes == []
+    assert run.lineages["root:each#0[0]"].writes[0].incoming_value == 3
+    assert run.lineages["root:each#0[1]"].writes[0].incoming_value == 1
+    # The visit closed before `done`; lineage history remains while a new
+    # load starts fresh barrier state with a new activation id.
+    fresh = load_or_begin_foreach_activation(
+        run.frames["root"], "each", mode="concurrent"
+    )
+    assert fresh.id == "root:each#1"
+    assert fresh.barrier.next_index == 0
+    assert fresh.barrier.pending_results == {}
     foreach_entries = [entry for entry in run.trace if entry.step_type == "foreach"]
     assert foreach_entries[-1].state_changes["state.number"] == 6
 
@@ -385,7 +409,7 @@ def _sum_items_workflow() -> Workflow:
         ],
         edges=[
             Edge.model_validate({"from": "each", "outcome": "loop", "to": "add_item"}),
-            Edge.model_validate({"from": "add_item", "outcome": "ok", "to": END}),
+            Edge.model_validate({"from": "add_item", "outcome": "ok", "to": "each"}),
             Edge.model_validate({"from": "each", "outcome": "done", "to": END}),
         ],
     )
@@ -495,7 +519,7 @@ def _same_item_reducer_visibility_workflow() -> Workflow:
                     "to": "read_number",
                 }
             ),
-            Edge.model_validate({"from": "read_number", "outcome": "ok", "to": END}),
+            Edge.model_validate({"from": "read_number", "outcome": "ok", "to": "each"}),
             Edge.model_validate({"from": "each", "outcome": "done", "to": END}),
         ],
     )
@@ -571,6 +595,15 @@ def _nested_foreach_lineage_workflow() -> Workflow:
                     "output": [{"source": "seen", "target": "state.seen"}],
                 }
             ),
+            NodeUse.model_validate(
+                {
+                    "id": "tail",
+                    "type": "node",
+                    "node": "record",
+                    "input": [{"target": "seen", "path": "context.outer"}],
+                    "output": [{"source": "seen", "target": "state.seen"}],
+                }
+            ),
         ],
         edges=[
             Edge.model_validate(
@@ -587,8 +620,13 @@ def _nested_foreach_lineage_workflow() -> Workflow:
                     "to": "record",
                 }
             ),
-            Edge.model_validate({"from": "record", "outcome": "ok", "to": END}),
-            Edge.model_validate({"from": "inner_each", "outcome": "done", "to": END}),
+            Edge.model_validate(
+                {"from": "record", "outcome": "ok", "to": "inner_each"}
+            ),
+            Edge.model_validate(
+                {"from": "inner_each", "outcome": "done", "to": "tail"}
+            ),
+            Edge.model_validate({"from": "tail", "outcome": "ok", "to": "outer_each"}),
             Edge.model_validate({"from": "outer_each", "outcome": "done", "to": END}),
         ],
     )
@@ -602,7 +640,7 @@ def _workflow(
 ) -> Workflow:
     edges = [
         Edge.model_validate({"from": "each", "outcome": "loop", "to": "record"}),
-        Edge.model_validate({"from": "record", "outcome": "ok", "to": END}),
+        Edge.model_validate({"from": "record", "outcome": "ok", "to": "each"}),
         Edge.model_validate({"from": "each", "outcome": "done", "to": END}),
     ]
     if include_completed_with_errors:
@@ -772,7 +810,9 @@ def _multi_step_overlay_workflow() -> Workflow:
                     "to": "read_scratch",
                 }
             ),
-            Edge.model_validate({"from": "read_scratch", "outcome": "ok", "to": END}),
+            Edge.model_validate(
+                {"from": "read_scratch", "outcome": "ok", "to": "each"}
+            ),
             Edge.model_validate({"from": "each", "outcome": "done", "to": END}),
         ],
     )
@@ -839,7 +879,9 @@ def _same_path_replace_workflow() -> Workflow:
                     "to": "write_winner",
                 }
             ),
-            Edge.model_validate({"from": "write_winner", "outcome": "ok", "to": END}),
+            Edge.model_validate(
+                {"from": "write_winner", "outcome": "ok", "to": "each"}
+            ),
             Edge.model_validate({"from": "each", "outcome": "done", "to": END}),
         ],
     )

@@ -31,8 +31,8 @@ async def test_concurrent_foreach_interrupt_returns_before_refill() -> None:
     assert run.status is RunStatus.INTERRUPTED
     assert run.interrupt is not None
     assert run.interrupt.payload["item"] == "b"
-    assert run.frames["root:each:1"].status == "interrupted"
-    assert "root:each:2" not in run.frames
+    assert run.frames["root:each#0:1"].status == "interrupted"
+    assert "root:each#0:2" not in run.frames
     assert "seen" not in run.state
 
 
@@ -52,9 +52,16 @@ async def test_resume_prioritizes_interrupted_item_before_siblings() -> None:
         resume_payload={},
     )
 
+    from wf_core.runtime.foreach_state import item_frame_owner
+
+    interrupted_owner = item_frame_owner(run.frames["root:each#0:1"])
+    assert interrupted_owner is not None
     assert resumed.status is RunStatus.COMPLETED
     assert resumed.state["seen"] == ["a", "b", "c"]
-    assert resumed.trace[interrupted_trace_len].frame_id == "root:each:1"
+    resumed_owner = item_frame_owner(resumed.frames["root:each#0:1"])
+    assert resumed_owner is not None
+    assert resumed_owner.activation_id == interrupted_owner.activation_id
+    assert resumed.trace[interrupted_trace_len].frame_id == "root:each#0:1"
     assert resumed.trace[interrupted_trace_len].step_type == "interrupt"
     assert resumed.trace[interrupted_trace_len].outcome == "submitted"
     foreach_entries = [entry for entry in resumed.trace if entry.step_type == "foreach"]
@@ -132,7 +139,7 @@ def _workflow() -> Workflow:
         ],
         edges=[
             Edge.model_validate({"from": "each", "outcome": "loop", "to": "route"}),
-            Edge.model_validate({"from": "route", "outcome": "ok", "to": END}),
+            Edge.model_validate({"from": "route", "outcome": "ok", "to": "each"}),
             Edge.model_validate(
                 {
                     "from": "route",
@@ -140,7 +147,7 @@ def _workflow() -> Workflow:
                     "to": "ask",
                 }
             ),
-            Edge.model_validate({"from": "ask", "outcome": "submitted", "to": END}),
+            Edge.model_validate({"from": "ask", "outcome": "submitted", "to": "each"}),
             Edge.model_validate({"from": "each", "outcome": "done", "to": END}),
         ],
     )

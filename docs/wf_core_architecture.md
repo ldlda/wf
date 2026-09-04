@@ -74,9 +74,10 @@ interrupted, failed, or deadlocked. This replaces the older assumption that
 ## Foreach
 
 Serial foreach creates one iteration child frame, records typed
-`ForeachIterationMetadata`, blocks on that child, and enqueues the child. When
-the child reaches `END`, `wake_parent_if_children_complete` wakes the blocked
-parent so it can create the next iteration or emit `done`.
+`ForeachIterationMetadata`, blocks on that child, and enqueues the child. An
+item child returns by targeting its immediate owning foreach. The child
+finishes at that owner location without executing the controller; the parent
+activation consumes the result and continues or completes its barrier.
 
 Concurrent foreach uses the same frame machinery but admits multiple item
 lineages according to `ForeachConcurrentPolicy`. Each item lineage reads through
@@ -98,6 +99,9 @@ See `examples/raw_concurrent_foreach.py` for the canonical raw workflow shape an
 - validate edge sources, destinations, duplicate outcomes, and declared outcomes
 - validate reachable nodes have all required outcome edges
 - validate explicit `EndNode` outcomes against `Workflow.outcomes`
+- validate foreach control regions once: region conflicts, unreachable nodes,
+  body terminals, non-local returns, empty bodies, and bodies without possible
+  returns fail validation
 
 Validation reports multiple issues through `ValidationReport` instead of
 raising at the first failure.

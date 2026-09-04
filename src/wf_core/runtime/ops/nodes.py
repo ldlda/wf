@@ -15,18 +15,16 @@ from wf_core.run_state import (
     RuntimeContext,
     StepExecutionResult,
 )
-from wf_core.runtime.foreach_state import ForeachBarrierState, item_frame_owner
 from wf_core.runtime.input_bindings import resolve_step_input_bindings
 from wf_core.runtime.lineage import (
-    append_lineage_writes,
-    commit_patch_for_frame,
+    commit_foreach_aware_patch,
     scope_input_for_frame,
 )
 from wf_core.runtime.ops.frames import frame_context_values
 from wf_core.runtime.ops.merges import ReducerDefinition
 from wf_core.runtime.ops.overlays import state_view_for_frame
 from wf_core.runtime.ops.schemas import validate_payload_against_schema
-from wf_core.runtime.ops.state import StatePatch, build_output_patch
+from wf_core.runtime.ops.state import build_output_patch
 
 NodeHandler = Callable[[dict[str, Any], RuntimeContext], NodeResult | dict[str, Any]]
 AsyncNodeHandler = Callable[
@@ -112,32 +110,10 @@ def _finalize_node_execution(
         state_view,
         reducers=reducers,
     )
-    owner = item_frame_owner(frame)
-    if owner is None:
-        state_changes = commit_patch_for_frame(run, frame, patch)
-    else:
-        parent_frame_id, foreach_node_id, item_index = owner
-        parent_frame = run.frames[parent_frame_id]
-        barrier = ForeachBarrierState.from_frame(parent_frame, foreach_node_id)
-        if barrier is not None and barrier.mode == "concurrent":
-            # New concurrent foreach stores writes in the child lineage; the
-            # barrier keeps only result metadata plus old patch fallback.
-            append_lineage_writes(
-                run,
-                scope_id=frame.scope_id,
-                lineage_id=frame.lineage_id,
-                writes=patch.writes,
-            )
-            barrier.add_success_patch(
-                index=item_index,
-                frame_id=frame.id,
-                patch=StatePatch(),
-                lineage_id=frame.lineage_id,
-            )
-            barrier.save_to_frame(parent_frame, foreach_node_id)
-            state_changes = {}
-        else:
-            state_changes = commit_patch_for_frame(run, parent_frame, patch)
+    # Foreach-aware routing (root, serial parent, concurrent lineage) is
+    # owned by the shared helper so every operation commits the same way.
+    # Closed or superseded activations fail closed inside.
+    state_changes = commit_foreach_aware_patch(run, frame, patch)
     return StepExecutionResult(
         outcome=result.outcome,
         resolved_input=resolved_input,

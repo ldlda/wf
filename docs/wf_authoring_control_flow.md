@@ -228,6 +228,17 @@ step with item-local child lineages:
 In async execution, admitted async item node handlers may run at the same time.
 Run-state mutation, tracing, and barrier commits remain deterministic.
 
+An iteration body returns through its immediate owning foreach:
+
+```python
+g.connect(each, "loop", record)
+g.connect(record, "ok", each)
+g.connect(each, "done", END)
+```
+
+Region conflicts, unreachable nodes, body terminals, non-local returns, empty
+bodies, and bodies without possible returns fail validation.
+
 See `examples/authoring_concurrent_foreach.py` for a runnable example covering:
 
 - sync concurrent foreach with `item_error={"action": "collect", ...}`;

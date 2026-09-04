@@ -1,16 +1,37 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Literal
+from typing import Any, Literal, overload
 
 from wf_core.errors import WorkflowExecutionError
-from wf_core.models.reducers import ReducerRef
-from wf_core.paths import StatePath
-from wf_core.run_state import ExecutionFrame, StateWrite
-from wf_core.runtime.ops.state import StatePatch
+from wf_core.run_state import ExecutionFrame, RunState
 from wf_core.runtime.scheduler import ForeachIterationMetadata
 
-_BARRIER_METADATA_KEY = "foreach_barriers"
+_ACTIVATION_METADATA_KEY = "foreach_activations"
+
+
+@dataclass(slots=True)
+class ForeachActivationState:
+    """Persisted state for one dynamic visit to a foreach controller.
+
+    A parent frame creates a fresh activation on first entry, reuses it while
+    admitting items, and closes it before emitting ``done``. The id is opaque:
+    callers compare it by name and never parse it.
+    """
+
+    id: str
+    foreach_node_id: str
+    barrier: ForeachBarrierState
+
+
+@dataclass(frozen=True, slots=True)
+class ForeachItemOwner:
+    """Named ownership record for one foreach item frame."""
+
+    parent_frame_id: str
+    foreach_node_id: str
+    activation_id: str
+    item_index: int
 
 
 @dataclass(slots=True)
@@ -68,16 +89,14 @@ class ItemErrorRecord:
 class PendingItemResult:
     """Buffered item result waiting for a future foreach barrier commit.
 
-    New concurrent foreach execution stores item writes in `RunState.lineages`
-    and records `lineage_id` here. `patch` remains for old serialized barrier
-    metadata and direct unit tests that still construct pending patches.
+    Concurrent item writes live in `RunState.lineages`; the barrier keeps
+    only the lineage identity per item index.
     """
 
     index: int
     frame_id: str
     status: Literal["succeeded", "failed"]
     lineage_id: str | None = None
-    patch: StatePatch = field(default_factory=StatePatch)
     error: ItemErrorRecord | None = None
 
     @classmethod
@@ -92,39 +111,48 @@ class PendingItemResult:
             raise WorkflowExecutionError(
                 f"malformed pending foreach result missing {exc.args[0]!r}"
             ) from exc
-        patch_changes = raw.get("patch_changes", {})
-        patch_writes = raw.get("patch_writes")
         lineage_id = raw.get("lineage_id")
+        raw_error = raw.get("error")
         if not isinstance(index, int) or index < 0:
             raise WorkflowExecutionError("malformed pending foreach result index")
         if not isinstance(frame_id, str):
             raise WorkflowExecutionError("malformed pending foreach result frame id")
-        if lineage_id is not None and not isinstance(lineage_id, str):
-            raise WorkflowExecutionError("malformed pending foreach result lineage id")
         if status not in {"succeeded", "failed"}:
             raise WorkflowExecutionError("malformed pending foreach result status")
-        if not isinstance(patch_changes, dict):
-            raise WorkflowExecutionError("malformed pending foreach result patch")
-        if patch_writes is not None and not isinstance(patch_writes, list):
-            raise WorkflowExecutionError("malformed pending foreach result writes")
-        raw_error = raw.get("error")
+        if status == "succeeded":
+            if not isinstance(lineage_id, str):
+                raise WorkflowExecutionError(
+                    "malformed pending foreach result lineage id"
+                )
+            if raw_error is not None:
+                raise WorkflowExecutionError(
+                    "malformed pending foreach result: succeeded result must not "
+                    "carry an error"
+                )
+        else:
+            if raw_error is None:
+                raise WorkflowExecutionError(
+                    "malformed pending foreach result: failed result requires an error"
+                )
+            if lineage_id is not None and not isinstance(lineage_id, str):
+                raise WorkflowExecutionError(
+                    "malformed pending foreach result lineage id"
+                )
+        error = (
+            ItemErrorRecord.from_metadata(raw_error) if raw_error is not None else None
+        )
+        if error is not None and (error.index != index or error.frame_id != frame_id):
+            raise WorkflowExecutionError(
+                "malformed pending foreach result: error identity "
+                f"(index {error.index!r}, frame {error.frame_id!r}) does not "
+                f"match enclosing result (index {index!r}, frame {frame_id!r})"
+            )
         return cls(
             index=index,
             frame_id=frame_id,
             status=status,
             lineage_id=lineage_id,
-            patch=(
-                StatePatch(
-                    writes=[_state_write_from_metadata(item) for item in patch_writes]
-                )
-                if patch_writes is not None
-                else StatePatch(changes=patch_changes)
-            ),
-            error=(
-                ItemErrorRecord.from_metadata(raw_error)
-                if raw_error is not None
-                else None
-            ),
+            error=error,
         )
 
     def to_metadata(self) -> dict[str, Any]:
@@ -133,10 +161,6 @@ class PendingItemResult:
             "frame_id": self.frame_id,
             "status": self.status,
             "lineage_id": self.lineage_id,
-            "patch_changes": dict(self.patch.changes),
-            "patch_writes": [
-                _state_write_to_metadata(write) for write in self.patch.writes
-            ],
             "error": self.error.to_metadata() if self.error is not None else None,
         }
 
@@ -150,33 +174,6 @@ class ForeachBarrierState:
     active_frame_ids: tuple[str, ...] = ()
     outstanding_frame_ids: tuple[str, ...] = ()
     pending_results: dict[int, PendingItemResult] = field(default_factory=dict)
-
-    @classmethod
-    def from_frame(
-        cls,
-        frame: ExecutionFrame,
-        foreach_node_id: str,
-    ) -> ForeachBarrierState | None:
-        """Load one foreach barrier state from frame metadata.
-
-        Missing metadata means the foreach has not started on this frame yet.
-        Malformed metadata means runtime state is corrupt and should fail fast.
-        """
-        all_barriers = frame.metadata.get(_BARRIER_METADATA_KEY)
-        if all_barriers is None:
-            return None
-        if not isinstance(all_barriers, dict):
-            raise WorkflowExecutionError(
-                f"malformed foreach barrier table for frame {frame.id!r}"
-            )
-        raw = all_barriers.get(foreach_node_id)
-        if raw is None:
-            return None
-        if not isinstance(raw, dict):
-            raise WorkflowExecutionError(
-                f"malformed foreach barrier state for frame {frame.id!r}"
-            )
-        return cls.from_metadata(raw)
 
     @classmethod
     def from_metadata(cls, raw: object) -> ForeachBarrierState:
@@ -201,7 +198,12 @@ class ForeachBarrierState:
                 raise WorkflowExecutionError(
                     "malformed foreach barrier pending result index"
                 ) from exc
-            parsed_results[index] = PendingItemResult.from_metadata(raw_result)
+            parsed = PendingItemResult.from_metadata(raw_result)
+            if parsed.index != index:
+                raise WorkflowExecutionError(
+                    "malformed foreach barrier pending result index mismatch"
+                )
+            parsed_results[index] = parsed
         return cls(
             next_index=next_index,
             mode=mode,
@@ -209,20 +211,6 @@ class ForeachBarrierState:
             outstanding_frame_ids=outstanding_frame_ids,
             pending_results=parsed_results,
         )
-
-    def save_to_frame(self, frame: ExecutionFrame, foreach_node_id: str) -> None:
-        """Store this barrier state in frame metadata under its foreach node id."""
-        existing = frame.metadata.get(_BARRIER_METADATA_KEY)
-        if existing is None:
-            frame.metadata[_BARRIER_METADATA_KEY] = {
-                foreach_node_id: self.to_metadata()
-            }
-            return
-        if not isinstance(existing, dict):
-            raise WorkflowExecutionError(
-                f"malformed foreach barrier table for frame {frame.id!r}"
-            )
-        existing[foreach_node_id] = self.to_metadata()
 
     def to_metadata(self) -> dict[str, Any]:
         return {
@@ -266,15 +254,13 @@ class ForeachBarrierState:
         *,
         index: int,
         frame_id: str,
-        patch: StatePatch,
-        lineage_id: str | None = None,
+        lineage_id: str,
     ) -> None:
-        """Buffer or extend successful item patches by item index.
+        """Record one completed concurrent item by lineage identity.
 
-        New runtime paths pass an empty patch and use `lineage_id`; legacy
-        callers may still accumulate patches here and replay them at the
-        barrier. Do not merge `_prepared_writes`: the barrier replays public
-        write records against one staged parent state.
+        Registration is idempotent for the same frame and lineage so the
+        owner back-edge can own it regardless of which operation ran last.
+        Any conflicting identity fails closed.
         """
         existing = self.pending_results.get(index)
         if existing is None:
@@ -283,7 +269,6 @@ class ForeachBarrierState:
                 frame_id=frame_id,
                 status="succeeded",
                 lineage_id=lineage_id,
-                patch=patch,
             )
             return
         if existing.frame_id != frame_id:
@@ -291,14 +276,11 @@ class ForeachBarrierState:
                 f"foreach item result for index {index!r} belongs to frame "
                 f"{existing.frame_id!r}, got {frame_id!r}"
             )
-        if lineage_id is not None and existing.lineage_id not in {None, lineage_id}:
+        if existing.lineage_id != lineage_id:
             raise WorkflowExecutionError(
                 f"foreach item result for index {index!r} belongs to lineage "
                 f"{existing.lineage_id!r}, got {lineage_id!r}"
             )
-        if existing.lineage_id is None:
-            existing.lineage_id = lineage_id
-        existing.patch.extend(patch)
 
     def add_failure(self, *, error: ItemErrorRecord) -> None:
         """Buffer one handled item failure for the foreach barrier.
@@ -320,14 +302,232 @@ class ForeachBarrierState:
         )
 
 
-def item_frame_owner(frame: ExecutionFrame) -> tuple[str, str, int] | None:
-    """Return parent frame id, foreach node id, and item index for item frames."""
-    if frame.kind != "foreach_iteration" or frame.parent_frame_id is None:
+def _activation_entry(
+    frame: ExecutionFrame,
+    table: dict[str, Any] | None,
+    foreach_node_id: str,
+) -> dict[str, Any] | None:
+    """Return the mutable activation entry or fail fast on corrupt state."""
+    if table is None:
         return None
+    entry = table.get(foreach_node_id)
+    if entry is None:
+        return None
+    if not isinstance(entry, dict):
+        raise WorkflowExecutionError(
+            f"malformed foreach activation entry for frame {frame.id!r}"
+        )
+    return entry
+
+
+def load_or_begin_foreach_activation(
+    frame: ExecutionFrame,
+    foreach_node_id: str,
+    *,
+    mode: Literal["serial", "concurrent"],
+) -> ForeachActivationState:
+    """Load the active activation or begin a fresh visit.
+
+    The first entry for one visit allocates an opaque id from the parent frame
+    id, foreach node id, and a persisted per-frame sequence. Later calls reuse
+    the active activation; closing it makes the next visit allocate a new id
+    with fresh barrier state. Mode mismatches and malformed tables fail fast.
+    """
+    table = _activation_table(frame)
+    entry = _activation_entry(frame, table, foreach_node_id)
+    if entry is None:
+        entry = {"next_sequence": 0, "active": None}
+        table[foreach_node_id] = entry
+    next_sequence = entry.get("next_sequence", 0)
+    if not isinstance(next_sequence, int) or next_sequence < 0:
+        raise WorkflowExecutionError(
+            f"malformed foreach activation sequence for frame {frame.id!r}"
+        )
+    active = entry.get("active")
+    if active is not None:
+        activation = _activation_from_metadata(
+            active, frame_id=frame.id, foreach_node_id=foreach_node_id
+        )
+        if activation.barrier.mode != mode:
+            raise WorkflowExecutionError(
+                f"foreach {foreach_node_id!r} activation {activation.id!r} "
+                f"has mode {activation.barrier.mode!r}, got {mode!r}"
+            )
+        return activation
+    activation_id = f"{frame.id}:{foreach_node_id}#{next_sequence}"
+    activation = ForeachActivationState(
+        id=activation_id,
+        foreach_node_id=foreach_node_id,
+        barrier=ForeachBarrierState(mode=mode),
+    )
+    entry["next_sequence"] = next_sequence + 1
+    entry["active"] = {
+        "id": activation.id,
+        "barrier": activation.barrier.to_metadata(),
+    }
+    return activation
+
+
+def save_foreach_activation(
+    frame: ExecutionFrame, activation: ForeachActivationState
+) -> None:
+    """Persist barrier progress for the named active activation."""
+    table = _activation_table(frame, create=False)
+    entry = _activation_entry(frame, table, activation.foreach_node_id)
+    if entry is None:
+        raise WorkflowExecutionError(
+            f"malformed foreach activation entry for frame {frame.id!r}"
+        )
+    active = entry.get("active")
+    if not isinstance(active, dict) or active.get("id") != activation.id:
+        raise WorkflowExecutionError(
+            f"cannot save stale foreach activation {activation.id!r} "
+            f"for frame {frame.id!r}"
+        )
+    active["barrier"] = activation.barrier.to_metadata()
+
+
+def close_foreach_activation(
+    frame: ExecutionFrame, activation: ForeachActivationState
+) -> None:
+    """Close the named active activation, preserving the visit sequence.
+
+    The barrier is removed so a later visit starts fresh; the sequence keeps
+    increasing so child and lineage ids cannot collide across visits.
+    """
+    table = _activation_table(frame, create=False)
+    entry = _activation_entry(frame, table, activation.foreach_node_id)
+    if entry is None:
+        raise WorkflowExecutionError(
+            f"malformed foreach activation entry for frame {frame.id!r}"
+        )
+    active = entry.get("active")
+    if not isinstance(active, dict) or active.get("id") != activation.id:
+        raise WorkflowExecutionError(
+            f"cannot close stale foreach activation {activation.id!r} "
+            f"for frame {frame.id!r}"
+        )
+    entry["active"] = None
+
+
+def load_foreach_activation(
+    frame: ExecutionFrame, foreach_node_id: str, activation_id: str
+) -> ForeachActivationState | None:
+    """Return the active activation only when its id matches the child.
+
+    A child result naming a closed or different activation must fail closed in
+    the caller rather than buffering into the wrong barrier.
+
+    This is a read-only lookup: a missing table or entry raises without
+    mutating frame metadata.
+    """
+    table = _activation_table(frame, create=False)
+    entry = _activation_entry(frame, table, foreach_node_id)
+    if entry is None:
+        raise WorkflowExecutionError(
+            f"malformed foreach activation entry for frame {frame.id!r}"
+        )
+    active = entry.get("active")
+    if active is None:
+        return None
+    activation = _activation_from_metadata(
+        active, frame_id=frame.id, foreach_node_id=foreach_node_id
+    )
+    if activation.id != activation_id:
+        return None
+    return activation
+
+
+def require_foreach_activation(
+    frame: ExecutionFrame, foreach_node_id: str, activation_id: str
+) -> ForeachActivationState:
+    """Load the named activation or raise when it is closed or superseded."""
+    activation = load_foreach_activation(frame, foreach_node_id, activation_id)
+    if activation is None:
+        raise WorkflowExecutionError(
+            f"foreach item activation {activation_id!r} for node "
+            f"{foreach_node_id!r} is closed or superseded"
+        )
+    return activation
+
+
+def item_frame_owner(frame: ExecutionFrame) -> ForeachItemOwner | None:
+    """Return the named foreach ownership record for item frames.
+
+    Malformed item metadata fails closed via ``ForeachIterationMetadata``;
+    only genuinely non-item frames return ``None``. An item frame without
+    a parent is corrupt state and raises rather than masquerading as an
+    ordinary frame.
+    """
+    if frame.kind != "foreach_iteration":
+        return None
+    if frame.parent_frame_id is None:
+        raise WorkflowExecutionError(
+            f"foreach item frame {frame.id!r} is missing its parent frame"
+        )
     metadata = ForeachIterationMetadata.from_frame(frame)
     if metadata is None:
         return None
-    return frame.parent_frame_id, metadata.foreach_node_id, metadata.loop_index
+    return ForeachItemOwner(
+        parent_frame_id=frame.parent_frame_id,
+        foreach_node_id=metadata.foreach_node_id,
+        activation_id=metadata.activation_id,
+        item_index=metadata.loop_index,
+    )
+
+
+@overload
+def _activation_table(
+    frame: ExecutionFrame, *, create: Literal[True] = True
+) -> dict[str, Any]: ...
+
+
+@overload
+def _activation_table(
+    frame: ExecutionFrame, *, create: Literal[False]
+) -> dict[str, Any] | None: ...
+
+
+def _activation_table(
+    frame: ExecutionFrame, *, create: bool = True
+) -> dict[str, Any] | None:
+    """Return the activation table, optionally creating it.
+
+    Read-only lookups pass ``create=False`` so a failed lookup leaves
+    frame metadata untouched. Only ``load_or_begin`` creates the table.
+    """
+    raw = frame.metadata.get(_ACTIVATION_METADATA_KEY)
+    if raw is None:
+        if not create:
+            return None
+        table: dict[str, Any] = {}
+        frame.metadata[_ACTIVATION_METADATA_KEY] = table
+        return table
+    if not isinstance(raw, dict):
+        raise WorkflowExecutionError(
+            f"malformed foreach activation table for frame {frame.id!r}"
+        )
+    return raw
+
+
+def _activation_from_metadata(
+    raw: object, *, frame_id: str, foreach_node_id: str
+) -> ForeachActivationState:
+    if not isinstance(raw, dict):
+        raise WorkflowExecutionError(
+            f"malformed foreach activation for frame {frame_id!r}"
+        )
+    activation_id = raw.get("id")
+    barrier_raw = raw.get("barrier")
+    if not isinstance(activation_id, str) or not activation_id:
+        raise WorkflowExecutionError(
+            f"malformed foreach activation id for frame {frame_id!r}"
+        )
+    return ForeachActivationState(
+        id=activation_id,
+        foreach_node_id=foreach_node_id,
+        barrier=ForeachBarrierState.from_metadata(barrier_raw),
+    )
 
 
 def _string_tuple(raw: object) -> tuple[str, ...]:
@@ -338,53 +538,30 @@ def _string_tuple(raw: object) -> tuple[str, ...]:
     raise WorkflowExecutionError("malformed foreach barrier frame id list")
 
 
-def _state_write_from_metadata(raw: object) -> StateWrite:
-    """Parse one persisted item-lineage write record.
+def register_foreach_item_success(
+    run: RunState, frame: ExecutionFrame, owner: ForeachItemOwner
+) -> None:
+    """Record one completed concurrent item at its owner back-edge.
 
-    Barrier metadata must keep reducer-visible values across interrupt/resume;
-    reconstructing from `patch_changes` would downgrade reducer writes to
-    replace-style incoming values.
+    Registration keys off the returning frame, so it works regardless of
+    which operation ran last in the item (node, subgraph, or nested
+    control). Serial items commit through the parent at operation time and
+    need no barrier entry. A closed or superseded activation fails closed.
     """
-    if not isinstance(raw, dict):
-        raise WorkflowExecutionError("malformed pending foreach write")
-    try:
-        path = raw["path"]
-        incoming_value = raw["incoming_value"]
-        visible_value = raw["visible_value"]
-        reducer = raw["reducer"]
-    except KeyError as exc:
+    parent_frame = run.frames.get(owner.parent_frame_id)
+    if parent_frame is None:
         raise WorkflowExecutionError(
-            f"malformed pending foreach write missing {exc.args[0]!r}"
-        ) from exc
-    try:
-        return StateWrite(
-            path=_state_path_from_metadata(path),
-            incoming_value=incoming_value,
-            visible_value=visible_value,
-            reducer=ReducerRef.model_validate(reducer),
+            "foreach lineage state references missing parent frame "
+            f"{owner.parent_frame_id!r} for child frame {frame.id!r}"
         )
-    except WorkflowExecutionError:
-        raise
-    except (TypeError, ValueError) as exc:
-        raise WorkflowExecutionError(f"malformed pending foreach write: {exc}") from exc
-
-
-def _state_write_to_metadata(write: StateWrite) -> dict[str, Any]:
-    """Serialize one item-lineage write without relying on dotted display paths."""
-    return {
-        "path": {"root": "state", "parts": list(write.path.parts)},
-        "incoming_value": write.incoming_value,
-        "visible_value": write.visible_value,
-        "reducer": write.reducer.model_dump(mode="json"),
-    }
-
-
-def _state_path_from_metadata(raw: object) -> StatePath:
-    if isinstance(raw, str):
-        return StatePath.parse(raw)
-    if not isinstance(raw, dict) or raw.get("root") != "state":
-        raise WorkflowExecutionError("malformed pending foreach write path")
-    parts = raw.get("parts")
-    if not isinstance(parts, list) or not all(isinstance(part, str) for part in parts):
-        raise WorkflowExecutionError("malformed pending foreach write path")
-    return StatePath(tuple(parts))
+    activation = require_foreach_activation(
+        parent_frame, owner.foreach_node_id, owner.activation_id
+    )
+    if activation.barrier.mode != "concurrent":
+        return
+    activation.barrier.add_success_patch(
+        index=owner.item_index,
+        frame_id=frame.id,
+        lineage_id=frame.lineage_id,
+    )
+    save_foreach_activation(parent_frame, activation)

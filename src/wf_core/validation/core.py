@@ -25,6 +25,14 @@ from wf_core.validation.steps import (
 
 
 def validate_workflow(workflow: Workflow) -> ValidationReport:
+    """Coordinate structural validation including foreach control regions.
+
+    Ordinary node/edge checks run first; the pure control-region analysis runs
+    once afterwards and its diagnostics are translated verbatim. No second
+    graph traversal lives inside validation.
+    """
+    from wf_core.analysis.control_regions import analyze_control_regions
+
     report = ValidationReport()
 
     node_defs = _collect_node_defs(workflow, report)
@@ -33,6 +41,12 @@ def validate_workflow(workflow: Workflow) -> ValidationReport:
     _validate_start(workflow, nodes_by_id, report)
     outgoing = _validate_edges(workflow, nodes_by_id, node_defs, report)
     _validate_reachable_outcomes(workflow, nodes_by_id, node_defs, outgoing, report)
+    for issue in analyze_control_regions(workflow).issues:
+        report.add(
+            ValidationIssueCode(issue.kind.value),
+            issue.path,
+            issue.message,
+        )
 
     return report
 

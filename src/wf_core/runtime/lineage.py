@@ -7,7 +7,6 @@ from typing import Any
 
 from wf_core.errors import WorkflowExecutionError
 from wf_core.run_state import ExecutionFrame, LineageState, RunState, StateWrite
-from wf_core.runtime.foreach_state import ForeachBarrierState, item_frame_owner
 from wf_core.runtime.ops.state import (
     StatePatch,
     commit_state_patch,
@@ -44,41 +43,21 @@ class LineageStateView:
 def lineage_writes_for_frame(
     run: RunState, frame: ExecutionFrame
 ) -> Sequence[StateWrite]:
-    """Return writes visible to this frame's current lineage.
+    """Return ancestor and current-lineage writes visible to this frame.
 
-    This is still backed by concurrent foreach barrier metadata. Keeping the
-    lookup here gives future `RunState.lineages` or subgraph scopes one place to
-    plug in without making node execution understand foreach internals.
+    An empty child lineage still inherits writes buffered by its ancestors, as
+    happens when an outer concurrent foreach writes before entering an inner
+    foreach. Lineage existence and scope therefore control traversal; the
+    current lineage having its own writes does not.
     """
     lineage = run.lineages.get(frame.lineage_id)
-    if lineage is not None and lineage.scope_id == frame.scope_id and lineage.writes:
+    if lineage is not None and lineage.scope_id == frame.scope_id:
         return tuple(
             lineage_state_writes(
                 run, scope_id=frame.scope_id, lineage_id=frame.lineage_id
             )
         )
-
-    # Compatibility fallback: concurrent foreach used barrier-local patches
-    # before `RunState.lineages` became the primary write store. Keep reading
-    # those patches so old serialized runs and direct barrier tests still work.
-    owner = item_frame_owner(frame)
-    if owner is None:
-        return ()
-    parent_frame_id, foreach_node_id, item_index = owner
-    parent_frame = run.frames.get(parent_frame_id)
-    if parent_frame is None:
-        raise WorkflowExecutionError(
-            "foreach lineage compatibility state references missing parent frame "
-            f"{parent_frame_id!r} for child frame {frame.id!r}"
-        )
-    barrier = ForeachBarrierState.from_frame(parent_frame, foreach_node_id)
-    if barrier is None or barrier.mode != "concurrent":
-        return ()
-
-    pending = barrier.pending_results.get(item_index)
-    if pending is None:
-        return ()
-    return pending.patch.writes
+    return ()
 
 
 def is_scope_root_lineage_frame(run: RunState, frame: ExecutionFrame) -> bool:
@@ -109,6 +88,61 @@ def commit_patch_for_frame(
         writes=patch.writes,
     )
     return {}
+
+
+def commit_foreach_aware_patch(
+    run: RunState, frame: ExecutionFrame, patch: StatePatch
+) -> dict[str, Any]:
+    """Commit one write patch with foreach-aware routing.
+
+    Ordinary frames commit (or buffer) through their own lineage. The walk
+    climbs through every serial item owner until it reaches either the
+    workflow/subgraph scope root, where it commits, or a concurrent item
+    boundary, where it buffers in that item lineage for the barrier to
+    merge. The whole ancestry is validated first: the write lands only
+    after the chain reaches an acyclic non-item ancestor, so a parent
+    cycle fails closed even when it passes through a concurrent
+    boundary. Malformed ownership, missing parents, parent cycles, and
+    closed or superseded activations fail closed.
+    """
+    from wf_core.runtime.foreach_state import (
+        item_frame_owner,
+        require_foreach_activation,
+    )
+
+    current = frame
+    seen: set[str] = set()
+    buffer_in: ExecutionFrame | None = None
+    while True:
+        owner = item_frame_owner(current)
+        if owner is None:
+            break
+        if current.id in seen:
+            raise WorkflowExecutionError(
+                f"cycle detected in foreach parent chain at frame {current.id!r}"
+            )
+        seen.add(current.id)
+        parent_frame = run.frames.get(owner.parent_frame_id)
+        if parent_frame is None:
+            raise WorkflowExecutionError(
+                "foreach item state references missing parent frame "
+                f"{owner.parent_frame_id!r} for child frame {current.id!r}"
+            )
+        activation = require_foreach_activation(
+            parent_frame, owner.foreach_node_id, owner.activation_id
+        )
+        if buffer_in is None and activation.barrier.mode == "concurrent":
+            buffer_in = current
+        current = parent_frame
+    if buffer_in is not None:
+        append_lineage_writes(
+            run,
+            scope_id=buffer_in.scope_id,
+            lineage_id=buffer_in.lineage_id,
+            writes=patch.writes,
+        )
+        return {}
+    return commit_patch_for_frame(run, current, patch)
 
 
 def scope_state_for_frame(run: RunState, frame: ExecutionFrame) -> dict[str, Any]:

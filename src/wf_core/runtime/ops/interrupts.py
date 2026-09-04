@@ -14,7 +14,7 @@ from wf_core.run_state import (
     StepExecutionResult,
 )
 from wf_core.runtime.input_bindings import resolve_step_input_bindings
-from wf_core.runtime.lineage import commit_patch_for_frame
+from wf_core.runtime.lineage import commit_foreach_aware_patch
 from wf_core.runtime.ops.flow import advance_frame, append_step_result_trace
 from wf_core.runtime.ops.index import WorkflowIndex
 from wf_core.runtime.ops.merges import ReducerDefinition
@@ -115,7 +115,9 @@ def resume_interrupt(
         reducers=reducers,
         missing_field_message="interrupt resume payload is missing required field {field}",
     )
-    state_changes = commit_patch_for_frame(run, frame, patch)
+    # Foreach-aware routing: a serial item resume commits through the parent
+    # scope, a concurrent one buffers in the item lineage for barrier merge.
+    state_changes = commit_foreach_aware_patch(run, frame, patch)
     next_node_id = index.next_node_id(frame.node_id, resume_outcome)
     append_step_result_trace(
         run,

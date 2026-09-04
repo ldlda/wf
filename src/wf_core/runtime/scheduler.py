@@ -38,9 +38,15 @@ class BlockedOnChildren:
 
 @dataclass(slots=True, frozen=True)
 class ForeachIterationMetadata:
-    """Typed metadata for a foreach iteration frame."""
+    """Typed metadata for a foreach iteration frame.
+
+    ``activation_id`` names the dynamic foreach visit that owns this item.
+    It separates fresh barrier state from earlier visits to the same node use
+    and must survive checkpoint serialization.
+    """
 
     foreach_node_id: str
+    activation_id: str
     loop_index: int
     loop_item: Any
     loop_alias: str
@@ -51,11 +57,16 @@ class ForeachIterationMetadata:
             return None
         metadata = frame.metadata
         foreach_node_id = metadata.get("foreach_node_id")
+        activation_id = metadata.get("activation_id")
         loop_index = metadata.get("loop_index")
         loop_alias = metadata.get("loop_alias")
         if not isinstance(foreach_node_id, str) or not foreach_node_id:
             raise WorkflowExecutionError(
                 f"malformed foreach node id for frame {frame.id!r}"
+            )
+        if not isinstance(activation_id, str) or not activation_id:
+            raise WorkflowExecutionError(
+                f"malformed foreach activation id for frame {frame.id!r}"
             )
         if not isinstance(loop_index, int):
             raise WorkflowExecutionError(
@@ -71,6 +82,7 @@ class ForeachIterationMetadata:
             )
         return cls(
             foreach_node_id=foreach_node_id,
+            activation_id=activation_id,
             loop_index=loop_index,
             loop_item=metadata["loop_item"],
             loop_alias=loop_alias,
@@ -79,6 +91,7 @@ class ForeachIterationMetadata:
     def to_metadata(self) -> dict[str, object]:
         return {
             "foreach_node_id": self.foreach_node_id,
+            "activation_id": self.activation_id,
             "loop_index": self.loop_index,
             "loop_item": self.loop_item,
             "loop_alias": self.loop_alias,
@@ -178,7 +191,11 @@ def wake_parent_if_children_complete(run: RunState, child_frame_id: str) -> None
 
 
 def wake_parent_for_child_progress(run: RunState, child_frame_id: str) -> None:
-    """Wake a blocked parent after one child finishes so it can refill slots."""
+    """Wake a blocked parent after one child finishes so it can refill slots.
+
+    The wake-up includes the foreach activation: a child naming a closed or
+    superseded activation cannot wake a parent waiting on a later visit.
+    """
     child = _frame(run, child_frame_id)
     parent_id = child.parent_frame_id
     if parent_id is None:
@@ -189,6 +206,26 @@ def wake_parent_for_child_progress(run: RunState, child_frame_id: str) -> None:
     block = BlockedOnChildren.from_frame(parent)
     if block is None or child_frame_id not in block.child_frame_ids:
         return
+    # Lazy import avoids a cycle: foreach_state owns activation persistence on
+    # top of this scheduler's frame metadata types.
+    from wf_core.runtime.foreach_state import (
+        item_frame_owner,
+        load_foreach_activation,
+    )
+
+    try:
+        owner = item_frame_owner(child)
+    except WorkflowExecutionError:
+        raise
+    if owner is not None:
+        activation = load_foreach_activation(
+            parent, owner.foreach_node_id, owner.activation_id
+        )
+        if activation is None:
+            raise WorkflowExecutionError(
+                f"foreach item frame {child_frame_id!r} names closed activation "
+                f"{owner.activation_id!r} and cannot wake parent {parent_id!r}"
+            )
     wake_frame(run, parent_id)
 
 

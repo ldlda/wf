@@ -272,7 +272,13 @@ async def test_snapshotless_remote_node_upgrades_to_real_capability_contract() -
     replacement = graph.use(capability, id="replacement", input=[], output=[])
     graph.connect(replacement, "ok", "done")
 
-    assert graph.validate_local().ok is True
+    # A disconnected replacement has no derivable control region; new
+    # validation reports it as unreachable rather than silently accepting it.
+    report = graph.validate_local()
+    assert any(
+        issue.code == "unreachable_node" and issue.path == "nodes[replacement]"
+        for issue in report.errors
+    )
     assert graph.seeded_node_defs["app.default.remote"].input_schema.properties == {
         "query": {"type": "string"}
     }

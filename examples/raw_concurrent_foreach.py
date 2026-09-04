@@ -97,7 +97,7 @@ def build_raw_concurrent_foreach_workflow() -> Workflow:
             ],
             "edges": [
                 {"from": "each", "outcome": "loop", "to": "record"},
-                {"from": "record", "outcome": "ok", "to": END},
+                {"from": "record", "outcome": "ok", "to": "each"},
                 {"from": "each", "outcome": "done", "to": END},
                 {"from": "each", "outcome": "completed_with_errors", "to": END},
             ],

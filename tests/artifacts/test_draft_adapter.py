@@ -505,14 +505,16 @@ def test_adapter_lowers_foreach_policy_through_builder() -> None:
                             "collect_to": "state.item_errors",
                         },
                     }
-                }
+                },
+                "echo": {"use": "demo.echo"},
             },
             "routes": {
                 "each_item": {
-                    "loop": "__end__",
+                    "loop": "echo",
                     "done": "__end__",
                     "completed_with_errors": "__end__",
-                }
+                },
+                "echo": {"ok": "each_item"},
             },
         }
     )

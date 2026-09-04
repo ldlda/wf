@@ -123,7 +123,7 @@ def _workflow(*, max_active: int) -> Workflow:
         ],
         edges=[
             Edge.model_validate({"from": "each", "outcome": "loop", "to": "record"}),
-            Edge.model_validate({"from": "record", "outcome": "ok", "to": END}),
+            Edge.model_validate({"from": "record", "outcome": "ok", "to": "each"}),
             Edge.model_validate({"from": "each", "outcome": "done", "to": END}),
         ],
     )

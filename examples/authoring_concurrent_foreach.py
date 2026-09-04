@@ -114,7 +114,7 @@ def build_concurrent_foreach_workflow(
     )
     builder.set_entry_point(each)
     builder.connect(each, "loop", record)
-    builder.connect(record, "ok", END)
+    builder.connect(record, "ok", each)
     builder.connect(each, "done", END)
     if _item_error_action(item_error) in {"collect", "skip"}:
         builder.connect(each, "completed_with_errors", END)
@@ -165,7 +165,7 @@ def run_replace_conflict_example() -> None:
     )
     builder.set_entry_point(each)
     builder.connect(each, "loop", record)
-    builder.connect(record, "ok", END)
+    builder.connect(record, "ok", each)
     builder.connect(each, "done", END)
     try:
         builder.execute({"items": ["a", "b"]})

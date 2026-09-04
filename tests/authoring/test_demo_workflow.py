@@ -210,7 +210,7 @@ def build_authoring_demo_workflow():
     builder.connect(list_files, "ok", summarize_each)
     builder.connect(summarize_each, "loop", summarize_one)
     builder.connect(summarize_each, "done", combine_summaries)
-    builder.connect(summarize_one, "ok", END)
+    builder.connect(summarize_one, "ok", summarize_each)
     builder.connect(combine_summaries, "ok", should_email)
     builder.connect(should_email, "true", approve_email)
     builder.connect(should_email, "false", skip_email)

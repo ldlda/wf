@@ -17,7 +17,7 @@ from wf_core.run_state import (
     StepExecutionResult,
 )
 from wf_core.runtime.input_bindings import resolve_step_input_bindings
-from wf_core.runtime.lineage import commit_patch_for_frame
+from wf_core.runtime.lineage import commit_foreach_aware_patch
 from wf_core.runtime.ops.frames import frame_context_values
 from wf_core.runtime.ops.merges import ReducerDefinition
 from wf_core.runtime.ops.overlays import state_view_for_frame
@@ -236,7 +236,10 @@ def _finish_subgraph(
         reducers=reducers,
         missing_field_message="subgraph output did not include required field {field}",
     )
-    state_changes = commit_patch_for_frame(run, frame, patch)
+    # Foreach-aware routing (root, serial parent, concurrent lineage) is
+    # owned by the shared helper so subgraph output commits exactly like
+    # node output. Closed or superseded activations fail closed inside.
+    state_changes = commit_foreach_aware_patch(run, frame, patch)
     return StepExecutionResult(
         outcome=child_outcome,
         resolved_input=activation.child_input,

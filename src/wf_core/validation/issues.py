@@ -26,6 +26,12 @@ class ValidationIssueCode(StrEnum):
     INVALID_FOREACH_COLLECT_DESTINATION = "invalid_foreach_collect_destination"
     INVALID_INTERRUPT_SOURCE = "invalid_interrupt_source"
     INVALID_INTERRUPT_DESTINATION = "invalid_interrupt_destination"
+    UNREACHABLE_NODE = "unreachable_node"
+    FOREACH_REGION_CONFLICT = "foreach_region_conflict"
+    INVALID_FOREACH_RETURN = "invalid_foreach_return"
+    INVALID_FOREACH_TERMINAL = "invalid_foreach_terminal"
+    EMPTY_FOREACH_BODY = "empty_foreach_body"
+    FOREACH_BODY_NO_RETURN = "foreach_body_no_return"
 
 
 @dataclass(slots=True)

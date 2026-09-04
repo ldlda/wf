@@ -795,12 +795,6 @@ stable.
 
 - Native subgraph polish: optional per-use-site child deployment overrides and
   clearer child trace inspection.
-- Active concurrent foreach correction: replace item-body `END` routes with
-  canonical back-edges to the owning foreach. The approved semantics are in the
-  [`foreach back-edge design`](superpowers/specs/2026-09-04-foreach-back-edge-design.md).
-  This slice also makes foreach control regions fail-closed, rejects unreachable
-  workflow nodes, and gives repeated visits to one foreach node distinct
-  persisted activation identities.
 - Proposed follow-up: replace innermost-only foreach values with same-scope
   [`structured runtime context`](superpowers/specs/2026-09-04-structured-runtime-context-design.md),
   including typed Python lookup, graph paths, schema analysis, authoring refs,
@@ -808,7 +802,7 @@ stable.
 - Proposed runtime guard: add a persisted, run-wide
   [`step budget`](superpowers/specs/2026-09-04-run-step-budget-design.md) for
   valid graph cycles that cannot be proven terminating during validation.
-- After that correction, reuse the foreach barrier/lineage machinery for
+- Next, reuse the foreach barrier/lineage machinery for
   fork/gather. The proposed control semantics are recorded in
   [`ADR-0006`](adr/0006-explicit-fork-and-topology-driven-gather.md).
 - Protocol-native progress: investigate MCP tasks/progress or WebSocket/SSE only
@@ -949,6 +943,11 @@ stable.
   routes, or outputs. Python, JSON-RPC, MCP, and local/remote CLI surfaces are
   aligned. Implementation plan:
   [`capability step updates`](historical/superpowers/plans/2026-07-26-capability-step-update.md).
+- Completed: foreach bodies now return through validated back-edges to their
+  immediate owner, with unique static control regions and fresh persisted
+  activation identities for every dynamic visit. Design:
+  [`foreach back-edge design`](superpowers/specs/2026-09-04-foreach-back-edge-design.md).
+  Fork/gather remains explicitly deferred.
 
 Agent evaluation cohort status and policy:
 

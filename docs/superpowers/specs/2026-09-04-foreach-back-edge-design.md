@@ -2,9 +2,9 @@
 
 ## Status
 
-Approved in conversation on 2026-09-04. This document specifies canonical
-foreach body-return semantics. It does not include the separately planned
-ergonomic Python DSL or authorize fork/gather implementation.
+Implemented on 2026-09-04. This document specifies canonical foreach
+body-return semantics. It does not include the separately planned ergonomic
+Python DSL or authorize fork/gather implementation.
 
 ## Purpose
 
@@ -203,9 +203,10 @@ foreach_owner_stack)` rather than merely looking for graph cycles:
 A node use therefore belongs to one static control region, while remaining free
 to execute in any number of dynamic frames, lineages, or items. When the same
 capability is needed at two program locations, authoring creates two node uses
-with distinct identifiers. Existing context-contract analysis may still report
-fields as conditional because multiple paths can reach a node within its one
-region; it must not use multiple owner stacks to represent that case.
+with distinct identifiers. Context-contract analysis reports one field set per
+static region: fields are available when the region is inside a foreach body
+and absent outside it. A node reached under two stacks is a region conflict
+and receives no foreach fields rather than a conditional union.
 
 The unique-owner rule rejects both ways of crossing a foreach boundary. An
 outside edge into a body node reaches that node under both the outer and item
@@ -431,9 +432,24 @@ may independently return and complete the item.
 ## State and Failure Behavior
 
 Back-edge return changes control representation, not state semantics.
-Iteration writes remain buffered in the item lineage. Serial behavior and the
-concurrent barrier continue to commit or merge those writes according to the
-accepted concurrent-foreach ADR and declared reducers.
+Concurrent iteration writes remain buffered in the item lineage for the
+barrier to merge, while serial owners pass writes outward to the scope
+root, which commits them according to the accepted concurrent-foreach ADR
+and declared reducers. One shared helper
+routes every item write: it climbs through each serial owner to the scope
+root, where it commits, or selects the first concurrent boundary as the
+buffer target, where it buffers for that barrier to merge (the walk
+continues past the selected boundary to validate the full ancestry, so
+parent cycles fail closed even when they pass through a concurrent
+owner; the concurrent barrier finish
+routes its combined patch through the same helper, so nested serial owners
+cannot strand it). Parent cycles, missing parents, and orphaned item frames
+fail closed. Buffered failure records must carry an error whose index and
+frame match the enclosing result. The completed item is
+registered with its barrier at the owner back-edge, keyed by the returning
+frame rather than by whichever operation ran last, so node, subgraph, and
+nested-control endings all count. A return naming a closed or superseded
+activation fails closed instead of buffering into the wrong visit.
 
 An ordinary node outcome named `error` remains domain control. An exception
 remains a runtime item failure handled by `fail`, `skip`, or `collect`. Neither
@@ -490,7 +506,7 @@ semantics also run through the runtime.
 | Closed body cycle | Reject missing owner return | N/A |
 | Unreachable nodes | Reject each node | N/A |
 | Re-enter foreach after `done` | Accept | Fresh activation and children |
-| Subgraph inside foreach | Accept | Child `END`, then item return |
+| Subgraph inside foreach | Accept | Child `END`, then item return (serial and concurrent) |
 | Interrupt inside foreach | Accept | Resume the same item activation |
 | Future fork in foreach | Deferred with fork/gather | Gather before return |
 

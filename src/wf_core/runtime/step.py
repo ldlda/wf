@@ -16,7 +16,7 @@ from wf_core.models.steps import (
 )
 from wf_core.models.workflow import Workflow
 from wf_core.run_state import ExecutionFrame, FrameStatus, RunState, StepExecutionResult
-from wf_core.runtime.foreach_state import ForeachBarrierState, item_frame_owner
+from wf_core.runtime.foreach_state import item_frame_owner, load_foreach_activation
 from wf_core.runtime.ops.flow import advance_frame, append_step_result_trace
 from wf_core.runtime.ops.foreach import step_foreach
 from wf_core.runtime.ops.handlers import (
@@ -87,6 +87,11 @@ def complete_end_step(
     """Record an explicit workflow terminal and complete the active frame."""
     result = StepExecutionResult(outcome=outcome)
     frame = run.frames[frame_id]
+    if item_frame_owner(frame) is not None:
+        raise WorkflowExecutionError(
+            f"foreach item frame {frame.id!r} cannot target explicit end node "
+            f"{node_id!r}; return to its owning foreach"
+        )
     frame.metadata["workflow_outcome"] = outcome
     if frame.parent_frame_id is None:
         run.outcome = outcome
@@ -361,10 +366,15 @@ def _claim_matching_async_item_frames(
     index: WorkflowIndex,
     first_frame: ExecutionFrame,
 ) -> list[ExecutionFrame]:
+    """Claim sibling item frames from the same activation for async batching.
+
+    Batching never mixes activations: only frames naming the same parent,
+    foreach, and activation id run together, preserving deterministic barrier
+    commits across revisits.
+    """
     owner = item_frame_owner(first_frame)
     if owner is None:
         return []
-    parent_frame_id, foreach_node_id, _item_index = owner
     claimed: list[ExecutionFrame] = []
     remaining_ready: list[str] = []
     for frame_id in run.ready_frame_ids:
@@ -373,7 +383,9 @@ def _claim_matching_async_item_frames(
         if (
             frame.status == FrameStatus.PENDING
             and frame_owner is not None
-            and frame_owner[:2] == (parent_frame_id, foreach_node_id)
+            and frame_owner.parent_frame_id == owner.parent_frame_id
+            and frame_owner.foreach_node_id == owner.foreach_node_id
+            and frame_owner.activation_id == owner.activation_id
             and isinstance(index.nodes_by_id.get(frame.node_id), NodeUse)
         ):
             frame.status = FrameStatus.RUNNING
@@ -392,14 +404,15 @@ def _can_batch_async_foreach_item(
     owner = item_frame_owner(frame)
     if owner is None:
         return False
-    parent_frame_id, foreach_node_id, _item_index = owner
-    parent_frame = run.frames.get(parent_frame_id)
+    parent_frame = run.frames.get(owner.parent_frame_id)
     if parent_frame is None:
         return False
-    barrier = ForeachBarrierState.from_frame(parent_frame, foreach_node_id)
+    activation = load_foreach_activation(
+        parent_frame, owner.foreach_node_id, owner.activation_id
+    )
     return (
-        barrier is not None
-        and barrier.mode == "concurrent"
+        activation is not None
+        and activation.barrier.mode == "concurrent"
         and isinstance(index.nodes_by_id.get(frame.node_id), NodeUse)
     )
 

@@ -3,7 +3,7 @@
 > **For agentic workers:** REQUIRED SUB-SKILL: Use
 > superpowers:subagent-driven-development (recommended) or
 > superpowers:executing-plans to implement this plan task-by-task. Steps use
-> checkbox (`- [ ]`) syntax for tracking.
+> checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Make foreach bodies return through validated back-edges to their
 immediate owner, with unique static control regions and fresh persisted state
@@ -19,7 +19,7 @@ back-edge as item completion.
 pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
 
 **Spec:**
-[`docs/superpowers/specs/2026-09-04-foreach-back-edge-design.md`](../specs/2026-09-04-foreach-back-edge-design.md)
+[`docs/superpowers/specs/2026-09-04-foreach-back-edge-design.md`](../../../superpowers/specs/2026-09-04-foreach-back-edge-design.md)
 
 ## Global Constraints
 
@@ -85,7 +85,7 @@ pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
 - `owner_stack_by_node` contains only nodes whose region is unambiguous. Later
   context analysis must not grant foreach fields to a conflicted node.
 
-- [ ] **Step 1: Write failing acceptance tests for legal regions**
+- [x] **Step 1: Write failing acceptance tests for legal regions**
 
   Add explicit tests named:
 
@@ -108,7 +108,7 @@ pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
   assert analysis.issues == ()
   ```
 
-- [ ] **Step 2: Run legal-region tests and confirm the missing module fails**
+- [x] **Step 2: Run legal-region tests and confirm the missing module fails**
 
   Run:
 
@@ -119,7 +119,7 @@ pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
   Expected: collection fails because `wf_core.analysis.control_regions` does
   not exist.
 
-- [ ] **Step 3: Implement semantic traversal over node and owner stack**
+- [x] **Step 3: Implement semantic traversal over node and owner stack**
 
   Use a bounded worklist of `(node_id, owner_stack)` states. The special edge
   handling must follow this order:
@@ -149,7 +149,7 @@ pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
   Ignore unknown sources and targets here because ordinary edge validation
   already owns those diagnostics.
 
-- [ ] **Step 4: Write failing tests for every invalid pressure case**
+- [x] **Step 4: Write failing tests for every invalid pressure case**
 
   Add one explicit test per topology:
 
@@ -172,7 +172,7 @@ pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
   )
   ```
 
-- [ ] **Step 5: Implement conflicts, reachability, and returnability**
+- [x] **Step 5: Implement conflicts, reachability, and returnability**
 
   Record the first stack for each node. If a second distinct stack reaches the
   same node, remove it from `owner_stack_by_node` and emit one region conflict.
@@ -185,7 +185,7 @@ pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
   Suppress cascading no-return diagnostics when a region conflict, invalid
   return, invalid terminal, or empty body already makes that state ambiguous.
 
-- [ ] **Step 6: Run analyzer tests**
+- [x] **Step 6: Run analyzer tests**
 
   Run:
 
@@ -198,7 +198,7 @@ pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
 
   Expected: all commands pass.
 
-- [ ] **Step 7: Commit the analyzer**
+- [x] **Step 7: Commit the analyzer**
 
   ```bash
   git add src/wf_core/analysis/control_regions.py \
@@ -223,7 +223,7 @@ pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
   `loop_item`, `loop_index`, and its alias; completing it restores the outer
   context. It does not expose all enclosing aliases.
 
-- [ ] **Step 1: Rewrite context tests to canonical back-edges**
+- [x] **Step 1: Rewrite context tests to canonical back-edges**
 
   Replace successful item routes such as:
 
@@ -244,7 +244,7 @@ pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
   {"from": "after_inner", "outcome": "ok", "to": "outer"}
   ```
 
-- [ ] **Step 2: Replace the mixed-reachability expectation**
+- [x] **Step 2: Replace the mixed-reachability expectation**
 
   Delete the test that expects one node to receive conditional loop fields when
   reached both inside and outside a foreach. Add a test proving conflicted nodes
@@ -260,7 +260,7 @@ pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
   assert "inner_item" not in after_inner
   ```
 
-- [ ] **Step 3: Run the context tests and confirm old traversal fails**
+- [x] **Step 3: Run the context tests and confirm old traversal fails**
 
   Run:
 
@@ -271,7 +271,7 @@ pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
   Expected: failures show that the single `FrameScope` traversal neither pops
   canonical return edges nor consumes region-conflict diagnostics.
 
-- [ ] **Step 4: Replace duplicate traversal with the analyzer result**
+- [x] **Step 4: Replace duplicate traversal with the analyzer result**
 
   Remove the local breadth-first scope traversal. For each unambiguous node,
   derive its active context from the final stack item:
@@ -286,7 +286,7 @@ pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
   diagnostics to bounded context warnings. Do not reintroduce multiple scopes
   or conditional fields for a single node use.
 
-- [ ] **Step 5: Run context and authoring-contract tests**
+- [x] **Step 5: Run context and authoring-contract tests**
 
   Run:
 
@@ -300,7 +300,7 @@ pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
 
   Expected: all commands pass.
 
-- [ ] **Step 6: Commit context integration**
+- [x] **Step 6: Commit context integration**
 
   ```bash
   git add src/wf_core/analysis/context_scopes.py \
@@ -360,7 +360,7 @@ pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
 - Callers compare owner fields by name; remove tuple slicing and positional
   unpacking.
 
-- [ ] **Step 1: Write failing activation-lifecycle tests**
+- [x] **Step 1: Write failing activation-lifecycle tests**
 
   Add tests proving:
 
@@ -379,7 +379,7 @@ pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
   Also test malformed metadata, mode mismatch, closing a stale activation, and
   JSON round-trip through `ExecutionFrame.metadata`.
 
-- [ ] **Step 2: Run activation tests and confirm failure**
+- [x] **Step 2: Run activation tests and confirm failure**
 
   Run:
 
@@ -389,7 +389,7 @@ pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
 
   Expected: imports fail because activation lifecycle helpers do not exist.
 
-- [ ] **Step 3: Implement the activation metadata seam**
+- [x] **Step 3: Implement the activation metadata seam**
 
   Hide the JSON dictionary shape inside `foreach_state.py`. Persist, per parent
   frame and foreach node id, a monotonically increasing visit sequence plus at
@@ -400,7 +400,7 @@ pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
   retain a compatibility reader for the old barrier-only shape because the spec
   found no real persisted foreach data.
 
-- [ ] **Step 4: Add activation identity to item metadata and helpers**
+- [x] **Step 4: Add activation identity to item metadata and helpers**
 
   Require this shape:
 
@@ -417,14 +417,14 @@ pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
   Child frame and lineage ids must include `activation.id`, so a later visit at
   item index zero cannot collide with the first visit.
 
-- [ ] **Step 5: Move runtime callers onto named owner and activation state**
+- [x] **Step 5: Move runtime callers onto named owner and activation state**
 
   Update lineage reads, node-result buffering, async batching, failure
   collection, refill, and barrier commit to load the activation named by the
   child. Fail closed when a child result names a closed or different active
   activation.
 
-- [ ] **Step 6: Update focused metadata tests**
+- [x] **Step 6: Update focused metadata tests**
 
   Replace hand-written item metadata in `test_foreach_barrier_state.py` and
   `test_scheduler.py` with required activation ids. Update hard-coded child
@@ -432,7 +432,7 @@ pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
   include the activation identity. Assert `item_frame_owner` returns
   `ForeachItemOwner`, not a tuple.
 
-- [ ] **Step 7: Run runtime-state tests**
+- [x] **Step 7: Run runtime-state tests**
 
   Run:
 
@@ -449,7 +449,7 @@ pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
 
   Expected: all commands pass.
 
-- [ ] **Step 8: Commit activation identity**
+- [x] **Step 8: Commit activation identity**
 
   ```bash
   git add src/wf_core/runtime/foreach_state.py \
@@ -488,7 +488,7 @@ pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
 - Produces an internal helper that derives ancestor foreach owners from frame
   ancestry for defensive non-local-return rejection.
 
-- [ ] **Step 1: Write failing serial return tests**
+- [x] **Step 1: Write failing serial return tests**
 
   Add tests with canonical edges:
 
@@ -501,7 +501,7 @@ pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
   Prove two items execute, the child finishes at `each`, the parent wakes, and
   the final workflow outcome remains `ok`.
 
-- [ ] **Step 2: Write failing cycle, nested, and re-entry runtime tests**
+- [x] **Step 2: Write failing cycle, nested, and re-entry runtime tests**
 
   Add explicit tests named:
 
@@ -518,7 +518,7 @@ pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
   direct defensive test constructs an invalid frame chain without running
   workflow preparation and asserts `WorkflowExecutionError`.
 
-- [ ] **Step 3: Implement immediate-owner return in frame advancement**
+- [x] **Step 3: Implement immediate-owner return in frame advancement**
 
   Before `END` handling or ordinary enqueue:
 
@@ -540,20 +540,20 @@ pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
   an item targets `END`, or targets a foreach found below its immediate owner in
   the active ancestor chain, raise `WorkflowExecutionError` defensively.
 
-- [ ] **Step 4: Close activations before controller completion edges**
+- [x] **Step 4: Close activations before controller completion edges**
 
   In both serial and concurrent completion paths, close the active activation
   before calling `advance_frame` for `done` or `completed_with_errors`. This
   makes a self-looping or later returning completion edge start a fresh visit.
 
-- [ ] **Step 5: Migrate executable foreach fixtures**
+- [x] **Step 5: Migrate executable foreach fixtures**
 
   Change item-success routes from `END` to their owner in every file listed for
   this task. Keep controller completion routes to `END` or their real outer
   continuation. For nested fixtures, return inner bodies to the inner foreach
   and outer-tail nodes to the outer foreach.
 
-- [ ] **Step 6: Prove concurrent, async, error, and interrupt behavior**
+- [x] **Step 6: Prove concurrent, async, error, and interrupt behavior**
 
   Run:
 
@@ -572,7 +572,7 @@ pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
   fail-closed test showing a completed activation cannot accept a result or
   wake-up from another activation.
 
-- [ ] **Step 7: Run runtime static checks**
+- [x] **Step 7: Run runtime static checks**
 
   Run:
 
@@ -588,7 +588,7 @@ pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
 
   Expected: all commands pass.
 
-- [ ] **Step 8: Commit runtime back-edges**
+- [x] **Step 8: Commit runtime back-edges**
 
   ```bash
   git add src/wf_core/runtime/ops/flow.py \
@@ -624,7 +624,7 @@ pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
 - Keeps `Workflow.validate_structure()` and `ValidationReport` signatures
   unchanged.
 
-- [ ] **Step 1: Add failing public-validation assertions**
+- [x] **Step 1: Add failing public-validation assertions**
 
   For every pressure-case test, call both the pure analyzer and
   `workflow.validate_structure()`. Invalid cases must assert the public code and
@@ -642,7 +642,7 @@ pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
   Legal cases assert `report.ok`. Add a test proving every unreachable node in
   one component receives its own `UNREACHABLE_NODE` issue.
 
-- [ ] **Step 2: Run public-validation tests and confirm failure**
+- [x] **Step 2: Run public-validation tests and confirm failure**
 
   Run:
 
@@ -652,7 +652,7 @@ pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
 
   Expected: analyzer tests pass, but public reports lack the new issue codes.
 
-- [ ] **Step 3: Wire analysis into validation once**
+- [x] **Step 3: Wire analysis into validation once**
 
   Add enum members with exactly the analyzer values. Call
   `analyze_control_regions(workflow)` after ordinary node and edge validation,
@@ -668,7 +668,7 @@ pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
 
   Do not add a second graph traversal inside validation.
 
-- [ ] **Step 4: Canonicalize policy and draft fixtures**
+- [x] **Step 4: Canonicalize policy and draft fixtures**
 
   Policy-only workflow helpers must include a distinct body node and route it
   back to the foreach owner. Draft fixtures with:
@@ -688,7 +688,7 @@ pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
   Parse-only policy fixtures still use a distinct body; do not preserve an
   invalid `loop -> __end__` shortcut just because the test does not execute it.
 
-- [ ] **Step 5: Run validation and draft suites**
+- [x] **Step 5: Run validation and draft suites**
 
   Run:
 
@@ -703,7 +703,7 @@ pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
   `UNREACHABLE_NODE` when disconnection is the behavior under test. Do not add
   an allow-unreachable flag.
 
-- [ ] **Step 6: Run core validation static checks**
+- [x] **Step 6: Run core validation static checks**
 
   Run:
 
@@ -717,7 +717,7 @@ pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
 
   Expected: all commands pass.
 
-- [ ] **Step 7: Commit fail-closed validation**
+- [x] **Step 7: Commit fail-closed validation**
 
   ```bash
   git add src/wf_core/validation tests/core/test_foreach_control_regions.py \
@@ -744,7 +744,7 @@ pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
   surface.
 - Preserves historical reports and recorded agent-challenge outputs verbatim.
 
-- [ ] **Step 1: Search for stale canonical foreach returns**
+- [x] **Step 1: Search for stale canonical foreach returns**
 
   Run targeted searches:
 
@@ -760,7 +760,7 @@ pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
   completion changes to the owner. Do not rewrite unrelated ordinary terminal
   routes or immutable historical evidence.
 
-- [ ] **Step 2: Update live architecture and authoring docs**
+- [x] **Step 2: Update live architecture and authoring docs**
 
   Replace the old architecture statement that item children reach `END` with:
 
@@ -781,13 +781,13 @@ pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
   Document that region conflicts, unreachable nodes, body terminals, non-local
   returns, empty bodies, and bodies without possible returns fail validation.
 
-- [ ] **Step 3: Mark the design implemented and roadmap item complete**
+- [x] **Step 3: Mark the design implemented and roadmap item complete**
 
   Set the spec status to `Implemented on 2026-09-04`. Move the roadmap bullet
   from active correction to recently completed runtime work. Keep fork/gather
   explicitly deferred.
 
-- [ ] **Step 4: Run the focused acceptance matrix**
+- [x] **Step 4: Run the focused acceptance matrix**
 
   Run:
 
@@ -806,7 +806,7 @@ pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
   Expected: every current pressure-case row passes. The future-fork row remains
   documented and unimplemented because no fork node exists.
 
-- [ ] **Step 5: Run repository verification**
+- [x] **Step 5: Run repository verification**
 
   Run:
 
@@ -826,7 +826,7 @@ pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
   unrelated lint debt, do not run an unsafe global auto-fix; report it and keep
   this slice's edited documents clean.
 
-- [ ] **Step 6: Commit implementation documentation**
+- [x] **Step 6: Commit implementation documentation**
 
   ```bash
   git add docs/wf_core_architecture.md docs/wf_authoring_control_flow.md \
@@ -835,7 +835,7 @@ pytest, pytest-asyncio, Ruff, basedpyright, markdownlint-cli2.
   git commit -m "docs: publish foreach back-edge semantics"
   ```
 
-- [ ] **Step 7: Archive the completed plan**
+- [x] **Step 7: Archive the completed plan**
 
   After every prior task is complete and committed:
 

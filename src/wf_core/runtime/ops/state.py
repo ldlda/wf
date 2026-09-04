@@ -249,6 +249,15 @@ def build_barrier_patch(
     committed aggregate values. A barrier trace is the single visible state
     commit for all buffered item patches, so showing raw per-item incoming
     values would hide what actually landed in `RunState.state`.
+
+    The emitted `writes` log keeps every constituent item write in order
+    instead of one merged write per path. A combined patch buffered in a
+    lineage can itself be re-merged by an outer barrier, and replaying merged
+    cumulative values would duplicate whatever was already committed when the
+    constituents were built. Replaying the original per-item deltas stays
+    correct at any nesting depth. Each kept write still carries the merged
+    aggregate as its `visible_value`, so overlay reads and `visible_values`
+    keep showing the final value.
     """
     state_fields = workflow.state_schema.field_index()
     validate_barrier_writes(item_patches, state_fields, reducers=reducers)
@@ -269,22 +278,31 @@ def build_barrier_patch(
             safe_set_nested_value(staged_state, key_path, merged_value)
             prepared_patch[destination_path] = (key_path, merged_value)
             committed_changes[str(destination_path)] = merged_value
+    merged_visible = {
+        destination_path: merged_value
+        for destination_path, (_key_path, merged_value) in prepared_patch.items()
+    }
     writes = [
         StateWrite(
-            path=destination_path,
-            incoming_value=merged_value,
-            visible_value=merged_value,
-            reducer=reducer_for_state_path(destination_path, state_fields),
+            path=write.path,
+            incoming_value=write.incoming_value,
+            visible_value=merged_visible[write.path],
+            reducer=write.reducer,
         )
-        for destination_path, (_key_path, merged_value) in prepared_patch.items()
+        for item_patch in item_patches
+        for write in item_patch.writes
     ]
     validate_staged_state_patch(staged_state, prepared_patch, state_fields)
-    return StatePatch(
-        changes=committed_changes,
+    combined = StatePatch(
         writes=writes,
         _prepared_writes=prepared_patch,
         _staged_state=staged_state,
     )
+    # The trace-facing view reports the aggregate, while the replay log above
+    # intentionally carries per-item deltas (see docstring). Assign it after
+    # construction: passing both to the constructor requires them to agree.
+    combined.changes = committed_changes
+    return combined
 
 
 def validate_barrier_writes(
