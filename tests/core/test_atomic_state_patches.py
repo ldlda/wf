@@ -284,6 +284,46 @@ def test_barrier_replays_incoming_values_not_lineage_visible_values() -> None:
     assert patch.visible_values["state.number"] == 6
 
 
+def test_barrier_combined_patch_remerges_without_duplicating_prefix() -> None:
+    """A combined patch re-merged by an outer barrier must not duplicate.
+
+    The second barrier is computed after the first aggregate was committed,
+    so its constituents were built against that prefix. Re-merging must
+    replay the original per-item deltas, not the cumulative aggregates.
+    """
+    workflow = _workflow(
+        fields={
+            "seen": StateField(
+                type="array",
+                reducer=ReducerRef(name="wf.std.append"),
+            )
+        }
+    )
+
+    first = build_barrier_patch(
+        workflow,
+        [
+            StatePatch(changes={"state.seen": "a"}),
+            StatePatch(changes={"state.seen": "b"}),
+        ],
+        {},
+    )
+    second = build_barrier_patch(
+        workflow,
+        [
+            StatePatch(changes={"state.seen": "c"}),
+            StatePatch(changes={"state.seen": "d"}),
+        ],
+        {"seen": ["a", "b"]},
+    )
+
+    assert second.changes["state.seen"] == ["a", "b", "c", "d"]
+    remerged = build_barrier_patch(workflow, [first, second], {})
+
+    assert remerged.changes["state.seen"] == ["a", "b", "c", "d"]
+    assert remerged.visible_values["state.seen"] == ["a", "b", "c", "d"]
+
+
 def test_build_and_commit_patch_matches_apply_output_bindings() -> None:
     workflow = _workflow(fields={"person.name": StateField(type="string")})
     state_from_apply = {"person": {"name": "old"}}

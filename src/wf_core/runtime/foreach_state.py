@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Literal
+from typing import Any, Literal, overload
 
 from wf_core.errors import WorkflowExecutionError
 from wf_core.run_state import ExecutionFrame, RunState
@@ -303,9 +303,13 @@ class ForeachBarrierState:
 
 
 def _activation_entry(
-    frame: ExecutionFrame, table: dict[str, Any], foreach_node_id: str
+    frame: ExecutionFrame,
+    table: dict[str, Any] | None,
+    foreach_node_id: str,
 ) -> dict[str, Any] | None:
     """Return the mutable activation entry or fail fast on corrupt state."""
+    if table is None:
+        return None
     entry = table.get(foreach_node_id)
     if entry is None:
         return None
@@ -368,7 +372,7 @@ def save_foreach_activation(
     frame: ExecutionFrame, activation: ForeachActivationState
 ) -> None:
     """Persist barrier progress for the named active activation."""
-    table = _activation_table(frame)
+    table = _activation_table(frame, create=False)
     entry = _activation_entry(frame, table, activation.foreach_node_id)
     if entry is None:
         raise WorkflowExecutionError(
@@ -391,7 +395,7 @@ def close_foreach_activation(
     The barrier is removed so a later visit starts fresh; the sequence keeps
     increasing so child and lineage ids cannot collide across visits.
     """
-    table = _activation_table(frame)
+    table = _activation_table(frame, create=False)
     entry = _activation_entry(frame, table, activation.foreach_node_id)
     if entry is None:
         raise WorkflowExecutionError(
@@ -413,8 +417,11 @@ def load_foreach_activation(
 
     A child result naming a closed or different activation must fail closed in
     the caller rather than buffering into the wrong barrier.
+
+    This is a read-only lookup: a missing table or entry raises without
+    mutating frame metadata.
     """
-    table = _activation_table(frame)
+    table = _activation_table(frame, create=False)
     entry = _activation_entry(frame, table, foreach_node_id)
     if entry is None:
         raise WorkflowExecutionError(
@@ -469,9 +476,30 @@ def item_frame_owner(frame: ExecutionFrame) -> ForeachItemOwner | None:
     )
 
 
-def _activation_table(frame: ExecutionFrame) -> dict[str, Any]:
+@overload
+def _activation_table(
+    frame: ExecutionFrame, *, create: Literal[True] = True
+) -> dict[str, Any]: ...
+
+
+@overload
+def _activation_table(
+    frame: ExecutionFrame, *, create: Literal[False]
+) -> dict[str, Any] | None: ...
+
+
+def _activation_table(
+    frame: ExecutionFrame, *, create: bool = True
+) -> dict[str, Any] | None:
+    """Return the activation table, optionally creating it.
+
+    Read-only lookups pass ``create=False`` so a failed lookup leaves
+    frame metadata untouched. Only ``load_or_begin`` creates the table.
+    """
     raw = frame.metadata.get(_ACTIVATION_METADATA_KEY)
     if raw is None:
+        if not create:
+            return None
         table: dict[str, Any] = {}
         frame.metadata[_ACTIVATION_METADATA_KEY] = table
         return table

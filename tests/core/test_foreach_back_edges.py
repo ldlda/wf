@@ -539,6 +539,130 @@ def test_nested_foreach_preserves_inner_writes_in_all_modes(
         assert sorted(seen, key=repr) == sorted([1, 2, 1, 2], key=repr)
 
 
+def _three_level_workflow(
+    *, outer_mode: str, middle_mode: str, inner_mode: str
+) -> Workflow:
+    def _foreach(node_id: str, *, over: str, alias: str, mode: str) -> ForeachNode:
+        payload: dict[str, Any] = {
+            "id": node_id,
+            "type": "foreach",
+            "over": over,
+            "as": alias,
+            "mode": mode,
+        }
+        if mode == "concurrent":
+            payload["concurrent"] = {"max_active": 2, "max_outstanding": 2}
+        return ForeachNode.model_validate(payload)
+
+    return Workflow(
+        name="three_level_nested_foreach",
+        input_schema=SchemaRef(type="object", properties={}),
+        state_schema=StateSchema.from_field_map(
+            {
+                "items": StateField(type="array"),
+                "mid_items": StateField(type="array"),
+                "inner_items": StateField(type="array"),
+                "seen": StateField(
+                    type="array", reducer=ReducerRef(name="wf.std.append")
+                ),
+            }
+        ),
+        output_schema=SchemaRef(type="object", properties={"seen": {"type": "array"}}),
+        node_defs=[
+            NodeDef(
+                name="work",
+                input_schema=SchemaRef(
+                    type="object", properties={"value": {}}, required=["value"]
+                ),
+                output_schema=SchemaRef(
+                    type="object", properties={"seen": {}}, required=["seen"]
+                ),
+                outcomes=["ok"],
+            )
+        ],
+        start="outer",
+        nodes=[
+            _foreach("outer", over="state.items", alias="outer_item", mode=outer_mode),
+            _foreach(
+                "middle",
+                over="state.mid_items",
+                alias="mid_item",
+                mode=middle_mode,
+            ),
+            _foreach(
+                "inner",
+                over="state.inner_items",
+                alias="inner_item",
+                mode=inner_mode,
+            ),
+            NodeUse.model_validate(
+                {
+                    "id": "work",
+                    "type": "node",
+                    "node": "work",
+                    "input": [{"target": "value", "path": "context.inner_item"}],
+                    "output": [{"source": "seen", "target": "state.seen"}],
+                }
+            ),
+        ],
+        edges=[
+            Edge.model_validate({"from": "outer", "outcome": "loop", "to": "middle"}),
+            Edge.model_validate({"from": "middle", "outcome": "loop", "to": "inner"}),
+            Edge.model_validate({"from": "inner", "outcome": "loop", "to": "work"}),
+            Edge.model_validate({"from": "work", "outcome": "ok", "to": "inner"}),
+            Edge.model_validate({"from": "inner", "outcome": "done", "to": "middle"}),
+            Edge.model_validate({"from": "middle", "outcome": "done", "to": "outer"}),
+            Edge.model_validate({"from": "outer", "outcome": "done", "to": END}),
+        ],
+    )
+
+
+@pytest.mark.parametrize(
+    ("outer_mode", "middle_mode", "inner_mode"),
+    [
+        ("serial", "serial", "serial"),
+        ("serial", "serial", "concurrent"),
+        ("serial", "concurrent", "serial"),
+        ("serial", "concurrent", "concurrent"),
+        ("concurrent", "serial", "serial"),
+        ("concurrent", "serial", "concurrent"),
+        ("concurrent", "concurrent", "serial"),
+        ("concurrent", "concurrent", "concurrent"),
+    ],
+)
+def test_three_level_nested_foreach_preserves_writes(
+    outer_mode: str, middle_mode: str, inner_mode: str
+) -> None:
+    """Write routing holds through three nesting levels in every mode mix.
+
+    Barriers merge items in index order, so each middle visit yields exactly
+    [1, 2]; only the outer completion order varies. A serial outer admits
+    in order, making [1, 2, 1, 2] exact, while a concurrent outer leaves
+    only the multiset contractual.
+    """
+    workflow = _three_level_workflow(
+        outer_mode=outer_mode, middle_mode=middle_mode, inner_mode=inner_mode
+    )
+
+    run = execute_workflow(
+        workflow,
+        {"items": ["a", "b"], "mid_items": ["m"], "inner_items": [1, 2]},
+        {
+            "work": lambda payload, _ctx: {
+                "outcome": "ok",
+                "output": {"seen": payload["value"]},
+            }
+        },
+    )
+
+    assert run.status == RunStatus.COMPLETED
+    seen = run.state.get("seen") or []
+    if outer_mode == "serial":
+        assert seen == [1, 2, 1, 2]
+    else:
+        assert sorted(seen, key=repr) == sorted([1, 2, 1, 2], key=repr)
+
+
 def test_item_frame_owner_rejects_missing_parent_frame() -> None:
     """A foreach_iteration frame without a parent is malformed, not ordinary."""
     frame = ExecutionFrame(

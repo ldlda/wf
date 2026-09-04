@@ -437,8 +437,11 @@ barrier to merge, while serial owners pass writes outward to the scope
 root, which commits them according to the accepted concurrent-foreach ADR
 and declared reducers. One shared helper
 routes every item write: it climbs through each serial owner to the scope
-root, where it commits, or stops at the first concurrent item boundary,
-where it buffers for that barrier to merge (the concurrent barrier finish
+root, where it commits, or selects the first concurrent boundary as the
+buffer target, where it buffers for that barrier to merge (the walk
+continues past the selected boundary to validate the full ancestry, so
+parent cycles fail closed even when they pass through a concurrent
+owner; the concurrent barrier finish
 routes its combined patch through the same helper, so nested serial owners
 cannot strand it). Parent cycles, missing parents, and orphaned item frames
 fail closed. Buffered failure records must carry an error whose index and

@@ -5,8 +5,11 @@ import pytest
 from wf_core.errors import WorkflowExecutionError
 from wf_core.run_state import ExecutionFrame
 from wf_core.runtime.foreach_state import (
+    ForeachActivationState,
+    ForeachBarrierState,
     close_foreach_activation,
     item_frame_owner,
+    load_foreach_activation,
     load_or_begin_foreach_activation,
     save_foreach_activation,
 )
@@ -100,3 +103,28 @@ def test_item_metadata_requires_activation_identity() -> None:
         ForeachIterationMetadata.from_frame(frame)
     with pytest.raises(WorkflowExecutionError, match="activation"):
         item_frame_owner(frame)
+
+
+def test_failed_activation_lookup_leaves_metadata_untouched() -> None:
+    """Read-only lookups must not create the activation table on failure."""
+    frame = _frame()
+    stale = ForeachActivationState(
+        id="root:each#0",
+        foreach_node_id="each",
+        barrier=ForeachBarrierState(mode="serial"),
+    )
+
+    with pytest.raises(WorkflowExecutionError, match="activation"):
+        load_foreach_activation(frame, "each", "root:each#0")
+    with pytest.raises(WorkflowExecutionError, match="activation"):
+        save_foreach_activation(frame, stale)
+    with pytest.raises(WorkflowExecutionError, match="activation"):
+        close_foreach_activation(frame, stale)
+
+    assert frame.metadata == {}
+
+    # The write path still creates the table exactly once.
+    activation = load_or_begin_foreach_activation(frame, "each", mode="serial")
+    assert frame.metadata["foreach_activations"]["each"]["active"]["id"] == (
+        activation.id
+    )
