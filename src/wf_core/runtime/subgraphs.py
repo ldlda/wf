@@ -236,7 +236,31 @@ def _finish_subgraph(
         reducers=reducers,
         missing_field_message="subgraph output did not include required field {field}",
     )
-    state_changes = commit_patch_for_frame(run, frame, patch)
+    # Match node execution: serial item writes commit through the parent
+    # scope so top-level serial subgraphs land in root state; concurrent
+    # item writes stay buffered in the item lineage for barrier merge.
+    from wf_core.runtime.foreach_state import (
+        item_frame_owner,
+        load_foreach_activation,
+    )
+
+    commit_frame = frame
+    try:
+        owner = item_frame_owner(frame)
+    except Exception:
+        owner = None
+    if owner is not None:
+        parent_frame = run.frames.get(owner.parent_frame_id)
+        if parent_frame is not None:
+            foreach_activation = load_foreach_activation(
+                parent_frame, owner.foreach_node_id, owner.activation_id
+            )
+            if (
+                foreach_activation is not None
+                and foreach_activation.barrier.mode == "serial"
+            ):
+                commit_frame = parent_frame
+    state_changes = commit_patch_for_frame(run, commit_frame, patch)
     return StepExecutionResult(
         outcome=child_outcome,
         resolved_input=activation.child_input,

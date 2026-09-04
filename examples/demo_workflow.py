@@ -255,7 +255,7 @@ def build_demo_workflow() -> Workflow:
                     "outcome": "done",
                     "to": "combine_summaries",
                 },
-                {"from": "summarize_one", "outcome": "ok", "to": END},
+                {"from": "summarize_one", "outcome": "ok", "to": "summarize_each"},
                 {"from": "combine_summaries", "outcome": "ok", "to": "should_email"},
                 {"from": "should_email", "outcome": "true", "to": "approve_email"},
                 {"from": "should_email", "outcome": "false", "to": "skip_email"},

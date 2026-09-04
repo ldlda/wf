@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from wf_core.errors import WorkflowExecutionError
 from wf_core.models.workflow import Workflow
 from wf_core.run_state import (
     ExecutionFrame,
@@ -76,6 +77,39 @@ def advance_frame(
     next_node_id: str,
     front: bool = False,
 ) -> None:
+    # Foreach back-edge return is an ownership check, not generic cycle
+    # detection. Only the frame's immediate recorded owner completes the item;
+    # a root frame targeting the same foreach enters it normally.
+    from wf_core.runtime.foreach_state import item_frame_owner
+
+    owner = item_frame_owner(frame)
+    if owner is not None:
+        if next_node_id == END:
+            raise WorkflowExecutionError(
+                f"foreach item frame {frame.id!r} cannot target workflow END; "
+                f"return to owning foreach {owner.foreach_node_id!r}"
+            )
+        if next_node_id == owner.foreach_node_id:
+            source_node_id = frame.node_id
+            frame.prior_outcome = outcome
+            frame.activated_incoming_edge = source_node_id
+            frame.node_id = owner.foreach_node_id
+            frame.status = FrameStatus.COMPLETED
+            frame.finished_at_node_id = owner.foreach_node_id
+            # The child does not execute the controller again; the blocked
+            # parent activation consumes the result and admits the next item
+            # or emits done. The owner location stays inspectable in trace
+            # and checkpoint state.
+            wake_parent_for_child_progress(run, frame.id)
+            run.sync_from_current_frame()
+            return
+        ancestors = _foreach_ancestor_ids(run, frame)
+        if next_node_id in ancestors[1:]:
+            raise WorkflowExecutionError(
+                f"foreach item frame {frame.id!r} targets non-immediate "
+                f"ancestor {next_node_id!r}; only {owner.foreach_node_id!r} "
+                "can complete this item"
+            )
     frame.prior_outcome = outcome
     frame.activated_incoming_edge = frame.node_id
     frame.node_id = next_node_id
@@ -91,6 +125,30 @@ def advance_frame(
         frame.finished_at_node_id = None
         mark_frame_pending(run, frame.id, front=front)
     run.sync_from_current_frame()
+
+
+def _foreach_ancestor_ids(run: RunState, frame: ExecutionFrame) -> list[str]:
+    """Derive active foreach owners from frame ancestry for fail-closed checks.
+
+    The first entry is the frame's immediate owner; later entries are older
+    ancestors. A target naming an older ancestor is a non-local return, while
+    a target naming an inactive foreach is an ordinary nested entry.
+    """
+    from wf_core.runtime.foreach_state import item_frame_owner
+
+    ancestors: list[str] = []
+    cursor: ExecutionFrame | None = frame
+    seen: set[str] = set()
+    while cursor is not None:
+        owner = item_frame_owner(cursor)
+        if owner is not None:
+            if owner.foreach_node_id in seen:
+                break
+            seen.add(owner.foreach_node_id)
+            ancestors.append(owner.foreach_node_id)
+        parent_id = cursor.parent_frame_id
+        cursor = run.frames.get(parent_id) if parent_id is not None else None
+    return ancestors
 
 
 def finalize_run(workflow: Workflow, run: RunState) -> RunState:

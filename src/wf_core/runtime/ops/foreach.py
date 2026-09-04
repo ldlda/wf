@@ -12,6 +12,7 @@ from wf_core.runtime.foreach_state import (
     ForeachBarrierState,
     ItemErrorRecord,
     PendingItemResult,
+    close_foreach_activation,
     load_or_begin_foreach_activation,
     save_foreach_activation,
 )
@@ -87,6 +88,9 @@ def _step_foreach_serial(
                 state_changes={},
             ),
         )
+        # Close the visit before following `done` so a self-looping completion
+        # edge or a later revisit starts a fresh activation.
+        close_foreach_activation(frame, activation)
         advance_frame(run, frame, outcome=outcome, next_node_id=next_node_id)
         return run
 
@@ -96,6 +100,15 @@ def _step_foreach_serial(
     save_foreach_activation(frame, activation)
     child_id = _child_frame_id(activation, loop_index)
     child_lineage_id = _child_lineage_id(activation, loop_index)
+    # Serial items still own a lineage so nested subgraph/boundary commits have
+    # a parent lineage to buffer into; top-level serial writes commit through
+    # the parent scope root.
+    add_lineage(
+        run,
+        scope_id=frame.scope_id,
+        lineage_id=child_lineage_id,
+        parent_id=frame.lineage_id,
+    )
     add_frame(
         run,
         ExecutionFrame(
@@ -168,6 +181,7 @@ def _step_foreach_concurrent(
             frame=frame,
             step=step,
             index=index,
+            activation=activation,
             barrier=barrier,
             reducers=reducers,
         )
@@ -318,6 +332,7 @@ def _finish_concurrent_foreach(
     frame: ExecutionFrame,
     step: ForeachNode,
     index: WorkflowIndex,
+    activation: ForeachActivationState,
     barrier: ForeachBarrierState,
     reducers: Mapping[str, ReducerDefinition] | None = None,
 ) -> RunState:
@@ -373,6 +388,8 @@ def _finish_concurrent_foreach(
             state_changes=state_changes,
         ),
     )
+    # Close the visit before following completion so later revisits start fresh.
+    close_foreach_activation(frame, activation)
     advance_frame(run, frame, outcome=outcome, next_node_id=next_node_id)
     return run
 

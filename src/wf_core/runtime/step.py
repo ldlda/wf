@@ -87,6 +87,11 @@ def complete_end_step(
     """Record an explicit workflow terminal and complete the active frame."""
     result = StepExecutionResult(outcome=outcome)
     frame = run.frames[frame_id]
+    if item_frame_owner(frame) is not None:
+        raise WorkflowExecutionError(
+            f"foreach item frame {frame.id!r} cannot target explicit end node "
+            f"{node_id!r}; return to its owning foreach"
+        )
     frame.metadata["workflow_outcome"] = outcome
     if frame.parent_frame_id is None:
         run.outcome = outcome

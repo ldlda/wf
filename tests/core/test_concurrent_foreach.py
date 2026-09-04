@@ -286,12 +286,14 @@ def test_sync_concurrent_foreach_barrier_replays_add_reducer_inputs() -> None:
     assert run.output["number"] == 6
     assert run.lineages["root:each#0[0]"].writes[0].incoming_value == 3
     assert run.lineages["root:each#0[1]"].writes[0].incoming_value == 1
-    active = load_or_begin_foreach_activation(
+    # The visit closed before `done`; lineage history remains while a new
+    # load starts fresh barrier state with a new activation id.
+    fresh = load_or_begin_foreach_activation(
         run.frames["root"], "each", mode="concurrent"
     )
-    assert active.id == "root:each#0"
-    assert active.barrier.pending_results[0].lineage_id == "root:each#0[0]"
-    assert active.barrier.pending_results[0].patch.writes == []
+    assert fresh.id == "root:each#1"
+    assert fresh.barrier.next_index == 0
+    assert fresh.barrier.pending_results == {}
     foreach_entries = [entry for entry in run.trace if entry.step_type == "foreach"]
     assert foreach_entries[-1].state_changes["state.number"] == 6
 
@@ -407,7 +409,7 @@ def _sum_items_workflow() -> Workflow:
         ],
         edges=[
             Edge.model_validate({"from": "each", "outcome": "loop", "to": "add_item"}),
-            Edge.model_validate({"from": "add_item", "outcome": "ok", "to": END}),
+            Edge.model_validate({"from": "add_item", "outcome": "ok", "to": "each"}),
             Edge.model_validate({"from": "each", "outcome": "done", "to": END}),
         ],
     )
@@ -517,7 +519,7 @@ def _same_item_reducer_visibility_workflow() -> Workflow:
                     "to": "read_number",
                 }
             ),
-            Edge.model_validate({"from": "read_number", "outcome": "ok", "to": END}),
+            Edge.model_validate({"from": "read_number", "outcome": "ok", "to": "each"}),
             Edge.model_validate({"from": "each", "outcome": "done", "to": END}),
         ],
     )
@@ -593,6 +595,15 @@ def _nested_foreach_lineage_workflow() -> Workflow:
                     "output": [{"source": "seen", "target": "state.seen"}],
                 }
             ),
+            NodeUse.model_validate(
+                {
+                    "id": "tail",
+                    "type": "node",
+                    "node": "record",
+                    "input": [{"target": "seen", "path": "context.outer"}],
+                    "output": [{"source": "seen", "target": "state.seen"}],
+                }
+            ),
         ],
         edges=[
             Edge.model_validate(
@@ -609,8 +620,13 @@ def _nested_foreach_lineage_workflow() -> Workflow:
                     "to": "record",
                 }
             ),
-            Edge.model_validate({"from": "record", "outcome": "ok", "to": END}),
-            Edge.model_validate({"from": "inner_each", "outcome": "done", "to": END}),
+            Edge.model_validate(
+                {"from": "record", "outcome": "ok", "to": "inner_each"}
+            ),
+            Edge.model_validate(
+                {"from": "inner_each", "outcome": "done", "to": "tail"}
+            ),
+            Edge.model_validate({"from": "tail", "outcome": "ok", "to": "outer_each"}),
             Edge.model_validate({"from": "outer_each", "outcome": "done", "to": END}),
         ],
     )
@@ -624,7 +640,7 @@ def _workflow(
 ) -> Workflow:
     edges = [
         Edge.model_validate({"from": "each", "outcome": "loop", "to": "record"}),
-        Edge.model_validate({"from": "record", "outcome": "ok", "to": END}),
+        Edge.model_validate({"from": "record", "outcome": "ok", "to": "each"}),
         Edge.model_validate({"from": "each", "outcome": "done", "to": END}),
     ]
     if include_completed_with_errors:
@@ -794,7 +810,9 @@ def _multi_step_overlay_workflow() -> Workflow:
                     "to": "read_scratch",
                 }
             ),
-            Edge.model_validate({"from": "read_scratch", "outcome": "ok", "to": END}),
+            Edge.model_validate(
+                {"from": "read_scratch", "outcome": "ok", "to": "each"}
+            ),
             Edge.model_validate({"from": "each", "outcome": "done", "to": END}),
         ],
     )
@@ -861,7 +879,9 @@ def _same_path_replace_workflow() -> Workflow:
                     "to": "write_winner",
                 }
             ),
-            Edge.model_validate({"from": "write_winner", "outcome": "ok", "to": END}),
+            Edge.model_validate(
+                {"from": "write_winner", "outcome": "ok", "to": "each"}
+            ),
             Edge.model_validate({"from": "each", "outcome": "done", "to": END}),
         ],
     )
