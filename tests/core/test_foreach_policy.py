@@ -137,16 +137,19 @@ def test_collect_policy_requires_completed_with_errors_edge() -> None:
     workflow = _workflow(
         item_error={"action": "collect", "collect_to": "state.item_errors"},
         edges=[
-            {"from": "each", "outcome": "loop", "to": END},
+            {"from": "each", "outcome": "loop", "to": "body"},
+            {"from": "body", "outcome": "ok", "to": "each"},
             {"from": "each", "outcome": "done", "to": END},
         ],
     )
 
     report = validate_workflow(workflow)
 
-    assert report.errors
-    assert report.errors[0].code == "missing_outcome_edge"
-    assert "completed_with_errors" in report.errors[0].message
+    matching = [
+        issue for issue in report.errors if issue.code == "missing_outcome_edge"
+    ]
+    assert matching
+    assert "completed_with_errors" in matching[0].message
 
 
 def test_collect_policy_destination_must_be_declared_array_field() -> None:
@@ -199,11 +202,13 @@ def _workflow(
                     "over": "state.items",
                     "as": "item",
                     "item_error": item_error or {"action": "fail"},
-                }
+                },
+                {"id": "body", "type": "node", "node": "noop"},
             ],
             "edges": edges
             or [
-                {"from": "each", "outcome": "loop", "to": END},
+                {"from": "each", "outcome": "loop", "to": "body"},
+                {"from": "body", "outcome": "ok", "to": "each"},
                 {"from": "each", "outcome": "done", "to": END},
             ],
             "node_defs": [],

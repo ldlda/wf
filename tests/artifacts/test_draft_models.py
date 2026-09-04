@@ -322,7 +322,7 @@ def test_workflow_draft_foreach_over_dumps_structural_path() -> None:
             },
             "routes": {
                 "each_item": {"loop": "echo", "done": "__end__"},
-                "echo": {"ok": "__end__"},
+                "echo": {"ok": "each_item"},
             },
         }
     )
@@ -338,6 +338,7 @@ def test_workflow_draft_foreach_accepts_canonical_item_error_policy() -> None:
             **_keyed_echo_draft(),
             "start": "each_item",
             "steps": {
+                **_keyed_echo_draft()["steps"],
                 "each_item": {
                     "foreach": {
                         "over": "state.items",
@@ -349,9 +350,12 @@ def test_workflow_draft_foreach_accepts_canonical_item_error_policy() -> None:
                             "collect_to": "state.item_errors",
                         },
                     }
-                }
+                },
             },
-            "routes": {"each_item": {"loop": "__end__", "done": "__end__"}},
+            "routes": {
+                "each_item": {"loop": "echo", "done": "__end__"},
+                "echo": {"ok": "each_item"},
+            },
         }
     )
 
@@ -372,15 +376,19 @@ def test_workflow_draft_foreach_accepts_item_error_action_string() -> None:
             **_keyed_echo_draft(),
             "start": "each_item",
             "steps": {
+                **_keyed_echo_draft()["steps"],
                 "each_item": {
                     "foreach": {
                         "over": "state.items",
                         "as": "item",
                         "item_error": "skip",
                     }
-                }
+                },
             },
-            "routes": {"each_item": {"loop": "__end__", "done": "__end__"}},
+            "routes": {
+                "each_item": {"loop": "echo", "done": "__end__"},
+                "echo": {"ok": "each_item"},
+            },
         }
     )
 

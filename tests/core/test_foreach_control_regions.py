@@ -6,6 +6,7 @@ from wf_core.analysis.control_regions import (
     ControlRegionIssueKind,
     analyze_control_regions,
 )
+from wf_core.validation.issues import ValidationIssueCode
 
 
 def _workflow(
@@ -56,6 +57,21 @@ def _condition(node_id: str) -> dict[str, object]:
     }
 
 
+_CONTROL_REGION_CODES = {code.value for code in ControlRegionIssueKind}
+
+
+def _public_control_errors(workflow: Workflow) -> list[tuple[str, str]]:
+    return [
+        (issue.code.value, issue.path)
+        for issue in workflow.validate_structure().errors
+        if issue.code.value in _CONTROL_REGION_CODES
+    ]
+
+
+def _assert_no_public_control_errors(workflow: Workflow) -> None:
+    assert _public_control_errors(workflow) == []
+
+
 def test_closed_root_cycle_has_one_empty_control_region() -> None:
     workflow = _workflow(
         start="a",
@@ -70,6 +86,7 @@ def test_closed_root_cycle_has_one_empty_control_region() -> None:
 
     assert analysis.issues == ()
     assert analysis.owner_stack_by_node == {"a": (), "b": ()}
+    _assert_no_public_control_errors(workflow)
 
 
 def test_foreach_cycle_with_possible_return_is_valid() -> None:
@@ -89,6 +106,7 @@ def test_foreach_cycle_with_possible_return_is_valid() -> None:
     assert analysis.issues == ()
     assert analysis.owner_stack_by_node["a"] == ("f",)
     assert analysis.owner_stack_by_node["f"] == ()
+    _assert_no_public_control_errors(workflow)
 
 
 def test_conditional_foreach_paths_can_both_return() -> None:
@@ -109,6 +127,7 @@ def test_conditional_foreach_paths_can_both_return() -> None:
     assert analysis.issues == ()
     assert analysis.owner_stack_by_node["condition"] == ("f",)
     assert analysis.owner_stack_by_node["work"] == ("f",)
+    _assert_no_public_control_errors(workflow)
 
 
 def test_nested_foreach_assigns_static_owner_stacks() -> None:
@@ -142,6 +161,7 @@ def test_nested_foreach_assigns_static_owner_stacks() -> None:
         "after": (),
     }
     assert analysis.issues == ()
+    _assert_no_public_control_errors(workflow)
 
 
 def test_reentering_completed_foreach_keeps_one_static_region() -> None:
@@ -163,6 +183,7 @@ def test_reentering_completed_foreach_keeps_one_static_region() -> None:
     assert analysis.owner_stack_by_node["f"] == ()
     assert analysis.owner_stack_by_node["work"] == ("f",)
     assert analysis.owner_stack_by_node["again"] == ()
+    _assert_no_public_control_errors(workflow)
 
 
 def test_external_entry_into_foreach_body_is_region_conflict() -> None:
@@ -184,6 +205,12 @@ def test_external_entry_into_foreach_body_is_region_conflict() -> None:
         (issue.kind, issue.path) for issue in analysis.issues
     ]
     assert "b" not in analysis.owner_stack_by_node
+    matching = [
+        issue
+        for issue in workflow.validate_structure().errors
+        if issue.code == ValidationIssueCode.FOREACH_REGION_CONFLICT
+    ]
+    assert matching[0].path == "nodes[b]"
 
 
 def test_foreach_body_escape_is_region_conflict() -> None:
@@ -204,6 +231,12 @@ def test_foreach_body_escape_is_region_conflict() -> None:
         (issue.kind, issue.path) for issue in analysis.issues
     ]
     assert "after" not in analysis.owner_stack_by_node
+    matching = [
+        issue
+        for issue in workflow.validate_structure().errors
+        if issue.code == ValidationIssueCode.FOREACH_REGION_CONFLICT
+    ]
+    assert matching[0].path == "nodes[after]"
 
 
 def test_skipping_inner_foreach_owner_is_invalid_return() -> None:
@@ -224,6 +257,12 @@ def test_skipping_inner_foreach_owner_is_invalid_return() -> None:
     assert (ControlRegionIssueKind.INVALID_FOREACH_RETURN, "edges[2]") in [
         (issue.kind, issue.path) for issue in analysis.issues
     ]
+    matching = [
+        issue
+        for issue in workflow.validate_structure().errors
+        if issue.code == ValidationIssueCode.INVALID_FOREACH_RETURN
+    ]
+    assert matching[0].path == "edges[2]"
 
 
 def test_entering_sibling_foreach_body_is_region_conflict() -> None:
@@ -245,6 +284,12 @@ def test_entering_sibling_foreach_body_is_region_conflict() -> None:
     assert (ControlRegionIssueKind.FOREACH_REGION_CONFLICT, "nodes[b2]") in [
         (issue.kind, issue.path) for issue in analysis.issues
     ]
+    matching = [
+        issue
+        for issue in workflow.validate_structure().errors
+        if issue.code == ValidationIssueCode.FOREACH_REGION_CONFLICT
+    ]
+    assert matching[0].path == "nodes[b2]"
 
 
 def test_empty_foreach_body_is_rejected() -> None:
@@ -262,6 +307,12 @@ def test_empty_foreach_body_is_rejected() -> None:
     assert (ControlRegionIssueKind.EMPTY_FOREACH_BODY, "edges[0]") in [
         (issue.kind, issue.path) for issue in analysis.issues
     ]
+    matching = [
+        issue
+        for issue in workflow.validate_structure().errors
+        if issue.code == ValidationIssueCode.EMPTY_FOREACH_BODY
+    ]
+    assert matching[0].path == "edges[0]"
 
 
 def test_closed_foreach_body_cycle_has_no_return() -> None:
@@ -281,6 +332,12 @@ def test_closed_foreach_body_cycle_has_no_return() -> None:
     assert (ControlRegionIssueKind.FOREACH_BODY_NO_RETURN, "nodes[f]") in [
         (issue.kind, issue.path) for issue in analysis.issues
     ]
+    matching = [
+        issue
+        for issue in workflow.validate_structure().errors
+        if issue.code == ValidationIssueCode.FOREACH_BODY_NO_RETURN
+    ]
+    assert matching[0].path == "nodes[f]"
 
 
 def test_foreach_body_cannot_target_end_token() -> None:
@@ -299,6 +356,12 @@ def test_foreach_body_cannot_target_end_token() -> None:
     assert (ControlRegionIssueKind.INVALID_FOREACH_TERMINAL, "edges[1]") in [
         (issue.kind, issue.path) for issue in analysis.issues
     ]
+    matching = [
+        issue
+        for issue in workflow.validate_structure().errors
+        if issue.code == ValidationIssueCode.INVALID_FOREACH_TERMINAL
+    ]
+    assert matching[0].path == "edges[1]"
 
 
 def test_foreach_body_cannot_target_explicit_end_node() -> None:
@@ -321,6 +384,12 @@ def test_foreach_body_cannot_target_explicit_end_node() -> None:
     assert (ControlRegionIssueKind.INVALID_FOREACH_TERMINAL, "edges[1]") in [
         (issue.kind, issue.path) for issue in analysis.issues
     ]
+    matching = [
+        issue
+        for issue in workflow.validate_structure().errors
+        if issue.code == ValidationIssueCode.INVALID_FOREACH_TERMINAL
+    ]
+    assert matching[0].path == "edges[1]"
 
 
 def test_every_unreachable_node_is_reported() -> None:
@@ -345,3 +414,8 @@ def test_every_unreachable_node_is_reported() -> None:
         ControlRegionIssueKind.UNREACHABLE_NODE,
         "nodes[detached_b]",
     ) in by_kind_path
+    public_by_code_path = [
+        (issue.code.value, issue.path) for issue in workflow.validate_structure().errors
+    ]
+    assert ("unreachable_node", "nodes[detached_a]") in public_by_code_path
+    assert ("unreachable_node", "nodes[detached_b]") in public_by_code_path
