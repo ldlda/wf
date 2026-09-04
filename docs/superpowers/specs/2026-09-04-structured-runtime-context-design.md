@@ -298,6 +298,88 @@ A future time-machine design may combine checkpoints with trace or richer
 events. This design preserves stable identities for that work without choosing
 event sourcing, checkpoint navigation, or rerun-from-step semantics now.
 
+## Potential Host Runtime Context
+
+A future capability interface may follow the useful shape of a generic
+`Runtime[ContextT]`. This is a possible extension, not a requirement of the
+structured foreach implementation:
+
+```python
+@dataclass(frozen=True, slots=True)
+class AppRuntimeContext:
+    account: AccountRef
+    features: AccountFeatures
+    app: RuntimeApp
+
+
+async def process_order(
+    order: Order,
+    runtime: Runtime[AppRuntimeContext],
+) -> Receipt:
+    if runtime.context.features.semantic_search:
+        search = await runtime.context.app.capability("search")
+        return await search.run(order)
+
+    ...
+```
+
+This host context is not the same namespace as the graph-visible
+`context.foreach` object:
+
+- `Runtime[ContextT].context` would contain host-provided dependencies and
+  run-scoped configuration. Its values may be non-serializable and would not be
+  addressable with `GraphSourcePath`.
+- `Runtime.foreach` and graph `context.foreach` would remain engine-derived,
+  JSON-compatible execution facts.
+- Values that a saved workflow or child subgraph consumes declaratively still
+  enter through workflow input, state, or explicit subgraph input bindings.
+
+The likely package seam is:
+
+```text
+wf-client.App
+    remote-facing handle used by a caller
+
+wf-server
+    authenticates the account and reconstructs execution dependencies
+
+wf-api
+    assembles the concrete AppRuntimeContext
+
+wf-core
+    defines Runtime[ContextT] and treats ContextT as opaque
+
+wf-authoring
+    has no dependency on accounts, clients, or server facilities
+```
+
+`AppRuntimeContext.app` should not automatically be the caller's literal
+`wf-client.App` instance. Server execution may instead receive a narrow
+`RuntimeApp` interface with the same convenient capability-discovery shape,
+without requiring the server to call itself through its public HTTP transport.
+
+The host context is reconstructed rather than persisted:
+
+```text
+persisted account and run identity
+    -> wf-server reconstructs AppRuntimeContext
+    -> wf-core executes with Runtime[AppRuntimeContext]
+```
+
+Database connections, credentials, clients, and feature evaluators therefore
+remain outside serialized run state. Only stable identities needed to
+reconstruct them survive a checkpoint or interrupt. Account features exposed
+to capability code should represent the effective features for that execution;
+authorization must still be enforced by the server rather than delegated to a
+boolean in runtime context.
+
+If this extension is adopted, it should replace the current untyped
+`RuntimeContext.platform` escape hatch rather than layering another host-object
+field beside it. Execution facts such as node, frame, scope, lineage, and
+incoming transition should also be grouped separately from the generic host
+context. Stores, stream writers, heartbeat controls, and other runtime
+facilities remain YAGNI until concrete callers require them.
+
 ## Compatibility and Migration
 
 The structured `foreach` field is additive. Existing `GraphSourcePath`,
@@ -359,4 +441,5 @@ compatibility promise.
 - A universal static node-address or dynamic execution-path type.
 - Time-machine behavior or event-sourced resume.
 - Fork/gather context, scheduling context, or run step limits.
+- The generic host-provided `Runtime[ContextT]` extension described above.
 - The broader doubly ergonomic Python DSL.
