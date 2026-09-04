@@ -27,7 +27,7 @@ def test_concurrent_foreach_skip_emits_completed_with_errors() -> None:
     )
 
     assert run.state["seen"] == ["a", "c"]
-    assert run.frames["root:each:1"].status == "failed"
+    assert run.frames["root:each#0:1"].status == "failed"
     foreach_entries = [entry for entry in run.trace if entry.step_type == "foreach"]
     assert foreach_entries[-1].outcome == "completed_with_errors"
     assert foreach_entries[-1].resolved_input["failed_items"] == 1
@@ -47,7 +47,7 @@ def test_concurrent_foreach_collect_writes_ordered_error_records() -> None:
     assert len(run.state["errors"]) == 1
     error = run.state["errors"][0]
     assert error["index"] == 1
-    assert error["frame_id"] == "root:each:1"
+    assert error["frame_id"] == "root:each#0:1"
     assert error["node_id"] == "record"
     assert error["error_type"] == "ValueError"
     assert error["message"] == "bad item"

@@ -163,8 +163,19 @@ def test_child_completion_wakes_blocked_parent() -> None:
 
 
 def test_wake_parent_when_child_finishes_for_refill() -> None:
+    from wf_core.runtime.foreach_state import (
+        ForeachItemOwner,
+        item_frame_owner,
+        load_or_begin_foreach_activation,
+        save_foreach_activation,
+    )
+
     run = _run()
     add_frame(run, ExecutionFrame(id="parent", kind="root", node_id="foreach"))
+    activation = load_or_begin_foreach_activation(
+        run.frames["parent"], "foreach", mode="serial"
+    )
+    save_foreach_activation(run.frames["parent"], activation)
     add_frame(
         run,
         ExecutionFrame(
@@ -172,10 +183,21 @@ def test_wake_parent_when_child_finishes_for_refill() -> None:
             kind="foreach_iteration",
             node_id="__end__",
             parent_frame_id="parent",
+            metadata={
+                "foreach_node_id": "foreach",
+                "activation_id": activation.id,
+                "loop_index": 0,
+                "loop_item": "a",
+                "loop_alias": "item",
+            },
         ),
     )
     block_frame_on_children(run, "parent", ("child", "other"))
     run.frames["child"].status = FrameStatus.COMPLETED
+
+    owner = item_frame_owner(run.frames["child"])
+    assert isinstance(owner, ForeachItemOwner)
+    assert owner.activation_id == activation.id
 
     wake_parent_for_child_progress(run, "child")
 

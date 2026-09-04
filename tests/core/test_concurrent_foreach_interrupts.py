@@ -31,8 +31,8 @@ async def test_concurrent_foreach_interrupt_returns_before_refill() -> None:
     assert run.status is RunStatus.INTERRUPTED
     assert run.interrupt is not None
     assert run.interrupt.payload["item"] == "b"
-    assert run.frames["root:each:1"].status == "interrupted"
-    assert "root:each:2" not in run.frames
+    assert run.frames["root:each#0:1"].status == "interrupted"
+    assert "root:each#0:2" not in run.frames
     assert "seen" not in run.state
 
 
@@ -54,7 +54,7 @@ async def test_resume_prioritizes_interrupted_item_before_siblings() -> None:
 
     assert resumed.status is RunStatus.COMPLETED
     assert resumed.state["seen"] == ["a", "b", "c"]
-    assert resumed.trace[interrupted_trace_len].frame_id == "root:each:1"
+    assert resumed.trace[interrupted_trace_len].frame_id == "root:each#0:1"
     assert resumed.trace[interrupted_trace_len].step_type == "interrupt"
     assert resumed.trace[interrupted_trace_len].outcome == "submitted"
     foreach_entries = [entry for entry in resumed.trace if entry.step_type == "foreach"]

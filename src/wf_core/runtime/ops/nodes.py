@@ -15,7 +15,11 @@ from wf_core.run_state import (
     RuntimeContext,
     StepExecutionResult,
 )
-from wf_core.runtime.foreach_state import ForeachBarrierState, item_frame_owner
+from wf_core.runtime.foreach_state import (
+    item_frame_owner,
+    require_foreach_activation,
+    save_foreach_activation,
+)
 from wf_core.runtime.input_bindings import resolve_step_input_bindings
 from wf_core.runtime.lineage import (
     append_lineage_writes,
@@ -116,10 +120,14 @@ def _finalize_node_execution(
     if owner is None:
         state_changes = commit_patch_for_frame(run, frame, patch)
     else:
-        parent_frame_id, foreach_node_id, item_index = owner
-        parent_frame = run.frames[parent_frame_id]
-        barrier = ForeachBarrierState.from_frame(parent_frame, foreach_node_id)
-        if barrier is not None and barrier.mode == "concurrent":
+        parent_frame = run.frames[owner.parent_frame_id]
+        # Fail closed when the child names a closed or superseded activation:
+        # its writes must not land in a later visit's barrier.
+        activation = require_foreach_activation(
+            parent_frame, owner.foreach_node_id, owner.activation_id
+        )
+        barrier = activation.barrier
+        if barrier.mode == "concurrent":
             # New concurrent foreach stores writes in the child lineage; the
             # barrier keeps only result metadata plus old patch fallback.
             append_lineage_writes(
@@ -129,12 +137,12 @@ def _finalize_node_execution(
                 writes=patch.writes,
             )
             barrier.add_success_patch(
-                index=item_index,
+                index=owner.item_index,
                 frame_id=frame.id,
                 patch=StatePatch(),
                 lineage_id=frame.lineage_id,
             )
-            barrier.save_to_frame(parent_frame, foreach_node_id)
+            save_foreach_activation(parent_frame, activation)
             state_changes = {}
         else:
             state_changes = commit_patch_for_frame(run, parent_frame, patch)

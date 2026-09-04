@@ -8,9 +8,13 @@ from wf_core.paths import StatePath
 from wf_core.run_state import ExecutionFrame, RunState, RunStatus, StateWrite
 from wf_core.runtime.foreach_state import (
     ForeachBarrierState,
+    ForeachItemOwner,
     ItemErrorRecord,
     PendingItemResult,
     _state_write_from_metadata,
+    item_frame_owner,
+    load_or_begin_foreach_activation,
+    save_foreach_activation,
 )
 from wf_core.runtime.lineage import LineageStateView, lineage_writes_for_frame
 from wf_core.runtime.ops.state import StatePatch
@@ -134,20 +138,28 @@ def test_lineage_state_view_materializes_visible_values_without_mutating_base() 
 
 def test_lineage_writes_for_frame_reads_current_foreach_pending_result() -> None:
     parent = ExecutionFrame(id="root", kind="workflow", node_id="each")
+    activation = load_or_begin_foreach_activation(parent, "each", mode="concurrent")
+    child_lineage_id = f"{activation.id}[0]"
     child = ExecutionFrame(
-        id="root:each:0",
+        id=f"{activation.id}:0",
         kind="foreach_iteration",
         node_id="work",
         parent_frame_id="root",
-        lineage_id="root/each[0]",
+        lineage_id=child_lineage_id,
         parent_lineage_id="root",
         metadata={
             "foreach_node_id": "each",
+            "activation_id": activation.id,
             "loop_index": 0,
             "loop_item": "a",
             "loop_alias": "item",
         },
     )
+    # Ownership is named, not positional.
+    owner = item_frame_owner(child)
+    assert isinstance(owner, ForeachItemOwner)
+    assert owner.activation_id == activation.id
+    assert owner.item_index == 0
     patch = StatePatch(
         writes=[
             StateWrite(
@@ -158,19 +170,14 @@ def test_lineage_writes_for_frame_reads_current_foreach_pending_result() -> None
             )
         ]
     )
-    barrier = ForeachBarrierState(
-        mode="concurrent",
-        pending_results={
-            0: PendingItemResult(
-                index=0,
-                frame_id=child.id,
-                status="succeeded",
-                lineage_id=child.lineage_id,
-                patch=patch,
-            )
-        },
+    activation.barrier.pending_results[0] = PendingItemResult(
+        index=0,
+        frame_id=child.id,
+        status="succeeded",
+        lineage_id=child.lineage_id,
+        patch=patch,
     )
-    barrier.save_to_frame(parent, "each")
+    save_foreach_activation(parent, activation)
     run = RunState(
         workflow_name="lineage",
         status=RunStatus.PENDING,
@@ -188,12 +195,13 @@ def test_lineage_writes_for_frame_reads_current_foreach_pending_result() -> None
 
 def test_lineage_writes_for_frame_rejects_missing_compatibility_parent_frame() -> None:
     child = ExecutionFrame(
-        id="missing:each:0",
+        id="missing:each#0:0",
         kind="foreach_iteration",
         node_id="work",
         parent_frame_id="missing",
         metadata={
             "foreach_node_id": "each",
+            "activation_id": "missing:each#0",
             "loop_index": 0,
             "loop_item": "a",
             "loop_alias": "item",

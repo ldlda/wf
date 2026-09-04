@@ -8,9 +8,12 @@ from wf_core.models.steps import ForeachNode
 from wf_core.models.workflow import Workflow
 from wf_core.run_state import ExecutionFrame, FrameStatus, RunState, StepExecutionResult
 from wf_core.runtime.foreach_state import (
+    ForeachActivationState,
     ForeachBarrierState,
     ItemErrorRecord,
     PendingItemResult,
+    load_or_begin_foreach_activation,
+    save_foreach_activation,
 )
 from wf_core.runtime.lineage import (
     add_lineage,
@@ -63,7 +66,8 @@ def _step_foreach_serial(
         raise WorkflowExecutionError("serial foreach helper received non-serial mode")
 
     frame = run.current_frame()
-    barrier = ForeachBarrierState.from_frame(frame, step.id) or ForeachBarrierState()
+    activation = load_or_begin_foreach_activation(frame, step.id, mode="serial")
+    barrier = activation.barrier
     iterable = _resolve_foreach_iterable(run, frame, step)
 
     loop_index = barrier.next_index
@@ -89,9 +93,9 @@ def _step_foreach_serial(
     loop_start = index.next_node_id(frame.node_id, "loop")
     item = iterable[loop_index]
     barrier.next_index = loop_index + 1
-    barrier.save_to_frame(frame, step.id)
-    child_id = f"{frame.id}:{step.id}:{loop_index}"
-    child_lineage_id = _child_lineage_id(frame, step, loop_index)
+    save_foreach_activation(frame, activation)
+    child_id = _child_frame_id(activation, loop_index)
+    child_lineage_id = _child_lineage_id(activation, loop_index)
     add_frame(
         run,
         ExecutionFrame(
@@ -105,6 +109,7 @@ def _step_foreach_serial(
             parent_lineage_id=frame.lineage_id,
             metadata=ForeachIterationMetadata(
                 foreach_node_id=step.id,
+                activation_id=activation.id,
                 loop_index=loop_index,
                 loop_item=item,
                 loop_alias=step.as_,
@@ -141,11 +146,8 @@ def _step_foreach_concurrent(
     if step.concurrent is None:
         raise WorkflowExecutionError("concurrent foreach requires concurrent policy")
     frame = run.current_frame()
-    barrier = ForeachBarrierState.from_frame(frame, step.id)
-    if barrier is None:
-        barrier = ForeachBarrierState(mode="concurrent")
-    elif barrier.mode != "concurrent":
-        raise WorkflowExecutionError("malformed concurrent foreach barrier mode")
+    activation = load_or_begin_foreach_activation(frame, step.id, mode="concurrent")
+    barrier = activation.barrier
 
     _finish_completed_children(run, step, barrier)
     iterable = _resolve_foreach_iterable(run, frame, step)
@@ -154,6 +156,7 @@ def _step_foreach_concurrent(
         frame=frame,
         step=step,
         index=index,
+        activation=activation,
         barrier=barrier,
         iterable=iterable,
     )
@@ -169,7 +172,7 @@ def _step_foreach_concurrent(
             reducers=reducers,
         )
 
-    barrier.save_to_frame(frame, step.id)
+    save_foreach_activation(frame, activation)
     block_frame_on_children(run, frame.id, barrier.outstanding_frame_ids)
     run.sync_from_current_frame()
     return run
@@ -242,6 +245,7 @@ def _admit_concurrent_children(
     frame: ExecutionFrame,
     step: ForeachNode,
     index: WorkflowIndex,
+    activation: ForeachActivationState,
     barrier: ForeachBarrierState,
     iterable: list[object],
 ) -> None:
@@ -256,8 +260,8 @@ def _admit_concurrent_children(
     ):
         loop_index = barrier.next_index
         item = iterable[loop_index]
-        child_id = f"{frame.id}:{step.id}:{loop_index}"
-        child_lineage_id = _child_lineage_id(frame, step, loop_index)
+        child_id = _child_frame_id(activation, loop_index)
+        child_lineage_id = _child_lineage_id(activation, loop_index)
         add_lineage(
             run,
             scope_id=frame.scope_id,
@@ -280,6 +284,7 @@ def _admit_concurrent_children(
                 parent_lineage_id=frame.lineage_id,
                 metadata=ForeachIterationMetadata(
                     foreach_node_id=step.id,
+                    activation_id=activation.id,
                     loop_index=loop_index,
                     loop_item=item,
                     loop_alias=step.as_,
@@ -372,13 +377,22 @@ def _finish_concurrent_foreach(
     return run
 
 
-def _child_lineage_id(frame: ExecutionFrame, step: ForeachNode, loop_index: int) -> str:
-    """Return a deterministic opaque lineage id for one foreach child frame.
+def _child_frame_id(activation: ForeachActivationState, loop_index: int) -> str:
+    """Return a deterministic opaque child frame id for one activation item.
+
+    The id embeds the activation so a later visit at item zero cannot collide
+    with the first visit. Compare full ids; never parse them.
+    """
+    return f"{activation.id}:{loop_index}"
+
+
+def _child_lineage_id(activation: ForeachActivationState, loop_index: int) -> str:
+    """Return a deterministic opaque lineage id for one activation item.
 
     The readable shape is only for diagnostics. Runtime code should compare the
     full id, not parse it; future structured lineage refs can replace this.
     """
-    return f"{frame.lineage_id}/{step.id}[{loop_index}]"
+    return f"{activation.id}[{loop_index}]"
 
 
 def _patch_for_successful_item(

@@ -7,7 +7,7 @@ from typing import Any
 
 from wf_core.errors import WorkflowExecutionError
 from wf_core.run_state import ExecutionFrame, LineageState, RunState, StateWrite
-from wf_core.runtime.foreach_state import ForeachBarrierState, item_frame_owner
+from wf_core.runtime.foreach_state import item_frame_owner, load_foreach_activation
 from wf_core.runtime.ops.state import (
     StatePatch,
     commit_state_patch,
@@ -61,21 +61,24 @@ def lineage_writes_for_frame(
     # Compatibility fallback: concurrent foreach used barrier-local patches
     # before `RunState.lineages` became the primary write store. Keep reading
     # those patches so old serialized runs and direct barrier tests still work.
+    # Barrier lookup includes the activation so a stale visit cannot read a
+    # later activation's buffered writes.
     owner = item_frame_owner(frame)
     if owner is None:
         return ()
-    parent_frame_id, foreach_node_id, item_index = owner
-    parent_frame = run.frames.get(parent_frame_id)
+    parent_frame = run.frames.get(owner.parent_frame_id)
     if parent_frame is None:
         raise WorkflowExecutionError(
             "foreach lineage compatibility state references missing parent frame "
-            f"{parent_frame_id!r} for child frame {frame.id!r}"
+            f"{owner.parent_frame_id!r} for child frame {frame.id!r}"
         )
-    barrier = ForeachBarrierState.from_frame(parent_frame, foreach_node_id)
-    if barrier is None or barrier.mode != "concurrent":
+    activation = load_foreach_activation(
+        parent_frame, owner.foreach_node_id, owner.activation_id
+    )
+    if activation is None or activation.barrier.mode != "concurrent":
         return ()
 
-    pending = barrier.pending_results.get(item_index)
+    pending = activation.barrier.pending_results.get(owner.item_index)
     if pending is None:
         return ()
     return pending.patch.writes

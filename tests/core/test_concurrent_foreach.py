@@ -19,7 +19,11 @@ from wf_core import (
     execute_workflow,
 )
 from wf_core.run_state import ExecutionFrame, RunState, RuntimeContext
-from wf_core.runtime.foreach_state import ForeachBarrierState
+from wf_core.runtime.foreach_state import (
+    ForeachItemOwner,
+    item_frame_owner,
+    load_or_begin_foreach_activation,
+)
 from wf_core.runtime.scheduler import ForeachIterationMetadata
 
 
@@ -143,7 +147,11 @@ def test_concurrent_foreach_item_frames_use_distinct_lineages() -> None:
     assert run.frames["root"].lineage_id == "root"
     assert run.frames["root"].parent_lineage_id is None
     assert len(item_frames) == 2
-    assert item_lineage_ids == {"root/each[0]", "root/each[1]"}
+    assert item_lineage_ids == {"root:each#0[0]", "root:each#0[1]"}
+    for frame in item_frames:
+        owner = item_frame_owner(frame)
+        assert isinstance(owner, ForeachItemOwner)
+        assert owner.activation_id == "root:each#0"
     assert set(context_lineage_ids) == item_lineage_ids
     assert all(frame.scope_id == "root" for frame in item_frames)
     assert all(frame.parent_lineage_id == "root" for frame in item_frames)
@@ -162,15 +170,27 @@ def test_nested_concurrent_foreach_records_parent_child_lineages() -> None:
     inner_frames = _foreach_frames(run, "inner_each")
 
     assert {frame.lineage_id for frame in outer_frames} == {
-        "root/outer_each[0]",
-        "root/outer_each[1]",
+        "root:outer_each#0[0]",
+        "root:outer_each#0[1]",
     }
     assert all(frame.parent_lineage_id == "root" for frame in outer_frames)
     assert {(frame.parent_lineage_id, frame.lineage_id) for frame in inner_frames} == {
-        ("root/outer_each[0]", "root/outer_each[0]/inner_each[0]"),
-        ("root/outer_each[0]", "root/outer_each[0]/inner_each[1]"),
-        ("root/outer_each[1]", "root/outer_each[1]/inner_each[0]"),
-        ("root/outer_each[1]", "root/outer_each[1]/inner_each[1]"),
+        (
+            "root:outer_each#0[0]",
+            "root:outer_each#0:0:inner_each#0[0]",
+        ),
+        (
+            "root:outer_each#0[0]",
+            "root:outer_each#0:0:inner_each#0[1]",
+        ),
+        (
+            "root:outer_each#0[1]",
+            "root:outer_each#0:1:inner_each#0[0]",
+        ),
+        (
+            "root:outer_each#0[1]",
+            "root:outer_each#0:1:inner_each#0[1]",
+        ),
     }
 
 
@@ -264,12 +284,14 @@ def test_sync_concurrent_foreach_barrier_replays_add_reducer_inputs() -> None:
 
     assert run.state["number"] == 6
     assert run.output["number"] == 6
-    assert run.lineages["root/each[0]"].writes[0].incoming_value == 3
-    assert run.lineages["root/each[1]"].writes[0].incoming_value == 1
-    barrier = ForeachBarrierState.from_frame(run.frames["root"], "each")
-    assert barrier is not None
-    assert barrier.pending_results[0].lineage_id == "root/each[0]"
-    assert barrier.pending_results[0].patch.writes == []
+    assert run.lineages["root:each#0[0]"].writes[0].incoming_value == 3
+    assert run.lineages["root:each#0[1]"].writes[0].incoming_value == 1
+    active = load_or_begin_foreach_activation(
+        run.frames["root"], "each", mode="concurrent"
+    )
+    assert active.id == "root:each#0"
+    assert active.barrier.pending_results[0].lineage_id == "root:each#0[0]"
+    assert active.barrier.pending_results[0].patch.writes == []
     foreach_entries = [entry for entry in run.trace if entry.step_type == "foreach"]
     assert foreach_entries[-1].state_changes["state.number"] == 6
 

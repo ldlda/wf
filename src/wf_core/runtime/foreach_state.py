@@ -11,6 +11,31 @@ from wf_core.runtime.ops.state import StatePatch
 from wf_core.runtime.scheduler import ForeachIterationMetadata
 
 _BARRIER_METADATA_KEY = "foreach_barriers"
+_ACTIVATION_METADATA_KEY = "foreach_activations"
+
+
+@dataclass(slots=True)
+class ForeachActivationState:
+    """Persisted state for one dynamic visit to a foreach controller.
+
+    A parent frame creates a fresh activation on first entry, reuses it while
+    admitting items, and closes it before emitting ``done``. The id is opaque:
+    callers compare it by name and never parse it.
+    """
+
+    id: str
+    foreach_node_id: str
+    barrier: ForeachBarrierState
+
+
+@dataclass(frozen=True, slots=True)
+class ForeachItemOwner:
+    """Named ownership record for one foreach item frame."""
+
+    parent_frame_id: str
+    foreach_node_id: str
+    activation_id: str
+    item_index: int
 
 
 @dataclass(slots=True)
@@ -320,14 +345,188 @@ class ForeachBarrierState:
         )
 
 
-def item_frame_owner(frame: ExecutionFrame) -> tuple[str, str, int] | None:
-    """Return parent frame id, foreach node id, and item index for item frames."""
+def load_or_begin_foreach_activation(
+    frame: ExecutionFrame,
+    foreach_node_id: str,
+    *,
+    mode: Literal["serial", "concurrent"],
+) -> ForeachActivationState:
+    """Load the active activation or begin a fresh visit.
+
+    The first entry for one visit allocates an opaque id from the parent frame
+    id, foreach node id, and a persisted per-frame sequence. Later calls reuse
+    the active activation; closing it makes the next visit allocate a new id
+    with fresh barrier state. Mode mismatches and malformed tables fail fast.
+    """
+    table = _activation_table(frame)
+    entry = table.get(foreach_node_id)
+    if entry is None:
+        entry = {"next_sequence": 0, "active": None}
+        table[foreach_node_id] = entry
+    if not isinstance(entry, dict):
+        raise WorkflowExecutionError(
+            f"malformed foreach activation entry for frame {frame.id!r}"
+        )
+    next_sequence = entry.get("next_sequence", 0)
+    if not isinstance(next_sequence, int) or next_sequence < 0:
+        raise WorkflowExecutionError(
+            f"malformed foreach activation sequence for frame {frame.id!r}"
+        )
+    active = entry.get("active")
+    if active is not None:
+        activation = _activation_from_metadata(
+            active, frame_id=frame.id, foreach_node_id=foreach_node_id
+        )
+        if activation.barrier.mode != mode:
+            raise WorkflowExecutionError(
+                f"foreach {foreach_node_id!r} activation {activation.id!r} "
+                f"has mode {activation.barrier.mode!r}, got {mode!r}"
+            )
+        return activation
+    activation_id = f"{frame.id}:{foreach_node_id}#{next_sequence}"
+    activation = ForeachActivationState(
+        id=activation_id,
+        foreach_node_id=foreach_node_id,
+        barrier=ForeachBarrierState(mode=mode),
+    )
+    entry["next_sequence"] = next_sequence + 1
+    entry["active"] = {
+        "id": activation.id,
+        "barrier": activation.barrier.to_metadata(),
+    }
+    return activation
+
+
+def save_foreach_activation(
+    frame: ExecutionFrame, activation: ForeachActivationState
+) -> None:
+    """Persist barrier progress for the named active activation."""
+    table = _activation_table(frame)
+    entry = table.get(activation.foreach_node_id)
+    if not isinstance(entry, dict):
+        raise WorkflowExecutionError(
+            f"malformed foreach activation entry for frame {frame.id!r}"
+        )
+    active = entry.get("active")
+    if not isinstance(active, dict) or active.get("id") != activation.id:
+        raise WorkflowExecutionError(
+            f"cannot save stale foreach activation {activation.id!r} "
+            f"for frame {frame.id!r}"
+        )
+    active["barrier"] = activation.barrier.to_metadata()
+
+
+def close_foreach_activation(
+    frame: ExecutionFrame, activation: ForeachActivationState
+) -> None:
+    """Close the named active activation, preserving the visit sequence.
+
+    The barrier is removed so a later visit starts fresh; the sequence keeps
+    increasing so child and lineage ids cannot collide across visits.
+    """
+    table = _activation_table(frame)
+    entry = table.get(activation.foreach_node_id)
+    if not isinstance(entry, dict):
+        raise WorkflowExecutionError(
+            f"malformed foreach activation entry for frame {frame.id!r}"
+        )
+    active = entry.get("active")
+    if not isinstance(active, dict) or active.get("id") != activation.id:
+        raise WorkflowExecutionError(
+            f"cannot close stale foreach activation {activation.id!r} "
+            f"for frame {frame.id!r}"
+        )
+    entry["active"] = None
+
+
+def load_foreach_activation(
+    frame: ExecutionFrame, foreach_node_id: str, activation_id: str
+) -> ForeachActivationState | None:
+    """Return the active activation only when its id matches the child.
+
+    A child result naming a closed or different activation must fail closed in
+    the caller rather than buffering into the wrong barrier.
+    """
+    table = _activation_table(frame)
+    entry = table.get(foreach_node_id)
+    if not isinstance(entry, dict):
+        raise WorkflowExecutionError(
+            f"malformed foreach activation entry for frame {frame.id!r}"
+        )
+    active = entry.get("active")
+    if active is None:
+        return None
+    activation = _activation_from_metadata(
+        active, frame_id=frame.id, foreach_node_id=foreach_node_id
+    )
+    if activation.id != activation_id:
+        return None
+    return activation
+
+
+def require_foreach_activation(
+    frame: ExecutionFrame, foreach_node_id: str, activation_id: str
+) -> ForeachActivationState:
+    """Load the named activation or raise when it is closed or superseded."""
+    activation = load_foreach_activation(frame, foreach_node_id, activation_id)
+    if activation is None:
+        raise WorkflowExecutionError(
+            f"foreach item activation {activation_id!r} for node "
+            f"{foreach_node_id!r} is closed or superseded"
+        )
+    return activation
+
+
+def item_frame_owner(frame: ExecutionFrame) -> ForeachItemOwner | None:
+    """Return the named foreach ownership record for item frames.
+
+    Malformed item metadata fails closed via ``ForeachIterationMetadata``;
+    only non-item frames return ``None``.
+    """
     if frame.kind != "foreach_iteration" or frame.parent_frame_id is None:
         return None
     metadata = ForeachIterationMetadata.from_frame(frame)
     if metadata is None:
         return None
-    return frame.parent_frame_id, metadata.foreach_node_id, metadata.loop_index
+    return ForeachItemOwner(
+        parent_frame_id=frame.parent_frame_id,
+        foreach_node_id=metadata.foreach_node_id,
+        activation_id=metadata.activation_id,
+        item_index=metadata.loop_index,
+    )
+
+
+def _activation_table(frame: ExecutionFrame) -> dict[str, Any]:
+    raw = frame.metadata.get(_ACTIVATION_METADATA_KEY)
+    if raw is None:
+        table: dict[str, Any] = {}
+        frame.metadata[_ACTIVATION_METADATA_KEY] = table
+        return table
+    if not isinstance(raw, dict):
+        raise WorkflowExecutionError(
+            f"malformed foreach activation table for frame {frame.id!r}"
+        )
+    return raw
+
+
+def _activation_from_metadata(
+    raw: object, *, frame_id: str, foreach_node_id: str
+) -> ForeachActivationState:
+    if not isinstance(raw, dict):
+        raise WorkflowExecutionError(
+            f"malformed foreach activation for frame {frame_id!r}"
+        )
+    activation_id = raw.get("id")
+    barrier_raw = raw.get("barrier")
+    if not isinstance(activation_id, str) or not activation_id:
+        raise WorkflowExecutionError(
+            f"malformed foreach activation id for frame {frame_id!r}"
+        )
+    return ForeachActivationState(
+        id=activation_id,
+        foreach_node_id=foreach_node_id,
+        barrier=ForeachBarrierState.from_metadata(barrier_raw),
+    )
 
 
 def _string_tuple(raw: object) -> tuple[str, ...]:
