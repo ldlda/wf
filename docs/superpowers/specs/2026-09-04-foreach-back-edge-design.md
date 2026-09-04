@@ -2,9 +2,9 @@
 
 ## Status
 
-Approved in conversation on 2026-09-04. This document specifies canonical
-foreach body-return semantics. It does not include the separately planned
-ergonomic Python DSL or authorize fork/gather implementation.
+Implemented on 2026-09-04. This document specifies canonical foreach
+body-return semantics. It does not include the separately planned ergonomic
+Python DSL or authorize fork/gather implementation.
 
 ## Purpose
 
