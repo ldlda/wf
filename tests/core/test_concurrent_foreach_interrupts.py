@@ -19,6 +19,7 @@ from wf_core import (
     execute_workflow_async,
     resume_workflow_async,
 )
+from wf_core.runtime.foreach_state import item_frame_owner
 
 
 async def test_concurrent_foreach_interrupt_returns_before_refill() -> None:
@@ -44,6 +45,9 @@ async def test_resume_prioritizes_interrupted_item_before_siblings() -> None:
         {"route": _interrupt_on_b},
     )
     interrupted_trace_len = len(run.trace)
+    interrupted_owner = item_frame_owner(run.frames["root:each#0:1"])
+    assert interrupted_owner is not None
+    interrupted_activation_id = interrupted_owner.activation_id
 
     resumed = await resume_workflow_async(
         workflow,
@@ -52,15 +56,11 @@ async def test_resume_prioritizes_interrupted_item_before_siblings() -> None:
         resume_payload={},
     )
 
-    from wf_core.runtime.foreach_state import item_frame_owner
-
-    interrupted_owner = item_frame_owner(run.frames["root:each#0:1"])
-    assert interrupted_owner is not None
     assert resumed.status is RunStatus.COMPLETED
     assert resumed.state["seen"] == ["a", "b", "c"]
     resumed_owner = item_frame_owner(resumed.frames["root:each#0:1"])
     assert resumed_owner is not None
-    assert resumed_owner.activation_id == interrupted_owner.activation_id
+    assert resumed_owner.activation_id == interrupted_activation_id
     assert resumed.trace[interrupted_trace_len].frame_id == "root:each#0:1"
     assert resumed.trace[interrupted_trace_len].step_type == "interrupt"
     assert resumed.trace[interrupted_trace_len].outcome == "submitted"

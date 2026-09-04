@@ -28,18 +28,6 @@ from wf_core.runtime.foreach_state import item_frame_owner
 from wf_core.runtime.scheduler import add_frame
 
 
-def _node_use(node_id: str, *, node: str = "record") -> NodeUse:
-    return NodeUse.model_validate(
-        {
-            "id": node_id,
-            "type": "node",
-            "node": node,
-            "input": [{"target": "value", "path": "context.item"}],
-            "output": [{"source": "seen", "target": "state.seen"}],
-        }
-    )
-
-
 def _serial_workflow() -> Workflow:
     foreach = ForeachNode.model_validate(
         {
@@ -1360,8 +1348,14 @@ def test_nonlocal_runtime_return_fails_closed_when_validation_is_bypassed() -> N
 
     from wf_core.runtime.ops.flow import advance_frame
 
-    with pytest.raises(WorkflowExecutionError, match="non-local|ancestor|immediate"):
+    with pytest.raises(
+        WorkflowExecutionError, match="targets non-immediate ancestor"
+    ) as exc_info:
         advance_frame(run, run.frames["inner-item"], outcome="ok", next_node_id="outer")
+    message = str(exc_info.value)
+    assert "'inner-item'" in message
+    assert "'outer'" in message
+    assert "'inner'" in message
 
 
 def test_root_frame_targeting_foreach_enters_normally() -> None:
@@ -1415,8 +1409,13 @@ def test_completed_activation_cannot_consume_later_activation_result_or_wake() -
 
     assert second.id != first.id
 
-    with pytest.raises(WorkflowExecutionError, match="closed|superseded"):
+    with pytest.raises(
+        WorkflowExecutionError, match="closed or superseded"
+    ) as exc_info:
         require_foreach_activation(parent, "each", first.id)
+    message = str(exc_info.value)
+    assert repr(first.id) in message
+    assert "'each'" in message
 
     run = RunState(
         workflow_name="activation_isolation",

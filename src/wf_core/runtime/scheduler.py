@@ -213,10 +213,7 @@ def wake_parent_for_child_progress(run: RunState, child_frame_id: str) -> None:
         load_foreach_activation,
     )
 
-    try:
-        owner = item_frame_owner(child)
-    except WorkflowExecutionError:
-        raise
+    owner = item_frame_owner(child)
     if owner is not None:
         activation = load_foreach_activation(
             parent, owner.foreach_node_id, owner.activation_id

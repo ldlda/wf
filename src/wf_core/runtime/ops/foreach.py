@@ -94,7 +94,6 @@ def _step_foreach_serial(
         advance_frame(run, frame, outcome=outcome, next_node_id=next_node_id)
         return run
 
-    loop_start = index.next_node_id(frame.node_id, "loop")
     item = iterable[loop_index]
     loop_start, child_id = _admit_item_frame(
         run=run,
@@ -292,7 +291,6 @@ def _admit_concurrent_children(
         raise WorkflowExecutionError("concurrent foreach requires concurrent policy")
 
     barrier = activation.barrier
-    loop_start = index.next_node_id(frame.node_id, "loop")
     while (
         barrier.next_index < len(iterable)
         and len(barrier.active_frame_ids) < step.concurrent.max_active

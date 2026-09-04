@@ -133,7 +133,7 @@ its real contract; do not assume those names exist.
 ## Deployment Diagnosis And Durable Runs
 
 ```python
-from wf_client import DeploymentRequired, WorkflowClientError
+from wf_client import DeploymentRequired, ProtocolError, WorkflowClientError
 
 artifact = await app.workflow("invoice", version=2)
 
@@ -144,6 +144,12 @@ except DeploymentRequired as error:
     print("unresolved", error.unresolved_logical_sources)
     for diagnostic in error.diagnostics:
         print(diagnostic.code, diagnostic.message)
+except ProtocolError as error:
+    print("server error", error.code, error.message, error.data)
+    raise
+except WorkflowClientError as error:
+    print(type(error).__name__, error)
+    raise
 
 deployment = await artifact.deploy(
     "invoice.production",

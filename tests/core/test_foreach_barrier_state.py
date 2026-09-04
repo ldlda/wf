@@ -361,21 +361,29 @@ def _failed_result(
 
 
 def test_pending_item_result_rejects_error_index_mismatch() -> None:
-    with pytest.raises(WorkflowExecutionError, match="error.*index|index.*error"):
+    with pytest.raises(WorkflowExecutionError, match="error identity") as exc_info:
         PendingItemResult.from_metadata(
             _failed_result(
                 index=0, frame_id="child-0", error_index=7, error_frame="child-0"
             )
         )
+    message = str(exc_info.value)
+    assert "index 7" in message
+    assert "index 0" in message
+    assert "frame 'child-0'" in message
 
 
 def test_pending_item_result_rejects_error_frame_mismatch() -> None:
-    with pytest.raises(WorkflowExecutionError, match="error.*frame|frame.*error"):
+    with pytest.raises(WorkflowExecutionError, match="error identity") as exc_info:
         PendingItemResult.from_metadata(
             _failed_result(
                 index=0, frame_id="child-0", error_index=0, error_frame="other"
             )
         )
+    message = str(exc_info.value)
+    assert "frame 'other'" in message
+    assert "frame 'child-0'" in message
+    assert "index 0" in message
 
 
 def test_pending_item_result_accepts_matching_error_identity() -> None:

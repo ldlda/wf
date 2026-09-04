@@ -18,9 +18,10 @@ from wf_core.runtime.ops.state import (
 class LineageStateView:
     """Committed state plus writes visible inside one child lineage.
 
-    Today concurrent foreach supplies the writes from barrier metadata. Future
-    native subgraphs and fork/gather should use the same primitive instead of
-    rebuilding foreach-specific overlay logic.
+    Concurrent foreach item writes live in ``RunState.lineages``; the barrier
+    keeps only each item's lineage identity. Future native subgraphs and
+    fork/gather should reuse this primitive instead of rebuilding lineage
+    overlay logic.
     """
 
     base_state: Mapping[str, Any]

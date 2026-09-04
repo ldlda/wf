@@ -93,6 +93,17 @@ behavior. The counter is incremented before user code or external capability
 code begins, so failures and interrupts still consume the attempt that caused
 them.
 
+For a durable run, admission is checkpointed before dispatch. The checkpoint
+contains the incremented counter, assigned step number, selected frame and
+node, and an admitted-but-not-completed marker. Dispatch may begin only after
+that checkpoint succeeds. If the process stops at that boundary, restore keeps
+the attempt consumed, clears the abandoned admission marker, and requeues the
+frame; a retry is a new attempt with a new step number. The in-memory executor
+applies the same counter transition without requiring a persistence backend.
+As with any crash after external dispatch and before result persistence, retry
+may repeat external effects; the budget records attempts and does not provide
+exactly-once execution.
+
 If `steps_executed == max_steps`, the next attempted dispatch is denied. A
 budget of one therefore admits exactly one step. The denied step does not
 increment the counter and does not invoke a handler.
@@ -132,6 +143,15 @@ Reserved async attempts remain consumed even if one handler raises. This
 matches the rule that admission, rather than successful completion, consumes
 the budget and avoids making counts depend on task completion timing.
 
+The runtime awaits every handler in an admitted batch before finalizing any
+result. It then finalizes in reserved ready-queue order. Handled foreach item
+failures follow their declared `skip` or `collect` policy. At the first
+unhandled failure in that order, preceding successful results have committed,
+the run fails, and later sibling results are discarded without state or trace
+commits. Because all handler tasks have already settled, no sibling can mutate
+the failed checkpoint afterward; external effects performed inside a handler
+remain outside rollback.
+
 ## Exhaustion Behavior
 
 Exhaustion is a runtime failure, not a workflow outcome. The runtime raises a
@@ -160,16 +180,19 @@ administrative rerun can raise the budget is outside ordinary resume semantics.
 
 ## Persistence and Resume
 
-`RunLimits` and `steps_executed` are serialized inside the existing persisted
-`RunState` checkpoint. An interrupted run resumes with its original maximum and
-cumulative count.
+`RunLimits` and `steps_executed` are serialized inside the persisted `RunState`
+checkpoint. An interrupted run resumes with its original maximum and cumulative
+count.
 
-The persisted run envelope may remain at version 1 because adding dataclass
-fields with defaults is structurally additive. Loading an older checkpoint
-that lacks these fields yields the default limit and a zero count. The
-repository has no declared production migration requirement for reconstructing
-historical counts that were never recorded; if real stored checkpoints exist,
-their migration policy must be established before release.
+A checkpoint that predates step budgets receives one explicit, prospective
+upgrade: assign the default limit and `steps_executed = 0`, mark the envelope as
+budget-initialized, and persist the upgraded checkpoint before admitting any
+new work. Attempts made before the upgrade cannot be reconstructed and are
+explicitly outside the new budget; every attempt after it is cumulative. A
+missing counter on an already budget-initialized envelope is corrupt state, not
+another request for defaults. If the one-time upgrade cannot be persisted,
+resume fails before dispatch. The persisted envelope version or equivalent
+migration marker must distinguish these cases.
 
 Subgraph scopes do not receive independent counters. They are part of the same
 run and consume the root run's budget. This prevents an outer workflow from
@@ -258,6 +281,8 @@ with the run.
 - A batch claims no more frames than the remaining budget.
 - Step numbers follow ready-queue order rather than completion order.
 - Reserved attempts remain counted when one async handler fails.
+- A still-running sibling settles before an unhandled handler failure is
+  checkpointed, and its later result does not commit state or trace data.
 - Sync and async runs produce the same count for equivalent serial execution.
 
 ### Persistence and API
@@ -265,7 +290,10 @@ with the run.
 - Limits and counts round-trip through `dump_run_state()` and
   `load_run_state()`.
 - A stored interrupted run resumes without resetting or replacing its budget.
-- Older additive checkpoints receive documented defaults.
+- A pre-budget checkpoint receives its defaults once, persists the upgraded
+  envelope before dispatch, and cannot receive another fresh budget on reload.
+- Stopping after the admission checkpoint but before handler start leaves the
+  attempt consumed; retrying the requeued frame consumes a new attempt.
 - Run inspection exposes effective maximum, executed, and remaining counts.
 - Trace entries expose deterministic step numbers without becoming the source
   of enforcement truth.

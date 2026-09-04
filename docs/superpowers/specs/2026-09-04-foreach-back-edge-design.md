@@ -4,7 +4,8 @@
 
 Implemented on 2026-09-04. This document specifies canonical foreach
 body-return semantics. It does not include the separately planned ergonomic
-Python DSL or authorize fork/gather implementation.
+Python DSL or the explicit fork/gather implementation described by
+[ADR-0006](../../adr/0006-explicit-fork-and-topology-driven-gather.md).
 
 ## Purpose
 

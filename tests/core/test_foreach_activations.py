@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 import pytest
 
 from wf_core.errors import WorkflowExecutionError
@@ -65,8 +67,13 @@ def test_closing_stale_activation_fails_closed() -> None:
     second = load_or_begin_foreach_activation(frame, "each", mode="serial")
     save_foreach_activation(frame, second)
 
-    with pytest.raises(WorkflowExecutionError, match="stale|closed|active"):
+    with pytest.raises(
+        WorkflowExecutionError, match="cannot close stale foreach activation"
+    ) as exc_info:
         close_foreach_activation(frame, first)
+    message = str(exc_info.value)
+    assert repr(first.id) in message
+    assert "'root'" in message
 
 
 def test_activation_json_round_trip_through_frame_metadata() -> None:
@@ -75,7 +82,7 @@ def test_activation_json_round_trip_through_frame_metadata() -> None:
     activation.barrier.next_index = 2
     save_foreach_activation(frame, activation)
 
-    dumped = dict(frame.metadata)
+    dumped = json.loads(json.dumps(frame.metadata))
     restored_frame = ExecutionFrame(
         id="root", kind="workflow", node_id="each", metadata=dumped
     )

@@ -154,13 +154,14 @@ def analyze_control_regions(workflow: Workflow) -> ControlRegionAnalysis:
                 # unreachable. The `END` token has no node to record.
                 if isinstance(target_node, EndNode):
                     visited_nodes.add(target_id)
-                    recorded_target = owner_stack_by_node.get(target_id)
-                    if recorded_target is None:
-                        owner_stack_by_node[target_id] = target_stack
-                    elif recorded_target != target_stack:
-                        record_region_conflict(
-                            target_id, (recorded_target, target_stack)
-                        )
+                    if target_id not in conflicted:
+                        recorded_target = owner_stack_by_node.get(target_id)
+                        if recorded_target is None:
+                            owner_stack_by_node[target_id] = target_stack
+                        elif recorded_target != target_stack:
+                            record_region_conflict(
+                                target_id, (recorded_target, target_stack)
+                            )
                 if target_stack:
                     issues.append(
                         ControlRegionIssue(

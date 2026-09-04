@@ -417,6 +417,42 @@ def test_foreach_body_cannot_target_explicit_end_node() -> None:
     assert matching[0].path == "edges[1]"
 
 
+def test_explicit_end_reached_from_three_regions_stays_conflicted() -> None:
+    workflow = _workflow(
+        start="start",
+        nodes=[
+            _node("start"),
+            _foreach("f1"),
+            _node("b1"),
+            _foreach("f2"),
+            _node("b2"),
+            {"id": "stop", "type": "end", "outcome": "ok"},
+        ],
+        edges=[
+            {"from": "start", "outcome": "direct", "to": "stop"},
+            {"from": "start", "outcome": "left", "to": "f1"},
+            {"from": "start", "outcome": "right", "to": "f2"},
+            {"from": "f1", "outcome": "loop", "to": "b1"},
+            {"from": "b1", "outcome": "ok", "to": "stop"},
+            {"from": "f1", "outcome": "done", "to": END},
+            {"from": "f2", "outcome": "loop", "to": "b2"},
+            {"from": "b2", "outcome": "ok", "to": "stop"},
+            {"from": "f2", "outcome": "done", "to": END},
+        ],
+    )
+
+    analysis = analyze_control_regions(workflow)
+
+    conflicts = [
+        issue
+        for issue in analysis.issues
+        if issue.kind == ControlRegionIssueKind.FOREACH_REGION_CONFLICT
+        and issue.path == "nodes[stop]"
+    ]
+    assert len(conflicts) == 1
+    assert "stop" not in analysis.owner_stack_by_node
+
+
 def test_every_unreachable_node_is_reported() -> None:
     workflow = _workflow(
         start="work",

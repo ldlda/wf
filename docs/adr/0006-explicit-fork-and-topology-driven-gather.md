@@ -76,10 +76,14 @@ not duplicate the lineage's scope membership.
 
 Lineage remains a virtual worldview: committed scope state plus writes visible
 to one branch. Gathering several lineages does not require turning lineage
-ancestry into a multi-parent graph. A partial gather can create an intermediate
-lineage under the branches' common parent, retaining multi-input provenance in
-activation-token metadata. A final gather can merge that lineage with remaining
-siblings and resume the blocked parent continuation.
+ancestry into a multi-parent graph. Every input lineage must belong to the same
+runtime scope. Because lineages have one parent, their ancestry chains have at
+most one deepest shared lineage: the lowest common ancestor is the deterministic
+merge base. Different scopes or no shared ancestor fail before state mutation.
+A partial gather creates its intermediate lineage under that merge base and
+retains multi-input provenance in activation-token metadata. A final gather can
+merge that lineage with remaining siblings and resume the blocked parent
+continuation.
 
 The first gather merge policy is fail-closed:
 
@@ -92,10 +96,29 @@ State-field reducers remain the source of truth for legitimate concurrent
 merges. The gather policy determines what happens when patches cannot be
 merged; the initial behavior is to fail rather than choose a last writer.
 
+Gather slots have declaration order, and that order is the canonical reducer
+replay order. After choosing the merge base, the runtime applies each selected
+lineage's writes after that base in declared-slot order, never arrival,
+scheduler, or frame-id order. A bucket accepts exactly one token for each slot;
+a second token for the same activation and slot fails the activation instead of
+making an alternative-path race decide the result. Order-sensitive reducers
+such as append are therefore deterministic in synchronous and asynchronous
+execution.
+
 Branch execution order may be deterministic in the synchronous runtime and
 overlap in the asynchronous runtime. Both modes must produce equivalent graph
 semantics. Scheduler order decides when compatible work progresses, never which
 arrivals belong together.
+
+An unhandled branch failure makes its gather activation terminally failed and
+stops further branch admission. The runtime requests cancellation of admitted
+siblings, awaits every sibling's settlement, and accepts no later state or
+trace commits from them; external effects that already occurred cannot be
+rolled back. It then marks the failed activation's uncommitted lineages
+abandoned and permanently non-mergeable, invalidates and removes every pending
+gather token, marks sibling frames cancelled or failed, and persists the failed
+run. Restore may inspect those frames and lineages but cannot schedule them or
+consume a token from the failed activation.
 
 `END` and explicit `EndNode` represent workflow/subgraph termination, not a
 generic way to complete any child frame. A foreach item returns through a
@@ -153,9 +176,10 @@ node is a pass-through marker with no barrier contract.
 
 - Edge identity gains gather-slot significance only when its target is a
   gather; ordinary edge semantics stay unchanged.
-- Workflow validation must prove that every gather slot has an incoming edge,
-  reject slots on non-gather targets, and preserve one successor per ordinary
-  `(node, outcome)` pair.
+- Workflow validation must require every gather-target edge to name exactly one
+  declared slot, reject missing or unknown gather slots, prove that every slot
+  has an incoming edge, reject slots on non-gather targets, and preserve one
+  successor per ordinary `(node, outcome)` pair.
 - Checkpoints must persist pending gather arrivals and activation provenance so
   interruption/resume cannot mix loop iterations or subgraph invocations.
 - Runtime operations should resolve a frame, its lineage, and its scope through
@@ -169,8 +193,9 @@ node is a pass-through marker with no barrier contract.
   ordinary node output.
 - Fork/gather should generalize concurrent-foreach lineage and barrier helpers,
   not create a second state-patch system.
-- Runtime branch failures remain execution failures in the first version. Skip,
-  collect, race, first-success, cancellation, and timeout policies are deferred.
+- Runtime branch failures remain execution failures with the terminal cleanup
+  above. Skip, collect, race, first-success, configurable cancellation, and
+  timeout policies are deferred.
 
 ## Open Questions
 

@@ -234,6 +234,7 @@ An iteration body returns through its immediate owning foreach:
 g.connect(each, "loop", record)
 g.connect(record, "ok", each)
 g.connect(each, "done", END)
+g.connect(each, "completed_with_errors", END)
 ```
 
 Region conflicts, unreachable nodes, body terminals, non-local returns, empty

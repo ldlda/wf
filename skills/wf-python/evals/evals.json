@@ -22,6 +22,7 @@
         "Loads exact artifact version 3 and edits the seeded builder rather than rebuilding",
         "Warns that step IDs and state paths must be inspected rather than guessed",
         "Validates locally and remotely before saving version 4",
+        "Passes an explicit source binding through bindings=... when creating the deployment",
         "Creates and validates a deployment before starting a durable run"
       ]
     },
