@@ -801,6 +801,13 @@ stable.
   This slice also makes foreach control regions fail-closed, rejects unreachable
   workflow nodes, and gives repeated visits to one foreach node distinct
   persisted activation identities.
+- Proposed follow-up: replace innermost-only foreach values with same-scope
+  [`structured runtime context`](superpowers/specs/2026-09-04-structured-runtime-context-design.md),
+  including typed Python lookup, graph paths, schema analysis, authoring refs,
+  and explicit subgraph input boundaries.
+- Proposed runtime guard: add a persisted, run-wide
+  [`step budget`](superpowers/specs/2026-09-04-run-step-budget-design.md) for
+  valid graph cycles that cannot be proven terminating during validation.
 - After that correction, reuse the foreach barrier/lineage machinery for
   fork/gather. The proposed control semantics are recorded in
   [`ADR-0006`](adr/0006-explicit-fork-and-topology-driven-gather.md).

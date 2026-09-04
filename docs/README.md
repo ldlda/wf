@@ -116,6 +116,11 @@ docs as the active references:
   proposed explicit fork, gather-slot, and activation-token semantics.
 - [`superpowers/specs/2026-09-04-foreach-back-edge-design.md`](superpowers/specs/2026-09-04-foreach-back-edge-design.md):
   approved canonical foreach body-return and validation semantics.
+- [`superpowers/specs/2026-09-04-structured-runtime-context-design.md`](superpowers/specs/2026-09-04-structured-runtime-context-design.md):
+  proposed same-scope nested foreach context, path, schema, and authoring-ref
+  semantics.
+- [`superpowers/specs/2026-09-04-run-step-budget-design.md`](superpowers/specs/2026-09-04-run-step-budget-design.md):
+  proposed persisted run-wide protection against unbounded graph execution.
 - [`superpowers/specs/2026-05-24-native-subgraphs-design.md`](superpowers/specs/2026-05-24-native-subgraphs-design.md):
   native subgraph design.
 - [`superpowers/specs/2026-05-26-durable-workflow-runs-and-resume-design.md`](superpowers/specs/2026-05-26-durable-workflow-runs-and-resume-design.md):
