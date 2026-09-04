@@ -801,13 +801,9 @@ def test_foreach_reference_treats_dotted_id_as_one_literal_segment() -> None:
         state_schema={"type": "object"},
         output_schema={"type": "object"},
     )
-    each = builder.foreach(
-        id="orders.v2", over=state_path("orders"), as_="order"
-    )
+    each = builder.foreach(id="orders.v2", over=state_path("orders"), as_="order")
 
-    assert each.item == GraphSourcePath(
-        "context", ("foreach", "orders.v2", "item")
-    )
+    assert each.item == GraphSourcePath("context", ("foreach", "orders.v2", "item"))
     assert str(each.item) == 'context.foreach."orders.v2".item'
     assert str(each.index) == 'context.foreach."orders.v2".index'
 
@@ -840,5 +836,5 @@ def test_foreach_ref_works_in_node_input_binding() -> None:
         input=[input_from(each.item, "order")],
     )
     binding = work.input[0]
-    assert isinstance(binding, object)
+    assert isinstance(binding, InputPathBinding)
     assert str(binding.path) == "context.foreach.orders.item"

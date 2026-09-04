@@ -48,7 +48,7 @@ and barrier foundations in this order.
 The implementation plan is ready and its feature branch is under review:
 
 - [`structured runtime context design`](superpowers/specs/2026-09-04-structured-runtime-context-design.md)
-- [`structured runtime context implementation plan`](superpowers/plans/2026-09-04-structured-runtime-context.md)
+- [`structured runtime context implementation plan`](historical/superpowers/plans/2026-09-04-structured-runtime-context.md)
 
 This slice gives runtime code, expressions, validation, and authoring references
 one model for run data and same-scope foreach activations. Subgraphs continue to

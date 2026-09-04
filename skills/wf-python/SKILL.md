@@ -226,5 +226,28 @@ except WorkflowClientError as error:
 - Use the public objects before inspecting `wf_api`, RPC clients, codecs, or
   stores. Drop below the client boundary only when implementing the client.
 
+## Structured foreach context
+
+Prefer declared input bindings via the foreach reference:
+
+```python
+orders = graph.foreach(
+    id="orders",
+    over=state_path("orders"),
+    as_="order",
+)
+charge = graph.use(
+    charge_order,
+    input=[input_from(orders.item, "order")],
+)
+graph.set_route(orders, "loop", charge)
+graph.set_route(charge, "ok", orders)
+```
+
+Normal capabilities receive foreach values through declared inputs. Advanced
+handlers may inspect `ctx.foreach["orders"].index` and stable runtime
+identities. Child workflows do not inherit caller context and must receive
+input. `loop_item`, `loop_index`, and aliases are migration conveniences.
+
 Read [references/python-lifecycle.md](references/python-lifecycle.md) when a
 complete typed lifecycle or an editing/debugging recipe is needed.

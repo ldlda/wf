@@ -11,6 +11,7 @@ from wf_core import (
     NodeUse,
     PreparedSubgraph,
     RunState,
+    RunStatus,
     SchemaRef,
     StateField,
     StateSchema,
@@ -425,3 +426,143 @@ def _interrupting_child_workflow() -> Workflow:
 
 def _schema(properties: dict[str, object]) -> SchemaRef:
     return SchemaRef.model_validate({"type": "object", "properties": properties})
+
+
+def test_subgraph_does_not_inherit_caller_foreach_context() -> None:
+    from wf_core import ForeachNode, RuntimeContext
+
+    child_seen: dict[str, object] = {}
+    pre_seen: dict[str, object] = {}
+
+    def probe(payload: dict[str, object], ctx: RuntimeContext) -> dict[str, object]:
+        if ctx.current_node_id == "pre":
+            pre_seen["foreach"] = dict(ctx.foreach)
+            pre_seen["input_order"] = payload.get("order")
+        else:
+            child_seen["input_order"] = payload.get("order")
+            child_seen["context"] = ctx
+        return {"outcome": "ok", "output": {}}
+
+    child = Workflow(
+        name="child.workflow",
+        input_schema=_schema({"order": {"type": "object"}}),
+        state_schema=StateSchema.from_field_map(
+            {
+                "order": StateField(type="object"),
+                "child_items": StateField(type="array", default=["child-item"]),
+            }
+        ),
+        output_schema=_schema({}),
+        node_defs=[
+            NodeDef(
+                name="probe",
+                input_schema=_schema({"order": {}}),
+                output_schema=_schema({}),
+                outcomes=["ok"],
+            )
+        ],
+        start="pre",
+        nodes=[
+            NodeUse.model_validate(
+                {
+                    "id": "pre",
+                    "type": "node",
+                    "node": "probe",
+                    "input": [{"target": "order", "path": "input.order"}],
+                }
+            ),
+            ForeachNode.model_validate(
+                {
+                    "id": "orders",
+                    "type": "foreach",
+                    "over": "state.child_items",
+                    "as": "c_order",
+                    "mode": "serial",
+                }
+            ),
+            NodeUse.model_validate(
+                {
+                    "id": "work",
+                    "type": "node",
+                    "node": "probe",
+                    "input": [{"target": "order", "path": "input.order"}],
+                }
+            ),
+        ],
+        edges=[
+            Edge.model_validate({"from": "pre", "outcome": "ok", "to": "orders"}),
+            Edge.model_validate({"from": "orders", "outcome": "loop", "to": "work"}),
+            Edge.model_validate({"from": "work", "outcome": "ok", "to": "orders"}),
+            Edge.model_validate({"from": "orders", "outcome": "done", "to": END}),
+        ],
+    )
+    parent = Workflow(
+        name="parent_orders",
+        input_schema=_schema({}),
+        state_schema=StateSchema.from_field_map(
+            {"parent_orders": StateField(type="array")}
+        ),
+        output_schema=_schema({}),
+        node_defs=[
+            NodeDef(
+                name="noop",
+                input_schema=_schema({}),
+                output_schema=_schema({}),
+                outcomes=["ok"],
+            )
+        ],
+        start="orders",
+        nodes=[
+            ForeachNode.model_validate(
+                {
+                    "id": "orders",
+                    "type": "foreach",
+                    "over": "state.parent_orders",
+                    "as": "p_order",
+                    "mode": "serial",
+                }
+            ),
+            SubgraphNode.model_validate(
+                {
+                    "id": "run_child",
+                    "type": "subgraph",
+                    "workflow": "child.workflow",
+                    "input_schema": _schema({"order": {"type": "object"}}),
+                    "output_schema": _schema({}),
+                    "input": [
+                        {
+                            "target": "order",
+                            "path": "context.foreach.orders.item",
+                        }
+                    ],
+                    "output": [],
+                }
+            ),
+        ],
+        edges=[
+            Edge.model_validate(
+                {"from": "orders", "outcome": "loop", "to": "run_child"}
+            ),
+            Edge.model_validate({"from": "run_child", "outcome": "ok", "to": "orders"}),
+            Edge.model_validate({"from": "orders", "outcome": "done", "to": END}),
+        ],
+    )
+    run = execute_workflow(
+        parent,
+        {"parent_orders": [{"sku": "A-17"}]},
+        {},
+        subgraphs={
+            "child.workflow": PreparedSubgraph(
+                workflow=child, registry={"probe": probe}
+            )
+        },
+    )
+    assert run.status == RunStatus.COMPLETED
+    assert child_seen["input_order"] == {"sku": "A-17"}
+    ctx = child_seen["context"]
+    assert isinstance(ctx, RuntimeContext)
+    assert tuple(ctx.foreach) == ("orders",)
+    assert ctx.foreach["orders"].item == "child-item"
+    assert ctx.foreach["orders"].scope_id != "root"
+    assert pre_seen["foreach"] == {}
+    assert pre_seen["input_order"] == {"sku": "A-17"}

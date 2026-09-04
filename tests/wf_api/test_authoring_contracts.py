@@ -491,8 +491,12 @@ def test_structured_foreach_paths_appear_in_authoring_inventory() -> None:
             Edge.model_validate(
                 {"from": "orders", "outcome": "loop", "to": "inner_body"}
             ),
-            Edge.model_validate({"from": "inner_body", "outcome": "ok", "to": "orders"}),
-            Edge.model_validate({"from": "orders", "outcome": "done", "to": "customers"}),
+            Edge.model_validate(
+                {"from": "inner_body", "outcome": "ok", "to": "orders"}
+            ),
+            Edge.model_validate(
+                {"from": "orders", "outcome": "done", "to": "customers"}
+            ),
             Edge.model_validate({"from": "customers", "outcome": "done", "to": END}),
         ],
     )

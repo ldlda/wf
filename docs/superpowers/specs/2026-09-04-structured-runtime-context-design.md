@@ -2,7 +2,7 @@
 
 ## Status
 
-Approved for implementation on 2026-09-04. This document specifies structured
+Implemented on 2026-09-04. This document specifies structured
 foreach context inside one runtime scope. It complements the foreach back-edge
 design without expanding that implementation slice.
 

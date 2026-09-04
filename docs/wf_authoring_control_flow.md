@@ -248,6 +248,32 @@ See `examples/authoring_concurrent_foreach.py` for a runnable example covering:
 - the replace-conflict case when sibling item writes target a non-mergeable
   state path.
 
+## Structured `foreach` context
+
+Nested bodies read every active same-scope iteration through structured paths.
+Prefer declared input bindings via the foreach reference:
+
+```python
+orders = graph.foreach(
+    id="orders",
+    over=state_path("orders"),
+    as_="order",
+)
+charge = graph.use(
+    charge_order,
+    input=[input_from(orders.item, "order")],
+)
+graph.set_route(orders, "loop", charge)
+graph.set_route(charge, "ok", orders)
+```
+
+The compiled binding is ordinary protocol data (`context.foreach.orders.item`).
+Normal capabilities receive foreach values through declared inputs. Advanced
+handlers may inspect `ctx.foreach["orders"].index` and stable runtime
+identities (`activation_id`, `frame_id`, `scope_id`, `lineage_id`). Child
+workflows do not inherit caller context and must receive input;
+`loop_item`, `loop_index`, and aliases are migration conveniences.
+
 ## Deprecated `route`
 
 `route()` is a compatibility shim:

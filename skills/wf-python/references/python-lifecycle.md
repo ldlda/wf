@@ -175,3 +175,26 @@ for frame in trace.frames:
 Catch the specific public errors useful to the application and retain a final
 `WorkflowClientError` fallback. Unknown server errors remain inspectable
 `ProtocolError` values with `code`, `message`, and `data`.
+
+## Structured foreach context
+
+Prefer declared input bindings via the foreach reference:
+
+```python
+orders = graph.foreach(
+    id="orders",
+    over=state_path("orders"),
+    as_="order",
+)
+charge = graph.use(
+    charge_order,
+    input=[input_from(orders.item, "order")],
+)
+graph.set_route(orders, "loop", charge)
+graph.set_route(charge, "ok", orders)
+```
+
+Normal capabilities receive foreach values through declared inputs. Advanced
+handlers may inspect `ctx.foreach["orders"].index` and stable runtime
+identities. Child workflows do not inherit caller context and must receive
+input. `loop_item`, `loop_index`, and aliases are migration conveniences.

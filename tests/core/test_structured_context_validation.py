@@ -86,11 +86,14 @@ def test_active_structured_foreach_item_path_is_valid() -> None:
 
     workflow = _base_workflow(work_path="context.foreach.orders.item")
     report = validate_workflow(workflow)
-    assert _issue(
-        report,
-        ValidationIssueCode.INVALID_CONTEXT_PATH,
-        "nodes[2].input[0].path",
-    ) is None
+    assert (
+        _issue(
+            report,
+            ValidationIssueCode.INVALID_CONTEXT_PATH,
+            "nodes[2].input[0].path",
+        )
+        is None
+    )
 
 
 def test_nested_body_can_read_outer_and_inner_entries() -> None:
@@ -104,18 +107,21 @@ def test_nested_body_can_read_outer_and_inner_entries() -> None:
     ):
         workflow = _base_workflow(work_path=path)
         report = validate_workflow(workflow)
-        assert _issue(
-            report, ValidationIssueCode.INVALID_CONTEXT_PATH, "nodes[2].input[0].path"
-        ) is None, path
+        assert (
+            _issue(
+                report,
+                ValidationIssueCode.INVALID_CONTEXT_PATH,
+                "nodes[2].input[0].path",
+            )
+            is None
+        ), path
 
 
 def test_inactive_foreach_entry_is_rejected() -> None:
     from wf_core.validation import validate_workflow
 
     workflow = _base_workflow()
-    workflow.nodes[3] = _node_use(
-        "after_inner", path="context.foreach.orders.item"
-    )
+    workflow.nodes[3] = _node_use("after_inner", path="context.foreach.orders.item")
     report = validate_workflow(workflow)
     issue = _issue(
         report, ValidationIssueCode.INVALID_CONTEXT_PATH, "nodes[3].input[0].path"
@@ -172,9 +178,7 @@ def test_workflow_output_cannot_read_completed_foreach_entry() -> None:
         )
     ]
     report = validate_workflow(workflow)
-    issue = _issue(
-        report, ValidationIssueCode.INVALID_CONTEXT_PATH, "output[0].path"
-    )
+    issue = _issue(report, ValidationIssueCode.INVALID_CONTEXT_PATH, "output[0].path")
     assert issue is not None
 
 
@@ -197,9 +201,7 @@ def test_workflow_output_cannot_read_completed_foreach_entry() -> None:
                 "work",
                 expression={
                     "kind": "array",
-                    "items": [
-                        {"kind": "path", "path": "context.foreach.missing.item"}
-                    ],
+                    "items": [{"kind": "path", "path": "context.foreach.missing.item"}],
                 },
             ),
             "nodes[2].input[0].expression.items[0].path",
@@ -235,7 +237,9 @@ def test_all_model_surfaces_reject_missing_foreach_id() -> None:
     )
     report = validate_workflow(workflow)
     assert (
-        _issue(report, ValidationIssueCode.INVALID_CONTEXT_PATH, "nodes[2].input[0].path")
+        _issue(
+            report, ValidationIssueCode.INVALID_CONTEXT_PATH, "nodes[2].input[0].path"
+        )
         is not None
     )
 
@@ -250,14 +254,14 @@ def test_all_model_surfaces_reject_missing_foreach_id() -> None:
         Edge.model_validate({"from": "work", "outcome": "true", "to": "orders"}),
         Edge.model_validate({"from": "work", "outcome": "false", "to": "orders"}),
         Edge.model_validate({"from": "orders", "outcome": "done", "to": "after_inner"}),
-        Edge.model_validate({"from": "after_inner", "outcome": "ok", "to": "customers"}),
+        Edge.model_validate(
+            {"from": "after_inner", "outcome": "ok", "to": "customers"}
+        ),
         Edge.model_validate({"from": "customers", "outcome": "done", "to": END}),
     ]
     report = validate_workflow(workflow)
     assert (
-        _issue(
-            report, ValidationIssueCode.INVALID_CONTEXT_PATH, "nodes[2].check.path"
-        )
+        _issue(report, ValidationIssueCode.INVALID_CONTEXT_PATH, "nodes[2].check.path")
         is not None
     )
 
@@ -289,7 +293,9 @@ def test_all_model_surfaces_reject_missing_foreach_id() -> None:
         Edge.model_validate({"from": "orders", "outcome": "loop", "to": "work"}),
         Edge.model_validate({"from": "work", "outcome": "submitted", "to": "orders"}),
         Edge.model_validate({"from": "orders", "outcome": "done", "to": "after_inner"}),
-        Edge.model_validate({"from": "after_inner", "outcome": "ok", "to": "customers"}),
+        Edge.model_validate(
+            {"from": "after_inner", "outcome": "ok", "to": "customers"}
+        ),
         Edge.model_validate({"from": "customers", "outcome": "done", "to": END}),
     ]
     report = validate_workflow(workflow)
@@ -306,9 +312,7 @@ def test_all_model_surfaces_reject_missing_foreach_id() -> None:
     from wf_core.models.steps import InputPathBinding as _IPB
 
     workflow = _base_workflow()
-    workflow.output = [
-        _IPB.model_validate({"target": "result", "path": bad})
-    ]
+    workflow.output = [_IPB.model_validate({"target": "result", "path": bad})]
     report = validate_workflow(workflow)
     assert (
         _issue(report, ValidationIssueCode.INVALID_CONTEXT_PATH, "output[0].path")
@@ -381,7 +385,9 @@ def test_sibling_foreach_aliases_may_match_when_never_active_together() -> None:
             Edge.model_validate({"from": "left", "outcome": "loop", "to": "left_body"}),
             Edge.model_validate({"from": "left_body", "outcome": "ok", "to": "left"}),
             Edge.model_validate({"from": "left", "outcome": "done", "to": "right"}),
-            Edge.model_validate({"from": "right", "outcome": "loop", "to": "right_body"}),
+            Edge.model_validate(
+                {"from": "right", "outcome": "loop", "to": "right_body"}
+            ),
             Edge.model_validate({"from": "right_body", "outcome": "ok", "to": "right"}),
             Edge.model_validate({"from": "right", "outcome": "done", "to": "join"}),
             Edge.model_validate({"from": "join", "outcome": "ok", "to": END}),

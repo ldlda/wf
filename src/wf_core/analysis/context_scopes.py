@@ -296,9 +296,7 @@ def _context_schema_for_stack(
             continue
         entry_schemas[owner_id] = foreach_entry_schema(
             owner_id,
-            _foreach_item_schema(
-                workflow, foreach, foreach_nodes, owner_stack_by_node
-            ),
+            _foreach_item_schema(workflow, foreach, foreach_nodes, owner_stack_by_node),
         )
     properties[FOREACH_CONTEXT_KEY] = {
         "type": "object",
@@ -306,9 +304,9 @@ def _context_schema_for_stack(
         "required": sorted(entry_schemas),
         "additionalProperties": False,
     }
-    required: list[str] = [
-        field.name for field in STANDARD_CONTEXT_FIELDS
-    ] + [FOREACH_CONTEXT_KEY]
+    required: list[str] = [field.name for field in STANDARD_CONTEXT_FIELDS] + [
+        FOREACH_CONTEXT_KEY
+    ]
     if stack:
         innermost = foreach_nodes.get(stack[-1])
         if innermost is not None:
@@ -445,10 +443,7 @@ def _schema_document(
         current: dict[str, object] = {
             field.name: field.schema for field in STANDARD_CONTEXT_FIELDS
         }
-        if (
-            foreach_nodes is not None
-            and owner_stack_by_node is not None
-        ):
+        if foreach_nodes is not None and owner_stack_by_node is not None:
             entry_schemas: dict[str, object] = {}
             for owner_id in resolved_stack:
                 foreach = foreach_nodes.get(owner_id)
@@ -480,7 +475,9 @@ def _schema_document(
                     for field in foreach_context_fields(foreach.as_, item_schema):
                         # Innermost loop keys win; outer aliases accumulate.
                         # Validation owns collision diagnostics.
-                        is_innermost = bool(resolved_stack) and owner_id == resolved_stack[-1]
+                        is_innermost = (
+                            bool(resolved_stack) and owner_id == resolved_stack[-1]
+                        )
                         if field.name not in current or is_innermost:
                             current[field.name] = field.schema
         return {"type": "object", "properties": current}

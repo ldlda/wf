@@ -64,12 +64,8 @@ def validate_context_paths(
                 node.input, f"nodes[{idx}].input", node.id, schema, report
             )
         elif isinstance(node, ConditionNode):
-            for location, path in _condition_paths(
-                node.check, f"nodes[{idx}].check"
-            ):
-                _validate_one_context_path(
-                    path, location, node.id, schema, report
-                )
+            for location, path in _condition_paths(node.check, f"nodes[{idx}].check"):
+                _validate_one_context_path(path, location, node.id, schema, report)
         elif isinstance(node, ForeachNode):
             # Context-rooted `over` paths reach this pass; the old
             # input/state-only check stays permissive for them.
@@ -110,9 +106,7 @@ def _validate_step_input_bindings(
                 binding.expression, f"{binding_location}.expression"
             ):
                 if path.root == "context":
-                    _validate_one_context_path(
-                        path, location, node_id, schema, report
-                    )
+                    _validate_one_context_path(path, location, node_id, schema, report)
 
 
 def _expression_paths(
@@ -219,9 +213,10 @@ def _path_in_schema(schema: Mapping[str, Any], parts: tuple[str, ...]) -> bool:
             # allows subpaths; scalar or closed schemas do not.
             if current == {}:
                 return True
-            if current.get("type") == "object" and current.get(
-                "additionalProperties", True
-            ) is not False:
+            if (
+                current.get("type") == "object"
+                and current.get("additionalProperties", True) is not False
+            ):
                 return True
             return False
         if part not in properties:
@@ -280,9 +275,7 @@ def _validate_alias_ownership(
                 continue
             alias = foreach.as_
             idx = node_index_by_id.get(owner_id)
-            location = (
-                f"nodes[{idx}].as" if idx is not None else f"nodes[{owner_id}]"
-            )
+            location = f"nodes[{idx}].as" if idx is not None else f"nodes[{owner_id}]"
             if not alias or alias in RESERVED_CONTEXT_KEYS:
                 if owner_id not in reported:
                     reported.add(owner_id)

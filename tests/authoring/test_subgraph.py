@@ -277,6 +277,7 @@ def test_workflow_builder_subgraph_adds_native_subgraph_node() -> None:
 
 def test_foreach_ref_works_in_subgraph_input_binding() -> None:
     from wf_authoring import state_path
+    from wf_core.models.steps import InputPathBinding
 
     child = build_demo_workflow()
     parent = WorkflowBuilder(
@@ -291,4 +292,6 @@ def test_foreach_ref_works_in_subgraph_input_binding() -> None:
         id="run_child",
         input=[input_from(each.item, "order")],
     )
-    assert str(step.input[0].path) == "context.foreach.orders.item"
+    binding = step.input[0]
+    assert isinstance(binding, InputPathBinding)
+    assert str(binding.path) == "context.foreach.orders.item"

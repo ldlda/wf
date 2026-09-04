@@ -68,7 +68,9 @@ def test_root_frame_has_empty_structured_foreach_context() -> None:
 def test_nested_same_scope_frames_expose_outermost_to_innermost_context() -> None:
     run = _run_with_frames(
         [
-            ExecutionFrame(id="root", kind="root", node_id="customers", scope_id="root"),
+            ExecutionFrame(
+                id="root", kind="root", node_id="customers", scope_id="root"
+            ),
             _item_frame(
                 frame_id="outer-item",
                 parent_id="root",
@@ -119,7 +121,9 @@ def test_nested_same_scope_frames_expose_outermost_to_innermost_context() -> Non
 def test_graph_context_values_keep_all_aliases_and_innermost_loop_keys() -> None:
     run = _run_with_frames(
         [
-            ExecutionFrame(id="root", kind="root", node_id="customers", scope_id="root"),
+            ExecutionFrame(
+                id="root", kind="root", node_id="customers", scope_id="root"
+            ),
             _item_frame(
                 frame_id="outer-item",
                 parent_id="root",
@@ -158,7 +162,9 @@ def test_graph_context_values_keep_all_aliases_and_innermost_loop_keys() -> None
 def test_context_ancestry_stops_at_runtime_scope_boundary() -> None:
     run = _run_with_frames(
         [
-            ExecutionFrame(id="root", kind="root", node_id="customers", scope_id="root"),
+            ExecutionFrame(
+                id="root", kind="root", node_id="customers", scope_id="root"
+            ),
             _item_frame(
                 frame_id="outer-item",
                 parent_id="root",
@@ -290,7 +296,9 @@ def test_structured_context_rejects_duplicate_active_alias() -> None:
 def test_context_read_does_not_mutate_run_state() -> None:
     run = _run_with_frames(
         [
-            ExecutionFrame(id="root", kind="root", node_id="customers", scope_id="root"),
+            ExecutionFrame(
+                id="root", kind="root", node_id="customers", scope_id="root"
+            ),
             _item_frame(
                 frame_id="outer-item",
                 parent_id="root",
@@ -369,7 +377,9 @@ def _nested_workflow(*, inner_over: str = "state.orders_list"):
             ),
             Edge.model_validate({"from": "orders", "outcome": "loop", "to": "work"}),
             Edge.model_validate({"from": "work", "outcome": "ok", "to": "orders"}),
-            Edge.model_validate({"from": "orders", "outcome": "done", "to": "customers"}),
+            Edge.model_validate(
+                {"from": "orders", "outcome": "done", "to": "customers"}
+            ),
             Edge.model_validate({"from": "customers", "outcome": "done", "to": END}),
         ],
     )
@@ -398,9 +408,7 @@ def test_nested_handler_receives_outer_and_inner_typed_entries() -> None:
         {"record": record},
     )
     assert run.status == RunStatus.COMPLETED
-    assert seen == [
-        (("customers", "orders"), {"name": "Ada"}, {"sku": "A-17"}, 0)
-    ]
+    assert seen == [(("customers", "orders"), {"name": "Ada"}, {"sku": "A-17"}, 0)]
 
 
 def test_nested_graph_bindings_resolve_outer_and_inner_items() -> None:
@@ -672,9 +680,7 @@ def test_concurrent_items_receive_distinct_frame_and_lineage_context() -> None:
         contexts.append(ctx.foreach["each"])
         return {"outcome": "ok", "output": {}}
 
-    run = execute_workflow(
-        workflow, {"items": ["a", "b"]}, {"record": record}
-    )
+    run = execute_workflow(workflow, {"items": ["a", "b"]}, {"record": record})
     assert run.status == RunStatus.COMPLETED
     assert len(contexts) == 2
     assert contexts[0].activation_id == contexts[1].activation_id
@@ -686,9 +692,7 @@ def test_concurrent_items_receive_distinct_frame_and_lineage_context() -> None:
 def test_nested_foreach_over_resolves_structured_outer_item_path() -> None:
     from wf_core import execute_workflow
 
-    workflow = _nested_workflow(
-        inner_over="context.foreach.customers.item.orders"
-    )
+    workflow = _nested_workflow(inner_over="context.foreach.customers.item.orders")
     captured: list[object] = []
 
     def record(payload: dict[str, object], _ctx: RuntimeContext) -> dict[str, object]:
@@ -705,3 +709,126 @@ def test_nested_foreach_over_resolves_structured_outer_item_path() -> None:
     )
     assert run.status == RunStatus.COMPLETED
     assert captured == [{"sku": "A-17"}]
+
+
+def test_interrupt_resume_recreates_structured_context_identities() -> None:
+    from wf_core import (
+        END,
+        Edge,
+        ForeachNode,
+        InterruptNode,
+        NodeDef,
+        NodeUse,
+        SchemaRef,
+        Workflow,
+        execute_workflow,
+        resume_workflow,
+    )
+    from wf_core.models.schemas import StateField, StateSchema
+    from wf_core.run_codec import dump_run_state, load_run_state
+
+    workflow = Workflow(
+        name="nested_interrupt_resume",
+        input_schema=SchemaRef(type="object", properties={}),
+        state_schema=StateSchema.from_field_map(
+            {
+                "customers": StateField(type="array"),
+                "orders_list": StateField(type="array"),
+            }
+        ),
+        output_schema=SchemaRef(type="object", properties={}),
+        node_defs=[
+            NodeDef(
+                name="record",
+                input_schema=SchemaRef(type="object", properties={"value": {}}),
+                output_schema=SchemaRef(type="object", properties={}),
+                outcomes=["ok"],
+            )
+        ],
+        start="outer",
+        nodes=[
+            ForeachNode.model_validate(
+                {
+                    "id": "outer",
+                    "type": "foreach",
+                    "over": "state.customers",
+                    "as": "customer",
+                    "mode": "serial",
+                }
+            ),
+            ForeachNode.model_validate(
+                {
+                    "id": "inner",
+                    "type": "foreach",
+                    "over": "state.orders_list",
+                    "as": "order",
+                    "mode": "serial",
+                }
+            ),
+            NodeUse.model_validate(
+                {
+                    "id": "pre",
+                    "type": "node",
+                    "node": "record",
+                    "input": [{"target": "value", "path": "context.order"}],
+                    "output": [],
+                }
+            ),
+            InterruptNode.model_validate(
+                {"id": "ask", "type": "interrupt", "kind": "approval", "request": []}
+            ),
+            NodeUse.model_validate(
+                {
+                    "id": "post",
+                    "type": "node",
+                    "node": "record",
+                    "input": [{"target": "value", "path": "context.order"}],
+                    "output": [],
+                }
+            ),
+        ],
+        edges=[
+            Edge.model_validate({"from": "outer", "outcome": "loop", "to": "inner"}),
+            Edge.model_validate({"from": "inner", "outcome": "loop", "to": "pre"}),
+            Edge.model_validate({"from": "pre", "outcome": "ok", "to": "ask"}),
+            Edge.model_validate({"from": "ask", "outcome": "submitted", "to": "post"}),
+            Edge.model_validate({"from": "post", "outcome": "ok", "to": "inner"}),
+            Edge.model_validate({"from": "inner", "outcome": "done", "to": "outer"}),
+            Edge.model_validate({"from": "outer", "outcome": "done", "to": END}),
+        ],
+    )
+    before: list[dict[str, ForeachContext]] = []
+    after: list[dict[str, ForeachContext]] = []
+    phase = {"value": "before"}
+
+    def record(_payload: dict[str, object], ctx: RuntimeContext) -> dict[str, object]:
+        snapshot = dict(ctx.foreach)
+        if phase["value"] == "before":
+            before.append(snapshot)
+        else:
+            after.append(snapshot)
+        return {"outcome": "ok", "output": {}}
+
+    run = execute_workflow(
+        workflow,
+        {"customers": [{"name": "Ada"}], "orders_list": [{"sku": "A-17"}]},
+        {"record": record},
+    )
+    assert run.status == RunStatus.INTERRUPTED
+    assert len(before) == 1
+    # Genuinely test reconstruction: dump, reload, resume from loaded state.
+    payload = dump_run_state(run)
+    reloaded = load_run_state(payload)
+    phase["value"] = "after"
+    resumed = resume_workflow(workflow, reloaded, {"record": record}, resume_payload={})
+    assert resumed.status == RunStatus.COMPLETED
+    assert len(after) == 1
+    before_outer = before[0]["outer"]
+    after_outer = after[0]["outer"]
+    before_inner = before[0]["inner"]
+    after_inner = after[0]["inner"]
+    assert after_outer.activation_id == before_outer.activation_id
+    assert after_inner.activation_id == before_inner.activation_id
+    assert after_inner.frame_id == before_inner.frame_id
+    assert after_inner.lineage_id == before_inner.lineage_id
+    assert after_inner.item == before_inner.item

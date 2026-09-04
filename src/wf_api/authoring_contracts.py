@@ -275,9 +275,7 @@ def _nested_foreach_path_options(
             # bounded object schema, mirroring input/state inventory behavior.
             if prop_name == "item":
                 options.extend(
-                    _nested_item_subpaths(
-                        prop_schema, owner_id, availability, depth=0
-                    )
+                    _nested_item_subpaths(prop_schema, owner_id, availability, depth=0)
                 )
     return options
 
@@ -302,7 +300,10 @@ def _nested_item_subpaths(
     for name, sub_schema in properties.items():
         if not isinstance(name, str) or not isinstance(sub_schema, Mapping):
             continue
-        if isinstance(sub_schema.get("type"), str) and sub_schema.get("type") == "array":
+        if (
+            isinstance(sub_schema.get("type"), str)
+            and sub_schema.get("type") == "array"
+        ):
             # Arrays are whole values; item indexes need real runtime indexes.
             path = str(
                 GraphSourcePath(
@@ -339,7 +340,10 @@ def _nested_item_subpaths(
         )
         options.extend(
             _nested_item_subpaths(
-                sub_schema, owner_id, availability, depth=depth + 1,
+                sub_schema,
+                owner_id,
+                availability,
+                depth=depth + 1,
                 prefix_parts=(*prefix_parts, name),
             )
         )
