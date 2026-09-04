@@ -4,6 +4,9 @@ from .context_scopes import (
     ContextFieldAvailability,
     context_analysis_warnings,
     context_fields_by_node,
+    context_schema_for_node,
+    context_schemas_by_node,
+    root_context_schema,
 )
 from .control_regions import (
     ControlRegionAnalysis,
@@ -22,4 +25,7 @@ __all__ = [
     "analyze_control_regions",
     "context_analysis_warnings",
     "context_fields_by_node",
+    "context_schema_for_node",
+    "context_schemas_by_node",
+    "root_context_schema",
 ]

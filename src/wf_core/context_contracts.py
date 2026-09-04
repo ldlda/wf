@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from copy import deepcopy
 from dataclasses import dataclass
 from typing import Any
@@ -87,3 +88,50 @@ def foreach_context_fields(
             )
         )
     return tuple(fields)
+
+
+def foreach_entry_schema(node_id: str, item_schema: ContextSchema) -> ContextSchema:
+    """Return the JSON schema for one structured ``foreach.<id>`` entry.
+
+    Identity fields disclose the dynamic activation/frame/scope/lineage when
+    advanced runtime code needs them; ``item`` carries the inferred
+    collection item schema.
+    """
+    return {
+        "type": "object",
+        "properties": {
+            "node_id": {"const": node_id},
+            "activation_id": {"type": "string"},
+            "frame_id": {"type": "string"},
+            "scope_id": {"type": "string"},
+            "lineage_id": {"type": "string"},
+            "index": {"type": "integer"},
+            "item": deepcopy(item_schema),
+        },
+        "required": [
+            "node_id",
+            "activation_id",
+            "frame_id",
+            "scope_id",
+            "lineage_id",
+            "index",
+            "item",
+        ],
+        "additionalProperties": False,
+    }
+
+
+def structured_foreach_contract(
+    entry_schemas: Mapping[str, ContextSchema],
+) -> ContextFieldContract:
+    """Return the ``foreach`` map contract for one static owner stack."""
+    return ContextFieldContract(
+        FOREACH_CONTEXT_KEY,
+        {
+            "type": "object",
+            "properties": dict(entry_schemas),
+            "required": sorted(entry_schemas),
+            "additionalProperties": False,
+        },
+        "Structured foreach context by static node id",
+    )

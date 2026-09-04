@@ -441,3 +441,68 @@ def test_project_inventory_does_not_offer_context_for_workflow_output() -> None:
 
     assert inventory["readable_sources"][0]["path"] == "context.item"
     assert inventory["readable_sources"][0]["uses"] == ["step_input"]
+
+
+def test_structured_foreach_paths_appear_in_authoring_inventory() -> None:
+    from wf_api.authoring_contracts import context_path_options_for_node
+    from wf_core import END, Edge, ForeachNode, NodeUse, SchemaRef, Workflow
+    from wf_core.models.schemas import StateSchema
+
+    def _foreach(node_id: str, *, over: str, alias: str) -> ForeachNode:
+        return ForeachNode.model_validate(
+            {"id": node_id, "type": "foreach", "over": over, "as": alias}
+        )
+
+    workflow = Workflow(
+        name="inventory_structured",
+        input_schema=SchemaRef(type="object"),
+        state_schema=StateSchema.model_validate(
+            {
+                "type": "object",
+                "properties": {
+                    "customers": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {"name": {"type": "string"}},
+                        },
+                    },
+                    "orders": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {"sku": {"type": "string"}},
+                        },
+                    },
+                },
+            }
+        ),
+        output_schema=SchemaRef(type="object"),
+        start="customers",
+        nodes=[
+            _foreach("customers", over="state.customers", alias="customer"),
+            _foreach("orders", over="state.orders", alias="order"),
+            NodeUse(id="inner_body", type="node", node="noop"),
+        ],
+        edges=[
+            Edge.model_validate(
+                {"from": "customers", "outcome": "loop", "to": "orders"}
+            ),
+            Edge.model_validate(
+                {"from": "orders", "outcome": "loop", "to": "inner_body"}
+            ),
+            Edge.model_validate({"from": "inner_body", "outcome": "ok", "to": "orders"}),
+            Edge.model_validate({"from": "orders", "outcome": "done", "to": "customers"}),
+            Edge.model_validate({"from": "customers", "outcome": "done", "to": END}),
+        ],
+    )
+    options = context_path_options_for_node(workflow, "inner_body")
+    paths = {option["path"] for option in options}
+    assert "context.foreach.customers.item" in paths
+    assert "context.foreach.customers.index" in paths
+    assert "context.foreach.orders.item" in paths
+    assert "context.foreach.orders.index" in paths
+    for option in options:
+        if option["path"].startswith("context.foreach."):
+            assert option["origin"] == "runtime_context"
+            assert option["uses"] == ["step_input"]

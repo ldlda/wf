@@ -260,10 +260,52 @@ def test_nested_foreach_replaces_inner_scope_and_restores_outer_scope() -> None:
 
     inner = _field_map(workflow, "inner_body")
     after_inner = _field_map(workflow, "after_inner")
-    assert "outer_item" not in inner
-    assert inner["inner_item"].availability == "available"
+    outer_item_schema = {"type": "string"}
+    inner_item_schema = {"type": "integer"}
+
+    assert inner["outer_item"].schema == outer_item_schema
+    assert inner["inner_item"].schema == inner_item_schema
+    assert inner["loop_item"].schema == inner_item_schema
+    foreach_schema = inner["foreach"].schema
+    assert set(foreach_schema["properties"]) == {"outer", "inner"}
+    assert foreach_schema["properties"]["outer"]["properties"]["item"] == (
+        outer_item_schema
+    )
+    assert foreach_schema["properties"]["inner"]["properties"]["index"] == {
+        "type": "integer"
+    }
     assert after_inner["outer_item"].availability == "available"
     assert "inner_item" not in after_inner
+
+
+def test_inner_completion_schema_restores_outer_structured_entry() -> None:
+    workflow = _workflow(
+        start="outer",
+        nodes=[
+            _foreach("outer", alias="outer_item"),
+            _foreach("inner", alias="inner_item", over="state.inner_items"),
+            _node("inner_body"),
+            _node("after_inner"),
+        ],
+        edges=[
+            {"from": "outer", "outcome": "loop", "to": "inner"},
+            {"from": "inner", "outcome": "loop", "to": "inner_body"},
+            {"from": "inner", "outcome": "done", "to": "after_inner"},
+            {"from": "inner_body", "outcome": "ok", "to": "inner"},
+            {"from": "after_inner", "outcome": "ok", "to": "outer"},
+            {"from": "outer", "outcome": "done", "to": END},
+        ],
+        state_schema={
+            "type": "object",
+            "properties": {
+                "items": {"type": "array", "items": {"type": "string"}},
+                "inner_items": {"type": "array", "items": {"type": "integer"}},
+            },
+        },
+    )
+    after_inner = _field_map(workflow, "after_inner")
+    foreach_schema = after_inner["foreach"].schema
+    assert set(foreach_schema["properties"]) == {"outer"}
 
 
 def test_nested_foreach_preserves_context_backed_item_schema() -> None:

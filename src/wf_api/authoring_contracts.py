@@ -10,6 +10,7 @@ from wf_core.analysis.context_scopes import (
     context_fields_by_node,
 )
 from wf_core.models.workflow import Workflow
+from wf_core.paths import GraphSourcePath
 
 from .models.authoring_contracts import (
     AuthoringContractInventoryPayload,
@@ -173,6 +174,8 @@ def context_path_options(
 ) -> list[AuthoringPathOptionPayload]:
     """Project analyzed runtime context fields into Task 1 path payloads."""
     options: list[AuthoringPathOptionPayload] = []
+    foreach_schema: Mapping[str, Any] | None = None
+    foreach_availability: str = "available"
     for field in fields:
         if isinstance(field, ContextFieldAvailability):
             name = field.name
@@ -212,6 +215,13 @@ def context_path_options(
         if reason is not None:
             option["reason"] = reason
         options.append(option)
+        if name == "foreach" and isinstance(schema, Mapping):
+            foreach_schema = schema
+            foreach_availability = availability
+    if foreach_schema is not None:
+        options.extend(
+            _nested_foreach_path_options(foreach_schema, foreach_availability)
+        )
     return options
 
 
@@ -221,6 +231,119 @@ def context_path_options_for_node(
 ) -> list[AuthoringPathOptionPayload]:
     """Project the runtime context available at one workflow node."""
     return context_path_options(context_fields_by_node(workflow).get(node_id, ()))
+
+
+def _nested_foreach_path_options(
+    foreach_schema: Mapping[str, Any],
+    availability: str,
+) -> list[AuthoringPathOptionPayload]:
+    """Emit literal structured paths beneath the ``foreach`` map.
+
+    Foreach ids are literal TOML segments formatted through
+    ``GraphSourcePath`` so dotted ids stay quoted as one segment. The walk is
+    bounded like other authoring traversals; arrays contribute no invented
+    child names.
+    """
+    from .models.authoring_contracts import AuthoringPathOptionPayload as _Payload
+
+    options: list[_Payload] = []
+    properties = foreach_schema.get("properties")
+    if not isinstance(properties, Mapping):
+        return options
+    for owner_id, entry_schema in properties.items():
+        if not isinstance(owner_id, str) or not isinstance(entry_schema, Mapping):
+            continue
+        entry_properties = entry_schema.get("properties")
+        if not isinstance(entry_properties, Mapping):
+            continue
+        for prop_name, prop_schema in entry_properties.items():
+            if not isinstance(prop_name, str) or not isinstance(prop_schema, Mapping):
+                continue
+            # Construct dotted ids as literal segments, never by string concat.
+            path = str(GraphSourcePath("context", ("foreach", owner_id, prop_name)))
+            option: _Payload = {
+                "path": path,
+                "label": prop_name.replace("_", " ").replace("-", " ").title(),
+                "origin": "runtime_context",
+                "schema": deepcopy(dict(prop_schema)),
+                "required": False,
+                "availability": availability,  # type: ignore[typeddict-item]
+                "uses": ["step_input"],
+            }
+            options.append(option)
+            # Emit nested object properties beneath `.item` when the item is a
+            # bounded object schema, mirroring input/state inventory behavior.
+            if prop_name == "item":
+                options.extend(
+                    _nested_item_subpaths(
+                        prop_schema, owner_id, availability, depth=0
+                    )
+                )
+    return options
+
+
+def _nested_item_subpaths(
+    item_schema: Mapping[str, Any],
+    owner_id: str,
+    availability: str,
+    *,
+    depth: int,
+    prefix_parts: tuple[str, ...] = (),
+) -> list[AuthoringPathOptionPayload]:
+    """Emit bounded object children beneath one foreach ``item`` schema."""
+    from .models.authoring_contracts import AuthoringPathOptionPayload as _Payload
+
+    if depth >= _MAX_LOCAL_SCHEMA_REFERENCE_DEPTH:
+        return []
+    properties = item_schema.get("properties")
+    if not isinstance(properties, Mapping):
+        return []
+    options: list[_Payload] = []
+    for name, sub_schema in properties.items():
+        if not isinstance(name, str) or not isinstance(sub_schema, Mapping):
+            continue
+        if isinstance(sub_schema.get("type"), str) and sub_schema.get("type") == "array":
+            # Arrays are whole values; item indexes need real runtime indexes.
+            path = str(
+                GraphSourcePath(
+                    "context", ("foreach", owner_id, "item", *prefix_parts, name)
+                )
+            )
+            options.append(
+                {
+                    "path": path,
+                    "label": name.replace("_", " ").replace("-", " ").title(),
+                    "origin": "runtime_context",
+                    "schema": deepcopy(dict(sub_schema)),
+                    "required": False,
+                    "availability": availability,  # type: ignore[typeddict-item]
+                    "uses": ["step_input"],
+                }
+            )
+            continue
+        path = str(
+            GraphSourcePath(
+                "context", ("foreach", owner_id, "item", *prefix_parts, name)
+            )
+        )
+        options.append(
+            {
+                "path": path,
+                "label": name.replace("_", " ").replace("-", " ").title(),
+                "origin": "runtime_context",
+                "schema": deepcopy(dict(sub_schema)),
+                "required": False,
+                "availability": availability,  # type: ignore[typeddict-item]
+                "uses": ["step_input"],
+            }
+        )
+        options.extend(
+            _nested_item_subpaths(
+                sub_schema, owner_id, availability, depth=depth + 1,
+                prefix_parts=(*prefix_parts, name),
+            )
+        )
+    return options
 
 
 def _context_entries_for_inventory(
