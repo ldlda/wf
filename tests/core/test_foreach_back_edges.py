@@ -539,6 +539,121 @@ def test_nested_foreach_preserves_inner_writes_in_all_modes(
         assert sorted(seen, key=repr) == sorted([1, 2, 1, 2], key=repr)
 
 
+@pytest.mark.parametrize("inner_mode", ["serial", "concurrent"])
+def test_nested_item_reads_buffered_ancestor_state(inner_mode: str) -> None:
+    """An inner item inherits the enclosing concurrent item's state view."""
+    inner_payload: dict[str, Any] = {
+        "id": "inner",
+        "type": "foreach",
+        "over": "state.inner_items",
+        "as": "inner_item",
+        "mode": inner_mode,
+    }
+    if inner_mode == "concurrent":
+        inner_payload["concurrent"] = {"max_active": 1, "max_outstanding": 1}
+    workflow = Workflow(
+        name="nested_foreach_reads_ancestor_state",
+        input_schema=SchemaRef(type="object", properties={}),
+        state_schema=StateSchema.from_field_map(
+            {
+                "items": StateField(type="array"),
+                "inner_items": StateField(type="array"),
+                "marker": StateField(type="string", default="root"),
+                "seen": StateField(
+                    type="array", reducer=ReducerRef(name="wf.std.append")
+                ),
+            }
+        ),
+        output_schema=SchemaRef(type="object", properties={"seen": {"type": "array"}}),
+        node_defs=[
+            NodeDef(
+                name="write_marker",
+                input_schema=SchemaRef(
+                    type="object", properties={"marker": {}}, required=["marker"]
+                ),
+                output_schema=SchemaRef(
+                    type="object", properties={"marker": {}}, required=["marker"]
+                ),
+                outcomes=["ok"],
+            ),
+            NodeDef(
+                name="observe_marker",
+                input_schema=SchemaRef(
+                    type="object", properties={"marker": {}}, required=["marker"]
+                ),
+                output_schema=SchemaRef(
+                    type="object", properties={"seen": {}}, required=["seen"]
+                ),
+                outcomes=["ok"],
+            ),
+        ],
+        start="outer",
+        nodes=[
+            ForeachNode.model_validate(
+                {
+                    "id": "outer",
+                    "type": "foreach",
+                    "over": "state.items",
+                    "as": "outer_item",
+                    "mode": "concurrent",
+                    "concurrent": {"max_active": 1, "max_outstanding": 1},
+                }
+            ),
+            NodeUse.model_validate(
+                {
+                    "id": "write_outer",
+                    "type": "node",
+                    "node": "write_marker",
+                    "input": [{"target": "marker", "path": "context.outer_item"}],
+                    "output": [{"source": "marker", "target": "state.marker"}],
+                }
+            ),
+            ForeachNode.model_validate(inner_payload),
+            NodeUse.model_validate(
+                {
+                    "id": "read_inner",
+                    "type": "node",
+                    "node": "observe_marker",
+                    "input": [{"target": "marker", "path": "state.marker"}],
+                    "output": [{"source": "seen", "target": "state.seen"}],
+                }
+            ),
+        ],
+        edges=[
+            Edge.model_validate(
+                {"from": "outer", "outcome": "loop", "to": "write_outer"}
+            ),
+            Edge.model_validate(
+                {"from": "write_outer", "outcome": "ok", "to": "inner"}
+            ),
+            Edge.model_validate(
+                {"from": "inner", "outcome": "loop", "to": "read_inner"}
+            ),
+            Edge.model_validate({"from": "read_inner", "outcome": "ok", "to": "inner"}),
+            Edge.model_validate({"from": "inner", "outcome": "done", "to": "outer"}),
+            Edge.model_validate({"from": "outer", "outcome": "done", "to": END}),
+        ],
+    )
+
+    run = execute_workflow(
+        workflow,
+        {"items": ["outer"], "inner_items": [1]},
+        {
+            "write_marker": lambda payload, _ctx: {
+                "outcome": "ok",
+                "output": {"marker": payload["marker"]},
+            },
+            "observe_marker": lambda payload, _ctx: {
+                "outcome": "ok",
+                "output": {"seen": payload["marker"]},
+            },
+        },
+    )
+
+    assert run.status == RunStatus.COMPLETED
+    assert run.state["seen"] == ["outer"]
+
+
 def _three_level_workflow(
     *, outer_mode: str, middle_mode: str, inner_mode: str
 ) -> Workflow:

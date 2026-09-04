@@ -43,14 +43,15 @@ class LineageStateView:
 def lineage_writes_for_frame(
     run: RunState, frame: ExecutionFrame
 ) -> Sequence[StateWrite]:
-    """Return writes visible to this frame's current lineage.
+    """Return ancestor and current-lineage writes visible to this frame.
 
-    This is still backed by concurrent foreach barrier metadata. Keeping the
-    lookup here gives future `RunState.lineages` or subgraph scopes one place to
-    plug in without making node execution understand foreach internals.
+    An empty child lineage still inherits writes buffered by its ancestors, as
+    happens when an outer concurrent foreach writes before entering an inner
+    foreach. Lineage existence and scope therefore control traversal; the
+    current lineage having its own writes does not.
     """
     lineage = run.lineages.get(frame.lineage_id)
-    if lineage is not None and lineage.scope_id == frame.scope_id and lineage.writes:
+    if lineage is not None and lineage.scope_id == frame.scope_id:
         return tuple(
             lineage_state_writes(
                 run, scope_id=frame.scope_id, lineage_id=frame.lineage_id
