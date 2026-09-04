@@ -170,7 +170,6 @@ def _step_foreach_concurrent(
         step=step,
         index=index,
         activation=activation,
-        barrier=barrier,
         iterable=iterable,
     )
 
@@ -182,7 +181,6 @@ def _step_foreach_concurrent(
             step=step,
             index=index,
             activation=activation,
-            barrier=barrier,
             reducers=reducers,
         )
 
@@ -260,12 +258,12 @@ def _admit_concurrent_children(
     step: ForeachNode,
     index: WorkflowIndex,
     activation: ForeachActivationState,
-    barrier: ForeachBarrierState,
     iterable: list[object],
 ) -> None:
     if step.concurrent is None:
         raise WorkflowExecutionError("concurrent foreach requires concurrent policy")
 
+    barrier = activation.barrier
     loop_start = index.next_node_id(frame.node_id, "loop")
     while (
         barrier.next_index < len(iterable)
@@ -333,9 +331,9 @@ def _finish_concurrent_foreach(
     step: ForeachNode,
     index: WorkflowIndex,
     activation: ForeachActivationState,
-    barrier: ForeachBarrierState,
     reducers: Mapping[str, ReducerDefinition] | None = None,
 ) -> RunState:
+    barrier = activation.barrier
     error_records = [
         result.error.to_metadata()
         for result in sorted(

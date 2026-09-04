@@ -345,6 +345,20 @@ class ForeachBarrierState:
         )
 
 
+def _activation_entry(
+    frame: ExecutionFrame, table: dict[str, Any], foreach_node_id: str
+) -> dict[str, Any] | None:
+    """Return the mutable activation entry or fail fast on corrupt state."""
+    entry = table.get(foreach_node_id)
+    if entry is None:
+        return None
+    if not isinstance(entry, dict):
+        raise WorkflowExecutionError(
+            f"malformed foreach activation entry for frame {frame.id!r}"
+        )
+    return entry
+
+
 def load_or_begin_foreach_activation(
     frame: ExecutionFrame,
     foreach_node_id: str,
@@ -359,14 +373,10 @@ def load_or_begin_foreach_activation(
     with fresh barrier state. Mode mismatches and malformed tables fail fast.
     """
     table = _activation_table(frame)
-    entry = table.get(foreach_node_id)
+    entry = _activation_entry(frame, table, foreach_node_id)
     if entry is None:
         entry = {"next_sequence": 0, "active": None}
         table[foreach_node_id] = entry
-    if not isinstance(entry, dict):
-        raise WorkflowExecutionError(
-            f"malformed foreach activation entry for frame {frame.id!r}"
-        )
     next_sequence = entry.get("next_sequence", 0)
     if not isinstance(next_sequence, int) or next_sequence < 0:
         raise WorkflowExecutionError(
@@ -402,8 +412,8 @@ def save_foreach_activation(
 ) -> None:
     """Persist barrier progress for the named active activation."""
     table = _activation_table(frame)
-    entry = table.get(activation.foreach_node_id)
-    if not isinstance(entry, dict):
+    entry = _activation_entry(frame, table, activation.foreach_node_id)
+    if entry is None:
         raise WorkflowExecutionError(
             f"malformed foreach activation entry for frame {frame.id!r}"
         )
@@ -425,8 +435,8 @@ def close_foreach_activation(
     increasing so child and lineage ids cannot collide across visits.
     """
     table = _activation_table(frame)
-    entry = table.get(activation.foreach_node_id)
-    if not isinstance(entry, dict):
+    entry = _activation_entry(frame, table, activation.foreach_node_id)
+    if entry is None:
         raise WorkflowExecutionError(
             f"malformed foreach activation entry for frame {frame.id!r}"
         )
@@ -448,8 +458,8 @@ def load_foreach_activation(
     the caller rather than buffering into the wrong barrier.
     """
     table = _activation_table(frame)
-    entry = table.get(foreach_node_id)
-    if not isinstance(entry, dict):
+    entry = _activation_entry(frame, table, foreach_node_id)
+    if entry is None:
         raise WorkflowExecutionError(
             f"malformed foreach activation entry for frame {frame.id!r}"
         )

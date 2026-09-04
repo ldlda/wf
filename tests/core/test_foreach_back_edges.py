@@ -695,6 +695,32 @@ def test_nonlocal_runtime_return_fails_closed_when_validation_is_bypassed() -> N
         advance_frame(run, run.frames["inner-item"], outcome="ok", next_node_id="outer")
 
 
+def test_root_frame_targeting_foreach_enters_normally() -> None:
+    """A root frame naming a foreach enters it; only an item frame returns."""
+    from wf_core.runtime.ops.flow import advance_frame
+
+    run = RunState(
+        workflow_name="root_entry",
+        status=RunStatus.RUNNING,
+        workflow_input={},
+        state={},
+        frames={},
+    )
+    add_frame(
+        run,
+        ExecutionFrame(id="root", kind="workflow", node_id="start"),
+    )
+    run.current_frame_id = "root"
+    run.sync_from_current_frame()
+
+    advance_frame(run, run.frames["root"], outcome="ok", next_node_id="each")
+
+    entered = run.frames["root"]
+    assert entered.node_id == "each"
+    assert entered.status == FrameStatus.PENDING
+    assert entered.finished_at_node_id is None
+
+
 def test_completed_activation_cannot_consume_later_activation_result_or_wake() -> None:
     """A closed visit rejects buffered results and wake-ups from other visits."""
     from wf_core.runtime.foreach_state import (

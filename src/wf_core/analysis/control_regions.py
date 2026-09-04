@@ -68,6 +68,26 @@ def analyze_control_regions(workflow: Workflow) -> ControlRegionAnalysis:
         if stack:
             ambiguous_tops.add(stack[-1])
 
+    def record_region_conflict(
+        node_id: str, stacks: tuple[ForeachOwnerStack, ...]
+    ) -> None:
+        """Drop one node use reached under two regions and report it once."""
+        del owner_stack_by_node[node_id]
+        if node_id not in conflicted:
+            conflicted.add(node_id)
+            issues.append(
+                ControlRegionIssue(
+                    kind=ControlRegionIssueKind.FOREACH_REGION_CONFLICT,
+                    path=f"nodes[{node_id}]",
+                    message=(
+                        f"node {node_id!r} is reachable under two foreach "
+                        "control regions"
+                    ),
+                )
+            )
+        for prior_stack in stacks:
+            mark_ambiguous(prior_stack)
+
     def add_adjacency(
         source: tuple[str, ForeachOwnerStack],
         target: tuple[str, ForeachOwnerStack],
@@ -99,20 +119,7 @@ def analyze_control_regions(workflow: Workflow) -> ControlRegionAnalysis:
             # single static owner stack. Drop it so later context analysis
             # grants no foreach fields, and stop expanding this ambiguous
             # state so the conflict does not cascade.
-            del owner_stack_by_node[node_id]
-            conflicted.add(node_id)
-            issues.append(
-                ControlRegionIssue(
-                    kind=ControlRegionIssueKind.FOREACH_REGION_CONFLICT,
-                    path=f"nodes[{node_id}]",
-                    message=(
-                        f"node {node_id!r} is reachable under two foreach "
-                        "control regions"
-                    ),
-                )
-            )
-            for prior_stack in (recorded, stack):
-                mark_ambiguous(prior_stack)
+            record_region_conflict(node_id, (recorded, stack))
             continue
 
         for edge_index, edge in edges_by_node.get(node_id, []):  # type: ignore[attr-defined]
@@ -151,21 +158,9 @@ def analyze_control_regions(workflow: Workflow) -> ControlRegionAnalysis:
                     if recorded_target is None:
                         owner_stack_by_node[target_id] = target_stack
                     elif recorded_target != target_stack:
-                        del owner_stack_by_node[target_id]
-                        if target_id not in conflicted:
-                            conflicted.add(target_id)
-                            issues.append(
-                                ControlRegionIssue(
-                                    kind=ControlRegionIssueKind.FOREACH_REGION_CONFLICT,
-                                    path=f"nodes[{target_id}]",
-                                    message=(
-                                        f"node {target_id!r} is reachable under "
-                                        "two foreach control regions"
-                                    ),
-                                )
-                            )
-                        for prior_stack in (recorded_target, target_stack):
-                            mark_ambiguous(prior_stack)
+                        record_region_conflict(
+                            target_id, (recorded_target, target_stack)
+                        )
                 if target_stack:
                     issues.append(
                         ControlRegionIssue(

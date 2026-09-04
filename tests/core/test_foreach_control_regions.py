@@ -265,6 +265,31 @@ def test_skipping_inner_foreach_owner_is_invalid_return() -> None:
     assert matching[0].path == "edges[2]"
 
 
+def test_reentering_active_ancestor_foreach_as_nested_controller_is_invalid() -> None:
+    workflow = _workflow(
+        start="f1",
+        nodes=[_foreach("f1"), _foreach("f2")],
+        edges=[
+            {"from": "f1", "outcome": "loop", "to": "f2"},
+            {"from": "f2", "outcome": "loop", "to": "f1"},
+            {"from": "f2", "outcome": "done", "to": "f1"},
+            {"from": "f1", "outcome": "done", "to": END},
+        ],
+    )
+
+    analysis = analyze_control_regions(workflow)
+
+    assert (ControlRegionIssueKind.INVALID_FOREACH_RETURN, "edges[1]") in [
+        (issue.kind, issue.path) for issue in analysis.issues
+    ]
+    matching = [
+        issue
+        for issue in workflow.validate_structure().errors
+        if issue.code == ValidationIssueCode.INVALID_FOREACH_RETURN
+    ]
+    assert matching[0].path == "edges[1]"
+
+
 def test_entering_sibling_foreach_body_is_region_conflict() -> None:
     workflow = _workflow(
         start="f1",

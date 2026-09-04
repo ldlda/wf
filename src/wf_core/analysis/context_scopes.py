@@ -145,7 +145,8 @@ def _available_fields(
 
     A single node use has one control region, so foreach fields are either
     present (inside a body) or absent (outside). Conditional availability is
-    not used to represent multiple owner stacks.
+    not used to represent multiple owner stacks: a node reached under two
+    stacks is a region conflict and receives no foreach fields at all.
     """
     contracts = list(STANDARD_CONTEXT_FIELDS)
     if active_scope is not None:
