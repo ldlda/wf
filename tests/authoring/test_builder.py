@@ -773,3 +773,72 @@ class _StructuralKeyMap:
 def test_input_map_rejects_structural_dict_keys_with_clear_message() -> None:
     with pytest.raises(TypeError, match="structural path dicts cannot be map keys"):
         normalize_input_mapping(cast(Mapping[object, object], _StructuralKeyMap()))
+
+
+def test_foreach_reference_exposes_item_and_index_paths() -> None:
+    from wf_core.paths import GraphSourcePath
+
+    builder = WorkflowBuilder(
+        name="foreach_ref",
+        input_schema={"type": "object"},
+        state_schema={"type": "object"},
+        output_schema={"type": "object"},
+    )
+    each = builder.foreach(id="orders", over=state_path("orders"), as_="order")
+
+    assert each.item == GraphSourcePath("context", ("foreach", "orders", "item"))
+    assert each.index == GraphSourcePath("context", ("foreach", "orders", "index"))
+    assert str(each.item) == "context.foreach.orders.item"
+    assert str(each.index) == "context.foreach.orders.index"
+
+
+def test_foreach_reference_treats_dotted_id_as_one_literal_segment() -> None:
+    from wf_core.paths import GraphSourcePath
+
+    builder = WorkflowBuilder(
+        name="foreach_dotted",
+        input_schema={"type": "object"},
+        state_schema={"type": "object"},
+        output_schema={"type": "object"},
+    )
+    each = builder.foreach(
+        id="orders.v2", over=state_path("orders"), as_="order"
+    )
+
+    assert each.item == GraphSourcePath(
+        "context", ("foreach", "orders.v2", "item")
+    )
+    assert str(each.item) == 'context.foreach."orders.v2".item'
+    assert str(each.index) == 'context.foreach."orders.v2".index'
+
+
+def test_foreach_computed_paths_are_not_serialized_fields() -> None:
+    builder = WorkflowBuilder(
+        name="foreach_serialized",
+        input_schema={"type": "object"},
+        state_schema={"type": "object"},
+        output_schema={"type": "object"},
+    )
+    each = builder.foreach(id="orders", over=state_path("orders"), as_="order")
+
+    dumped = each.model_dump(mode="json")
+    assert "item" not in dumped
+    assert "index" not in dumped
+
+
+def test_foreach_ref_works_in_node_input_binding() -> None:
+    builder = WorkflowBuilder(
+        name="foreach_node_binding",
+        input_schema={"type": "object"},
+        state_schema={"type": "object"},
+        output_schema={"type": "object"},
+    )
+    each = builder.foreach(id="orders", over=state_path("orders"), as_="order")
+
+    work = builder.use(
+        auto_bind_node,
+        input=[input_from(each.item, "order")],
+    )
+    binding = work.input[0]
+    assert isinstance(binding, object)
+    assert str(binding.path) == "context.foreach.orders.item"

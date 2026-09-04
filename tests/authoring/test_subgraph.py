@@ -273,3 +273,22 @@ def test_workflow_builder_subgraph_adds_native_subgraph_node() -> None:
     assert workflow.nodes[0].id == "run_child"
     assert workflow.nodes[0].outcomes == child.outcomes
     assert workflow.validate_structure().errors == []
+
+
+def test_foreach_ref_works_in_subgraph_input_binding() -> None:
+    from wf_authoring import state_path
+
+    child = build_demo_workflow()
+    parent = WorkflowBuilder(
+        name="foreach_subgraph_parent",
+        input_schema={"type": "object"},
+        state_schema={"type": "object"},
+        output_schema={"type": "object"},
+    )
+    each = parent.foreach(id="orders", over=state_path("orders"), as_="order")
+    step = parent.subgraph(
+        workflow=child,
+        id="run_child",
+        input=[input_from(each.item, "order")],
+    )
+    assert str(step.input[0].path) == "context.foreach.orders.item"

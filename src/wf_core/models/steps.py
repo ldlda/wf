@@ -274,6 +274,24 @@ class ForeachNode(BaseModel):
             raise ValueError("concurrent policy is only valid when mode='concurrent'")
         return self
 
+    @property
+    def item(self) -> GraphSourcePath:
+        """Return the structured item path for this foreach controller.
+
+        The constructor uses literal tuple segments so a foreach id
+        containing dots stays one TOML-quoted segment instead of being
+        reparsed as nested path separators.
+        """
+        return GraphSourcePath("context", ("foreach", self.id, "item"))
+
+    @property
+    def index(self) -> GraphSourcePath:
+        """Return the structured index path for this foreach controller.
+
+        Like :attr:`item`, the foreach id is one literal segment.
+        """
+        return GraphSourcePath("context", ("foreach", self.id, "index"))
+
 
 class JoinNode(BaseModel):
     """Control-flow step that marks a branch or frame as joined."""

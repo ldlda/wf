@@ -448,3 +448,26 @@ def test_foreach_node_serializes_over_path_as_canonical_string():
 
     assert node.over == GraphSourcePath.state("items")
     assert node.model_dump(mode="json")["over"] == "state.items"
+
+
+def test_foreach_ref_item_index_are_literal_structured_paths() -> None:
+    node = ForeachNode.model_validate(
+        {
+            "id": "orders.v2",
+            "type": "foreach",
+            "over": "state.orders",
+            "as": "order",
+        }
+    )
+    assert node.item == GraphSourcePath("context", ("foreach", "orders.v2", "item"))
+    assert node.index == GraphSourcePath("context", ("foreach", "orders.v2", "index"))
+    assert str(node.item) == 'context.foreach."orders.v2".item'
+    assert "item" not in node.model_dump(mode="json")
+    assert "index" not in node.model_dump(mode="json")
+    # GraphSourcePath still rejects an output root.
+    try:
+        GraphSourcePath.parse("output.result")
+    except Exception:
+        pass
+    else:
+        raise AssertionError("expected output root to be rejected")
