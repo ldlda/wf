@@ -1036,7 +1036,7 @@ def test_condition_still_reads_prior_outcome() -> None:
     workflow = Workflow(
         name="condition_prior_outcome",
         input_schema=SchemaRef(type="object", properties={}),
-        state_schema=StateSchema(fields={}),
+        state_schema=StateSchema.from_field_map({}),
         output_schema=SchemaRef(type="object", properties={}),
         node_defs=[
             NodeDef(
