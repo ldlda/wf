@@ -26,7 +26,6 @@ from wf_core.models.workflow import Edge, Workflow
 from wf_core.tokens import END
 
 type ContextAvailability = Literal["available", "conditional"]
-type FrameScope = str | None
 
 _MAX_LOCAL_SCHEMA_REFERENCE_DEPTH = 32
 
@@ -377,6 +376,7 @@ def _foreach_item_schema(
             _schema_document(
                 workflow,
                 foreach.over.root,
+                stack=controller_stack,
                 foreach_nodes=foreach_nodes,
                 owner_stack_by_node=owner_stack_by_node,
             ),
@@ -424,7 +424,6 @@ def _schema_document(
     root: str,
     *,
     stack: ForeachOwnerStack | None = None,
-    active_scope: FrameScope = None,
     foreach_nodes: Mapping[str, ForeachNode] | None = None,
     owner_stack_by_node: Mapping[str, ForeachOwnerStack] | None = None,
 ) -> Mapping[str, object]:
@@ -433,13 +432,7 @@ def _schema_document(
     if root == "state":
         return workflow.state_schema.model_dump(mode="json", exclude_none=True)
     if root == "context":
-        # Prefer the full owner stack when available; fall back to the legacy
-        # single active scope for callers that have not migrated yet.
-        resolved_stack: ForeachOwnerStack = ()
-        if stack is not None:
-            resolved_stack = stack
-        elif active_scope is not None:
-            resolved_stack = (active_scope,)
+        resolved_stack: ForeachOwnerStack = stack or ()
         current: dict[str, object] = {
             field.name: field.schema for field in STANDARD_CONTEXT_FIELDS
         }

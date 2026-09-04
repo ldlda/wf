@@ -41,6 +41,7 @@ def validate_context_paths(
     *,
     context_schemas: Mapping[str, ContextSchema],
     report: ValidationReport,
+    control_regions: ControlRegionAnalysis | None = None,
 ) -> None:
     """Validate every ``context.*`` path against its consuming location schema.
 
@@ -49,10 +50,14 @@ def validate_context_paths(
     only if every literal segment is a declared object property in the
     consuming node's generated schema. The whole ``context`` object and the
     ``context.foreach`` map remain readable; unknown dynamic keys do not.
+    The shared control-region analysis is threaded through so validation runs
+    it once; alias ownership never triggers a second traversal.
     """
     nodes_by_index = list(workflow.nodes)
     node_index_by_id = {node.id: idx for idx, node in enumerate(nodes_by_index)}
-    _validate_alias_ownership(workflow, node_index_by_id, report)
+    _validate_alias_ownership(
+        workflow, node_index_by_id, report, control_regions=control_regions
+    )
     for idx, node in enumerate(nodes_by_index):
         schema = context_schemas.get(node.id)
         if isinstance(node, NodeUse):
@@ -177,12 +182,48 @@ def _validate_one_context_path(
             "no context schema for this program location",
         )
         return
-    if not _path_in_schema(schema, path.parts):
+    failing, available = _failing_segment(schema, path.parts)
+    if failing is not None:
+        listed = f" (available: {available})" if available else ""
         report.add(
             ValidationIssueCode.INVALID_CONTEXT_PATH,
             location,
-            f"invalid context path {str(path)!r} at {node_id or location!r}",
+            f"invalid context path {str(path)!r} at {node_id or location!r}: "
+            f"unknown segment {failing!r}{listed}",
         )
+
+
+def _failing_segment(
+    schema: Mapping[str, Any], parts: tuple[str, ...]
+) -> tuple[str | None, str]:
+    """Return the first unknown segment plus the keys available there.
+
+    Returns ``(None, "")`` when the path walks declared properties (or
+    permissive unconstrained schemas). Diagnostics only; validity follows
+    the same walk as :func:`_path_in_schema`.
+    """
+    if not parts:
+        return None, ""
+    current: Any = schema
+    for part in parts:
+        if not isinstance(current, Mapping):
+            return part, ""
+        while isinstance(current.get("$ref"), str):
+            return part, ""
+        properties = current.get("properties")
+        if not isinstance(properties, Mapping):
+            if current == {}:
+                return None, ""
+            if (
+                current.get("type") == "object"
+                and current.get("additionalProperties", True) is not False
+            ):
+                return None, ""
+            return part, ""
+        if part not in properties:
+            return part, ",".join(sorted(str(key) for key in properties))
+        current = properties[part]
+    return None, ""
 
 
 def _path_in_schema(schema: Mapping[str, Any], parts: tuple[str, ...]) -> bool:
@@ -251,6 +292,8 @@ def _validate_alias_ownership(
     workflow: Workflow,
     node_index_by_id: dict[str, int],
     report: ValidationReport,
+    *,
+    control_regions: ControlRegionAnalysis | None = None,
 ) -> None:
     """Reject reserved or colliding active foreach aliases.
 
@@ -258,11 +301,14 @@ def _validate_alias_ownership(
     ``loop_item``, and ``loop_index`` (that is, ``RESERVED_CONTEXT_KEYS``).
     Siblings in separate control regions may reuse an alias because they are
     never active together; only aliases active in the same owner stack
-    collide. Failures point at the inner foreach's ``as`` field.
+    collide. Failures point at the inner foreach's ``as`` field. The shared
+    control-region analysis is reused; this helper never traverses alone.
     """
-    from wf_core.analysis.control_regions import analyze_control_regions
+    if control_regions is None:
+        from wf_core.analysis.control_regions import analyze_control_regions
 
-    analysis: ControlRegionAnalysis = analyze_control_regions(workflow)
+        control_regions = analyze_control_regions(workflow)
+    analysis = control_regions
     foreach_by_id = {
         node.id: node for node in workflow.nodes if isinstance(node, ForeachNode)
     }

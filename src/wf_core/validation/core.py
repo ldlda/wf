@@ -53,7 +53,12 @@ def validate_workflow(workflow: Workflow) -> ValidationReport:
             issue.message,
         )
     context_schemas = context_schemas_by_node(workflow, control_regions=analysis)
-    validate_context_paths(workflow, context_schemas=context_schemas, report=report)
+    validate_context_paths(
+        workflow,
+        context_schemas=context_schemas,
+        report=report,
+        control_regions=analysis,
+    )
 
     return report
 

@@ -74,7 +74,9 @@ class ForeachIterationMetadata:
             raise WorkflowExecutionError(
                 f"malformed foreach activation id for frame {frame.id!r}"
             )
-        if not isinstance(loop_index, int):
+        # `bool` is an `int` subclass; an index of True/False is corrupt
+        # persisted metadata, not item 1/0.
+        if not isinstance(loop_index, int) or isinstance(loop_index, bool):
             raise WorkflowExecutionError(
                 f"malformed foreach loop index for frame {frame.id!r}"
             )

@@ -683,6 +683,8 @@ def test_concurrent_items_receive_distinct_frame_and_lineage_context() -> None:
     run = execute_workflow(workflow, {"items": ["a", "b"]}, {"record": record})
     assert run.status == RunStatus.COMPLETED
     assert len(contexts) == 2
+    # Items admitted in one foreach visit share that visit's activation but
+    # own distinct item frames and lineages.
     assert contexts[0].activation_id == contexts[1].activation_id
     assert contexts[0].frame_id != contexts[1].frame_id
     assert contexts[0].lineage_id != contexts[1].lineage_id
@@ -832,3 +834,92 @@ def test_interrupt_resume_recreates_structured_context_identities() -> None:
     assert after_inner.frame_id == before_inner.frame_id
     assert after_inner.lineage_id == before_inner.lineage_id
     assert after_inner.item == before_inner.item
+
+
+def test_single_foreach_exposes_one_structured_entry() -> None:
+    from wf_core import (
+        END,
+        Edge,
+        ForeachNode,
+        NodeDef,
+        NodeUse,
+        SchemaRef,
+        Workflow,
+        execute_workflow,
+    )
+    from wf_core.models.schemas import StateField, StateSchema
+
+    workflow = Workflow(
+        name="single_structured",
+        input_schema=SchemaRef(type="object", properties={}),
+        state_schema=StateSchema.from_field_map({"items": StateField(type="array")}),
+        output_schema=SchemaRef(type="object", properties={}),
+        node_defs=[
+            NodeDef(
+                name="record",
+                input_schema=SchemaRef(type="object", properties={"value": {}}),
+                output_schema=SchemaRef(type="object", properties={}),
+                outcomes=["ok"],
+            )
+        ],
+        start="each",
+        nodes=[
+            ForeachNode.model_validate(
+                {
+                    "id": "each",
+                    "type": "foreach",
+                    "over": "state.items",
+                    "as": "item",
+                    "mode": "serial",
+                }
+            ),
+            NodeUse.model_validate(
+                {
+                    "id": "work",
+                    "type": "node",
+                    "node": "record",
+                    "input": [{"target": "value", "path": "context.item"}],
+                    "output": [],
+                }
+            ),
+        ],
+        edges=[
+            Edge.model_validate({"from": "each", "outcome": "loop", "to": "work"}),
+            Edge.model_validate({"from": "work", "outcome": "ok", "to": "each"}),
+            Edge.model_validate({"from": "each", "outcome": "done", "to": END}),
+        ],
+    )
+    seen: list[RuntimeContext] = []
+
+    def record(_payload: dict[str, object], ctx: RuntimeContext) -> dict[str, object]:
+        seen.append(ctx)
+        return {"outcome": "ok", "output": {}}
+
+    run = execute_workflow(workflow, {"items": ["a"]}, {"record": record})
+    assert run.status == RunStatus.COMPLETED
+    assert len(seen) == 1
+    assert tuple(seen[0].foreach) == ("each",)
+    assert seen[0].foreach["each"].item == "a"
+    assert seen[0].foreach["each"].index == 0
+
+
+def test_bool_loop_index_metadata_fails_closed() -> None:
+    run = _run_with_frames(
+        [
+            ExecutionFrame(
+                id="bad",
+                kind="foreach_iteration",
+                node_id="body",
+                scope_id="root",
+                metadata={
+                    "foreach_node_id": "each",
+                    "activation_id": "act-1",
+                    "loop_index": True,
+                    "loop_item": "a",
+                    "loop_alias": "item",
+                },
+            )
+        ]
+    )
+    with pytest.raises(WorkflowExecutionError, match="malformed foreach loop index"):
+        frame_context_view(run, run.frames["bad"])

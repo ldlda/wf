@@ -5,6 +5,7 @@ from typing import Any
 from wf_core.errors import WorkflowExecutionError
 from wf_core.models.workflow import Workflow
 from wf_core.run_state import (
+    ROOT_FRAME_ID,
     ExecutionFrame,
     FrameStatus,
     RunState,
@@ -12,6 +13,7 @@ from wf_core.run_state import (
     StepExecutionResult,
     TraceEntry,
 )
+from wf_core.runtime.ops.frames import frame_context_view
 from wf_core.runtime.ops.schemas import validate_payload_against_schema
 from wf_core.runtime.ops.state import project_output
 from wf_core.runtime.scheduler import (
@@ -163,9 +165,6 @@ def finalize_run(workflow: Workflow, run: RunState) -> RunState:
         run.outcome = "ok"
     # Root workflow output keeps standard root facts consistent by projecting
     # against the root frame's derived context rather than an empty mapping.
-    from wf_core.run_state import ROOT_FRAME_ID
-    from wf_core.runtime.ops.frames import frame_context_view
-
     root_frame = run.frames.get(ROOT_FRAME_ID)
     root_context: dict[str, Any] = (
         dict(frame_context_view(run, root_frame).graph)

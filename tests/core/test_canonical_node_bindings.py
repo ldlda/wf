@@ -11,7 +11,12 @@ from wf_core.models.steps import (
     InterruptNode,
     NodeUse,
 )
-from wf_core.paths import GraphSourcePath, LocalPath, StatePath
+from wf_core.paths import (
+    GraphSourcePath,
+    LocalPath,
+    PathResolutionError,
+    StatePath,
+)
 
 
 def test_node_use_accepts_canonical_input_and_output_bindings():
@@ -465,9 +470,5 @@ def test_foreach_ref_item_index_are_literal_structured_paths() -> None:
     assert "item" not in node.model_dump(mode="json")
     assert "index" not in node.model_dump(mode="json")
     # GraphSourcePath still rejects an output root.
-    try:
+    with pytest.raises(PathResolutionError):
         GraphSourcePath.parse("output.result")
-    except Exception:
-        pass
-    else:
-        raise AssertionError("expected output root to be rejected")

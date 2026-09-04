@@ -399,3 +399,137 @@ def test_sibling_foreach_aliases_may_match_when_never_active_together() -> None:
         for issue in report.errors
         if issue.code == ValidationIssueCode.FOREACH_CONTEXT_ALIAS_CONFLICT
     ]
+
+
+def test_child_workflow_cannot_address_caller_foreach_context() -> None:
+    """A child scope must receive caller values through declared input.
+
+    The child is validated alone, so a path naming the caller's foreach id
+    is a missing id in the child scope and fails closed.
+    """
+    from wf_core.validation import validate_workflow
+
+    child = Workflow(
+        name="child",
+        input_schema=SchemaRef(type="object", properties={"order": {}}),
+        state_schema=StateSchema.from_field_map({}),
+        output_schema=SchemaRef(type="object", properties={}),
+        node_defs=[_record_def()],
+        start="work",
+        nodes=[_node_use("work", path="context.foreach.orders.item")],
+        edges=[Edge.model_validate({"from": "work", "outcome": "ok", "to": END})],
+    )
+    report = validate_workflow(child)
+    issue = _issue(
+        report, ValidationIssueCode.INVALID_CONTEXT_PATH, "nodes[0].input[0].path"
+    )
+    assert issue is not None
+    assert "context.foreach.orders.item" in issue.message
+
+
+def test_object_expression_and_nested_conditions_report_exact_paths() -> None:
+    from wf_core.models.steps import ConditionNode, InterruptNode
+    from wf_core.validation import validate_workflow
+
+    bad = "context.foreach.missing.item"
+    workflow = _base_workflow()
+    workflow.nodes[2] = _node_use(
+        "work",
+        expression={
+            "kind": "object",
+            "fields": {"order": {"kind": "path", "path": bad}},
+        },
+    )
+    report = validate_workflow(workflow)
+    assert (
+        _issue(
+            report,
+            ValidationIssueCode.INVALID_CONTEXT_PATH,
+            "nodes[2].input[0].expression.fields.order.path",
+        )
+        is not None
+    )
+
+    workflow = _base_workflow()
+    workflow.nodes[2] = ConditionNode.model_validate(
+        {
+            "id": "work",
+            "type": "condition",
+            "check": {
+                "op": "not",
+                "arg": {
+                    "op": "and",
+                    "args": [
+                        {"op": "exists", "path": bad},
+                        {
+                            "op": "eq",
+                            "left": {"path": bad},
+                            "right": {"value": 1},
+                        },
+                    ],
+                },
+            },
+        }
+    )
+    workflow.edges = [
+        Edge.model_validate({"from": "customers", "outcome": "loop", "to": "orders"}),
+        Edge.model_validate({"from": "orders", "outcome": "loop", "to": "work"}),
+        Edge.model_validate({"from": "work", "outcome": "true", "to": "orders"}),
+        Edge.model_validate({"from": "work", "outcome": "false", "to": "orders"}),
+        Edge.model_validate({"from": "orders", "outcome": "done", "to": "after_inner"}),
+        Edge.model_validate(
+            {"from": "after_inner", "outcome": "ok", "to": "customers"}
+        ),
+        Edge.model_validate({"from": "customers", "outcome": "done", "to": END}),
+    ]
+    report = validate_workflow(workflow)
+    assert (
+        _issue(
+            report,
+            ValidationIssueCode.INVALID_CONTEXT_PATH,
+            "nodes[2].check.arg.args[0].path",
+        )
+        is not None
+    )
+    assert (
+        _issue(
+            report,
+            ValidationIssueCode.INVALID_CONTEXT_PATH,
+            "nodes[2].check.arg.args[1].left.path",
+        )
+        is not None
+    )
+
+    workflow = _base_workflow()
+    workflow.nodes[2] = InterruptNode.model_validate(
+        {
+            "id": "work",
+            "type": "interrupt",
+            "kind": "approval",
+            "request": [
+                {
+                    "target": "order",
+                    "expression": {"kind": "path", "path": bad},
+                }
+            ],
+        }
+    )
+    workflow.edges = [
+        Edge.model_validate({"from": "customers", "outcome": "loop", "to": "orders"}),
+        Edge.model_validate({"from": "orders", "outcome": "loop", "to": "work"}),
+        Edge.model_validate({"from": "work", "outcome": "submitted", "to": "orders"}),
+        Edge.model_validate({"from": "orders", "outcome": "done", "to": "after_inner"}),
+        Edge.model_validate(
+            {"from": "after_inner", "outcome": "ok", "to": "customers"}
+        ),
+        Edge.model_validate({"from": "customers", "outcome": "done", "to": END}),
+    ]
+    report = validate_workflow(workflow)
+    assert (
+        _issue(
+            report,
+            ValidationIssueCode.INVALID_CONTEXT_PATH,
+            "nodes[2].request[0].expression.path",
+        )
+        is not None
+    )

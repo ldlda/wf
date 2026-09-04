@@ -563,6 +563,7 @@ def test_subgraph_does_not_inherit_caller_foreach_context() -> None:
     assert isinstance(ctx, RuntimeContext)
     assert tuple(ctx.foreach) == ("orders",)
     assert ctx.foreach["orders"].item == "child-item"
-    assert ctx.foreach["orders"].scope_id != "root"
+    parent_scope_id = run.scopes["root"].id
+    assert ctx.foreach["orders"].scope_id != parent_scope_id
     assert pre_seen["foreach"] == {}
     assert pre_seen["input_order"] == {"sku": "A-17"}
