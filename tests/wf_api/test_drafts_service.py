@@ -675,7 +675,7 @@ async def test_update_capability_step_rejects_wrong_kind_and_invalid_input_atomi
         register_echo=True,
     )
     draft = _echo_draft()
-    draft["steps"]["joined"] = {"join": ["echo"]}
+    draft["steps"]["joined"] = {"end": {}}
     await draft_api.create_draft_workspace(workspace_id="echo", draft=draft)
     before = await draft_api.get_draft_workspace(
         workspace_id="echo",
@@ -3136,7 +3136,7 @@ async def test_set_step_output_bindings_rejects_non_capability_step_without_muta
     await draft_api.patch_draft_workspace(
         workspace_id="non-capability-output-step",
         revision=1,
-        patch=[{"op": "replace", "path": "/steps/render", "value": {"join": {}}}],
+        patch=[{"op": "replace", "path": "/steps/render", "value": {"end": {}}}],
     )
     before = await draft_api.get_draft_workspace(
         workspace_id="non-capability-output-step",
@@ -3246,7 +3246,7 @@ async def test_set_step_output_bindings_stale_revision_precedes_non_capability_s
     await draft_api.patch_draft_workspace(
         workspace_id="stale-output-non-capability",
         revision=1,
-        patch=[{"op": "replace", "path": "/steps/render", "value": {"join": {}}}],
+        patch=[{"op": "replace", "path": "/steps/render", "value": {"end": {}}}],
     )
     before = await draft_api.get_draft_workspace(
         workspace_id="stale-output-non-capability",
@@ -3504,7 +3504,7 @@ async def test_set_step_input_bindings_rejects_non_capability_step_without_mutat
         register_echo=True,
     )
     draft = _structured_report_draft()
-    draft["steps"]["report"] = {"join": {}}
+    draft["steps"]["report"] = {"end": {}}
     await draft_api.create_draft_workspace(workspace_id="non_capability", draft=draft)
     api = WorkflowApi(authoring.context, drafts=True)
     before = await draft_api.get_draft_workspace(
@@ -3956,7 +3956,6 @@ async def test_add_step_from_capability_rejects_existing_step_id(
             "interrupt",
             {"interrupt": {"kind": "review", "outcomes": ["submitted"]}},
         ),
-        ("join", {"join": {}}),
         ("end", {"end": {"outcome": "ok"}}),
         (
             "when",
@@ -4067,7 +4066,7 @@ async def test_add_step_stale_revision_wins_over_content_preflight(
     before = await draft_api.get_draft_workspace(
         workspace_id="draft_ws", include_draft=True
     )
-    step = TypeAdapter(DraftStep).validate_python({"join": {}})
+    step = TypeAdapter(DraftStep).validate_python({"end": {}})
 
     result = await api.add_step(
         workspace_id="draft_ws",

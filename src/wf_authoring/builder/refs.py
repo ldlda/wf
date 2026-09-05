@@ -8,7 +8,6 @@ from wf_core import (
     EndNode,
     ForeachNode,
     InterruptNode,
-    JoinNode,
     NodeUse,
     SubgraphNode,
 )
@@ -16,14 +15,7 @@ from wf_core import (
 from ..nodes import NodeSpec
 
 StepRef: TypeAlias = (
-    str
-    | NodeUse
-    | SubgraphNode
-    | ConditionNode
-    | ForeachNode
-    | InterruptNode
-    | JoinNode
-    | EndNode
+    str | NodeUse | SubgraphNode | ConditionNode | ForeachNode | InterruptNode | EndNode
 )
 """A reference to a step, which can be either a string id or a node object
  that should be auto-used."""

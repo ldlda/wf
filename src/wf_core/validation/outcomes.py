@@ -19,8 +19,6 @@ def declared_outcomes_for_step(step: Step, node_defs: dict[str, NodeDef]) -> set
         if step.item_error.action in {"skip", "collect"}:
             outcomes.add("completed_with_errors")
         return outcomes
-    if step.type == "join":
-        return {"done"}
     if isinstance(step, EndNode):
         return set()
     if isinstance(step, InterruptNode):

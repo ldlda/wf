@@ -132,7 +132,6 @@ Node presentation distinguishes the existing core node kinds:
 - condition;
 - interrupt;
 - foreach;
-- join;
 - end and other control nodes.
 
 Each node shows its stable id and concise semantic label. Selecting a node opens
@@ -226,4 +225,3 @@ The slice is complete when:
 7. stale requests and partial failures cannot corrupt newer selections;
 8. the `lda_report_workflow` lifecycle is readable without scrolling raw JSON;
 9. frontend tests, typecheck, production build, and optional live smoke pass.
-

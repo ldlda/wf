@@ -895,8 +895,9 @@ _Avoid_: Job, invocation
 - Missing reducers mean replace only within a single serial lineage. At a
   **Barrier**, multiple writes to the same path without a reducer are conflicts,
   not last-writer-wins replacements.
-- Current `JoinNode` should not silently become a **Barrier**. It may be
-  repurposed later only through an explicit design pass.
+- The pass-through `JoinNode` was removed. Future **Gather** behavior starts
+  from an explicit barrier contract rather than inheriting placeholder
+  semantics.
 - The first **Scheduler Foundation** implementation should create ready/block/wake
   seams only. **Lineage Isolation** and **Barrier** merge behavior are future
   concurrent semantics, not first-pass behavior.

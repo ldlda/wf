@@ -824,7 +824,6 @@ def test_wf_draft_add_help_lists_typed_step_commands_and_removes_flat_command() 
         "capability",
         "interrupt",
         "foreach",
-        "join",
         "end",
         "when",
         "choose",
@@ -1531,7 +1530,7 @@ def test_wf_draft_add_foreach_builds_concurrent_policy(monkeypatch) -> None:
     assert calls[1]["step"].foreach.concurrent.max_outstanding == 20
 
 
-def test_wf_draft_add_join_and_end_build_concrete_steps(monkeypatch) -> None:
+def test_wf_draft_add_end_builds_concrete_step(monkeypatch) -> None:
     calls: list[dict[str, Any]] = []
 
     class FakeHandlers:
@@ -1544,25 +1543,6 @@ def test_wf_draft_add_join_and_end_build_concrete_steps(monkeypatch) -> None:
         "wf_cli.commands.draft_add.load_cli_context", lambda _ctx: context
     )
 
-    join_result = runner.invoke(
-        app,
-        [
-            "draft",
-            "add",
-            "join",
-            "workspace",
-            "--revision",
-            "1",
-            "--step",
-            "joined",
-            "--from-step",
-            "each_issue",
-            "--from-outcome",
-            "done",
-            "--route",
-            "done=finish",
-        ],
-    )
     end_result = runner.invoke(
         app,
         [
@@ -1571,7 +1551,7 @@ def test_wf_draft_add_join_and_end_build_concrete_steps(monkeypatch) -> None:
             "end",
             "workspace",
             "--revision",
-            "2",
+            "1",
             "--step",
             "finish",
             "--outcome",
@@ -1579,12 +1559,9 @@ def test_wf_draft_add_join_and_end_build_concrete_steps(monkeypatch) -> None:
         ],
     )
 
-    assert join_result.exit_code == 0, join_result.output
     assert end_result.exit_code == 0, end_result.output
-    assert calls[0]["step"].model_dump(mode="json") == {"join": {}}
-    assert calls[0]["routes"] == {"done": "finish"}
-    assert calls[1]["step"].model_dump(mode="json") == {"end": {"outcome": "completed"}}
-    assert calls[1]["routes"] is None
+    assert calls[0]["step"].model_dump(mode="json") == {"end": {"outcome": "completed"}}
+    assert calls[0]["routes"] is None
 
 
 def test_wf_draft_add_control_commands_reject_invalid_input_before_api_call(
@@ -1788,12 +1765,9 @@ def test_wf_draft_add_control_commands_reject_invalid_input_before_api_call(
 def test_wf_draft_add_control_command_help_is_type_specific() -> None:
     interrupt = runner.invoke(app, ["draft", "add", "interrupt", "--help"])
     foreach = runner.invoke(app, ["draft", "add", "foreach", "--help"])
-    join = runner.invoke(app, ["draft", "add", "join", "--help"])
     end = runner.invoke(app, ["draft", "add", "end", "--help"])
 
-    assert (
-        interrupt.exit_code == foreach.exit_code == join.exit_code == end.exit_code == 0
-    )
+    assert interrupt.exit_code == foreach.exit_code == end.exit_code == 0
     assert "--request-schema-file" in interrupt.output
     assert "--resume-schema-file" in interrupt.output
     assert "--request" in interrupt.output
@@ -1806,9 +1780,6 @@ def test_wf_draft_add_control_command_help_is_type_specific() -> None:
     assert "--item-error" in foreach.output
     assert "--collect-to" in foreach.output
     assert "--request-schema-file" not in foreach.output
-    assert "--from-step" in join.output
-    assert "--route" in join.output
-    assert "--request-schema-file" not in join.output
     assert "--outcome" in end.output
     assert "--route" not in end.output
 

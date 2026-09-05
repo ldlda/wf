@@ -220,14 +220,6 @@ class DraftSubgraphStep(BaseModel):
     subgraph: DraftSubgraphPayload
 
 
-class DraftJoinStep(BaseModel):
-    """Draft step that emits the current core join node."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    join: JsonObject = Field(default_factory=dict)
-
-
 class DraftEndPayload(BaseModel):
     """Payload for one explicit workflow terminal outcome."""
 
@@ -323,7 +315,6 @@ DraftStep = (
     DraftUseStep
     | DraftForeachStep
     | DraftInterruptStep
-    | DraftJoinStep
     | DraftEndStep
     | DraftWhenStep
     | DraftChooseStep

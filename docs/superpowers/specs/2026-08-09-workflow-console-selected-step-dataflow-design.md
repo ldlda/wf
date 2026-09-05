@@ -28,7 +28,7 @@ The remaining graph-authoring work is split into independently useful slices:
 1. selected-step input and output dataflow;
 2. workflow Input, State, and Outcomes contract projections;
 3. explicit End authoring and a typed Add step palette;
-4. typed interrupt, control, subgraph, foreach, and join forms; and
+4. typed interrupt, control, subgraph, and foreach forms; and
 5. direct graph gestures lowered through the same canonical mutations.
 
 This document specifies only the first item.

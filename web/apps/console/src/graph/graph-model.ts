@@ -7,7 +7,6 @@ export type WorkflowGraphNodeKind =
   | "condition"
   | "interrupt"
   | "foreach"
-  | "join"
   | "end"
   | "unsupported";
 
@@ -94,8 +93,6 @@ const mapNodeKind = (type: unknown): WorkflowGraphNodeKind => {
       return "interrupt";
     case "foreach":
       return "foreach";
-    case "join":
-      return "join";
     case "end":
       return "end";
     default:
@@ -119,7 +116,6 @@ const buildLabel = (
     return typeof node.kind === "string" ? node.kind : "Interrupt";
   }
   if (type === "foreach") return "For Each";
-  if (type === "join") return "Join";
   if (type === "subgraph") {
     const workflowRef = typeof node.workflow === "string" ? node.workflow : undefined;
     if (workflowRef) {

@@ -2090,7 +2090,7 @@ def test_add_draft_step_params_reject_invalid_kind_and_route_source() -> None:
                 "workspace_id": "ws",
                 "revision": 1,
                 "step_id": "bad",
-                "step": {"use": "demo.echo", "join": {}},
+                "step": {"use": "demo.echo", "end": {}},
             }
         )
 
@@ -2104,7 +2104,7 @@ def test_add_draft_step_params_reject_invalid_kind_and_route_source() -> None:
                     "workspace_id": "ws",
                     "revision": 1,
                     "step_id": "new",
-                    "step": {"join": {}},
+                    "step": {"end": {}},
                     "incoming": incoming,
                 }
             )

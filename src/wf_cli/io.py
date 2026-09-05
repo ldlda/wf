@@ -56,7 +56,7 @@ def write_json_file(path: Path, payload: Any, *, force: bool) -> None:
             output.write("\n")
     except FileExistsError as exc:
         raise CliInputError(
-            f"file {path!s} already exists; use --force to replace it"
+            f"file already exists: {path!s}; use --force to replace it"
         ) from exc
     except OSError as exc:
         raise CliInputError(f"could not write file {path!s}: {exc}") from exc

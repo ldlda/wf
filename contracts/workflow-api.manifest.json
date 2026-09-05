@@ -1312,17 +1312,6 @@
         ],
         "type": "object"
       },
-      "DraftJoinStep": {
-        "additionalProperties": false,
-        "description": "Draft step that emits the current core join node.",
-        "properties": {
-          "join": {
-            "additionalProperties": true,
-            "type": "object"
-          }
-        },
-        "type": "object"
-      },
       "DraftMatchCase": {
         "additionalProperties": false,
         "description": "One ordered equality case in a draft match decision.",
@@ -6208,9 +6197,6 @@
               },
               {
                 "$ref": "#/components/schemas/DraftInterruptStep"
-              },
-              {
-                "$ref": "#/components/schemas/DraftJoinStep"
               },
               {
                 "$ref": "#/components/schemas/DraftEndStep"

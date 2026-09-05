@@ -10,7 +10,6 @@ from wf_core.models.steps import (
     EndNode,
     ForeachNode,
     InterruptNode,
-    JoinNode,
     NodeUse,
     SubgraphNode,
 )
@@ -22,7 +21,6 @@ from wf_core.runtime.ops.foreach import step_foreach
 from wf_core.runtime.ops.handlers import (
     handle_condition_step,
     handle_interrupt_step,
-    handle_join_step,
 )
 from wf_core.runtime.ops.index import WorkflowIndex, build_workflow_index
 from wf_core.runtime.ops.merges import ReducerDefinition
@@ -149,8 +147,6 @@ def step_workflow(
             raise
     elif isinstance(step, ConditionNode):
         step_result = handle_condition_step(run, step)
-    elif isinstance(step, JoinNode):
-        step_result = handle_join_step()
     elif isinstance(step, EndNode):
         return complete_end_step(
             run=run,
@@ -264,8 +260,6 @@ async def step_workflow_async(
             raise
     elif isinstance(step, ConditionNode):
         step_result = handle_condition_step(run, step)
-    elif isinstance(step, JoinNode):
-        step_result = handle_join_step()
     elif isinstance(step, EndNode):
         return complete_end_step(
             run=run,

@@ -67,7 +67,6 @@ def test_schema_compact_alias_is_json_outline_without_refs() -> None:
         "SubgraphNode",
         "ConditionNode",
         "ForeachNode",
-        "JoinNode",
         "EndNode",
         "InterruptNode",
     ]

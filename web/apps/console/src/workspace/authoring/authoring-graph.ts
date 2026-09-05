@@ -57,7 +57,6 @@ const stepKind = (step: JsonRecord): string => {
     "choose",
     "match",
     "foreach",
-    "join",
     "end",
   ]) {
     if (kind in step) return kind;

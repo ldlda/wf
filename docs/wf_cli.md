@@ -444,7 +444,7 @@ Use `set-route` separately for outcome routing.
 Use `wf draft add` to add one typed step to an existing draft:
 
 ```text
-capability  interrupt  foreach  join  end
+capability  interrupt  foreach  end
 when        choose     match    subgraph
 ```
 

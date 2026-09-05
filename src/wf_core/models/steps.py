@@ -293,13 +293,6 @@ class ForeachNode(BaseModel):
         return GraphSourcePath("context", ("foreach", self.id, "index"))
 
 
-class JoinNode(BaseModel):
-    """Control-flow step that marks a branch or frame as joined."""
-
-    id: str
-    type: Literal["join"]
-
-
 class EndNode(BaseModel):
     """Explicit workflow terminal that sets the workflow-level outcome.
 
@@ -411,13 +404,7 @@ class InterruptNode(BaseModel):
 
 
 Step = Annotated[
-    NodeUse
-    | SubgraphNode
-    | ConditionNode
-    | ForeachNode
-    | JoinNode
-    | EndNode
-    | InterruptNode,
+    NodeUse | SubgraphNode | ConditionNode | ForeachNode | EndNode | InterruptNode,
     Field(discriminator="type"),
 ]
 """Discriminated union of all executable workflow graph steps."""

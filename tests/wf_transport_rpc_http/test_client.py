@@ -13,7 +13,6 @@ from wf_api.surface import RouteSource, WorkflowDraftSurface
 from wf_artifacts.drafts.models import (
     DraftEndPayload,
     DraftEndStep,
-    DraftJoinStep,
     DraftStep,
 )
 from wf_core import END
@@ -573,32 +572,25 @@ async def test_rpc_client_builds_capability_free_draft_lifecycle(tmp_path) -> No
             workspace_id="control_first",
             name="control_first",
         )
-        joined = await client.add_step(
-            workspace_id="control_first",
-            revision=created["revision"],
-            step_id="gate",
-            step=DraftJoinStep(join={}),
-            routes={"done": "finish"},
-        )
-        started = await client.set_draft_start(
-            workspace_id="control_first",
-            revision=joined["revision"],
-            step_id="gate",
-        )
         ended = await client.add_step(
             workspace_id="control_first",
-            revision=started["revision"],
+            revision=created["revision"],
             step_id="finish",
             step=DraftEndStep(end=DraftEndPayload(outcome="error")),
         )
-        contracted = await client.set_draft_contract(
+        started = await client.set_draft_start(
             workspace_id="control_first",
             revision=ended["revision"],
+            step_id="finish",
+        )
+        contracted = await client.set_draft_contract(
+            workspace_id="control_first",
+            revision=started["revision"],
             outcomes=("error",),
         )
         stale = await client.set_draft_start(
             workspace_id="control_first",
-            revision=ended["revision"],
+            revision=started["revision"],
             step_id="finish",
         )
         validated = await client.validate_draft_workspace(workspace_id="control_first")
@@ -609,22 +601,18 @@ async def test_rpc_client_builds_capability_free_draft_lifecycle(tmp_path) -> No
         )
 
     assert created["revision"] == 1
-    assert joined["revision"] == 2
+    assert ended["revision"] == 2
     assert started["revision"] == 3
-    assert ended["revision"] == 4
-    assert contracted["revision"] == 5
+    assert contracted["revision"] == 4
     assert stale["status"] == "conflict"
     assert stale["diagnostics"][0]["code"] == "revision_conflict"
     assert validated["status"] == "valid"
     assert "compiled_plan" in compiled
-    assert compiled["compiled_plan"]["start"] == "gate"
+    assert compiled["compiled_plan"]["start"] == "finish"
     draft = inspected.get("draft")
     assert draft is not None
-    assert draft["start"] == "gate"
-    assert draft["steps"] == {
-        "gate": {"join": {}},
-        "finish": {"end": {"outcome": "error"}},
-    }
+    assert draft["start"] == "finish"
+    assert draft["steps"] == {"finish": {"end": {"outcome": "error"}}}
 
 
 def test_rpc_client_satisfies_draft_surface_static_shape() -> None:
@@ -1226,7 +1214,6 @@ async def test_rpc_client_preserves_nested_local_path_strings() -> None:
                 "outcomes": ["submitted"],
             },
         ),
-        ("join", TypeAdapter(DraftStep).validate_python({"join": {}}), {}),
         ("end", TypeAdapter(DraftStep).validate_python({"end": {}}), {"outcome": "ok"}),
         (
             "when",

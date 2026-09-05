@@ -771,14 +771,14 @@ def test_wf_remote_capability_free_draft_lifecycle(monkeypatch, tmp_path) -> Non
         [
             "draft",
             "add",
-            "join",
+            "end",
             "control_ws",
             "--revision",
             "1",
             "--step",
-            "gate",
-            "--route",
-            "done=finish",
+            "finish",
+            "--outcome",
+            "error",
         ],
         [
             "draft",
@@ -787,26 +787,14 @@ def test_wf_remote_capability_free_draft_lifecycle(monkeypatch, tmp_path) -> Non
             "--revision",
             "2",
             "--step",
-            "gate",
-        ],
-        [
-            "draft",
-            "add",
-            "end",
-            "control_ws",
-            "--revision",
-            "3",
-            "--step",
             "finish",
-            "--outcome",
-            "error",
         ],
         [
             "draft",
             "set-contract",
             "control_ws",
             "--revision",
-            "4",
+            "3",
             "--outcome",
             "error",
         ],
@@ -824,10 +812,10 @@ def test_wf_remote_capability_free_draft_lifecycle(monkeypatch, tmp_path) -> Non
     assert '"status": "valid"' in results[-1].output
     assert inspected.exit_code == 0, inspected.output
     payload = json.loads(inspected.output)
-    assert payload["revision"] == 5
-    assert payload["draft"]["start"] == "gate"
+    assert payload["revision"] == 4
+    assert payload["draft"]["start"] == "finish"
     assert payload["draft"]["outcomes"] == ["error"]
-    assert set(payload["draft"]["steps"]) == {"gate", "finish"}
+    assert set(payload["draft"]["steps"]) == {"finish"}
 
 
 def test_wf_draft_export_uses_remote_get_and_writes_only_draft(
@@ -2409,7 +2397,6 @@ def test_wf_draft_add_control_steps_use_generic_rpc_target(
                 "completed_with_errors": "__end__",
             },
         ),
-        ("join", ["--route", "done=__end__"], {}, {"done": "__end__"}),
         ("end", ["--outcome", "ok"], {"outcome": "ok"}, None),
         (
             "when",

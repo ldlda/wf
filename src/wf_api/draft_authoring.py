@@ -16,7 +16,6 @@ from wf_artifacts.drafts.models import (
     DraftEndStep,
     DraftForeachStep,
     DraftInterruptStep,
-    DraftJoinStep,
     DraftMatchStep,
     DraftStep,
     DraftSubgraphStep,
@@ -353,8 +352,6 @@ class WorkflowDraftAuthoringApi:
             return outcomes
         if isinstance(step, DraftInterruptStep):
             return set(step.interrupt.outcomes)
-        if isinstance(step, DraftJoinStep):
-            return {"done"}
         if isinstance(step, DraftSubgraphStep):
             return set(step.subgraph.outcomes)
         if isinstance(

@@ -4,7 +4,7 @@ from typing import Any
 
 from wf_authoring import WorkflowBuilder
 from wf_authoring.dsl import PathExpr
-from wf_core import JoinNode, SubgraphNode, Workflow
+from wf_core import SubgraphNode, Workflow
 from wf_core.paths import GraphSourcePath
 
 from .models import (
@@ -12,7 +12,6 @@ from .models import (
     DraftEndStep,
     DraftForeachStep,
     DraftInterruptStep,
-    DraftJoinStep,
     DraftMatchStep,
     DraftStep,
     DraftSubgraphStep,
@@ -84,10 +83,6 @@ def _add_step(builder: WorkflowBuilder, step_id: str, step: DraftStep):
         return builder.interrupt(
             **interrupt_kwargs,
         )
-    if isinstance(step, DraftJoinStep):
-        node = JoinNode(id=step_id, type="join")
-        builder.nodes.append(node)
-        return node
     if isinstance(step, DraftEndStep):
         return builder.end(step.end.outcome, id=step_id)
     if isinstance(step, DraftWhenStep):

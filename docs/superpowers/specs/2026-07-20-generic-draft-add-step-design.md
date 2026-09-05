@@ -56,7 +56,6 @@ deliberate authoring vocabulary that is later lowered by
 - `DraftUseStep`
 - `DraftForeachStep`
 - `DraftInterruptStep`
-- `DraftJoinStep`
 - `DraftEndStep`
 - `DraftWhenStep`
 - `DraftChooseStep`
@@ -149,7 +148,6 @@ Declared top-level outcomes are:
 - `foreach`: `loop`, `done`, plus `completed_with_errors` when the item-error
   policy is `skip` or `collect`;
 - `interrupt`: `interrupt.outcomes`;
-- `join`: `done`;
 - `subgraph`: `subgraph.outcomes`.
 
 The capability helper remains distinct because it resolves a capability,
@@ -175,7 +173,7 @@ reject malformed or ambiguous step objects before dispatching to the API.
 
 The Python RPC client implements the same method on `WorkflowApi`. Client and
 server serialize steps with aliases so fields such as foreach `as` and when
-`if` retain their canonical wire names. Round-trip tests cover all nine step
+`if` retain their canonical wire names. Round-trip tests cover all eight step
 variants, including interrupt schemas and subgraph workflow references.
 
 ## CLI Shape
@@ -186,7 +184,6 @@ Register a focused Typer application beneath `wf draft`:
 wf draft add capability
 wf draft add interrupt
 wf draft add foreach
-wf draft add join
 wf draft add end
 wf draft add when
 wf draft add choose
@@ -210,7 +207,6 @@ Variant-specific options are:
   `--resume LOCAL_SOURCE=STATE_TARGET`, and repeatable `--outcome`;
 - `foreach`: `--over`, `--as`, `--mode`, `--item-error`, optional
   `--collect-to`, `--max-active`, and `--max-outstanding`;
-- `join`: no variant-specific options;
 - `end`: `--outcome` and no `--route`;
 - `when`: `--condition-file`, `--then`, and `--otherwise`;
 - `choose`: `--clauses-file` containing the ordered clause array and
@@ -269,7 +265,7 @@ modules need them; avoid a broad CLI refactor.
 
 ### CLI
 
-- `wf draft add --help` lists all nine commands.
+- `wf draft add --help` lists all eight commands.
 - Per-command help exposes only relevant options.
 - Every command builds the expected `DraftStep`, incoming source, and routes.
 - Invalid flag combinations fail before calling the API.

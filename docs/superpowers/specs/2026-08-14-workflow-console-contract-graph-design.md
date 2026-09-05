@@ -56,7 +56,7 @@ Slice 6 includes:
 Slice 6 excludes:
 
 - explicit End-node creation;
-- typed creation forms for interrupt, condition, subgraph, foreach, or join;
+- typed creation forms for interrupt, condition, subgraph, or foreach;
 - graph gesture binding by drawing edges;
 - arbitrary schema inference from runtime values;
 - renaming existing step ids;
@@ -140,7 +140,7 @@ independent source of truth once the operation is available.
 Standard frame context currently includes values such as prior outcome, active
 incoming edge, scope id, lineage id, and parent lineage id. Foreach iteration
 frames additionally expose loop item, loop index, and the configured foreach
-alias. Future fork/join features may add branch-scoped context through the same
+alias. Future fork/gather features may add branch-scoped context through the same
 inventory without changing high-level clients.
 
 Context availability is computed by core/API code using workflow graph and

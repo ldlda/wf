@@ -41,15 +41,6 @@ def handle_condition_step(
     )
 
 
-def handle_join_step() -> StepExecutionResult:
-    return StepExecutionResult(
-        outcome="done",
-        resolved_input={},
-        output={},
-        state_changes={},
-    )
-
-
 def handle_interrupt_step(
     run: RunState,
     step: InterruptNode,

@@ -40,29 +40,25 @@ author -> validate -> save artifact -> deploy -> run -> inspect or resume
 
 ## Active runtime sequence
 
-The next three slices build on the foreach control-region, scheduler, lineage,
-and barrier foundations in this order.
+The next three slices build on the foreach control-region, structured-context,
+scheduler, lineage, and barrier foundations in this order.
 
-### 1. Review and merge structured runtime context
+### 1. Add a persisted run step budget
 
-The implementation plan is ready and its feature branch is under review:
-
-- [`structured runtime context design`](superpowers/specs/2026-09-04-structured-runtime-context-design.md)
-- [`structured runtime context implementation plan`](historical/superpowers/plans/2026-09-04-structured-runtime-context.md)
-
-This slice gives runtime code, expressions, validation, and authoring references
-one model for run data and same-scope foreach activations. Subgraphs continue to
-cross an explicit input boundary rather than inheriting a parent's context.
-
-### 2. Add a persisted run step budget
-
-After structured context is stable, implement the proposed run-wide limit:
+Implement the proposed run-wide limit:
 
 - [`run step budget design`](superpowers/specs/2026-09-04-run-step-budget-design.md)
 
 The budget must cover every frame and subgraph scope in one run, survive
 checkpoint and resume, and stop valid but non-terminating graph cycles with a
 clear runtime failure.
+
+### 2. Consolidate runtime identity resolution
+
+Introduce one internal resolver for a frame, lineage, runtime scope, and
+foreach activation environment. The resolver should validate the canonical
+identity chain once so fork/gather code does not pass related identifiers
+independently or repeat ownership walks.
 
 ### 3. Implement explicit fork and gather
 
@@ -140,12 +136,18 @@ The active sequence can assume these foundations:
 - Native subgraph scopes and durable return to the parent node
 - Concurrent foreach with activation barriers and reducer-aware lineage merges
 - Validated foreach back-edges with one static control region per node use
+- Structured runtime context shared by execution, expressions, validation, and
+  authoring references
+- Removal of the pass-through `JoinNode`; future `GatherNode` starts with its
+  actual synchronization contract and no placeholder compatibility
 - Durable stopped-run inspection and resume
 - Python client reconstruction of capabilities, artifacts, deployments, and
   runs through the API
 
 The current foreach return contract is
 [`foreach back-edge design`](superpowers/specs/2026-09-04-foreach-back-edge-design.md).
+The current context contract is
+[`structured runtime context`](superpowers/specs/2026-09-04-structured-runtime-context-design.md).
 
 ## Historical entry points
 

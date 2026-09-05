@@ -399,8 +399,8 @@ are part of the graph definition:
 ```
 
 Static values are not path mappings. Use `{"target": ..., "value": ...}` for
-literal JSON values. Invalid draft step shapes are rejected instead of silently
-compiling to `join`.
+literal JSON values. Invalid draft step shapes are rejected instead of being
+silently replaced with a placeholder step.
 
 Generated MCP tool wrappers are intentionally naive. They normally expose both
 `ok` and `error` outcomes, because MCP tool calls can report transport/provider
@@ -512,16 +512,6 @@ Declares an explicit workflow terminal outcome.
 
 Use explicit `end` steps for non-`ok` workflow outcomes. The legacy `__end__`
 destination remains the shorthand for public workflow outcome `ok`.
-
-### `join`
-
-Joins control flow.
-
-```json
-{
-  "join": {}
-}
-```
 
 ### `when`
 
@@ -643,10 +633,9 @@ interrupt, an end step, or a subgraph rather than a capability:
 
 ```bash
 wf draft create report_ws --name report_workflow
-wf draft add join report_ws --revision 1 --step gate --route done=finish
-wf draft set-start report_ws --revision 2 --step gate
-wf draft add end report_ws --revision 3 --step finish --outcome error
-wf draft set-contract report_ws --revision 4 --outcome error
+wf draft add end report_ws --revision 1 --step finish --outcome error
+wf draft set-start report_ws --revision 2 --step finish
+wf draft set-contract report_ws --revision 3 --outcome error
 wf draft validate report_ws
 ```
 

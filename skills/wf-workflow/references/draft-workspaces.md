@@ -255,7 +255,7 @@ an unexpected extra argument because it is not attached to its own flag.
 
   Adds any typed `DraftStep` with optional incoming and outgoing route wiring in
   one revision. The CLI exposes one command per kind under `wf draft add`:
-  `interrupt`, `foreach`, `join`, `end`, `when`, `choose`, `match`, and
+  `interrupt`, `foreach`, `end`, `when`, `choose`, `match`, and
   `subgraph`. Decision targets are embedded and reject `--route`. Interrupts
   and subgraphs preserve JSON Schema boundary contracts. Invalid intermediate
   drafts remain saveable in the workspace but must pass `wf draft validate`

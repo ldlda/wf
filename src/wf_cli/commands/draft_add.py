@@ -16,7 +16,6 @@ from wf_artifacts.drafts.models import (
     DraftForeachStep,
     DraftInterruptPayload,
     DraftInterruptStep,
-    DraftJoinStep,
     DraftMatchCase,
     DraftMatchPayload,
     DraftMatchStep,
@@ -419,43 +418,6 @@ def add_foreach_step(
         revision=revision,
         step_id=step_id,
         step=step,
-        from_step=from_step,
-        from_outcome=from_outcome,
-        routes=_parse_route_flags(route) or None,
-    )
-
-
-@app.command("join")
-def add_join_step(
-    ctx: typer.Context,
-    workspace_id: Annotated[str, typer.Argument(help="Draft workspace id.")],
-    revision: Annotated[
-        int, typer.Option("--revision", min=1, help="Expected workspace revision.")
-    ],
-    step_id: Annotated[str, typer.Option("--step", help="New draft step id.")],
-    from_step: Annotated[
-        str | None, typer.Option("--from-step", help="Incoming step id.")
-    ] = None,
-    from_outcome: Annotated[
-        str | None,
-        typer.Option("--from-outcome", help="Outcome on --from-step (default: ok)."),
-    ] = None,
-    route: Annotated[
-        list[str] | None,
-        typer.Option("--route", help="Route mapping OUTCOME=TARGET. Repeat as needed."),
-    ] = None,
-) -> None:
-    """Add a join step.
-
-    Example: `wf draft add join WS --revision 1 --step joined --route done=__end__`.
-    Run `wf draft validate WS` after editing.
-    """
-    _submit_step(
-        ctx,
-        workspace_id=workspace_id,
-        revision=revision,
-        step_id=step_id,
-        step=DraftJoinStep(join={}),
         from_step=from_step,
         from_outcome=from_outcome,
         routes=_parse_route_flags(route) or None,

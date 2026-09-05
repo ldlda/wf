@@ -46,7 +46,6 @@ describe("architectureCatalog", () => {
       "NodeUse",
       "Condition",
       "Foreach",
-      "Join",
       "Subgraph",
       "Interrupt",
       "End",

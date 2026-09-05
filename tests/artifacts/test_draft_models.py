@@ -226,7 +226,7 @@ def test_draft_step_requires_exactly_one_kind_key() -> None:
     assert isinstance(steps, dict)
     echo = steps["echo"]
     assert isinstance(echo, dict)
-    echo["join"] = {}
+    echo["end"] = {"outcome": "ok"}
 
     with pytest.raises(ValidationError) as exc_info:
         WorkflowDraft.model_validate(draft)

@@ -112,7 +112,6 @@ Exactly one step-kind key must be present. Allowed step-kind keys are:
 - `use`
 - `foreach`
 - `interrupt`
-- `join`
 
 Zero kind keys or multiple kind keys are validation errors.
 
@@ -243,19 +242,6 @@ This lowers to the current core `ForeachNode`.
 
 This lowers to the current core `InterruptNode`.
 
-### `join`
-
-```json
-{
-  "join": {}
-}
-```
-
-This lowers to the current core `JoinNode`.
-
-`join` is not a reverse branch. It remains reserved for actual join/frame
-semantics.
-
 ## Routes
 
 Most ordinary edges should be authored through `routes`:
@@ -337,7 +323,8 @@ node_c.unreachable
   -> runtime_error
 ```
 
-This is not `join`. It is compressed declaration of several ordinary edges.
+This is not synchronization. It is compressed declaration of several ordinary
+edges.
 
 Possible later surfaces:
 
@@ -366,7 +353,7 @@ That should be handled as its own pass, not smuggled into this MCP draft change.
 Potential later core work:
 
 - true graph-as-node / subgraph support
-- meaningful join semantics
+- explicit fork/gather semantics
 - future START-edge support if `Workflow.start` changes
 
 ### Draft `route` Sugar

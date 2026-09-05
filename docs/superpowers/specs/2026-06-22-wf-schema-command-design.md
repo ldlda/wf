@@ -157,7 +157,6 @@ Example:
           "SubgraphNode",
           "ConditionNode",
           "ForeachNode",
-          "JoinNode",
           "EndNode",
           "InterruptNode"
         ]

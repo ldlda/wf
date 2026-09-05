@@ -464,7 +464,6 @@ export interface WorkflowContractMap {
         | DraftUseStep
         | DraftForeachStep
         | DraftInterruptStep
-        | DraftJoinStep
         | DraftEndStep
         | DraftWhenStep
         | DraftChooseStep
@@ -1866,17 +1865,6 @@ export interface SchemaRef {
   title?: string | null;
   type?: string | string[] | null;
   [k: string]: unknown;
-}
-/**
- * Draft step that emits the current core join node.
- *
- * This interface was referenced by `WorkflowContractMap`'s JSON-Schema
- * via the `definition` "DraftJoinStep".
- */
-export interface DraftJoinStep {
-  join?: {
-    [k: string]: unknown;
-  };
 }
 /**
  * Draft step that lowers to core `EndNode`.

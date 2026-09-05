@@ -36,7 +36,7 @@ They are runtime policy, not workflow graph semantics.
 
 **Step Attempt** is one admitted attempt to execute a selected workflow `Step`
 in one frame. Node uses, conditions, foreach controllers, subgraph boundaries,
-interrupt nodes, joins, and explicit end nodes all count.
+interrupt nodes, and explicit end nodes all count.
 
 **Step Number** is the one-based ordinal assigned to an admitted step attempt
 within a run.
@@ -256,7 +256,7 @@ with the run.
 ### Core counting
 
 - A budget of one admits exactly one step and denies the second.
-- Node, condition, foreach, subgraph, interrupt, join, and explicit end steps
+- Node, condition, foreach, subgraph, interrupt, and explicit end steps
   count.
 - A transition to legacy `END` does not create an extra attempt.
 - Handler failure still consumes its admitted step.

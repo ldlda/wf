@@ -14,9 +14,10 @@ without making multiple matching edges silently mean broadcast.
 
 The scheduler, ready queue, blocked frames, lineage-local state views, and
 reducer-aware barrier commits already support concurrent foreach and native
-subgraphs. They do not yet define general graph-level fork/gather. The existing
-`JoinNode` is only a day-one marker: it immediately emits `done` and neither
-waits nor merges. Renaming it would falsely preserve semantics it never had.
+subgraphs. They do not yet define general graph-level fork/gather. A former
+`JoinNode` day-one marker immediately emitted `done`; it was removed after a
+census found no real persisted workflows using it. `GatherNode` therefore does
+not inherit placeholder semantics or a compatibility burden.
 
 A cross-system semantics review supported keeping `NodeResult.output` separate
 from its named domain `outcome`, keeping operational failure outside that
@@ -135,11 +136,10 @@ feature would require an operational signal to the owning foreach and an
 explicit policy for already admitted concurrent items. No `BreakNode` is added
 without that use case and policy.
 
-The current `JoinNode` will not be silently upgraded. Before implementation we
-will verify whether real persisted artifacts use it. With no real compatibility
-obligation, remove it and introduce `GatherNode` cleanly. If persisted callers
-exist, define an explicit migration rather than assigning barrier semantics to
-old `join` payloads.
+The placeholder `JoinNode` was removed rather than silently upgraded. The
+repository has no real persisted artifacts outside tests, so `GatherNode` can
+be introduced with its actual rendezvous and merge contract and no legacy wire
+alias.
 
 ## Considered Options
 
@@ -169,8 +169,8 @@ ordinary back-edge to the owning foreach already expresses item return in the
 canonical graph. Break and race semantics remain separate future policies
 rather than additional meanings assigned to ordinary outcomes.
 
-**Reuse or rename `JoinNode`.** Rejected as the default because the existing
-node is a pass-through marker with no barrier contract.
+**Reuse or rename the placeholder `JoinNode`.** Rejected and removed because
+the node was a pass-through marker with no barrier contract.
 
 ## Consequences
 
@@ -206,7 +206,6 @@ node is a pass-through marker with no barrier contract.
   continuation frame in each topology shape.
 - The trace representation for waiting and merging without excessive internal
   scheduler noise.
-- Whether any real persisted artifact requires migration from `JoinNode`.
 
 This ADR extends the lineage and barrier direction established by
 [ADR-0002](0002-concurrent-foreach-policy-and-barrier-commits.md). It remains

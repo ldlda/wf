@@ -31,8 +31,6 @@ const nodeColor = (data: WorkflowGraphNodeData): string => {
       return "#ef4444";
     case "foreach":
       return "#8b5cf6";
-    case "join":
-      return "#10b981";
     case "end":
       return "#6b7280";
     default:
