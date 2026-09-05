@@ -1199,6 +1199,7 @@ async def test_rpc_runs_deployment_and_reads_bounded_trace(tmp_path) -> None:
     assert trace["result"]["trace_start"] == 0
     assert trace["result"]["trace_limit"] == 1
     assert len(trace["result"]["trace"]) == 1
+    assert trace["result"]["trace"][0]["step_number"] == 1
 
 
 async def test_rpc_run_list_method(tmp_path) -> None:
@@ -2303,6 +2304,28 @@ async def test_rpc_runs_start_rejects_non_positive_step_budget(tmp_path) -> None
                 "deployment_id": deployment_id,
                 "workflow_input": {},
                 "max_steps": 0,
+            },
+        )
+
+    assert rejected["error"]["code"] == -32602
+
+
+@pytest.mark.parametrize("max_steps", [True, "5"])
+async def test_rpc_runs_start_rejects_non_integer_step_budget(
+    tmp_path, max_steps: object
+) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    deployment_id = await _seed_step_budget_deployment(server)
+    app = create_rpc_app(server)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        rejected = await _rpc(
+            client,
+            "workflow.runs.start",
+            {
+                "deployment_id": deployment_id,
+                "workflow_input": {},
+                "max_steps": max_steps,
             },
         )
 

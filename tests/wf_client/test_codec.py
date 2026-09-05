@@ -163,6 +163,7 @@ def test_decode_trace_result_decodes_bounded_trace() -> None:
                     "frame_id": "root",
                     "node_id": "constant",
                     "step_type": "node",
+                    "step_number": 1,
                     "resolved_input": {},
                     "outcome": "ok",
                     "next_node_id": "__end__",
@@ -176,3 +177,4 @@ def test_decode_trace_result_decodes_bounded_trace() -> None:
     assert result.trace_start == 0
     assert result.trace is not None
     assert result.trace[0]["node_id"] == "constant"
+    assert result.trace[0]["step_number"] == 1

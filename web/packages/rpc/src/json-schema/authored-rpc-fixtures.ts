@@ -301,11 +301,15 @@ const RunResultSchema = Schema.Struct({
   output: Schema.NullOr(JsonObjectSchema),
   diagnostics: Schema.Array(Schema.Unknown),
   trace_count: NonNegativeIntegerSchema,
+  max_steps: PositiveIntegerSchema,
+  steps_executed: NonNegativeIntegerSchema,
+  steps_remaining: NonNegativeIntegerSchema,
   next_actions: RunNextActionsSchema,
 });
 const TraceFrameSchema = Schema.Struct({
   node_id: Schema.String,
   step_type: Schema.String,
+  step_number: Schema.NullOr(PositiveIntegerSchema),
   resolved_input: JsonObjectSchema,
   outcome: Schema.String,
   output: JsonObjectSchema,
@@ -764,6 +768,7 @@ export const authoredRpcSchemas = {
       deployment_id: Schema.String,
       workflow_input: JsonObjectSchema,
       trace_range: Schema.optional(Schema.NullOr(TraceRangeSchema)),
+      max_steps: Schema.optional(PositiveIntegerSchema),
     }),
     success: RunResultSchema,
   },

@@ -438,6 +438,7 @@ class StartRunParams(RpcParamsModel):
     max_steps: int | None = Field(
         default=None,
         ge=1,
+        strict=True,
         description=(
             "Optional run step budget. The server default applies when omitted; "
             "resume never accepts a replacement."

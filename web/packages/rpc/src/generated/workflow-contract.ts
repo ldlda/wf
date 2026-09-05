@@ -2481,6 +2481,7 @@ export interface TraceEntryPayload {
   output: JsonObject;
   resolved_input: JsonObject;
   state_changes: JsonObject;
+  step_number: number | null;
   step_type: string;
   [k: string]: unknown;
 }
@@ -5018,6 +5019,16 @@ export const workflowRuntimeContract = {
         "state_changes": {
           "$ref": "#/components/schemas/JsonObject"
         },
+        "step_number": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "step_type": {
           "type": "string"
         }
@@ -5026,6 +5037,7 @@ export const workflowRuntimeContract = {
         "frame_id",
         "node_id",
         "step_type",
+        "step_number",
         "resolved_input",
         "outcome",
         "next_node_id",

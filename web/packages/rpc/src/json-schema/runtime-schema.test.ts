@@ -315,6 +315,9 @@ describe("runtimeSchemasFor", () => {
       output: null,
       diagnostics: [],
       trace_count: 1,
+      max_steps: 10_000,
+      steps_executed: 1,
+      steps_remaining: 9_999,
       next_actions: {
         can_continue: true,
         can_save_now: null,
@@ -381,6 +384,7 @@ describe("runtimeSchemasFor", () => {
         frame_id: "frame_1",
         node_id: "review_issues",
         step_type: "interrupt",
+        step_number: 1,
         resolved_input: {},
         outcome: "submitted",
         next_node_id: "create_issues",
@@ -401,6 +405,9 @@ describe("runtimeSchemasFor", () => {
       output: {},
       diagnostics: [],
       trace_count: 1,
+      max_steps: 10_000,
+      steps_executed: 1,
+      steps_remaining: 9_999,
       next_actions: {
         can_continue: false,
         can_save_now: null,

@@ -65,6 +65,9 @@ describe("checked workflow manifest translation", () => {
           run_id: "run_123",
           status: "completed",
           trace_count: 9,
+          max_steps: 10_000,
+          steps_executed: 9,
+          steps_remaining: 9_991,
         }),
       ),
     ).toBe(true);

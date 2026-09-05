@@ -141,6 +141,9 @@ const interruptedRun = {
   output: null,
   diagnostics: [],
   trace_count: 1,
+  max_steps: 10_000,
+  steps_executed: 1,
+  steps_remaining: 9_999,
   next_actions: nextActions,
 };
 
@@ -173,11 +176,14 @@ const completedRun = {
   outcome: "completed",
   output: { report: "# Completed report" },
   trace_count: 4,
+  steps_executed: 4,
+  steps_remaining: 9_996,
 };
 
 const authoredTraceFrame = {
   node_id: "review_issues",
   step_type: "interrupt",
+  step_number: 1,
   resolved_input: { report: "# Draft report" },
   outcome: "submitted",
   output: {},

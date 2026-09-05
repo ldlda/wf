@@ -389,6 +389,9 @@ const interpretRunDetail = (decoded: {
   readonly output: Record<string, unknown> | null;
   readonly diagnostics: ReadonlyArray<unknown>;
   readonly trace_count: number;
+  readonly max_steps: number;
+  readonly steps_executed: number;
+  readonly steps_remaining: number;
   readonly next_actions: Parameters<typeof interpretNextActions>[0];
 }) => ({
   runId: decoded.run_id,
@@ -403,6 +406,9 @@ const interpretRunDetail = (decoded: {
   output: decoded.output,
   diagnostics: decoded.diagnostics,
   traceCount: decoded.trace_count,
+  maxSteps: decoded.max_steps,
+  stepsExecuted: decoded.steps_executed,
+  stepsRemaining: decoded.steps_remaining,
   nextActions: interpretNextActions(decoded.next_actions),
 });
 
@@ -1268,6 +1274,7 @@ const operationEntries = defineOperationEntries([
         frameId: entry.frame_id,
         nodeId: entry.node_id,
         stepType: entry.step_type,
+        stepNumber: entry.step_number,
         outcome: entry.outcome,
         nextNodeId: entry.next_node_id,
         resolvedInput: entry.resolved_input,

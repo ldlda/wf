@@ -48,6 +48,7 @@ class TraceEntryPayload(TypedDict):
     frame_id: str
     node_id: str
     step_type: str
+    step_number: int | None
     resolved_input: JsonObject
     outcome: str
     next_node_id: str

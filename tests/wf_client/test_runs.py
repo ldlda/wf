@@ -65,6 +65,7 @@ class _Port:
                     "frame_id": "root",
                     "node_id": "approve",
                     "step_type": "node",
+                    "step_number": 1,
                     "resolved_input": {},
                     "outcome": "ok",
                     "next_node_id": "__end__",
@@ -101,6 +102,7 @@ async def test_interrupted_run_resumes_and_reads_bounded_trace() -> None:
     assert trace.start == 0
     assert trace.limit == 25
     assert len(trace.frames) == 1
+    assert trace.frames[0].step_number == 1
 
 
 @pytest.mark.asyncio

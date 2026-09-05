@@ -483,6 +483,9 @@ const lifecycleCases = [
       output: null,
       diagnostics: [],
       trace_count: 0,
+      max_steps: 10_000,
+      steps_executed: 1,
+      steps_remaining: 9_999,
       next_actions: {
         can_continue: false,
         can_save_now: null,
@@ -550,6 +553,9 @@ const lifecycleCases = [
       output: null,
       diagnostics: [],
       trace_count: 1,
+      max_steps: 10_000,
+      steps_executed: 1,
+      steps_remaining: 9_999,
       next_actions: {
         can_continue: true,
         can_save_now: null,
@@ -597,6 +603,9 @@ const lifecycleCases = [
       },
       diagnostics: [],
       trace_count: 4,
+      max_steps: 10_000,
+      steps_executed: 4,
+      steps_remaining: 9_996,
       next_actions: {
         can_continue: false,
         can_save_now: null,
@@ -635,6 +644,9 @@ const lifecycleCases = [
       output: null,
       diagnostics: [],
       trace_count: 1,
+      max_steps: 10_000,
+      steps_executed: 1,
+      steps_remaining: 9_999,
       next_actions: {
         can_continue: true,
         can_save_now: null,
@@ -651,6 +663,7 @@ const lifecycleCases = [
           frame_id: "frame_1",
           node_id: "review",
           step_type: "interrupt",
+          step_number: 1,
           resolved_input: { report: "..." },
           outcome: "submitted",
           output: {},
@@ -958,6 +971,7 @@ describe("lifecycle operations", () => {
           frameId: "frame_1",
           nodeId: "review",
           stepType: "interrupt",
+          stepNumber: 1,
           outcome: "submitted",
           nextNodeId: "create_issues",
         },
@@ -1019,6 +1033,9 @@ describe("lifecycle operations", () => {
     expect(exchange.interpreted).toMatchObject({
       runId: "run_demo",
       status: "interrupted",
+      maxSteps: 10_000,
+      stepsExecuted: 1,
+      stepsRemaining: 9_999,
       interrupt: {
         kind: "issue_review",
         typed: true,
