@@ -27,7 +27,7 @@ def test_run_state_codec_round_trips_completed_output() -> None:
     stored = dump_run_state(run)
     restored = load_run_state(stored)
 
-    assert stored["version"] == 1
+    assert stored["version"] == 2
     assert restored.status is RunStatus.COMPLETED
     assert restored.output["echoed"] == "hi"
 

@@ -15,6 +15,7 @@ from wf_core.run_state import (
     RunStatus,
     RuntimeScope,
 )
+from wf_core.runtime.limits import RunLimits
 from wf_core.runtime.scheduler import add_frame
 
 
@@ -30,13 +31,19 @@ def initial_state(
     return state
 
 
-def create_run_state(workflow: Workflow, workflow_input: dict[str, object]) -> RunState:
+def create_run_state(
+    workflow: Workflow,
+    workflow_input: dict[str, object],
+    *,
+    limits: RunLimits | None = None,
+) -> RunState:
     state = initial_state(workflow, workflow_input)
     run = RunState(
         workflow_name=workflow.name,
         status=RunStatus.PENDING,
         workflow_input=dict(workflow_input),
         state=state,
+        limits=limits if limits is not None else RunLimits(),
         scopes={
             ROOT_SCOPE_ID: RuntimeScope(
                 id=ROOT_SCOPE_ID,
