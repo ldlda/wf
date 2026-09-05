@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import inspect
+
 import pytest
 
 from wf_core import (
@@ -22,8 +24,12 @@ from wf_core import (
     WorkflowExecutionError,
     dump_run_state,
     execute_workflow,
+    execute_workflow_async,
+    execute_workflow_result_async,
     load_run_state,
     resume_workflow,
+    resume_workflow_async,
+    resume_workflow_result_async,
     step_workflow,
 )
 from wf_core.errors import WorkflowStepLimitExceeded
@@ -34,6 +40,7 @@ from wf_core.runtime.limits import (
     remaining_step_attempts,
 )
 from wf_core.runtime.ops.runs import create_run_state
+from wf_core.runtime.preparation import prepare_resume
 
 
 def _minimal_workflow(name: str = "budget") -> Workflow:
@@ -994,3 +1001,95 @@ def test_v2_missing_interrupt_step_number_is_corrupt() -> None:
 
     with pytest.raises(ValueError):
         load_run_state_with_upgrade(stored)
+
+
+# --- Task 4: engine-level limits seam ---
+
+
+def test_execute_workflow_accepts_explicit_limits() -> None:
+    workflow = _chain_workflow()
+
+    run = execute_workflow(
+        workflow,
+        {},
+        {"da": _ok_handler, "db": _ok_handler},
+        limits=RunLimits(max_steps=10),
+    )
+
+    assert run.status == RunStatus.COMPLETED
+    assert run.limits.max_steps == 10
+    assert run.steps_executed == 2
+    assert run.steps_remaining == 8
+
+
+def test_execute_workflow_defaults_to_ten_thousand() -> None:
+    workflow = _chain_workflow()
+
+    run = execute_workflow(workflow, {}, {"da": _ok_handler, "db": _ok_handler})
+
+    assert run.limits.max_steps == 10_000
+    assert run.steps_executed == 2
+
+
+def test_execute_workflow_enforces_limits() -> None:
+    workflow = _cyclic_workflow()
+
+    def ok_handler(_payload: dict, _context: object) -> dict:
+        return {"outcome": "ok", "output": {}}
+
+    with pytest.raises(WorkflowStepLimitExceeded):
+        execute_workflow(
+            workflow,
+            {},
+            {"da": ok_handler, "db": ok_handler},
+            limits=RunLimits(max_steps=2),
+        )
+
+
+async def test_execute_workflow_async_accepts_explicit_limits() -> None:
+    workflow = _chain_workflow()
+
+    async def ok_async(_payload: dict, _context: object) -> dict:
+        return {"outcome": "ok", "output": {}}
+
+    run = await execute_workflow_async(
+        workflow,
+        {},
+        {"da": ok_async, "db": ok_async},
+        limits=RunLimits(max_steps=10),
+    )
+
+    assert run.status == RunStatus.COMPLETED
+    assert run.limits.max_steps == 10
+    assert run.steps_executed == 2
+    assert run.steps_remaining == 8
+
+
+async def test_execute_workflow_result_async_reports_exhaustion() -> None:
+    workflow = _cyclic_workflow()
+
+    async def ok_async(_payload: dict, _context: object) -> dict:
+        return {"outcome": "ok", "output": {}}
+
+    run = await execute_workflow_result_async(
+        workflow,
+        {},
+        {"da": ok_async, "db": ok_async},
+        limits=RunLimits(max_steps=2),
+    )
+
+    assert run.status == RunStatus.FAILED
+    assert run.limits.max_steps == 2
+    assert run.steps_executed == 2
+    assert "step budget" in (run.error or "")
+
+
+def test_resume_entry_points_accept_no_replacement_limits() -> None:
+    """Ordinary resume reuses persisted limits; it never takes new ones."""
+    for entry in (
+        resume_workflow,
+        resume_workflow_async,
+        resume_workflow_result_async,
+        prepare_resume,
+    ):
+        assert "limits" not in inspect.signature(entry).parameters

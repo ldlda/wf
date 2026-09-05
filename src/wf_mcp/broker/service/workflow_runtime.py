@@ -16,6 +16,7 @@ from wf_artifacts import WorkflowArtifact, WorkflowArtifactStore, WorkflowDeploy
 from wf_authoring import NodeSpec
 from wf_core import (
     NodeUse,
+    RunLimits,
     RunState,
     RunStatus,
     Workflow,
@@ -163,6 +164,7 @@ class WorkflowRuntimeService:
         deployment: WorkflowDeployment | None = None,
         artifact: WorkflowArtifact | None = None,
         saved_subgraph_tree: SavedSubgraphTree | None = None,
+        limits: RunLimits | None = None,
     ) -> RunState:
         self.emit_event(
             make_event(
@@ -186,6 +188,7 @@ class WorkflowRuntimeService:
             reducers=reducers,
             subgraphs=prepared_subgraphs,
             platform=platform_context,
+            limits=limits,
         )
         self.emit_event(
             make_event(

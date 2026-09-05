@@ -15,6 +15,7 @@ from wf_artifacts import (
 )
 from wf_authoring import NodeSpec
 from wf_core import (
+    RunLimits,
     RunState,
     Workflow,
 )
@@ -343,6 +344,7 @@ class WfMcpService:
         deployment: WorkflowDeployment | None = None,
         artifact: WorkflowArtifact | None = None,
         saved_subgraph_tree: SavedSubgraphTree | None = None,
+        limits: RunLimits | None = None,
     ):
         return await self.workflow_runtime.run_workflow_from_plan(
             plan,
@@ -350,6 +352,7 @@ class WfMcpService:
             deployment=deployment,
             artifact=artifact,
             saved_subgraph_tree=saved_subgraph_tree,
+            limits=limits,
         )
 
     async def resume_workflow_from_plan(

@@ -13,7 +13,7 @@ from wf_artifacts import (
     WorkflowDeployment,
 )
 from wf_authoring import NodeSpec
-from wf_core import RunState
+from wf_core import RunLimits, RunState
 from wf_platform import CapabilitySource
 
 from .models import RawWorkflowPlan
@@ -61,6 +61,7 @@ class WorkflowRuntimeRunner(Protocol):
         deployment: WorkflowDeployment | None = None,
         artifact: WorkflowArtifact | None = None,
         saved_subgraph_tree: SavedSubgraphTree | None = None,
+        limits: RunLimits | None = None,
     ) -> RunState:
         """Execute one raw workflow plan and return its run state."""
         ...

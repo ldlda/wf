@@ -11,7 +11,7 @@ from wf_artifacts import (
     WorkflowDeployment,
     WorkflowRunRecord,
 )
-from wf_core import RunState
+from wf_core import RunLimits, RunState
 
 from .artifact_plans import raw_plan_from_artifact
 from .deployments import WorkflowDeploymentApi, _available_sources
@@ -80,6 +80,7 @@ class WorkflowRunApi:
         deployment_id: str,
         workflow_input: dict[str, Any],
         trace_range: TraceRangeLike | None = None,
+        max_steps: int | None = None,
     ) -> RunResult:
         trace_values = _trace_range_values(trace_range)
         deployment, artifact, diagnostics, tree = (
@@ -94,12 +95,16 @@ class WorkflowRunApi:
             )
 
         plan = raw_plan_from_artifact(artifact)
+        limits = (
+            RunLimits(max_steps=max_steps) if max_steps is not None else RunLimits()
+        )
         run = await self.context.runtime.run_workflow_from_plan(
             plan,
             workflow_input,
             deployment=deployment,
             artifact=artifact,
             saved_subgraph_tree=tree,
+            limits=limits,
         )
         record = persist_stopped_run(
             store=self._run_store(),
@@ -121,6 +126,9 @@ class WorkflowRunApi:
             error=run.error,
             output=run.output,
             trace_count=len(run.trace),
+            max_steps=run.limits.max_steps,
+            steps_executed=run.steps_executed,
+            steps_remaining=run.steps_remaining,
             **_trace_slice_fields(run, trace_values),
         )
 
@@ -176,6 +184,9 @@ class WorkflowRunApi:
                 output=stopped_run.output,
                 diagnostics=diagnostics,
                 trace_count=len(stopped_run.trace),
+                max_steps=stopped_run.limits.max_steps,
+                steps_executed=stopped_run.steps_executed,
+                steps_remaining=stopped_run.steps_remaining,
             )
         plan = raw_plan_from_artifact(environment.root_artifact)
         tree = saved_subgraph_tree_from_snapshots(environment.child_artifacts)
@@ -205,6 +216,9 @@ class WorkflowRunApi:
             error=run.error,
             output=run.output,
             trace_count=len(run.trace),
+            max_steps=run.limits.max_steps,
+            steps_executed=run.steps_executed,
+            steps_remaining=run.steps_remaining,
             **_trace_slice_fields(run, trace_values),
         )
 
@@ -261,6 +275,9 @@ class WorkflowRunApi:
             output=run.output,
             diagnostics=record.diagnostics,
             trace_count=len(run.trace),
+            max_steps=run.limits.max_steps,
+            steps_executed=run.steps_executed,
+            steps_remaining=run.steps_remaining,
         )
 
     async def read_run_trace(
@@ -281,6 +298,9 @@ class WorkflowRunApi:
             resume_readiness=record.resume_readiness.value,
             diagnostics=record.diagnostics,
             trace_count=len(run.trace),
+            max_steps=run.limits.max_steps,
+            steps_executed=run.steps_executed,
+            steps_remaining=run.steps_remaining,
             **_trace_slice_fields(run, trace_values),
         )
         # A concrete trace range makes _run_payload include the four trace
@@ -366,7 +386,16 @@ def _run_payload(
     trace_start: int | None = None,
     trace_limit: int | None = None,
     trace_truncated: bool = False,
+    max_steps: int | None = None,
+    steps_executed: int = 0,
+    steps_remaining: int | None = None,
 ) -> RunResult:
+    effective_max = max_steps if max_steps is not None else RunLimits().max_steps
+    effective_remaining = (
+        steps_remaining
+        if steps_remaining is not None
+        else max(effective_max - steps_executed, 0)
+    )
     payload = {
         "deployment_id": deployment.id,
         "artifact_id": artifact.id,
@@ -382,6 +411,9 @@ def _run_payload(
             diagnostic.model_dump(mode="json") for diagnostic in diagnostics or []
         ],
         "trace_count": trace_count,
+        "max_steps": effective_max,
+        "steps_executed": steps_executed,
+        "steps_remaining": effective_remaining,
         "next_actions": NextActions.from_run_result(
             run_id=run_id,
             status=status,

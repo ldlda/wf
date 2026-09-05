@@ -6,6 +6,7 @@ from typing import Any
 from wf_core.errors import WorkflowExecutionError
 from wf_core.models.workflow import Workflow
 from wf_core.run_state import ROOT_SCOPE_ID, RunState, RunStatus
+from wf_core.runtime.limits import RunLimits
 from wf_core.runtime.ops.flow import finalize_run
 from wf_core.runtime.ops.merges import ReducerDefinition
 from wf_core.runtime.ops.nodes import AsyncNodeHandler, NodeHandler
@@ -25,9 +26,10 @@ def execute_workflow(
     *,
     reducers: Mapping[str, ReducerDefinition] | None = None,
     subgraphs: Mapping[str, PreparedSubgraph[NodeHandler]] | None = None,
+    limits: RunLimits | None = None,
 ) -> RunState:
     """Create a run and execute a workflow synchronously until it stops."""
-    run = create_run_state(workflow, workflow_input)
+    run = create_run_state(workflow, workflow_input, limits=limits)
 
     try:
         prepare_new_run(workflow, workflow_input, run)
@@ -52,9 +54,10 @@ async def execute_workflow_async(
     reducers: Mapping[str, ReducerDefinition] | None = None,
     subgraphs: Mapping[str, PreparedSubgraph[AsyncNodeHandler]] | None = None,
     platform: object | None = None,
+    limits: RunLimits | None = None,
 ) -> RunState:
     """Create a run and execute a workflow asynchronously until it stops."""
-    run = create_run_state(workflow, workflow_input)
+    run = create_run_state(workflow, workflow_input, limits=limits)
 
     try:
         prepare_new_run(workflow, workflow_input, run)
@@ -80,9 +83,10 @@ async def execute_workflow_result_async(
     reducers: Mapping[str, ReducerDefinition] | None = None,
     subgraphs: Mapping[str, PreparedSubgraph[AsyncNodeHandler]] | None = None,
     platform: object | None = None,
+    limits: RunLimits | None = None,
 ) -> RunState:
     """Execute asynchronously and return failed state instead of raising failures."""
-    run = create_run_state(workflow, workflow_input)
+    run = create_run_state(workflow, workflow_input, limits=limits)
 
     try:
         prepare_new_run(workflow, workflow_input, run)

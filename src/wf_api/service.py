@@ -1048,11 +1048,13 @@ class WorkflowApi:
         deployment_id: str,
         workflow_input: dict[str, Any],
         trace_range: TraceRangeLike | None = None,
+        max_steps: int | None = None,
     ) -> RunResult:
         return await self.runs.run_deployment(
             deployment_id=deployment_id,
             workflow_input=workflow_input,
             trace_range=trace_range,
+            max_steps=max_steps,
         )
 
     async def resume_run(

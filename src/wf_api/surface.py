@@ -517,6 +517,7 @@ class WorkflowRunSurface(Protocol):
         deployment_id: str,
         workflow_input: dict[str, Any],
         trace_range: TraceRangeLike | None = None,
+        max_steps: int | None = None,
     ) -> RunResult: ...
 
     async def resume_run(

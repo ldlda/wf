@@ -13,6 +13,7 @@ from wf_api.operation_context import (
 )
 from wf_artifacts import DependencyDiagnostic, WorkflowArtifact, WorkflowDeployment
 from wf_authoring import NodeSpec
+from wf_core import RunLimits
 
 from .core import WfMcpService
 from .events import BrokerEventRecorder
@@ -70,6 +71,7 @@ class WfMcpWorkflowRuntimeRunner(WorkflowRuntimeRunner):
         deployment=None,
         artifact=None,
         saved_subgraph_tree=None,
+        limits: RunLimits | None = None,
     ):
         return await self.runtime.run_workflow_from_plan(
             plan,
@@ -77,6 +79,7 @@ class WfMcpWorkflowRuntimeRunner(WorkflowRuntimeRunner):
             deployment=deployment,
             artifact=artifact,
             saved_subgraph_tree=saved_subgraph_tree,
+            limits=limits,
         )
 
     async def resume_workflow_from_plan(

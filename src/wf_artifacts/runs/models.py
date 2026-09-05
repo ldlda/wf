@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from datetime import datetime
 from enum import StrEnum
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -72,6 +73,22 @@ class WorkflowRunRecord(BaseModel):
     updated_at: datetime
 
 
+class VersionedCheckpointState(BaseModel):
+    """Lenient read envelope for stopped-run checkpoints.
+
+    Writes always produce version 2 via ``wf_core.dump_run_state``; reads
+    accept version 1 so pre-budget checkpoints reach
+    ``load_run_state_with_upgrade`` instead of failing checkpoint validation
+    with a ``version == 2`` literal error first. The inner state stays an
+    untyped dict because core owns strict budget validation there.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    version: Literal[1, 2] = 2
+    state: dict[str, Any]
+
+
 class RunCheckpoint(BaseModel):
     """One stopped-state snapshot persisted at an external run boundary."""
 
@@ -81,5 +98,5 @@ class RunCheckpoint(BaseModel):
     run_id: str = Field(pattern=RUN_ID_PATTERN)
     sequence: int = Field(ge=1)
     reason: CheckpointReason
-    state: PersistedRunState
+    state: PersistedRunState | VersionedCheckpointState
     created_at: datetime

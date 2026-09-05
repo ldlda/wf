@@ -83,6 +83,9 @@ class RunResultBase(ArtifactVersionPayload, GuidedResultPayload):
     error: str | None
     output: JsonObject | None
     trace_count: int
+    max_steps: int
+    steps_executed: int
+    steps_remaining: int
 
 
 class RunResult(RunResultBase):

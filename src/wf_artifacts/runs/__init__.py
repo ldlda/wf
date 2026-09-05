@@ -4,6 +4,7 @@ from .models import (
     ResumeReadiness,
     RunCheckpoint,
     StoredRunStatus,
+    VersionedCheckpointState,
     WorkflowRunRecord,
     ensure_run_id,
 )
@@ -17,6 +18,7 @@ __all__ = [
     "RunCheckpoint",
     "RunStore",
     "StoredRunStatus",
+    "VersionedCheckpointState",
     "WorkflowRunRecord",
     "ensure_run_id",
 ]

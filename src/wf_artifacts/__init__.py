@@ -49,6 +49,7 @@ from .runs import (
     RunCheckpoint,
     RunStore,
     StoredRunStatus,
+    VersionedCheckpointState,
     WorkflowRunRecord,
     ensure_run_id,
 )
@@ -75,6 +76,7 @@ __all__ = [
     "RunStore",
     "SourceBinding",
     "StoredRunStatus",
+    "VersionedCheckpointState",
     "WorkflowArtifact",
     "WorkflowArtifactCatalogEntry",
     "WorkflowArtifactStore",

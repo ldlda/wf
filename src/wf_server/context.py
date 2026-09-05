@@ -33,6 +33,7 @@ from wf_artifacts import WorkflowArtifact, WorkflowDeployment
 from wf_authoring import NodeSpec
 from wf_core import (
     NodeUse,
+    RunLimits,
     RunState,
     Workflow,
     execute_workflow_result_async,
@@ -224,6 +225,7 @@ class LocalWorkflowRuntimeRunner(WorkflowRuntimeRunner):
         deployment: WorkflowDeployment | None = None,
         artifact: WorkflowArtifact | None = None,
         saved_subgraph_tree: SavedSubgraphTree | None = None,
+        limits: RunLimits | None = None,
     ) -> RunState:
         workflow, registry, reducers, prepared_subgraphs, platform_context = (
             self.prepare_workflow_runtime(
@@ -240,6 +242,7 @@ class LocalWorkflowRuntimeRunner(WorkflowRuntimeRunner):
             reducers=reducers,
             subgraphs=prepared_subgraphs,
             platform=platform_context,
+            limits=limits,
         )
 
     async def resume_workflow_from_plan(

@@ -25,6 +25,7 @@ from wf_core import (
     RunStatus,
     dump_run_state,
     load_run_state,
+    load_run_state_with_upgrade,
 )
 
 
@@ -100,10 +101,29 @@ def persist_stopped_run(
 def restore_interrupted_run(
     store: RunStore, run_id: str
 ) -> tuple[WorkflowRunRecord, RunState]:
-    """Load a persisted interrupted run and its latest typed runtime state."""
-    record, run = load_stored_run(store, run_id)
+    """Load a persisted interrupted run, persisting a v1 upgrade first.
+
+    A pre-budget (v1) checkpoint receives its one-time defaults and is
+    rewritten as a new v2 interrupted checkpoint under the same run id and
+    pinned environment *before* the run is returned, so resume dispatch
+    never runs on unmigrated state and a failed upgrade fails resume before
+    any handler runs. Ordinary inspection uses :func:`load_stored_run`,
+    which decodes v1 prospectively without mutating the store.
+    """
+    record = store.get_run(run_id)
     if record.status is not StoredRunStatus.INTERRUPTED:
         raise ValueError(f"workflow run {run_id!r} is not interrupted")
+    checkpoint = store.get_latest_checkpoint(run_id)
+    run, upgraded = load_run_state_with_upgrade(
+        checkpoint.state.model_dump(mode="json")
+    )
+    if upgraded:
+        record = persist_stopped_run(
+            store=store,
+            environment=record.environment,
+            run=run,
+            run_id=run_id,
+        )
     return record, run
 
 
