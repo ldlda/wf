@@ -16,7 +16,7 @@ from wf_core.models.steps import (
 from wf_core.models.workflow import Workflow
 from wf_core.run_state import ExecutionFrame, FrameStatus, RunState, StepExecutionResult
 from wf_core.runtime.foreach_state import item_frame_owner, load_foreach_activation
-from wf_core.runtime.limits import admit_step_attempt
+from wf_core.runtime.limits import admit_step_attempt, remaining_step_attempts
 from wf_core.runtime.ops.flow import advance_frame, append_step_result_trace
 from wf_core.runtime.ops.foreach import step_foreach
 from wf_core.runtime.ops.handlers import (
@@ -322,12 +322,25 @@ async def _step_async_foreach_item_batch(
     advancement happen afterward in ready-queue order so `RunState` is mutated
     deterministically.
 
-    Task 3 will bound the claimed siblings by the remaining budget and pin the
-    reservation/failure semantics. Until then every frame in the batch is
-    admitted in ready-queue order before any handler starts, so each trace has
-    a number; a denied frame raises before any handler in the batch runs.
+    Batch reservation is bounded by the remaining step budget: the batch claims
+    at most ``remaining`` frames (``first_frame`` plus up to ``remaining - 1``
+    siblings in ready-queue order) and admits every selected frame before
+    creating any handler coroutine. A denied admission raises before any
+    handler runs, so unclaimed siblings stay PENDING in their original queue
+    order and admitted attempts stay consumed even if a handler later fails.
+    All handlers are awaited via ``gather(return_exceptions=True)`` and then
+    finalized in reservation order; the first unhandled failure keeps preceding
+    commits and discards later sibling state/trace commits.
     """
-    frames = [first_frame, *_claim_matching_async_item_frames(run, index, first_frame)]
+    # Snapshot the remainder once so the claim bound and the admissions agree.
+    # `first_frame` already occupies the ready-queue head, so siblings are
+    # limited to `remaining - 1`; when remaining is 0 the first admission below
+    # raises before any handler is created.
+    remaining = remaining_step_attempts(run)
+    siblings = _claim_matching_async_item_frames(
+        run, index, first_frame, limit=max(remaining - 1, 0)
+    )
+    frames = [first_frame, *siblings]
     for frame in frames:
         admit_step_attempt(run, frame, frame.node_id)
     tasks = []
@@ -375,12 +388,18 @@ def _claim_matching_async_item_frames(
     run: RunState,
     index: WorkflowIndex,
     first_frame: ExecutionFrame,
+    limit: int,
 ) -> list[ExecutionFrame]:
     """Claim sibling item frames from the same activation for async batching.
 
     Batching never mixes activations: only frames naming the same parent,
     foreach, and activation id run together, preserving deterministic barrier
     commits across revisits.
+
+    At most ``limit`` matching frames are claimed in ready-queue order. Only
+    claimed frames flip to RUNNING; the rest stay PENDING and keep their
+    original relative order in ``ready_frame_ids`` so a later dispatch can
+    admit them once budget allows.
     """
     owner = item_frame_owner(first_frame)
     if owner is None:
@@ -397,6 +416,7 @@ def _claim_matching_async_item_frames(
             and frame_owner.foreach_node_id == owner.foreach_node_id
             and frame_owner.activation_id == owner.activation_id
             and isinstance(index.nodes_by_id.get(frame.node_id), NodeUse)
+            and len(claimed) < limit
         ):
             frame.status = FrameStatus.RUNNING
             claimed.append(frame)
