@@ -93,16 +93,13 @@ behavior. The counter is incremented before user code or external capability
 code begins, so failures and interrupts still consume the attempt that caused
 them.
 
-For a durable run, admission is checkpointed before dispatch. The checkpoint
-contains the incremented counter, assigned step number, selected frame and
-node, and an admitted-but-not-completed marker. Dispatch may begin only after
-that checkpoint succeeds. If the process stops at that boundary, restore keeps
-the attempt consumed, clears the abandoned admission marker, and requeues the
-frame; a retry is a new attempt with a new step number. The in-memory executor
-applies the same counter transition without requiring a persistence backend.
-As with any crash after external dispatch and before result persistence, retry
-may repeat external effects; the budget records attempts and does not provide
-exactly-once execution.
+The current runtime executes in memory and persists only externally stopped
+runs. It increments the counter before dispatch and includes the cumulative
+value in every interrupted, completed, or failed checkpoint. This slice does
+not introduce a write-ahead checkpoint for every step: that would be a new
+durable execution engine, add one store write per attempt, and still would not
+provide exactly-once external effects. If execution later advances directly
+from durable checkpoints, admission records belong in that design.
 
 If `steps_executed == max_steps`, the next attempted dispatch is denied. A
 budget of one therefore admits exactly one step. The denied step does not
@@ -292,8 +289,7 @@ with the run.
 - A stored interrupted run resumes without resetting or replacing its budget.
 - A pre-budget checkpoint receives its defaults once, persists the upgraded
   envelope before dispatch, and cannot receive another fresh budget on reload.
-- Stopping after the admission checkpoint but before handler start leaves the
-  attempt consumed; retrying the requeued frame consumes a new attempt.
+- Every externally stopped checkpoint preserves the cumulative count.
 - Run inspection exposes effective maximum, executed, and remaining counts.
 - Trace entries expose deterministic step numbers without becoming the source
   of enforcement truth.
