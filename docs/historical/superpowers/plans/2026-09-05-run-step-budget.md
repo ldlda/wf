@@ -55,7 +55,7 @@ async workflow runtimes, FastAPI JSON-RPC, the Python workflow client, pytest.
 - Produces: `remaining_step_attempts(run) -> int`.
 - Produces: `load_run_state_with_upgrade(payload) -> tuple[RunState, bool]`.
 
-- [ ] **Step 1: Write failing model, admission, and codec tests**
+- [x] **Step 1: Write failing model, admission, and codec tests**
 
 Cover positive validation, the default, a budget of one, denied admission not
 incrementing, error details, v2 round-trip, v1 default injection, and v2
@@ -73,7 +73,7 @@ with pytest.raises(WorkflowStepLimitExceeded):
     admit_step_attempt(run, run.current_frame(), workflow.start)
 ```
 
-- [ ] **Step 2: Run the new tests and verify they fail for missing symbols**
+- [x] **Step 2: Run the new tests and verify they fail for missing symbols**
 
 Run:
 
@@ -81,7 +81,7 @@ Run:
 uv run pytest tests/core/test_run_step_budget.py tests/core/test_run_codec.py -q
 ```
 
-- [ ] **Step 3: Implement the minimal core model and admission module**
+- [x] **Step 3: Implement the minimal core model and admission module**
 
 ```python
 @dataclass(frozen=True, slots=True)
@@ -109,14 +109,14 @@ Add `limits`, `steps_executed`, and computed `steps_remaining` to `RunState`;
 add `step_number: int | None` to `ExecutionFrame`; pass optional limits through
 `create_run_state()`.
 
-- [ ] **Step 4: Implement strict v2 output and explicit v1 loading**
+- [x] **Step 4: Implement strict v2 output and explicit v1 loading**
 
 `dump_run_state()` writes envelope version 2. Version 1 may omit the three new
 fields and receives defaults. Version 2 validates that `limits`,
 `steps_executed`, and each serialized frame's `step_number` field are present
 before using the dataclass adapter. Return `upgraded=True` only for v1.
 
-- [ ] **Step 5: Run the focused tests and commit**
+- [x] **Step 5: Run the focused tests and commit**
 
 Run:
 
@@ -143,18 +143,18 @@ Commit: `feat: add persisted run step budget state`
 - Produces: `TraceEntry.step_number: int`.
 - Produces: `InterruptRequest.step_number: int`.
 
-- [ ] **Step 1: Add failing sync behavior tests**
+- [x] **Step 1: Add failing sync behavior tests**
 
 Test NodeUse, condition, foreach controller/body, subgraph entry/return,
 interrupt/resume, explicit End, legacy `END`, handler failure, handled `error`
 outcome, a closed cycle, an exiting loop, and denial without handler invocation.
 Assert trace numbers rather than inferring counts from trace length.
 
-- [ ] **Step 2: Verify the focused tests fail before dispatch is counted**
+- [x] **Step 2: Verify the focused tests fail before dispatch is counted**
 
 Run: `uv run pytest tests/core/test_run_step_budget.py -q`
 
-- [ ] **Step 3: Admit after resolving the selected step and before dispatch**
+- [x] **Step 3: Admit after resolving the selected step and before dispatch**
 
 Call `admit_step_attempt()` exactly once in the non-batched paths of
 `step_workflow()` and `step_workflow_async()`. Make `append_trace()` fail closed
@@ -163,7 +163,7 @@ trace produced during the dispatch. Store the interrupt activation's number on
 `InterruptRequest`; its resume-completion trace reuses that value and does not
 admit another attempt.
 
-- [ ] **Step 4: Verify sync semantics and commit**
+- [x] **Step 4: Verify sync semantics and commit**
 
 Run:
 
@@ -190,7 +190,7 @@ Commit: `feat: enforce step budget during sync dispatch`
 - Consumes: `admit_step_attempt(...) -> int`.
 - Produces: bounded `_claim_matching_async_item_frames(..., limit: int)`.
 
-- [ ] **Step 1: Write failing async reservation tests**
+- [x] **Step 1: Write failing async reservation tests**
 
 Use handlers gated by `asyncio.Event` to prove that a three-unit remainder
 starts only the first three eligible frames, assigns numbers in queue order,
@@ -198,18 +198,18 @@ keeps reservations after a handler failure, settles siblings before raising,
 and discards later sibling state/trace commits after the first unhandled result
 in reservation order.
 
-- [ ] **Step 2: Verify the tests fail because batching claims every sibling**
+- [x] **Step 2: Verify the tests fail because batching claims every sibling**
 
 Run: `uv run pytest tests/core/test_run_step_budget_async.py -q`
 
-- [ ] **Step 3: Bound claims and reserve before creating handler tasks**
+- [x] **Step 3: Bound claims and reserve before creating handler tasks**
 
 Before `_step_async_foreach_item_batch()` creates any coroutine, require one
 unit for `first_frame`, claim at most `remaining - 1` matching frames, then call
 `admit_step_attempt()` for the resulting ordered frame list. Do not launch any
 task until every selected frame has its number.
 
-- [ ] **Step 4: Verify async and parity suites and commit**
+- [x] **Step 4: Verify async and parity suites and commit**
 
 Run:
 
@@ -242,14 +242,14 @@ Commit: `feat: reserve async workflow step attempts`
 - Produces: optional `max_steps` on run creation only.
 - Produces: `max_steps`, `steps_executed`, and `steps_remaining` in run results.
 
-- [ ] **Step 1: Write failing API and migration tests**
+- [x] **Step 1: Write failing API and migration tests**
 
 Pin requested/effective limit inspection, interrupted resume preserving the
 counter, resume accepting no replacement, and a v1 interrupted checkpoint being
 rewritten as v2 before runtime dispatch. Make the fake runtime assert it has not
 been called until the upgraded checkpoint exists.
 
-- [ ] **Step 2: Verify the API tests fail on the missing fields**
+- [x] **Step 2: Verify the API tests fail on the missing fields**
 
 Run:
 
@@ -257,7 +257,7 @@ Run:
 uv run pytest tests/wf_api/test_runs.py tests/wf_api/test_run_lifecycle.py -q
 ```
 
-- [ ] **Step 3: Thread limits through creation and project inspection fields**
+- [x] **Step 3: Thread limits through creation and project inspection fields**
 
 `WorkflowRunApi.run_deployment(..., max_steps: int | None = None)` constructs
 `RunLimits(max_steps=max_steps)` when supplied and otherwise uses the default.
@@ -270,14 +270,14 @@ passes it to the core async executor. `_run_payload()` always includes:
 "steps_remaining": run.steps_remaining,
 ```
 
-- [ ] **Step 4: Persist a v1 upgrade before resume dispatch**
+- [x] **Step 4: Persist a v1 upgrade before resume dispatch**
 
 In `restore_interrupted_run()`, load the raw latest checkpoint with the upgrade
 flag. If true, call `persist_stopped_run()` with the same run id and pinned
 environment, producing a v2 interrupted checkpoint before returning the run to
 the caller. Ordinary inspection may decode v1 prospectively without mutation.
 
-- [ ] **Step 5: Verify API behavior and commit**
+- [x] **Step 5: Verify API behavior and commit**
 
 Run:
 
@@ -313,13 +313,13 @@ Commit: `feat: persist and inspect run step budgets`
   `.steps_remaining`.
 - Produces: CLI `wf run start --max-steps INTEGER`.
 
-- [ ] **Step 1: Write failing round-trip and client reconstruction tests**
+- [x] **Step 1: Write failing round-trip and client reconstruction tests**
 
 Assert the request includes `max_steps` only when supplied; the response
 decoder requires all three inspection fields; refresh/resume preserve them;
 and CLI rejects zero before making an API request.
 
-- [ ] **Step 2: Verify transport/client tests fail**
+- [x] **Step 2: Verify transport/client tests fail**
 
 Run:
 
@@ -329,12 +329,12 @@ uv run pytest tests/wf_transport_rpc_http/test_client.py
 uv run pytest tests/wf_transport_rpc_http/test_app.py tests/wf_cli/test_app.py -q
 ```
 
-- [ ] **Step 3: Thread the optional creation value and reconstruct results**
+- [x] **Step 3: Thread the optional creation value and reconstruct results**
 
 Keep `max_steps` off resume signatures. Validate the CLI option with Typer
 `min=1`; server-side `RunLimits` remains authoritative for non-CLI callers.
 
-- [ ] **Step 4: Regenerate contracts, verify, and commit**
+- [x] **Step 4: Regenerate contracts, verify, and commit**
 
 Run:
 
@@ -361,14 +361,14 @@ Commit: `feat: expose run step budgets to clients`
 
 **Interfaces:** None.
 
-- [ ] **Step 1: Document creation, inspection, exhaustion, and resume**
+- [x] **Step 1: Document creation, inspection, exhaustion, and resume**
 
 Show `Deployment.run(..., max_steps=50_000)`, `wf run start --max-steps`, the
 three inspection fields, and that resume cannot reset the budget. Remove the
 step-budget item from the active roadmap and leave runtime identity resolution
 as the next fork/gather prerequisite.
 
-- [ ] **Step 2: Run focused and full verification**
+- [x] **Step 2: Run focused and full verification**
 
 Run:
 
@@ -385,7 +385,7 @@ pnpm --dir web test
 pnpm --dir web typecheck
 ```
 
-- [ ] **Step 3: Retire the completed plan and commit**
+- [x] **Step 3: Retire the completed plan and commit**
 
 Commit: `docs: complete run step budget slice`
 

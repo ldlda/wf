@@ -54,7 +54,13 @@ validated, runnable deployment.
 7. Save and validate a deployment.
    - `wf deploy save <deployment_id> --artifact <artifact_id> --version 1 --binding <logical_source>=<concrete_source>` (or `wf deploy create` alias)
    - `wf deploy validate <deployment_id>`
-8. Run the deployment.
+8. Run the deployment with an optional step budget.
+   - CLI: `wf run start <deployment_id> --input-file input.json`
+     with `--max-steps 50000` (default `10_000` when omitted; at least 1)
+   - Python: `await deployment.run(input, max_steps=50_000)`
+   - The budget covers every frame and subgraph scope in the run. Exhaustion
+     fails the run; it is never a routable workflow outcome and the denied
+     handler never runs.
 9. Inspect the run summary first; read bounded traces only when needed.
 
 ## Raw Plan Escape Hatch
@@ -104,16 +110,19 @@ sources and choose the concrete source explicitly.
 - **Workflow capability**: graph-ready `NodeSpec` or saved wrapper artifact.
 - **Artifact**: immutable saved workflow or wrapper.
 - **Deployment**: mutable binding from artifact version to concrete sources.
-- **Run**: durable stopped execution record with status, output, and trace count.
+- **Run**: durable stopped execution record with status, output, trace count,
+  and step budget (`max_steps`, `steps_executed`, `steps_remaining`).
 
 ## Result Handling
 
 `wf run start` returns compact status by default. Capture `run_id` even for
-completed or failed runs. Use:
+completed or failed runs. Inspection exposes the effective budget stored
+with the run (`max_steps`, `steps_executed`, `steps_remaining`). Use:
 
 - `wf run inspect <run_id>` for compact stored result.
 - `wf run trace <run_id> --from 0 --limit 25` for explicit debug slices.
-- `wf run resume <run_id>` only for interrupted runs.
+- `wf run resume <run_id>` only for interrupted runs. Resume reuses the
+  persisted budget and accepts no replacement value.
 
 Do not ask for unbounded traces.
 

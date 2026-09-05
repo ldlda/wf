@@ -13,7 +13,9 @@ and user-facing control belong in `wf_mcp`.
 | --- | --- |
 | `wf_core.models` | Pydantic workflow schema package: schemas, condition expressions, executable steps, workflow graph, and node results. |
 | `wf_core.run_state` | Serializable execution state: run status, frames, trace entries, interrupt requests, and runtime context. |
+| `wf_core.run_limits` | Immutable run-wide step budget (`RunLimits`). |
 | `wf_core.runtime` | Public execution interface: execute, resume, and step in sync or async mode. |
+| `wf_core.runtime.limits` | Admits one counted attempt per dispatched step. |
 | `wf_core.runtime.scheduler` | Internal frame scheduler: ready queue, selected cursor, frame creation, block/wake helpers, and typed foreach frame metadata. |
 | `wf_core.runtime.ops` | Executor-only operations used behind `wf_core.runtime`: node execution, state writes, frame movement, foreach, interrupts, indexes, and schema checks. |
 | `wf_core.validation` | Structural workflow validation split by validation concern. |
@@ -35,6 +37,10 @@ flat modules.
    `RunState.ready_frame_ids`, marks that frame `RUNNING`, and updates
    compatibility cursor fields such as `current_frame_id`.
 5. `step_workflow` resolves the selected frame and dispatches by step type.
+   Admission runs first: `runtime.limits.admit_step_attempt` consumes one unit
+   of the run-wide budget (`RunLimits`, default `10_000`) and stamps the frame
+   with its step number before any handler runs. Exhaustion fails the run and
+   never invokes the denied handler.
 6. A normal non-terminal step marks the same frame `PENDING` and puts it back at
    the end of the ready queue.
 7. Terminal, blocked, interrupted, and failed frames are not re-enqueued.

@@ -702,6 +702,29 @@ wf run start concat_ws.default \
   --input '{"items":["red","blue"],"separator":" + "}'
 ```
 
+Start with an explicit run-wide step budget (default `10_000` when omitted):
+
+```bash
+wf run start concat_ws.default \
+  --input '{"items":["red","blue"]}' \
+  --max-steps 50000
+```
+
+`--max-steps` must be at least 1; the server validates it again. The budget
+covers every frame and subgraph scope in the run and stops runaway cycles
+with a failed run instead of a routable workflow outcome.
+
+The Python client accepts the same creation-only value:
+
+```python
+run = await deployment.run({"items": ["red", "blue"]}, max_steps=50_000)
+assert (run.max_steps, run.steps_executed, run.steps_remaining) == (
+    50_000,
+    run.steps_executed,
+    50_000 - run.steps_executed,
+)
+```
+
 List durable stopped runs:
 
 ```bash
@@ -720,6 +743,17 @@ Inspect a run without trace detail:
 ```bash
 wf run inspect run_123
 ```
+
+Inspection reports the effective step budget alongside status and output:
+
+- `max_steps`: effective limit stored with the run
+- `steps_executed`: admitted step attempts so far
+- `steps_remaining`: unspent budget, floored at zero
+
+Resume reuses the persisted budget and accepts no replacement value.
+`wf run resume` takes only a payload and outcome; it never resets the
+counter. Budget exhaustion fails the run with a step-budget error and never
+invokes the denied handler.
 
 Poll a run until it stops:
 

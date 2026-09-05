@@ -5,8 +5,8 @@ from typing import Any, Literal, cast
 
 from pydantic import BaseModel, ConfigDict, TypeAdapter, ValidationError
 
+from .run_limits import RunLimits
 from .run_state import ROOT_SCOPE_ID, RunState
-from .runtime.limits import RunLimits
 
 
 class PersistedRunState(BaseModel):
@@ -57,7 +57,13 @@ def _check_step_number(value: object, *, steps_executed: int, what: str) -> None
     """
     if value is None:
         return
-    if not _is_strict_int(value) or not 1 <= value <= steps_executed:  # type: ignore[operator]
+    if not _is_strict_int(value):
+        raise ValueError(
+            "invalid persisted workflow run state: "
+            f"{what} has incoherent step number {value!r}"
+        )
+    number = cast(int, value)
+    if not 1 <= number <= steps_executed:
         raise ValueError(
             "invalid persisted workflow run state: "
             f"{what} has incoherent step number {value!r}"
@@ -101,27 +107,32 @@ def _require_v2_budget_fields(state: dict[str, Any]) -> None:
     corruption, not another request for defaults. Values are validated
     strictly on the raw envelope (exact ints, ranges, coherence) because lax
     coercion would otherwise accept bools, numeric strings, negatives, or
-    future frame numbers and silently inflate or distort the budget. Trace
-    and interrupt entries always carry the key (``None`` only for unadmitted
-    or upgraded pre-budget history), so a missing key is likewise corrupt
-    even though the dataclass default would otherwise mask it.
+    future frame numbers and silently inflate or distort the budget. The
+    limits object holds exactly ``max_steps``: unknown fields are corrupt
+    rather than silently dropped, since no stored-data contract emits them.
+    Trace and interrupt entries always carry the key (``None`` only for
+    unadmitted or upgraded pre-budget history), so a missing key is likewise
+    corrupt even though the dataclass default would otherwise mask it.
     """
     limits = state.get("limits")
-    if not isinstance(limits, dict) or "max_steps" not in limits:
+    if not isinstance(limits, dict) or set(limits.keys()) != {"max_steps"}:
         raise ValueError("invalid persisted workflow run state: missing step budget")
     max_steps = limits["max_steps"]
-    if not _is_strict_int(max_steps) or max_steps < 1:  # type: ignore[operator]
+    if not _is_strict_int(max_steps):
+        raise ValueError(
+            "invalid persisted workflow run state: corrupt step budget limit"
+        )
+    max_steps_value = cast(int, max_steps)
+    if max_steps_value < 1:
         raise ValueError(
             "invalid persisted workflow run state: corrupt step budget limit"
         )
     steps_executed = state.get("steps_executed")
     if not _is_strict_int(steps_executed):
         raise ValueError("invalid persisted workflow run state: missing step budget")
-    if not 0 <= steps_executed <= max_steps:  # type: ignore[operator]
-        raise ValueError(
-            "invalid persisted workflow run state: corrupt step counter"
-        )
     exec_count = cast(int, steps_executed)
+    if not 0 <= exec_count <= max_steps_value:
+        raise ValueError("invalid persisted workflow run state: corrupt step counter")
     frames = state.get("frames")
     if not isinstance(frames, dict):
         raise ValueError("invalid persisted workflow run state: missing frames")

@@ -10,26 +10,12 @@ checkpoints; the counter is persisted inside the existing stopped-run envelope.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from wf_core.errors import WorkflowStepLimitExceeded
 
 if TYPE_CHECKING:
     from wf_core.run_state import ExecutionFrame, RunState
-
-
-@dataclass(frozen=True, slots=True)
-class RunLimits:
-    """Immutable step budget captured when a run is created."""
-
-    max_steps: int = 10_000
-
-    def __post_init__(self) -> None:
-        if isinstance(self.max_steps, bool) or not isinstance(self.max_steps, int):
-            raise TypeError("max_steps must be an integer")
-        if self.max_steps < 1:
-            raise ValueError("max_steps must be positive")
 
 
 def admit_step_attempt(run: RunState, frame: ExecutionFrame, node_id: str) -> int:
@@ -50,4 +36,4 @@ def admit_step_attempt(run: RunState, frame: ExecutionFrame, node_id: str) -> in
 
 def remaining_step_attempts(run: RunState) -> int:
     """Return the unspent budget, floored at zero (never negative)."""
-    return max(run.limits.max_steps - run.steps_executed, 0)
+    return run.steps_remaining

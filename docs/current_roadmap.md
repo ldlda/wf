@@ -40,27 +40,18 @@ author -> validate -> save artifact -> deploy -> run -> inspect or resume
 
 ## Active runtime sequence
 
-The next three slices build on the foreach control-region, structured-context,
-scheduler, lineage, and barrier foundations in this order.
+The next two slices build on the foreach control-region, structured-context,
+scheduler, lineage, barrier, and persisted run step budget foundations in
+this order.
 
-### 1. Add a persisted run step budget
-
-Implement the proposed run-wide limit:
-
-- [`run step budget design`](superpowers/specs/2026-09-04-run-step-budget-design.md)
-
-The budget must cover every frame and subgraph scope in one run, survive
-checkpoint and resume, and stop valid but non-terminating graph cycles with a
-clear runtime failure.
-
-### 2. Consolidate runtime identity resolution
+### 1. Consolidate runtime identity resolution
 
 Introduce one internal resolver for a frame, lineage, runtime scope, and
 foreach activation environment. The resolver should validate the canonical
 identity chain once so fork/gather code does not pass related identifiers
 independently or repeat ownership walks.
 
-### 3. Implement explicit fork and gather
+### 2. Implement explicit fork and gather
 
 Reuse the scheduler, activation, lineage, and reducer-aware barrier machinery:
 
@@ -141,6 +132,9 @@ The active sequence can assume these foundations:
 - Removal of the pass-through `JoinNode`; future `GatherNode` starts with its
   actual synchronization contract and no placeholder compatibility
 - Durable stopped-run inspection and resume
+- Persisted run-wide step budget (`RunLimits`, `steps_executed`,
+  computed `steps_remaining`) covering every frame and subgraph scope,
+  surviving checkpoint and resume, with exhaustion as a failed run
 - Python client reconstruction of capabilities, artifacts, deployments, and
   runs through the API
 

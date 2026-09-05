@@ -2,14 +2,12 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
 from enum import StrEnum
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from wf_core.models.reducers import ReducerRef
 from wf_core.models.workflow_refs import WorkflowRef
 from wf_core.paths import StatePath
-
-if TYPE_CHECKING:
-    from wf_core.runtime.limits import RunLimits
+from wf_core.run_limits import RunLimits
 
 ROOT_SCOPE_ID = "root"
 ROOT_LINEAGE_ID = "root"
@@ -193,23 +191,12 @@ class InterruptRequest:
     step_number: int | None = None
 
 
-def _default_run_limits() -> RunLimits:
-    """Build the default budget without a top-level runtime import.
-
-    Importing ``wf_core.runtime.limits`` at module top would execute the
-    ``wf_core.runtime`` package, whose engine imports this module back.
-    """
-    from wf_core.runtime.limits import RunLimits
-
-    return RunLimits()
-
-
 @dataclass(slots=True)
 class RunState:
     """Mutable execution state for one workflow run.
 
     ``limits``/``steps_executed`` form the persisted run-wide step budget (see
-    ``wf_core.runtime.limits``); ``steps_remaining`` is computed from them.
+    ``wf_core.run_limits``); ``steps_remaining`` is computed from them.
     """
 
     workflow_name: str
@@ -229,7 +216,7 @@ class RunState:
     activated_incoming_edge: str | None = None
     error: str | None = None
     interrupt: InterruptRequest | None = None
-    limits: RunLimits = field(default_factory=_default_run_limits)
+    limits: RunLimits = field(default_factory=RunLimits)
     steps_executed: int = 0
 
     @property
@@ -257,9 +244,3 @@ class RunState:
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
-
-
-# Deferred runtime import: binding ``RunLimits`` here (after every class is
-# defined) lets ``wf_core.runtime`` engine modules import this module back
-# without a cycle, and gives pydantic a resolvable annotation for the codec.
-from wf_core.runtime.limits import RunLimits  # noqa: E402

@@ -1,6 +1,16 @@
+"""Sync step-budget dispatch tests.
+
+Covers run-wide counting for every current step kind, trace numbering,
+and the engine-level limits seam. Model/admission unit tests live in
+`test_run_limits.py`; codec and migration tests live in
+`test_run_step_budget_codec.py`.
+"""
+
 from __future__ import annotations
 
 import inspect
+from collections.abc import Callable
+from typing import Any
 
 import pytest
 
@@ -15,30 +25,23 @@ from wf_core import (
     NodeUse,
     PreparedSubgraph,
     ReducerRef,
+    RunLimits,
     RunStatus,
     SchemaRef,
     StateField,
     StateSchema,
     SubgraphNode,
     Workflow,
-    WorkflowExecutionError,
-    dump_run_state,
     execute_workflow,
     execute_workflow_async,
     execute_workflow_result_async,
-    load_run_state,
     resume_workflow,
     resume_workflow_async,
     resume_workflow_result_async,
     step_workflow,
 )
 from wf_core.errors import WorkflowStepLimitExceeded
-from wf_core.run_codec import load_run_state_with_upgrade
-from wf_core.runtime.limits import (
-    RunLimits,
-    admit_step_attempt,
-    remaining_step_attempts,
-)
+from wf_core.run_state import RunState
 from wf_core.runtime.ops.runs import create_run_state
 from wf_core.runtime.preparation import prepare_resume
 
@@ -65,343 +68,15 @@ def _minimal_workflow(name: str = "budget") -> Workflow:
     )
 
 
-def test_run_limits_default() -> None:
-    limits = RunLimits()
-
-    assert limits.max_steps == 10_000
-
-
-def test_run_limits_rejects_non_positive() -> None:
-    with pytest.raises(ValueError):
-        RunLimits(max_steps=0)
-    with pytest.raises(ValueError):
-        RunLimits(max_steps=-3)
-
-
-def test_run_limits_rejects_bool_and_non_int() -> None:
-    with pytest.raises(TypeError):
-        RunLimits(max_steps=True)  # type: ignore[arg-type]
-    with pytest.raises(TypeError):
-        RunLimits(max_steps=False)  # type: ignore[arg-type]
-    with pytest.raises(TypeError):
-        RunLimits(max_steps="10")  # type: ignore[arg-type]
-    with pytest.raises(TypeError):
-        RunLimits(max_steps=10.0)  # type: ignore[arg-type]
-
-
-def test_create_run_state_defaults_to_budget() -> None:
-    workflow = _minimal_workflow()
-
-    run = create_run_state(workflow, {})
-
-    assert run.limits.max_steps == 10_000
-    assert run.steps_executed == 0
-    assert run.steps_remaining == 10_000
-    assert run.current_frame().step_number is None
-    assert remaining_step_attempts(run) == 10_000
-
-
-def test_create_run_state_captures_limits() -> None:
-    workflow = _minimal_workflow()
-    limits = RunLimits(max_steps=5)
-
-    run = create_run_state(workflow, {}, limits=limits)
-
-    assert run.limits.max_steps == 5
-    assert run.steps_remaining == 5
-
-
-def test_budget_of_one() -> None:
-    workflow = _minimal_workflow()
-    limits = RunLimits(max_steps=1)
-    run = create_run_state(workflow, {}, limits=limits)
-    number = admit_step_attempt(run, run.current_frame(), workflow.start)
-
-    assert number == 1
-    assert run.steps_executed == 1
-    assert run.steps_remaining == 0
-    with pytest.raises(WorkflowStepLimitExceeded):
-        admit_step_attempt(run, run.current_frame(), workflow.start)
-
-
-def test_denied_admission_does_not_increment() -> None:
-    workflow = _minimal_workflow()
-    run = create_run_state(workflow, {}, limits=RunLimits(max_steps=1))
-    admit_step_attempt(run, run.current_frame(), workflow.start)
-
-    with pytest.raises(WorkflowStepLimitExceeded):
-        admit_step_attempt(run, run.current_frame(), workflow.start)
-
-    assert run.steps_executed == 1
-    assert run.current_frame().step_number == 1
-    assert run.steps_remaining == 0
-    assert remaining_step_attempts(run) == 0
-
-
-def test_admission_assigns_step_numbers() -> None:
-    workflow = _minimal_workflow()
-    run = create_run_state(workflow, {}, limits=RunLimits(max_steps=3))
-
-    first = admit_step_attempt(run, run.current_frame(), workflow.start)
-    second = admit_step_attempt(run, run.current_frame(), workflow.start)
-
-    assert first == 1
-    assert second == 2
-    assert run.steps_executed == 2
-    assert run.current_frame().step_number == 2
-    assert run.steps_remaining == 1
-    assert remaining_step_attempts(run) == 1
-
-
-def test_step_limit_error_details() -> None:
-    workflow = _minimal_workflow(name="budget_details")
-    run = create_run_state(workflow, {}, limits=RunLimits(max_steps=1))
-    frame = run.current_frame()
-    admit_step_attempt(run, frame, workflow.start)
-
-    with pytest.raises(WorkflowStepLimitExceeded) as exc_info:
-        admit_step_attempt(run, frame, workflow.start)
-
-    assert isinstance(exc_info.value, WorkflowExecutionError)
-    message = str(exc_info.value)
-    assert "budget_details" in message
-    assert "1" in message
-    assert frame.id in message
-    assert frame.scope_id in message
-    assert workflow.start in message
-
-
-def test_remaining_never_negative() -> None:
-    workflow = _minimal_workflow()
-    run = create_run_state(workflow, {}, limits=RunLimits(max_steps=1))
-    run.steps_executed = 5
-
-    assert run.steps_remaining == 0
-    assert remaining_step_attempts(run) == 0
-
-
-def test_dump_writes_v2_envelope() -> None:
-    workflow = _minimal_workflow()
-    run = create_run_state(workflow, {}, limits=RunLimits(max_steps=7))
-    admit_step_attempt(run, run.current_frame(), workflow.start)
-
-    stored = dump_run_state(run)
-
-    assert stored["version"] == 2
-
-
-def test_v2_round_trip() -> None:
-    workflow = _minimal_workflow()
-    run = create_run_state(workflow, {}, limits=RunLimits(max_steps=7))
-    admit_step_attempt(run, run.current_frame(), workflow.start)
-
-    stored = dump_run_state(run)
-    restored, upgraded = load_run_state_with_upgrade(stored)
-
-    assert upgraded is False
-    assert restored.limits.max_steps == 7
-    assert restored.steps_executed == 1
-    assert restored.steps_remaining == 6
-    assert restored.frames["root"].step_number == 1
-
-    via_legacy = load_run_state(stored)
-    assert via_legacy.limits.max_steps == 7
-    assert via_legacy.steps_executed == 1
-    assert via_legacy.frames["root"].step_number == 1
-
-
-def _strip_to_v1(stored: dict) -> dict:
-    state = dict(stored["state"])
-    state.pop("limits", None)
-    state.pop("steps_executed", None)
-    frames = {
-        frame_id: {key: value for key, value in frame.items() if key != "step_number"}
-        for frame_id, frame in dict(state["frames"]).items()
-    }
-    state["frames"] = frames
-    return {"version": 1, "state": state}
-
-
-def test_v1_payload_receives_defaults_once() -> None:
-    workflow = _minimal_workflow()
-    run = create_run_state(workflow, {}, limits=RunLimits(max_steps=7))
-    stored = _strip_to_v1(dump_run_state(run))
-
-    restored, upgraded = load_run_state_with_upgrade(stored)
-
-    assert upgraded is True
-    assert restored.limits.max_steps == 10_000
-    assert restored.steps_executed == 0
-    assert restored.steps_remaining == 10_000
-    assert restored.frames["root"].step_number is None
-
-    via_legacy = load_run_state(stored)
-    assert via_legacy.limits.max_steps == 10_000
-    assert via_legacy.steps_executed == 0
-
-
-def test_v2_missing_limits_is_corrupt() -> None:
-    workflow = _minimal_workflow()
-    run = create_run_state(workflow, {})
-    stored = dump_run_state(run)
-    stored["state"].pop("limits")
-
-    with pytest.raises(ValueError):
-        load_run_state_with_upgrade(stored)
-
-
-def test_v2_missing_steps_executed_is_corrupt() -> None:
-    workflow = _minimal_workflow()
-    run = create_run_state(workflow, {})
-    stored = dump_run_state(run)
-    stored["state"].pop("steps_executed")
-
-    with pytest.raises(ValueError):
-        load_run_state_with_upgrade(stored)
-
-
-def test_v2_missing_frame_step_number_is_corrupt() -> None:
-    workflow = _minimal_workflow()
-    run = create_run_state(workflow, {})
-    stored = dump_run_state(run)
-    del stored["state"]["frames"]["root"]["step_number"]
-
-    with pytest.raises(ValueError):
-        load_run_state_with_upgrade(stored)
-
-
-def test_v1_smuggled_budget_fields_receive_defaults() -> None:
-    """V1 envelopes predate budgets; smuggled fields must not survive."""
-    from typing import Any, cast
-
-    workflow = _minimal_workflow()
-    run = create_run_state(workflow, {}, limits=RunLimits(max_steps=7))
-    stored = _strip_to_v1(dump_run_state(run))
-    state = cast(dict[str, Any], stored["state"])
-    state["limits"] = {"max_steps": 999_999}
-    state["steps_executed"] = 999
-
-    restored, upgraded = load_run_state_with_upgrade(stored)
-
-    assert upgraded is True
-    assert restored.limits.max_steps == 10_000
-    assert restored.steps_executed == 0
-
-
-def test_v2_bool_max_steps_is_corrupt() -> None:
-    from typing import Any, cast
-
-    workflow = _minimal_workflow()
-    run = create_run_state(workflow, {}, limits=RunLimits(max_steps=2))
-    stored = dump_run_state(run)
-    cast(dict[str, Any], stored["state"])["limits"] = {"max_steps": True}
-
-    with pytest.raises(ValueError):
-        load_run_state_with_upgrade(stored)
-
-
-def test_v2_str_max_steps_is_corrupt() -> None:
-    from typing import Any, cast
-
-    workflow = _minimal_workflow()
-    run = create_run_state(workflow, {}, limits=RunLimits(max_steps=2))
-    stored = dump_run_state(run)
-    cast(dict[str, Any], stored["state"])["limits"] = {"max_steps": "10"}
-
-    with pytest.raises(ValueError):
-        load_run_state_with_upgrade(stored)
-
-
-def test_v2_negative_steps_executed_is_corrupt() -> None:
-    from typing import Any, cast
-
-    workflow = _minimal_workflow()
-    run = create_run_state(workflow, {}, limits=RunLimits(max_steps=2))
-    stored = dump_run_state(run)
-    cast(dict[str, Any], stored["state"])["steps_executed"] = -100
-
-    with pytest.raises(ValueError):
-        load_run_state_with_upgrade(stored)
-
-
-def test_v2_exceeding_steps_executed_is_corrupt() -> None:
-    from typing import Any, cast
-
-    workflow = _minimal_workflow()
-    run = create_run_state(workflow, {}, limits=RunLimits(max_steps=2))
-    stored = dump_run_state(run)
-    cast(dict[str, Any], stored["state"])["steps_executed"] = 5
-
-    with pytest.raises(ValueError):
-        load_run_state_with_upgrade(stored)
-
-
-def test_v2_bool_steps_executed_is_corrupt() -> None:
-    from typing import Any, cast
-
-    workflow = _minimal_workflow()
-    run = create_run_state(workflow, {}, limits=RunLimits(max_steps=2))
-    stored = dump_run_state(run)
-    cast(dict[str, Any], stored["state"])["steps_executed"] = True
-
-    with pytest.raises(ValueError):
-        load_run_state_with_upgrade(stored)
-
-
-def test_v2_incoherent_frame_step_number_is_corrupt() -> None:
-    from typing import Any, cast
-
-    workflow = _minimal_workflow()
-    run = create_run_state(workflow, {}, limits=RunLimits(max_steps=2))
-    admit_step_attempt(run, run.current_frame(), workflow.start)
-    stored = dump_run_state(run)
-    state = cast(dict[str, Any], stored["state"])
-    frames = cast(dict[str, Any], state["frames"])
-    cast(dict[str, Any], frames["root"])["step_number"] = 999
-
-    with pytest.raises(ValueError):
-        load_run_state_with_upgrade(stored)
-
-
-def test_v2_bool_frame_step_number_is_corrupt() -> None:
-    from typing import Any, cast
-
-    workflow = _minimal_workflow()
-    run = create_run_state(workflow, {}, limits=RunLimits(max_steps=2))
-    admit_step_attempt(run, run.current_frame(), workflow.start)
-    stored = dump_run_state(run)
-    state = cast(dict[str, Any], stored["state"])
-    frames = cast(dict[str, Any], state["frames"])
-    cast(dict[str, Any], frames["root"])["step_number"] = True
-
-    with pytest.raises(ValueError):
-        load_run_state_with_upgrade(stored)
-
-
-def test_v2_pending_frame_none_number_round_trips() -> None:
-    """Fresh V2 runs legitimately persist unadmitted (None) frame numbers."""
-    workflow = _minimal_workflow()
-    run = create_run_state(workflow, {}, limits=RunLimits(max_steps=2))
-
-    restored, upgraded = load_run_state_with_upgrade(dump_run_state(run))
-
-    assert upgraded is False
-    assert restored.steps_executed == 0
-    assert restored.frames["root"].step_number is None
-
-
-# --- Task 2: sync dispatch and trace numbering ---
-
-
 def _empty_schema() -> SchemaRef:
     return SchemaRef(type="object", properties={})
 
 
-def _ok_handler(payload: dict, _context: object) -> dict:
+def _ok_handler(payload: dict[str, Any], _context: object) -> dict[str, Any]:
     return {"outcome": "ok", "output": {}}
 
 
-def _trace_numbers(run) -> list:
+def _trace_numbers(run: RunState) -> list[int | None]:
     return [entry.step_number for entry in run.trace]
 
 
@@ -557,16 +232,10 @@ def _serial_foreach_workflow() -> Workflow:
 def test_sync_foreach_controller_and_body_share_counter() -> None:
     workflow = _serial_foreach_workflow()
 
-    run = execute_workflow(
-        workflow,
-        {"items": ["a", "b"]},
-        {
-            "record": lambda payload, _ctx: {
-                "outcome": "ok",
-                "output": {"seen": payload["value"]},
-            }
-        },
-    )
+    def record(payload: dict[str, Any], _context: object) -> dict[str, Any]:
+        return {"outcome": "ok", "output": {"seen": payload["value"]}}
+
+    run = execute_workflow(workflow, {"items": ["a", "b"]}, {"record": record})
 
     assert run.status == RunStatus.COMPLETED
     assert run.steps_executed == 5
@@ -741,7 +410,7 @@ def test_sync_explicit_end_counts() -> None:
         edges=[Edge.model_validate({"from": "finish", "outcome": "done", "to": "end"})],
     )
 
-    def finish(_payload: dict, _context: object) -> dict:
+    def finish(_payload: dict[str, Any], _context: object) -> dict[str, Any]:
         return {"outcome": "done", "output": {}}
 
     run = execute_workflow(workflow, {}, {"finish": finish})
@@ -766,7 +435,7 @@ def test_sync_legacy_end_creates_no_extra_attempt() -> None:
 def test_sync_handler_failure_consumes_attempt() -> None:
     workflow = _minimal_workflow()
 
-    def explode(_payload: dict, _context: object) -> dict:
+    def explode(_payload: dict[str, Any], _context: object) -> dict[str, Any]:
         raise ValueError("boom")
 
     run = create_run_state(workflow, {})
@@ -801,7 +470,7 @@ def test_sync_handled_error_outcome_counts_once() -> None:
         ],
     )
 
-    def fail_soft(_payload: dict, _context: object) -> dict:
+    def fail_soft(_payload: dict[str, Any], _context: object) -> dict[str, Any]:
         return {"outcome": "error", "output": {}}
 
     run = execute_workflow(workflow, {}, {"risky": fail_soft})
@@ -850,8 +519,10 @@ def test_sync_closed_cycle_fails_at_limit() -> None:
     workflow = _cyclic_workflow()
     calls: list[str] = []
 
-    def make(name: str):  # type: ignore[no-untyped-def]
-        def handler(_payload: dict, _context: object) -> dict:
+    def make(
+        name: str,
+    ) -> Callable[[dict[str, Any], object], dict[str, Any]]:
+        def handler(_payload: dict[str, Any], _context: object) -> dict[str, Any]:
             calls.append(name)
             return {"outcome": "ok", "output": {}}
 
@@ -925,7 +596,7 @@ def _counting_loop_workflow() -> Workflow:
 def test_sync_exiting_loop_completes_within_budget() -> None:
     workflow = _counting_loop_workflow()
 
-    def bump(payload: dict, _context: object) -> dict:
+    def bump(payload: dict[str, Any], _context: object) -> dict[str, Any]:
         count = payload.get("count", 0)
         assert isinstance(count, int)
         return {"outcome": "ok", "output": {"count": count + 1}}
@@ -939,9 +610,9 @@ def test_sync_exiting_loop_completes_within_budget() -> None:
 
 def test_sync_denial_never_invokes_handler() -> None:
     workflow = _chain_workflow()
-    b_calls: list[dict] = []
+    b_calls: list[dict[str, Any]] = []
 
-    def b_handler(payload: dict, _context: object) -> dict:
+    def b_handler(payload: dict[str, Any], _context: object) -> dict[str, Any]:
         b_calls.append(payload)
         return {"outcome": "ok", "output": {}}
 
@@ -953,57 +624,6 @@ def test_sync_denial_never_invokes_handler() -> None:
     assert run.steps_executed == 1
     assert _trace_numbers(run) == [1]
     assert b_calls == []
-
-
-def _strip_budget_fields(stored: dict) -> dict:
-    state = dict(_strip_to_v1(stored)["state"])
-    state["trace"] = [
-        {key: value for key, value in entry.items() if key != "step_number"}
-        for entry in state.get("trace", [])
-    ]
-    if state.get("interrupt") is not None:
-        state["interrupt"] = {
-            key: value
-            for key, value in state["interrupt"].items()
-            if key != "step_number"
-        }
-    return {"version": 1, "state": state}
-
-
-def test_v1_traces_and_interrupt_receive_none_step_numbers() -> None:
-    workflow = _interrupt_workflow()
-    run = execute_workflow(workflow, {}, {"work": _ok_handler})
-    stored = _strip_budget_fields(dump_run_state(run))
-
-    restored, upgraded = load_run_state_with_upgrade(stored)
-
-    assert upgraded is True
-    assert restored.trace[0].step_number is None
-    assert restored.interrupt is not None
-    assert restored.interrupt.step_number is None
-
-
-def test_v2_missing_trace_step_number_is_corrupt() -> None:
-    workflow = _interrupt_workflow()
-    run = execute_workflow(workflow, {}, {"work": _ok_handler})
-    stored = dump_run_state(run)
-    del stored["state"]["trace"][0]["step_number"]
-
-    with pytest.raises(ValueError):
-        load_run_state_with_upgrade(stored)
-
-
-def test_v2_missing_interrupt_step_number_is_corrupt() -> None:
-    workflow = _interrupt_workflow()
-    run = execute_workflow(workflow, {}, {"work": _ok_handler})
-    stored = dump_run_state(run)
-    del stored["state"]["interrupt"]["step_number"]
-
-    with pytest.raises(ValueError):
-        load_run_state_with_upgrade(stored)
-
-
-# --- Task 4: engine-level limits seam ---
 
 
 def test_execute_workflow_accepts_explicit_limits() -> None:
@@ -1034,7 +654,7 @@ def test_execute_workflow_defaults_to_ten_thousand() -> None:
 def test_execute_workflow_enforces_limits() -> None:
     workflow = _cyclic_workflow()
 
-    def ok_handler(_payload: dict, _context: object) -> dict:
+    def ok_handler(_payload: dict[str, Any], _context: object) -> dict[str, Any]:
         return {"outcome": "ok", "output": {}}
 
     with pytest.raises(WorkflowStepLimitExceeded):
@@ -1049,7 +669,7 @@ def test_execute_workflow_enforces_limits() -> None:
 async def test_execute_workflow_async_accepts_explicit_limits() -> None:
     workflow = _chain_workflow()
 
-    async def ok_async(_payload: dict, _context: object) -> dict:
+    async def ok_async(_payload: dict[str, Any], _context: object) -> dict[str, Any]:
         return {"outcome": "ok", "output": {}}
 
     run = await execute_workflow_async(
@@ -1068,7 +688,7 @@ async def test_execute_workflow_async_accepts_explicit_limits() -> None:
 async def test_execute_workflow_result_async_reports_exhaustion() -> None:
     workflow = _cyclic_workflow()
 
-    async def ok_async(_payload: dict, _context: object) -> dict:
+    async def ok_async(_payload: dict[str, Any], _context: object) -> dict[str, Any]:
         return {"outcome": "ok", "output": {}}
 
     run = await execute_workflow_result_async(

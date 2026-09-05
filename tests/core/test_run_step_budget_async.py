@@ -9,6 +9,7 @@ later sibling commits after the first unhandled result in reservation order.
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Callable
 from typing import Any
 
 import pytest
@@ -21,6 +22,7 @@ from wf_core import (
     NodeDef,
     NodeUse,
     ReducerRef,
+    RunLimits,
     RunStatus,
     SchemaRef,
     StateField,
@@ -31,9 +33,17 @@ from wf_core import (
     step_workflow_async,
 )
 from wf_core.errors import WorkflowStepLimitExceeded
-from wf_core.runtime.limits import RunLimits, remaining_step_attempts
+from wf_core.runtime.limits import remaining_step_attempts
 from wf_core.runtime.ops.runs import create_run_state
 from wf_core.runtime.preparation import prepare_new_run, prepare_resume
+
+
+async def _noop_record(payload: dict[str, Any], _context: object) -> dict[str, Any]:
+    return {"outcome": "ok", "output": payload}
+
+
+def _sync_noop_record(payload: dict[str, Any], _context: object) -> dict[str, Any]:
+    return {"outcome": "ok", "output": payload}
 
 
 def _concurrent_workflow(*, max_active: int, name: str = "async_budget") -> Workflow:
@@ -102,17 +112,19 @@ def _concurrent_workflow(*, max_active: int, name: str = "async_budget") -> Work
     )
 
 
-def _prepare_limited_run(
-    workflow: Workflow, items: list[Any], *, max_steps: int
-):
-    run = create_run_state(workflow, {"items": items}, limits=RunLimits(max_steps=max_steps))
+def _prepare_limited_run(workflow: Workflow, items: list[Any], *, max_steps: int):
+    run = create_run_state(
+        workflow, {"items": items}, limits=RunLimits(max_steps=max_steps)
+    )
     prepare_new_run(workflow, {"items": items}, run)
-    index = prepare_resume(workflow, run, resume_payload=None, resume_outcome="submitted")
+    index = prepare_resume(
+        workflow, run, resume_payload=None, resume_outcome="submitted"
+    )
     assert index is not None
     return run, index
 
 
-async def _wait_for(predicate, *, timeout: float = 2.0) -> None:  # type: ignore[no-untyped-def]
+async def _wait_for(predicate: Callable[[], bool], *, timeout: float = 2.0) -> None:
     async def _poll() -> None:
         while not predicate():
             await asyncio.sleep(0.005)
@@ -126,10 +138,7 @@ async def test_async_batch_bounded_to_remaining_budget() -> None:
     items = ["a", "b", "c", "d", "e"]
     run, index = _prepare_limited_run(workflow, items, max_steps=4)
 
-    async def _noop(payload: dict[str, Any], _ctx: object) -> dict[str, Any]:
-        return {"outcome": "ok", "output": payload}
-
-    await step_workflow_async(workflow, run, {"record": _noop}, index=index)
+    await step_workflow_async(workflow, run, {"record": _noop_record}, index=index)
     assert run.steps_executed == 1
     assert remaining_step_attempts(run) == 3
     assert run.ready_frame_ids == [f"root:each#0:{i}" for i in range(5)]
@@ -189,10 +198,7 @@ async def test_async_batch_denies_first_when_remaining_zero() -> None:
     items = ["a", "b", "c"]
     run, index = _prepare_limited_run(workflow, items, max_steps=1)
 
-    async def _noop(payload: dict[str, Any], _ctx: object) -> dict[str, Any]:
-        return {"outcome": "ok", "output": payload}
-
-    await step_workflow_async(workflow, run, {"record": _noop}, index=index)
+    await step_workflow_async(workflow, run, {"record": _noop_record}, index=index)
     assert run.steps_executed == 1
     assert remaining_step_attempts(run) == 0
 
@@ -224,10 +230,7 @@ async def test_async_batch_numbers_follow_queue_order_not_completion() -> None:
     items = ["a", "b", "c"]
     run, index = _prepare_limited_run(workflow, items, max_steps=20)
 
-    async def _noop(payload: dict[str, Any], _ctx: object) -> dict[str, Any]:
-        return {"outcome": "ok", "output": payload}
-
-    await step_workflow_async(workflow, run, {"record": _noop}, index=index)
+    await step_workflow_async(workflow, run, {"record": _noop_record}, index=index)
     assert run.steps_executed == 1
 
     allow_a = asyncio.Event()
@@ -282,10 +285,7 @@ async def test_async_batch_reservations_kept_after_failure() -> None:
     items = ["a", "b", "c"]
     run, index = _prepare_limited_run(workflow, items, max_steps=20)
 
-    async def _noop(payload: dict[str, Any], _ctx: object) -> dict[str, Any]:
-        return {"outcome": "ok", "output": payload}
-
-    await step_workflow_async(workflow, run, {"record": _noop}, index=index)
+    await step_workflow_async(workflow, run, {"record": _noop_record}, index=index)
     base_steps = run.steps_executed
     assert base_steps == 1
 
@@ -321,10 +321,7 @@ async def test_async_batch_settles_siblings_and_discards_later_commits() -> None
     items = ["a", "b", "c"]
     run, index = _prepare_limited_run(workflow, items, max_steps=20)
 
-    async def _noop(payload: dict[str, Any], _ctx: object) -> dict[str, Any]:
-        return {"outcome": "ok", "output": payload}
-
-    await step_workflow_async(workflow, run, {"record": _noop}, index=index)
+    await step_workflow_async(workflow, run, {"record": _noop_record}, index=index)
 
     release = asyncio.Event()
     started: list[str] = []
@@ -373,7 +370,9 @@ async def test_sync_async_parity_for_serial_execution() -> None:
     def _serial_workflow(name: str) -> Workflow:
         return Workflow(
             name=name,
-            input_schema=SchemaRef(type="object", properties={"items": {"type": "array"}}),
+            input_schema=SchemaRef(
+                type="object", properties={"items": {"type": "array"}}
+            ),
             state_schema=StateSchema.from_field_map(
                 {
                     "items": StateField(type="array"),
@@ -383,7 +382,9 @@ async def test_sync_async_parity_for_serial_execution() -> None:
                     ),
                 }
             ),
-            output_schema=SchemaRef(type="object", properties={"seen": {"type": "array"}}),
+            output_schema=SchemaRef(
+                type="object", properties={"seen": {"type": "array"}}
+            ),
             node_defs=[
                 NodeDef(
                     name="record",
@@ -426,7 +427,9 @@ async def test_sync_async_parity_for_serial_execution() -> None:
                 ),
             ],
             edges=[
-                Edge.model_validate({"from": "each", "outcome": "loop", "to": "record"}),
+                Edge.model_validate(
+                    {"from": "each", "outcome": "loop", "to": "record"}
+                ),
                 Edge.model_validate({"from": "record", "outcome": "ok", "to": "each"}),
                 Edge.model_validate({"from": "each", "outcome": "done", "to": END}),
             ],
@@ -438,7 +441,7 @@ async def test_sync_async_parity_for_serial_execution() -> None:
     sync_run = execute_workflow(
         sync_workflow,
         {"items": ["a", "b"]},
-        {"record": lambda payload, _ctx: {"outcome": "ok", "output": payload}},
+        {"record": _sync_noop_record},
     )
 
     async def record(payload: dict[str, Any], _ctx: object) -> dict[str, Any]:

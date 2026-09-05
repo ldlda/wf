@@ -4,6 +4,7 @@ from copy import deepcopy
 
 from wf_core.models.workflow import Workflow
 from wf_core.paths import set_nested_value
+from wf_core.run_limits import RunLimits
 from wf_core.run_state import (
     ROOT_FRAME_ID,
     ROOT_LINEAGE_ID,
@@ -15,7 +16,6 @@ from wf_core.run_state import (
     RunStatus,
     RuntimeScope,
 )
-from wf_core.runtime.limits import RunLimits
 from wf_core.runtime.scheduler import add_frame
 
 

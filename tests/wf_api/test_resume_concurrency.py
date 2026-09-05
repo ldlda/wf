@@ -17,7 +17,7 @@ from wf_artifacts import (
     WorkflowDeployment,
 )
 from wf_authoring import NodeSpec
-from wf_core import InterruptRequest, RunState, RunStatus
+from wf_core import InterruptRequest, RunLimits, RunState, RunStatus
 from wf_platform import CapabilitySource
 
 
@@ -57,6 +57,7 @@ class BlockingResumeRuntime:
         deployment: WorkflowDeployment | None = None,
         artifact: WorkflowArtifact | None = None,
         saved_subgraph_tree: SavedSubgraphTree | None = None,
+        limits: RunLimits | None = None,
     ) -> RunState:
         raise AssertionError("test should not start new workflow runs")
 

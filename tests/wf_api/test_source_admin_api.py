@@ -12,7 +12,7 @@ from wf_api.saved_subgraphs import SavedSubgraphTree
 from wf_api.source_admin import WorkflowSourceDiagnosticsProvider
 from wf_artifacts import WorkflowArtifact, WorkflowDeployment
 from wf_authoring import NodeSpec
-from wf_core import RunState
+from wf_core import RunLimits, RunState
 from wf_platform import (
     CapabilityBuckets,
     CapabilitySource,
@@ -43,6 +43,7 @@ class DummyRuntime:
         deployment: WorkflowDeployment | None = None,
         artifact: WorkflowArtifact | None = None,
         saved_subgraph_tree: SavedSubgraphTree | None = None,
+        limits: RunLimits | None = None,
     ) -> RunState:
         raise AssertionError("source admin tests must not run workflows")
 
