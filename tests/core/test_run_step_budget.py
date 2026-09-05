@@ -263,6 +263,126 @@ def test_v2_missing_frame_step_number_is_corrupt() -> None:
         load_run_state_with_upgrade(stored)
 
 
+def test_v1_smuggled_budget_fields_receive_defaults() -> None:
+    """V1 envelopes predate budgets; smuggled fields must not survive."""
+    from typing import Any, cast
+
+    workflow = _minimal_workflow()
+    run = create_run_state(workflow, {}, limits=RunLimits(max_steps=7))
+    stored = _strip_to_v1(dump_run_state(run))
+    state = cast(dict[str, Any], stored["state"])
+    state["limits"] = {"max_steps": 999_999}
+    state["steps_executed"] = 999
+
+    restored, upgraded = load_run_state_with_upgrade(stored)
+
+    assert upgraded is True
+    assert restored.limits.max_steps == 10_000
+    assert restored.steps_executed == 0
+
+
+def test_v2_bool_max_steps_is_corrupt() -> None:
+    from typing import Any, cast
+
+    workflow = _minimal_workflow()
+    run = create_run_state(workflow, {}, limits=RunLimits(max_steps=2))
+    stored = dump_run_state(run)
+    cast(dict[str, Any], stored["state"])["limits"] = {"max_steps": True}
+
+    with pytest.raises(ValueError):
+        load_run_state_with_upgrade(stored)
+
+
+def test_v2_str_max_steps_is_corrupt() -> None:
+    from typing import Any, cast
+
+    workflow = _minimal_workflow()
+    run = create_run_state(workflow, {}, limits=RunLimits(max_steps=2))
+    stored = dump_run_state(run)
+    cast(dict[str, Any], stored["state"])["limits"] = {"max_steps": "10"}
+
+    with pytest.raises(ValueError):
+        load_run_state_with_upgrade(stored)
+
+
+def test_v2_negative_steps_executed_is_corrupt() -> None:
+    from typing import Any, cast
+
+    workflow = _minimal_workflow()
+    run = create_run_state(workflow, {}, limits=RunLimits(max_steps=2))
+    stored = dump_run_state(run)
+    cast(dict[str, Any], stored["state"])["steps_executed"] = -100
+
+    with pytest.raises(ValueError):
+        load_run_state_with_upgrade(stored)
+
+
+def test_v2_exceeding_steps_executed_is_corrupt() -> None:
+    from typing import Any, cast
+
+    workflow = _minimal_workflow()
+    run = create_run_state(workflow, {}, limits=RunLimits(max_steps=2))
+    stored = dump_run_state(run)
+    cast(dict[str, Any], stored["state"])["steps_executed"] = 5
+
+    with pytest.raises(ValueError):
+        load_run_state_with_upgrade(stored)
+
+
+def test_v2_bool_steps_executed_is_corrupt() -> None:
+    from typing import Any, cast
+
+    workflow = _minimal_workflow()
+    run = create_run_state(workflow, {}, limits=RunLimits(max_steps=2))
+    stored = dump_run_state(run)
+    cast(dict[str, Any], stored["state"])["steps_executed"] = True
+
+    with pytest.raises(ValueError):
+        load_run_state_with_upgrade(stored)
+
+
+def test_v2_incoherent_frame_step_number_is_corrupt() -> None:
+    from typing import Any, cast
+
+    workflow = _minimal_workflow()
+    run = create_run_state(workflow, {}, limits=RunLimits(max_steps=2))
+    admit_step_attempt(run, run.current_frame(), workflow.start)
+    stored = dump_run_state(run)
+    state = cast(dict[str, Any], stored["state"])
+    frames = cast(dict[str, Any], state["frames"])
+    cast(dict[str, Any], frames["root"])["step_number"] = 999
+
+    with pytest.raises(ValueError):
+        load_run_state_with_upgrade(stored)
+
+
+def test_v2_bool_frame_step_number_is_corrupt() -> None:
+    from typing import Any, cast
+
+    workflow = _minimal_workflow()
+    run = create_run_state(workflow, {}, limits=RunLimits(max_steps=2))
+    admit_step_attempt(run, run.current_frame(), workflow.start)
+    stored = dump_run_state(run)
+    state = cast(dict[str, Any], stored["state"])
+    frames = cast(dict[str, Any], state["frames"])
+    cast(dict[str, Any], frames["root"])["step_number"] = True
+
+    with pytest.raises(ValueError):
+        load_run_state_with_upgrade(stored)
+
+
+def test_v2_pending_frame_none_number_round_trips() -> None:
+    """Fresh V2 runs legitimately persist unadmitted (None) frame numbers."""
+    workflow = _minimal_workflow()
+    run = create_run_state(workflow, {}, limits=RunLimits(max_steps=2))
+
+    restored, upgraded = load_run_state_with_upgrade(dump_run_state(run))
+
+    assert upgraded is False
+    assert restored.steps_executed == 0
+    assert restored.frames["root"].step_number is None
+
+
 # --- Task 2: sync dispatch and trace numbering ---
 
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 from pydantic import BaseModel, ConfigDict, TypeAdapter, ValidationError
 
@@ -37,45 +37,91 @@ def dump_run_state(run: RunState) -> dict[str, object]:
     ).model_dump(mode="json")
 
 
+def _is_strict_int(value: object) -> bool:
+    """Return True only for actual ints, excluding bools.
+
+    Pydantic's lax mode coerces ``True``/``"10"`` to ``1``/``10`` before
+    ``RunLimits.__post_init__`` runs, which would defeat the positive
+    non-boolean integer contract. Raw-envelope checks must therefore use
+    exact-type comparison instead of ``isinstance``.
+    """
+    return type(value) is int
+
+
+def _check_step_number(value: object, *, steps_executed: int, what: str) -> None:
+    """Reject corrupt step numbers that are not None or coherent history.
+
+    ``None`` survives for unadmitted pending frames and upgraded pre-budget
+    history. Any assigned number is one-based and can never exceed the
+    authoritative ``steps_executed`` counter.
+    """
+    if value is None:
+        return
+    if not _is_strict_int(value) or not 1 <= value <= steps_executed:  # type: ignore[operator]
+        raise ValueError(
+            "invalid persisted workflow run state: "
+            f"{what} has incoherent step number {value!r}"
+        )
+
+
 def _inject_v1_budget_defaults(state: dict[str, Any]) -> dict[str, Any]:
     """Copy a v1 state dict with the one-time step budget defaults applied.
 
     Version-1 envelopes predate step budgets, so they receive the default
     limit, a zeroed counter, and an unassigned number per frame exactly once
-    at load time. Pre-budget trace entries and any outstanding interrupt keep
-    an unassigned (``None``) number: attempts made before the upgrade are
-    outside the new budget.
+    at load time. Assignment overwrites rather than preserves: any budget
+    fields present in a v1 envelope are smuggled (v1 writers never emitted
+    them) and must not survive the upgrade. Pre-budget trace entries and any
+    outstanding interrupt keep an unassigned (``None``) number: attempts made
+    before the upgrade are outside the new budget.
     """
     upgraded = deepcopy(state)
-    upgraded.setdefault("limits", {"max_steps": RunLimits().max_steps})
-    upgraded.setdefault("steps_executed", 0)
+    upgraded["limits"] = {"max_steps": RunLimits().max_steps}
+    upgraded["steps_executed"] = 0
     frames = upgraded.get("frames")
     if isinstance(frames, dict):
         for frame in frames.values():
             if isinstance(frame, dict):
-                frame.setdefault("step_number", None)
+                frame["step_number"] = None
     trace = upgraded.get("trace")
     if isinstance(trace, list):
         for entry in trace:
             if isinstance(entry, dict):
-                entry.setdefault("step_number", None)
+                entry["step_number"] = None
     interrupt = upgraded.get("interrupt")
     if isinstance(interrupt, dict):
-        interrupt.setdefault("step_number", None)
+        interrupt["step_number"] = None
     return upgraded
 
 
 def _require_v2_budget_fields(state: dict[str, Any]) -> None:
-    """Reject v2 payloads missing budget fields as corrupt state.
+    """Reject v2 payloads with missing or incoherent budget fields as corrupt.
 
     Unlike v1, a v2 envelope promises budget fields; a missing counter is
-    corruption, not another request for defaults. Trace and interrupt entries
-    always carry the key (``None`` only for upgraded pre-budget history), so a
-    missing key is likewise corrupt even though the dataclass default would
-    otherwise mask it.
+    corruption, not another request for defaults. Values are validated
+    strictly on the raw envelope (exact ints, ranges, coherence) because lax
+    coercion would otherwise accept bools, numeric strings, negatives, or
+    future frame numbers and silently inflate or distort the budget. Trace
+    and interrupt entries always carry the key (``None`` only for unadmitted
+    or upgraded pre-budget history), so a missing key is likewise corrupt
+    even though the dataclass default would otherwise mask it.
     """
-    if "limits" not in state or "steps_executed" not in state:
+    limits = state.get("limits")
+    if not isinstance(limits, dict) or "max_steps" not in limits:
         raise ValueError("invalid persisted workflow run state: missing step budget")
+    max_steps = limits["max_steps"]
+    if not _is_strict_int(max_steps) or max_steps < 1:  # type: ignore[operator]
+        raise ValueError(
+            "invalid persisted workflow run state: corrupt step budget limit"
+        )
+    steps_executed = state.get("steps_executed")
+    if not _is_strict_int(steps_executed):
+        raise ValueError("invalid persisted workflow run state: missing step budget")
+    if not 0 <= steps_executed <= max_steps:  # type: ignore[operator]
+        raise ValueError(
+            "invalid persisted workflow run state: corrupt step counter"
+        )
+    exec_count = cast(int, steps_executed)
     frames = state.get("frames")
     if not isinstance(frames, dict):
         raise ValueError("invalid persisted workflow run state: missing frames")
@@ -85,6 +131,11 @@ def _require_v2_budget_fields(state: dict[str, Any]) -> None:
                 "invalid persisted workflow run state: "
                 f"frame {frame_id!r} is missing its step number"
             )
+        _check_step_number(
+            frame["step_number"],
+            steps_executed=exec_count,
+            what=f"frame {frame_id!r}",
+        )
     trace = state.get("trace")
     if isinstance(trace, list):
         for position, entry in enumerate(trace):
@@ -93,6 +144,11 @@ def _require_v2_budget_fields(state: dict[str, Any]) -> None:
                     "invalid persisted workflow run state: "
                     f"trace entry {position!r} is missing its step number"
                 )
+            _check_step_number(
+                entry["step_number"],
+                steps_executed=exec_count,
+                what=f"trace entry {position!r}",
+            )
     interrupt = state.get("interrupt")
     if interrupt is not None:
         if not isinstance(interrupt, dict) or "step_number" not in interrupt:
@@ -100,6 +156,11 @@ def _require_v2_budget_fields(state: dict[str, Any]) -> None:
                 "invalid persisted workflow run state: "
                 "interrupt is missing its step number"
             )
+        _check_step_number(
+            interrupt["step_number"],
+            steps_executed=exec_count,
+            what="interrupt",
+        )
 
 
 def _restore_root_alias(run: RunState) -> RunState:
