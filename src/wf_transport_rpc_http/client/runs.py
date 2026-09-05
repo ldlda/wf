@@ -36,17 +36,18 @@ class RpcRunClientMixin:
         deployment_id: str,
         workflow_input: dict[str, Any],
         trace_range: TraceRangeLike | None = None,
+        max_steps: int | None = None,
     ) -> RunResult:
+        params: dict[str, Any] = {
+            "deployment_id": deployment_id,
+            "workflow_input": workflow_input,
+            "trace_range": _trace_range_payload(trace_range),
+        }
+        if max_steps is not None:
+            params["max_steps"] = max_steps
         return cast(
             RunResult,
-            await self._call(
-                "workflow.runs.start",
-                {
-                    "deployment_id": deployment_id,
-                    "workflow_input": workflow_input,
-                    "trace_range": _trace_range_payload(trace_range),
-                },
-            ),
+            await self._call("workflow.runs.start", params),
         )
 
     async def resume_run(

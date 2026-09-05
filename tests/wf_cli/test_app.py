@@ -3240,3 +3240,53 @@ def test_wf_draft_import_rejects_bad_files_before_loading_context(
     assert result.exit_code == 2
     assert expected_error in " ".join(result.output.split())
     assert "context loaded" not in result.output
+
+
+def test_wf_run_start_rejects_zero_max_steps_before_loading_context(
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(
+        "wf_cli.commands.runs.load_cli_context_from_typer",
+        lambda _ctx: (_ for _ in ()).throw(AssertionError("context loaded")),
+    )
+
+    result = runner.invoke(
+        app,
+        ["run", "start", "report.production", "--input", "{}", "--max-steps", "0"],
+    )
+
+    assert result.exit_code != 0
+    assert "context loaded" not in result.output
+
+
+def test_wf_run_start_threads_max_steps_to_handler(monkeypatch) -> None:
+    calls: list[dict[str, Any]] = []
+
+    class FakeHandlers:
+        async def run_deployment(self, **kwargs: Any) -> dict[str, Any]:
+            calls.append(kwargs)
+            return {
+                "deployment_id": "report.production",
+                "status": "completed",
+                "run_id": "run-1",
+            }
+
+    context = SimpleNamespace(handlers=FakeHandlers(), verbose=False)
+    monkeypatch.setattr(
+        "wf_cli.commands.runs.load_cli_context_from_typer",
+        lambda _ctx: context,
+    )
+
+    budgeted = runner.invoke(
+        app,
+        ["run", "start", "report.production", "--input", "{}", "--max-steps", "7"],
+    )
+    defaulted = runner.invoke(
+        app,
+        ["run", "start", "report.production", "--input", "{}"],
+    )
+
+    assert budgeted.exit_code == 0, budgeted.output
+    assert defaulted.exit_code == 0, defaulted.output
+    assert calls[0]["max_steps"] == 7
+    assert calls[1]["max_steps"] is None

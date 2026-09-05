@@ -77,6 +77,9 @@ class _FakePort:
             "error": None,
             "output": {"result": "done"},
             "trace_count": 0,
+            "max_steps": 10_000,
+            "steps_executed": 1,
+            "steps_remaining": 9_999,
             "diagnostics": [],
             "next_actions": {
                 "can_continue": False,
@@ -365,3 +368,28 @@ async def test_deployment_snapshot_defensively_copies_model_and_diagnostics() ->
     assert deployment.diagnostics[0].message == "original"
     await deployment.run({})
     assert port.calls[-1][1]["deployment_id"] == "report.production"
+
+
+@pytest.mark.asyncio
+async def test_deployment_run_omits_max_steps_when_not_supplied() -> None:
+    artifact = _artifact()
+    deployment = await artifact.deploy("report.production")
+    port = cast(_FakePort, deployment._port)
+    await deployment.run({"topic": "workflow"})
+    run_calls = [params for name, params in port.calls if name == "run_deployment"]
+    assert len(run_calls) == 1
+    assert "max_steps" not in run_calls[0]
+
+
+@pytest.mark.asyncio
+async def test_deployment_run_threads_max_steps_when_supplied() -> None:
+    artifact = _artifact()
+    deployment = await artifact.deploy("report.production")
+    port = cast(_FakePort, deployment._port)
+    port.run_result.update({"max_steps": 7, "steps_executed": 2, "steps_remaining": 5})
+    run = await deployment.run({"topic": "workflow"}, max_steps=7)
+    run_calls = [params for name, params in port.calls if name == "run_deployment"]
+    assert run_calls[-1]["max_steps"] == 7
+    assert run.max_steps == 7
+    assert run.steps_executed == 2
+    assert run.steps_remaining == 5

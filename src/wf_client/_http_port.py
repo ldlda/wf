@@ -259,6 +259,7 @@ class PublicErrorWorkflowClientPort:
         deployment_id: str,
         workflow_input: dict[str, Any],
         trace_range: TraceRangeLike | None = None,
+        max_steps: int | None = None,
     ) -> RunResult:
         return await self._invoke(
             "workflow.runs.start",
@@ -266,6 +267,7 @@ class PublicErrorWorkflowClientPort:
             deployment_id=deployment_id,
             workflow_input=workflow_input,
             trace_range=trace_range,
+            max_steps=max_steps,
         )
 
     async def inspect_run(self, *, run_id: str) -> RunResult:

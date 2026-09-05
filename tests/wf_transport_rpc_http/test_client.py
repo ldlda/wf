@@ -28,6 +28,7 @@ from wf_server import build_local_static_workflow_server
 from wf_transport_rpc_http import RpcWorkflowApiClient, create_rpc_app
 from wf_transport_rpc_http.client.base import RpcProtocolError
 from wf_transport_rpc_http.client.drafts import RpcDraftClientMixin
+from wf_transport_rpc_http.client.runs import RpcRunClientMixin
 from wf_transport_rpc_http.client.sources import RpcSourceAdminClientMixin
 
 
@@ -1342,3 +1343,50 @@ async def test_rpc_client_diagnoses_source(tmp_path) -> None:
 
     assert payload == {"source_id": "demo.personal", "status": "ok"}
     assert calls == [("workflow.sources.diagnose", {"source_id": "demo.personal"})]
+
+
+async def test_rpc_run_client_omits_max_steps_unless_supplied() -> None:
+    calls: list[tuple[str, dict[str, object]]] = []
+
+    class Client(RpcRunClientMixin):
+        async def _call(self, method: str, params: dict[str, object]):
+            calls.append((method, params))
+            return {"run_id": "run-1"}
+
+    client = Client()
+    await client.run_deployment(deployment_id="report.default", workflow_input={})
+
+    assert calls[-1] == (
+        "workflow.runs.start",
+        {
+            "deployment_id": "report.default",
+            "workflow_input": {},
+            "trace_range": None,
+        },
+    )
+
+
+async def test_rpc_run_client_threads_max_steps_when_supplied() -> None:
+    calls: list[tuple[str, dict[str, object]]] = []
+
+    class Client(RpcRunClientMixin):
+        async def _call(self, method: str, params: dict[str, object]):
+            calls.append((method, params))
+            return {"run_id": "run-1"}
+
+    client = Client()
+    await client.run_deployment(
+        deployment_id="report.default",
+        workflow_input={},
+        max_steps=5,
+    )
+
+    assert calls[-1] == (
+        "workflow.runs.start",
+        {
+            "deployment_id": "report.default",
+            "workflow_input": {},
+            "trace_range": None,
+            "max_steps": 5,
+        },
+    )

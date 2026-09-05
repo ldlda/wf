@@ -119,12 +119,21 @@ def _run_from_decoded(
         interrupt=_interrupt(decoded.interrupt, operation=operation),
         diagnostics=decoded.diagnostics,
         trace_count=decoded.trace_count,
+        max_steps=decoded.max_steps,
+        steps_executed=decoded.steps_executed,
+        steps_remaining=decoded.steps_remaining,
     )
 
 
 @dataclass(frozen=True, slots=True, init=False)
 class Run:
-    """Immutable client snapshot of one durable deployment run."""
+    """Immutable client snapshot of one durable deployment run.
+
+    ``max_steps``, ``steps_executed``, and ``steps_remaining`` are the
+    server-effective budget values returned with every run response. The
+    server substitutes its default limit when creation omits one, so
+    refresh/resume reconstruction simply preserves whatever was returned.
+    """
 
     _port: WorkflowClientPort = field(repr=False, compare=False)
     run_id: str
@@ -135,6 +144,9 @@ class Run:
     _interrupt: InterruptRequest | None = field(repr=False)
     _diagnostics: tuple[DependencyDiagnostic, ...] = field(repr=False)
     trace_count: int
+    max_steps: int
+    steps_executed: int
+    steps_remaining: int
 
     def __init__(
         self,
@@ -148,6 +160,9 @@ class Run:
         interrupt: InterruptRequest | None,
         diagnostics: tuple[DependencyDiagnostic, ...],
         trace_count: int,
+        max_steps: int,
+        steps_executed: int,
+        steps_remaining: int,
     ) -> None:
         object.__setattr__(self, "_port", _port)
         object.__setattr__(self, "run_id", run_id)
@@ -162,6 +177,9 @@ class Run:
             tuple(item.model_copy(deep=True) for item in diagnostics),
         )
         object.__setattr__(self, "trace_count", trace_count)
+        object.__setattr__(self, "max_steps", max_steps)
+        object.__setattr__(self, "steps_executed", steps_executed)
+        object.__setattr__(self, "steps_remaining", steps_remaining)
 
     @property
     def output(self) -> dict[str, Any] | None:

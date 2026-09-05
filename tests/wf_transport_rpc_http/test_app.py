@@ -2233,3 +2233,95 @@ async def test_rpc_diagnoses_source(tmp_path) -> None:
 
     assert payload["result"]["source_id"] == "wf.std"
     assert payload["result"]["status"] == "unknown"
+
+
+async def _seed_step_budget_deployment(server: Any) -> str:
+    await server.api.create_artifact_from_plan(
+        artifact_id="budget_constant",
+        version=1,
+        title="Budget Constant",
+        plan=_constant_plan(),
+        outcomes=["ok"],
+        source_bindings={},
+    )
+    await server.api.save_deployment(
+        {
+            "id": "budget_constant.default",
+            "artifact_id": "budget_constant",
+            "artifact_version": 1,
+            "bindings": {},
+        }
+    )
+    return "budget_constant.default"
+
+
+async def test_rpc_runs_start_applies_optional_step_budget(tmp_path) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    deployment_id = await _seed_step_budget_deployment(server)
+    app = create_rpc_app(server)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        default = await _rpc(
+            client,
+            "workflow.runs.start",
+            {"deployment_id": deployment_id, "workflow_input": {}},
+        )
+        budgeted = await _rpc(
+            client,
+            "workflow.runs.start",
+            {
+                "deployment_id": deployment_id,
+                "workflow_input": {},
+                "max_steps": 5,
+            },
+        )
+
+    assert default["result"]["max_steps"] == 10_000
+    assert default["result"]["steps_executed"] >= 1
+    assert (
+        default["result"]["steps_remaining"]
+        == 10_000 - default["result"]["steps_executed"]
+    )
+    assert budgeted["result"]["max_steps"] == 5
+    assert budgeted["result"]["steps_executed"] >= 1
+    assert (
+        budgeted["result"]["steps_remaining"]
+        == 5 - budgeted["result"]["steps_executed"]
+    )
+
+
+async def test_rpc_runs_start_rejects_non_positive_step_budget(tmp_path) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    deployment_id = await _seed_step_budget_deployment(server)
+    app = create_rpc_app(server)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        rejected = await _rpc(
+            client,
+            "workflow.runs.start",
+            {
+                "deployment_id": deployment_id,
+                "workflow_input": {},
+                "max_steps": 0,
+            },
+        )
+
+    assert rejected["error"]["code"] == -32602
+
+
+async def test_rpc_runs_resume_rejects_step_budget_replacement(tmp_path) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    app = create_rpc_app(server)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        rejected = await _rpc(
+            client,
+            "workflow.runs.resume",
+            {
+                "run_id": "missing-run",
+                "resume_payload": {},
+                "max_steps": 3,
+            },
+        )
+
+    assert rejected["error"]["code"] == -32602

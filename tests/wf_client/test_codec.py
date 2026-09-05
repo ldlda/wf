@@ -124,6 +124,9 @@ def _run_payload(*, trace: list[dict[str, Any]] | None = None) -> dict[str, Any]
         "error": None,
         "output": {"result": "hello"},
         "trace_count": 0 if trace is None else len(trace),
+        "max_steps": 10_000,
+        "steps_executed": 1,
+        "steps_remaining": 9_999,
         "diagnostics": [],
         "next_actions": {
             "can_continue": False,

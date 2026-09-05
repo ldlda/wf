@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 from typing import Any, cast
 
 import pytest
@@ -38,6 +39,9 @@ def _payload(
         "error": None,
         "output": None if status == "interrupted" else {"result": "done"},
         "trace_count": 1,
+        "max_steps": 10_000,
+        "steps_executed": 1,
+        "steps_remaining": 9_999,
         "diagnostics": [],
         "next_actions": {
             "can_continue": status == "interrupted",
@@ -253,3 +257,66 @@ async def test_run_snapshot_defensively_copies_nested_public_values() -> None:
     assert run.diagnostics[0].message == "original"
     await run.resume({"approved": True})
     assert port.calls[-1][1]["run_id"] == "run-1"
+
+
+def _budgeted_payload(
+    *, status: str = "interrupted", max_steps: int = 7
+) -> dict[str, Any]:
+    payload = _payload(status=status)
+    payload.update(
+        {
+            "max_steps": max_steps,
+            "steps_executed": 2,
+            "steps_remaining": max_steps - 2,
+        }
+    )
+    return payload
+
+
+@pytest.mark.asyncio
+async def test_run_decoder_requires_budget_fields() -> None:
+    for field in ("max_steps", "steps_executed", "steps_remaining"):
+        payload = _budgeted_payload()
+        del payload[field]
+        with pytest.raises(InvalidResponse, match="workflow.runs.inspect"):
+            Run.from_payload(cast(WorkflowClientPort, _Port()), payload)
+
+
+@pytest.mark.asyncio
+async def test_run_exposes_step_budget() -> None:
+    run = Run.from_payload(
+        cast(WorkflowClientPort, _Port()), _budgeted_payload(max_steps=7)
+    )
+    assert run.max_steps == 7
+    assert run.steps_executed == 2
+    assert run.steps_remaining == 5
+
+
+@pytest.mark.asyncio
+async def test_refresh_preserves_step_budget() -> None:
+    port = _Port()
+    port.resume_payload = _budgeted_payload(status="completed", max_steps=9)
+    run = Run.from_payload(
+        cast(WorkflowClientPort, port), _budgeted_payload(max_steps=7)
+    )
+    refreshed = await run.refresh()
+    assert refreshed.max_steps == 9
+    assert refreshed.steps_executed == 2
+    assert refreshed.steps_remaining == 7
+
+
+@pytest.mark.asyncio
+async def test_resume_preserves_step_budget() -> None:
+    port = _Port()
+    port.resume_payload = _budgeted_payload(status="completed", max_steps=9)
+    run = Run.from_payload(
+        cast(WorkflowClientPort, port), _budgeted_payload(max_steps=7)
+    )
+    resumed = await run.resume({"approved": True})
+    assert resumed.max_steps == 9
+    assert resumed.steps_executed == 2
+    assert resumed.steps_remaining == 7
+
+
+def test_resume_signature_excludes_max_steps() -> None:
+    assert "max_steps" not in inspect.signature(Run.resume).parameters

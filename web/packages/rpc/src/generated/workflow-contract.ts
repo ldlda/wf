@@ -895,6 +895,10 @@ export interface WorkflowContractMap {
         [k: string]: unknown;
       };
       trace_range?: TraceRangeParams | null;
+      /**
+       * Optional run step budget. The server default applies when omitted; resume never accepts a replacement.
+       */
+      max_steps?: number | null;
     };
     result: RunResult;
   };
@@ -2399,12 +2403,15 @@ export interface RunResult {
   diagnostics: DependencyDiagnosticPayload[];
   error: string | null;
   interrupt: InterruptPayload | null;
+  max_steps: number;
   next_actions: NextActionsPayload;
   outcome: string | null;
   output: JsonObject | null;
   resume_readiness: ResumeReadiness | null;
   run_id: string | null;
   status: RunStatus;
+  steps_executed: number;
+  steps_remaining: number;
   trace?: TraceEntryPayload[];
   trace_count: number;
   trace_limit?: number;
@@ -2532,12 +2539,15 @@ export interface RunTraceResult {
   diagnostics: DependencyDiagnosticPayload[];
   error: string | null;
   interrupt: InterruptPayload | null;
+  max_steps: number;
   next_actions: NextActionsPayload;
   outcome: string | null;
   output: JsonObject | null;
   resume_readiness: ResumeReadiness | null;
   run_id: string | null;
   status: RunStatus;
+  steps_executed: number;
+  steps_remaining: number;
   trace: TraceEntryPayload[];
   trace_count: number;
   trace_limit: number;
@@ -4473,6 +4483,9 @@ export const workflowRuntimeContract = {
             }
           ]
         },
+        "max_steps": {
+          "type": "integer"
+        },
         "next_actions": {
           "$ref": "#/components/schemas/NextActionsPayload"
         },
@@ -4519,6 +4532,12 @@ export const workflowRuntimeContract = {
         "status": {
           "$ref": "#/components/schemas/RunStatus"
         },
+        "steps_executed": {
+          "type": "integer"
+        },
+        "steps_remaining": {
+          "type": "integer"
+        },
         "trace": {
           "items": {
             "$ref": "#/components/schemas/TraceEntryPayload"
@@ -4551,7 +4570,10 @@ export const workflowRuntimeContract = {
         "outcome",
         "error",
         "output",
-        "trace_count"
+        "trace_count",
+        "max_steps",
+        "steps_executed",
+        "steps_remaining"
       ],
       "type": "object"
     },
@@ -4639,6 +4661,9 @@ export const workflowRuntimeContract = {
             }
           ]
         },
+        "max_steps": {
+          "type": "integer"
+        },
         "next_actions": {
           "$ref": "#/components/schemas/NextActionsPayload"
         },
@@ -4685,6 +4710,12 @@ export const workflowRuntimeContract = {
         "status": {
           "$ref": "#/components/schemas/RunStatus"
         },
+        "steps_executed": {
+          "type": "integer"
+        },
+        "steps_remaining": {
+          "type": "integer"
+        },
         "trace": {
           "items": {
             "$ref": "#/components/schemas/TraceEntryPayload"
@@ -4718,6 +4749,9 @@ export const workflowRuntimeContract = {
         "error",
         "output",
         "trace_count",
+        "max_steps",
+        "steps_executed",
+        "steps_remaining",
         "trace",
         "trace_start",
         "trace_limit",
@@ -6571,6 +6605,19 @@ export const workflowRuntimeContract = {
               }
             ],
             "default": null
+          },
+          "max_steps": {
+            "anyOf": [
+              {
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional run step budget. The server default applies when omitted; resume never accepts a replacement."
           }
         },
         "required": [

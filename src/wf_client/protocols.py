@@ -121,6 +121,7 @@ class WorkflowClientPort(Protocol):
         deployment_id: str,
         workflow_input: dict[str, Any],
         trace_range: TraceRangeLike | None = None,
+        max_steps: int | None = None,
     ) -> RunResult: ...
 
     async def list_runs(

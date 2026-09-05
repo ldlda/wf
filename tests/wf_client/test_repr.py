@@ -73,6 +73,9 @@ def test_rich_representations_bound_large_values_and_redact_secret_like_fields()
         interrupt=None,
         diagnostics=(),
         trace_count=1000,
+        max_steps=10_000,
+        steps_executed=3,
+        steps_remaining=9_997,
     )
 
     rendered = repr(run)

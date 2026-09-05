@@ -179,17 +179,27 @@ class Deployment:
             diagnostics=diagnostics,
         )
 
-    async def run(self, workflow_input: Mapping[str, Any]) -> Run:
+    async def run(
+        self,
+        workflow_input: Mapping[str, Any],
+        *,
+        max_steps: int | None = None,
+    ) -> Run:
         from .codec import decode_run_result
         from .runs import _run_from_decoded
 
-        decoded = decode_run_result(
-            await self._port.run_deployment(
+        if max_steps is None:
+            raw = await self._port.run_deployment(
                 deployment_id=self.deployment_id,
                 workflow_input=dict(workflow_input),
-            ),
-            operation="workflow.runs.start",
-        )
+            )
+        else:
+            raw = await self._port.run_deployment(
+                deployment_id=self.deployment_id,
+                workflow_input=dict(workflow_input),
+                max_steps=max_steps,
+            )
+        decoded = decode_run_result(raw, operation="workflow.runs.start")
         if decoded.deployment_id != self.deployment_id:
             raise InvalidResponse(
                 operation="workflow.runs.start",

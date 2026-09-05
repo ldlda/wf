@@ -3478,6 +3478,9 @@
               }
             ]
           },
+          "max_steps": {
+            "type": "integer"
+          },
           "next_actions": {
             "$ref": "#/components/schemas/NextActionsPayload"
           },
@@ -3524,6 +3527,12 @@
           "status": {
             "$ref": "#/components/schemas/RunStatus"
           },
+          "steps_executed": {
+            "type": "integer"
+          },
+          "steps_remaining": {
+            "type": "integer"
+          },
           "trace": {
             "items": {
               "$ref": "#/components/schemas/TraceEntryPayload"
@@ -3556,7 +3565,10 @@
           "outcome",
           "error",
           "output",
-          "trace_count"
+          "trace_count",
+          "max_steps",
+          "steps_executed",
+          "steps_remaining"
         ],
         "type": "object"
       },
@@ -3644,6 +3656,9 @@
               }
             ]
           },
+          "max_steps": {
+            "type": "integer"
+          },
           "next_actions": {
             "$ref": "#/components/schemas/NextActionsPayload"
           },
@@ -3690,6 +3705,12 @@
           "status": {
             "$ref": "#/components/schemas/RunStatus"
           },
+          "steps_executed": {
+            "type": "integer"
+          },
+          "steps_remaining": {
+            "type": "integer"
+          },
           "trace": {
             "items": {
               "$ref": "#/components/schemas/TraceEntryPayload"
@@ -3723,6 +3744,9 @@
           "error",
           "output",
           "trace_count",
+          "max_steps",
+          "steps_executed",
+          "steps_remaining",
           "trace",
           "trace_start",
           "trace_limit",
@@ -8759,6 +8783,23 @@
               }
             ],
             "default": null
+          }
+        },
+        {
+          "name": "max_steps",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional run step budget. The server default applies when omitted; resume never accepts a replacement."
           }
         }
       ],

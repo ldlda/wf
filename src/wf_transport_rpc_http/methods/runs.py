@@ -52,6 +52,7 @@ def register_methods(
                     if params.trace_range is not None
                     else None
                 ),
+                max_steps=params.max_steps,
             )
         except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:
             raise_workflow_rpc_error(exc)

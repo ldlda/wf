@@ -70,6 +70,14 @@ def start_run(
             "--trace-limit", min=1, max=100, help="Optional trace slice limit."
         ),
     ] = None,
+    max_steps: Annotated[
+        int | None,
+        typer.Option(
+            "--max-steps",
+            min=1,
+            help="Optional run step budget; the server default applies when omitted.",
+        ),
+    ] = None,
 ) -> None:
     """Start one workflow deployment."""
     try:
@@ -84,6 +92,7 @@ def start_run(
             deployment_id=deployment_id,
             workflow_input=workflow_input,
             trace_range=trace_range,
+            max_steps=max_steps,
         ),
     )
     emit_json(payload)

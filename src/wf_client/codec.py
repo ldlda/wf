@@ -51,6 +51,9 @@ class _DecodedRunFields:
     error: str | None
     output: dict[str, Any] | None
     trace_count: int
+    max_steps: int
+    steps_executed: int
+    steps_remaining: int
     diagnostics: tuple[DependencyDiagnostic, ...]
     next_actions: dict[str, Any]
     trace: tuple[dict[str, Any], ...] | None = None
@@ -255,6 +258,9 @@ def _decode_run_fields(
         error=wire["error"],
         output=dict(wire["output"]) if wire["output"] is not None else None,
         trace_count=wire["trace_count"],
+        max_steps=wire["max_steps"],
+        steps_executed=wire["steps_executed"],
+        steps_remaining=wire["steps_remaining"],
         diagnostics=diagnostics,
         next_actions=dict(wire["next_actions"]),
         trace=trace,
@@ -269,7 +275,12 @@ def decode_run_result(
     *,
     operation: str = "workflow.runs.inspect",
 ) -> DecodedRunResult:
-    """Validate and decode a start/inspect/resume run response."""
+    """Validate and decode a start/inspect/resume run response.
+
+    ``RunResult`` declares the ``max_steps``/``steps_executed``/
+    ``steps_remaining`` trio as required, so a response missing any of them
+    fails validation here instead of reaching client reconstruction.
+    """
     wire = _validate(payload, RunResult, operation)
     fields = _decode_run_fields(
         wire,

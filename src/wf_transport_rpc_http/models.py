@@ -435,6 +435,14 @@ class StartRunParams(RpcParamsModel):
     deployment_id: str = Field(min_length=1)
     workflow_input: dict[str, Any] = Field(default_factory=dict)
     trace_range: TraceRangeParams | None = None
+    max_steps: int | None = Field(
+        default=None,
+        ge=1,
+        description=(
+            "Optional run step budget. The server default applies when omitted; "
+            "resume never accepts a replacement."
+        ),
+    )
 
 
 class InspectRunParams(RpcParamsModel):
