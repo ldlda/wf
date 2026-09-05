@@ -69,6 +69,15 @@ def resume_interrupt(
     resume_outcome: str,
     reducers: Mapping[str, ReducerDefinition] | None = None,
 ) -> None:
+    """Complete a previously admitted interrupt activation.
+
+    Resume never admits a new step attempt: supplying the external payload
+    finishes the activation counted at interrupt time. The completion trace
+    therefore reuses the stored ``InterruptRequest.step_number`` (which may be
+    ``None`` only for pre-budget legacy activations) instead of the current
+    frame number, and execution after resume continues from the persisted
+    cumulative counter.
+    """
     if run.interrupt is None:
         raise WorkflowExecutionError("run is interrupted but has no interrupt request")
 
@@ -119,6 +128,9 @@ def resume_interrupt(
     # scope, a concurrent one buffers in the item lineage for barrier merge.
     state_changes = commit_foreach_aware_patch(run, frame, patch)
     next_node_id = index.next_node_id(frame.node_id, resume_outcome)
+    # Reuse the activation's stored number (not the frame's current number, and
+    # without admitting): both entries describe one admitted activation.
+    activation_number = run.interrupt.step_number
     append_step_result_trace(
         run,
         frame_id=frame.id,
@@ -131,6 +143,7 @@ def resume_interrupt(
             output=resume_payload,
             state_changes=state_changes,
         ),
+        step_number=activation_number,
     )
     run.interrupt = None
     advance_frame(run, frame, outcome=resume_outcome, next_node_id=next_node_id)

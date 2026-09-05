@@ -16,6 +16,7 @@ from wf_core.models.steps import (
 from wf_core.models.workflow import Workflow
 from wf_core.run_state import ExecutionFrame, FrameStatus, RunState, StepExecutionResult
 from wf_core.runtime.foreach_state import item_frame_owner, load_foreach_activation
+from wf_core.runtime.limits import admit_step_attempt
 from wf_core.runtime.ops.flow import advance_frame, append_step_result_trace
 from wf_core.runtime.ops.foreach import step_foreach
 from wf_core.runtime.ops.handlers import (
@@ -129,6 +130,11 @@ def step_workflow(
         return run
     index, step = prepared
     frame = run.current_frame()
+    # One admission per selected step, immediately before dispatch: the counter
+    # increments before any handler runs, so failures and interrupts consume
+    # their attempt, while a denied dispatch raises before its handler runs.
+    # prepare_step() returning None (legacy END, interrupted) admits nothing.
+    admit_step_attempt(run, frame, frame.node_id)
 
     if isinstance(step, NodeUse):
         node_def = index.node_defs[step.node]
@@ -241,6 +247,9 @@ async def step_workflow_async(
         return run
     index, step = prepared
     frame = run.current_frame()
+    # Same single-admission rule as the sync path; only the concurrent foreach
+    # batch below (Task 3) reserves differently.
+    admit_step_attempt(run, frame, frame.node_id)
 
     if isinstance(step, NodeUse):
         node_def = index.node_defs[step.node]
@@ -312,8 +321,15 @@ async def _step_async_foreach_item_batch(
     Only handler awaits run concurrently. Finalization, tracing, and frame
     advancement happen afterward in ready-queue order so `RunState` is mutated
     deterministically.
+
+    Task 3 will bound the claimed siblings by the remaining budget and pin the
+    reservation/failure semantics. Until then every frame in the batch is
+    admitted in ready-queue order before any handler starts, so each trace has
+    a number; a denied frame raises before any handler in the batch runs.
     """
     frames = [first_frame, *_claim_matching_async_item_frames(run, index, first_frame)]
+    for frame in frames:
+        admit_step_attempt(run, frame, frame.node_id)
     tasks = []
     for frame in frames:
         node = _node_use_for_frame(index, frame)

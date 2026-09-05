@@ -73,6 +73,11 @@ def handle_interrupt_step(
         public_node_id=public_frame.node_id,
         route=route,
     )
+    # The current dispatch was already admitted by step_workflow(), so the
+    # frame carries this activation's number. Persist it on the request: resume
+    # completes the same activation without admitting again, and its
+    # completion trace reuses this stored number.
+    interrupt_request.step_number = frame.step_number
     run.interrupt = interrupt_request
     run.status = RunStatus.INTERRUPTED
     frame.status = FrameStatus.INTERRUPTED

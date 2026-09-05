@@ -134,6 +134,12 @@ class TraceEntry:
     next_node_id: str
     output: dict[str, Any] = field(default_factory=dict)
     state_changes: dict[str, Any] = field(default_factory=dict)
+    # One-based step number assigned at admission. Every trace emitted for an
+    # admitted step carries its frame's number; ``None`` only survives on
+    # pre-budget (v1) entries. Gaps are valid when an attempt fails or
+    # interrupts before emitting a trace, so ``RunState.steps_executed`` stays
+    # authoritative for enforcement and resume.
+    step_number: int | None = None
 
 
 @dataclass(slots=True)
@@ -179,6 +185,12 @@ class InterruptRequest:
     request_schema: dict[str, object] = field(default_factory=_object_schema)
     resume_schema: dict[str, object] = field(default_factory=_object_schema)
     typed: bool = False
+    # Step number of the admitted interrupt activation. The initial interrupt
+    # trace and the later resume-completion trace both reuse this one number
+    # because they describe a single activation; resume never admits again.
+    # ``None`` only survives on pre-budget (v1) checkpoints whose activation
+    # predates the counter.
+    step_number: int | None = None
 
 
 def _default_run_limits() -> RunLimits:

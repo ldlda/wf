@@ -22,6 +22,12 @@ from wf_core.runtime.scheduler import (
 )
 from wf_core.tokens import END
 
+# Sentinel for ``append_trace()``: copy the named frame's admitted step number
+# (failing closed when unassigned). Interrupt resume passes its stored
+# activation number explicitly instead, so one activation keeps one number
+# across its interrupt and resume-completion entries without a second admission.
+_FROM_FRAME: Any = object()
+
 
 def append_trace(
     run: RunState,
@@ -34,7 +40,28 @@ def append_trace(
     next_node_id: str,
     output: dict[str, Any],
     state_changes: dict[str, Any],
+    step_number: int | None | Any = _FROM_FRAME,
 ) -> None:
+    """Append one trace entry carrying its admitted step number.
+
+    By default the number is copied from the named frame, which must have been
+    assigned by ``admit_step_attempt()`` during this dispatch; otherwise the
+    trace would silently describe an uncounted step, so fail closed with
+    ``WorkflowExecutionError``. Pass ``step_number`` explicitly only to reuse a
+    persisted activation number (interrupt resume-completion).
+    """
+    if step_number is _FROM_FRAME:
+        frame = run.frames.get(frame_id)
+        if frame is None:
+            raise WorkflowExecutionError(
+                f"cannot trace step for unknown frame {frame_id!r}"
+            )
+        if frame.step_number is None:
+            raise WorkflowExecutionError(
+                f"cannot trace unadmitted step for frame {frame_id!r} "
+                f"at node {node_id!r}; admit the step before dispatch"
+            )
+        step_number = frame.step_number
     run.trace.append(
         TraceEntry(
             frame_id=frame_id,
@@ -45,6 +72,7 @@ def append_trace(
             next_node_id=next_node_id,
             output=output,
             state_changes=state_changes,
+            step_number=step_number,
         )
     )
 
@@ -57,6 +85,7 @@ def append_step_result_trace(
     step_type: str,
     next_node_id: str,
     result: StepExecutionResult,
+    step_number: int | None | Any = _FROM_FRAME,
 ) -> None:
     append_trace(
         run,
@@ -68,6 +97,7 @@ def append_step_result_trace(
         next_node_id=next_node_id,
         output=result.output,
         state_changes=result.state_changes,
+        step_number=step_number,
     )
 
 

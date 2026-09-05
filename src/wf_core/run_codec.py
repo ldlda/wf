@@ -42,7 +42,9 @@ def _inject_v1_budget_defaults(state: dict[str, Any]) -> dict[str, Any]:
 
     Version-1 envelopes predate step budgets, so they receive the default
     limit, a zeroed counter, and an unassigned number per frame exactly once
-    at load time. Attempts made before the upgrade are outside the new budget.
+    at load time. Pre-budget trace entries and any outstanding interrupt keep
+    an unassigned (``None``) number: attempts made before the upgrade are
+    outside the new budget.
     """
     upgraded = deepcopy(state)
     upgraded.setdefault("limits", {"max_steps": RunLimits().max_steps})
@@ -52,6 +54,14 @@ def _inject_v1_budget_defaults(state: dict[str, Any]) -> dict[str, Any]:
         for frame in frames.values():
             if isinstance(frame, dict):
                 frame.setdefault("step_number", None)
+    trace = upgraded.get("trace")
+    if isinstance(trace, list):
+        for entry in trace:
+            if isinstance(entry, dict):
+                entry.setdefault("step_number", None)
+    interrupt = upgraded.get("interrupt")
+    if isinstance(interrupt, dict):
+        interrupt.setdefault("step_number", None)
     return upgraded
 
 
@@ -59,7 +69,10 @@ def _require_v2_budget_fields(state: dict[str, Any]) -> None:
     """Reject v2 payloads missing budget fields as corrupt state.
 
     Unlike v1, a v2 envelope promises budget fields; a missing counter is
-    corruption, not another request for defaults.
+    corruption, not another request for defaults. Trace and interrupt entries
+    always carry the key (``None`` only for upgraded pre-budget history), so a
+    missing key is likewise corrupt even though the dataclass default would
+    otherwise mask it.
     """
     if "limits" not in state or "steps_executed" not in state:
         raise ValueError("invalid persisted workflow run state: missing step budget")
@@ -71,6 +84,21 @@ def _require_v2_budget_fields(state: dict[str, Any]) -> None:
             raise ValueError(
                 "invalid persisted workflow run state: "
                 f"frame {frame_id!r} is missing its step number"
+            )
+    trace = state.get("trace")
+    if isinstance(trace, list):
+        for position, entry in enumerate(trace):
+            if not isinstance(entry, dict) or "step_number" not in entry:
+                raise ValueError(
+                    "invalid persisted workflow run state: "
+                    f"trace entry {position!r} is missing its step number"
+                )
+    interrupt = state.get("interrupt")
+    if interrupt is not None:
+        if not isinstance(interrupt, dict) or "step_number" not in interrupt:
+            raise ValueError(
+                "invalid persisted workflow run state: "
+                "interrupt is missing its step number"
             )
 
 
