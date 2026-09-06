@@ -3,10 +3,14 @@ from __future__ import annotations
 import hashlib
 import re
 from collections.abc import Sequence
+from typing import TYPE_CHECKING, Any
 
 from fastmcp.server.transforms import GetToolNext, Transform
 from fastmcp.tools.base import Tool
 from fastmcp.utilities.versions import VersionSpec
+
+if TYPE_CHECKING:
+    from fastmcp import FastMCP
 
 _SAFE_TOOL_NAME_PATTERN = re.compile(r"^[a-zA-Z0-9_-]{1,64}$")
 _MAX_TOOL_NAME_LENGTH = 64
@@ -30,9 +34,11 @@ class SafeToolNames(Transform):
     readable.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, server: FastMCP[Any] | None = None) -> None:
         self._safe_to_original: dict[str, str] = {}
         self._original_to_safe: dict[str, str] = {}
+        self._server = server
+        self._primed = False
 
     async def list_tools(self, tools: Sequence[Tool]) -> Sequence[Tool]:
         return [
@@ -47,9 +53,31 @@ class SafeToolNames(Transform):
         *,
         version: VersionSpec | None = None,
     ) -> Tool | None:
-        original_name = self._safe_to_original.get(name) or decode_safe_tool_name(name)
+        original_name = self._safe_to_original.get(name)
+        if original_name is None:
+            original_name = await self._prime_lookup(name)
+        if original_name is None:
+            original_name = decode_safe_tool_name(name)
         tool = await call_next(original_name, version=version)
         return None if tool is None else tool.model_copy(update={"name": name})
+
+    async def _prime_lookup(self, name: str) -> str | None:
+        """Populate the reverse map from a live listing on first miss.
+
+        FastMCP v4 resolves `tools/call` through this chain without requiring
+        a prior `tools/list`, so the tables built during listing may be empty
+        when a directly-called safe name arrives. One live listing primes
+        them; a failed prime falls through to the identity fallback so the
+        call still ends in a proper unknown-tool error.
+        """
+        if self._server is None or self._primed:
+            return None
+        self._primed = True
+        try:
+            await self._server.list_tools()
+        except Exception:
+            return None
+        return self._safe_to_original.get(name)
 
     def _safe_name(self, original_name: str) -> str:
         cached = self._original_to_safe.get(original_name)

@@ -123,7 +123,7 @@ class ProxyRuntime:
             # Keep this outermost so every previous tool projection, including
             # search mode's synthetic tools and always-visible controls, is
             # adapted for clients with stricter name patterns.
-            self.server.add_transform(SafeToolNames())
+            self.server.add_transform(SafeToolNames(server=self.server))
 
     def current_config(self) -> BrokerConfig:
         if self.manager is None:
