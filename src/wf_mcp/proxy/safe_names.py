@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import re
+from asyncio import Lock
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any
 
@@ -39,6 +40,7 @@ class SafeToolNames(Transform):
         self._original_to_safe: dict[str, str] = {}
         self._server = server
         self._primed = False
+        self._prime_lock = Lock()
 
     async def list_tools(self, tools: Sequence[Tool]) -> Sequence[Tool]:
         return [
@@ -70,14 +72,18 @@ class SafeToolNames(Transform):
         them; a failed prime falls through to the identity fallback so the
         call still ends in a proper unknown-tool error.
         """
-        if self._server is None or self._primed:
+        if self._server is None:
             return None
-        self._primed = True
-        try:
-            await self._server.list_tools()
-        except Exception:
-            return None
-        return self._safe_to_original.get(name)
+        # A direct-call burst must share the first live listing. Publishing
+        # ``_primed`` without this barrier lets siblings observe empty maps.
+        async with self._prime_lock:
+            if not self._primed:
+                self._primed = True
+                try:
+                    await self._server.list_tools()
+                except Exception:
+                    return None
+            return self._safe_to_original.get(name)
 
     def _safe_name(self, original_name: str) -> str:
         cached = self._original_to_safe.get(original_name)

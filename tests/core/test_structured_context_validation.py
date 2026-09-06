@@ -1,9 +1,17 @@
 from __future__ import annotations
 
+from collections.abc import Callable
+
 import pytest
 
 from wf_core import END, Edge, ForeachNode, NodeDef, NodeUse, SchemaRef, Workflow
 from wf_core.models.schemas import StateField, StateSchema
+from wf_core.models.steps import (
+    ConditionNode,
+    InputPathBinding,
+    InterruptNode,
+    SubgraphNode,
+)
 from wf_core.validation.issues import ValidationIssueCode
 
 
@@ -275,13 +283,7 @@ def test_node_input_surfaces_report_exact_model_paths(make_node, expected_path) 
     )
 
 
-def test_all_model_surfaces_reject_missing_foreach_id() -> None:
-    from wf_core.models.steps import ConditionNode, InterruptNode, SubgraphNode
-    from wf_core.validation import validate_workflow
-
-    bad = "context.foreach.missing.item"
-    # Subgraph input
-    workflow = _base_workflow()
+def _missing_foreach_subgraph(workflow: Workflow, bad: str) -> str:
     workflow.nodes[2] = SubgraphNode.model_validate(
         {
             "id": "work",
@@ -290,16 +292,10 @@ def test_all_model_surfaces_reject_missing_foreach_id() -> None:
             "input": [{"target": "order", "path": bad}],
         }
     )
-    report = validate_workflow(workflow)
-    assert (
-        _issue(
-            report, ValidationIssueCode.INVALID_CONTEXT_PATH, "nodes[2].input[0].path"
-        )
-        is not None
-    )
+    return "nodes[2].input[0].path"
 
-    # Condition check
-    workflow = _base_workflow()
+
+def _missing_foreach_condition(workflow: Workflow, bad: str) -> str:
     workflow.nodes[2] = ConditionNode.model_validate(
         {"id": "work", "type": "condition", "check": {"op": "exists", "path": bad}}
     )
@@ -314,25 +310,17 @@ def test_all_model_surfaces_reject_missing_foreach_id() -> None:
         ),
         Edge.model_validate({"from": "customers", "outcome": "done", "to": END}),
     ]
-    report = validate_workflow(workflow)
-    assert (
-        _issue(report, ValidationIssueCode.INVALID_CONTEXT_PATH, "nodes[2].check.path")
-        is not None
-    )
+    return "nodes[2].check.path"
 
-    # Foreach over
-    workflow = _base_workflow()
+
+def _missing_foreach_over(workflow: Workflow, bad: str) -> str:
     workflow.nodes[1] = ForeachNode.model_validate(
         {"id": "orders", "type": "foreach", "over": bad, "as": "order"}
     )
-    report = validate_workflow(workflow)
-    assert (
-        _issue(report, ValidationIssueCode.INVALID_CONTEXT_PATH, "nodes[1].over")
-        is not None
-    )
+    return "nodes[1].over"
 
-    # Interrupt request
-    workflow = _base_workflow()
+
+def _missing_foreach_interrupt(workflow: Workflow, bad: str) -> str:
     workflow.nodes[2] = InterruptNode.model_validate(
         {
             "id": "work",
@@ -351,24 +339,37 @@ def test_all_model_surfaces_reject_missing_foreach_id() -> None:
         ),
         Edge.model_validate({"from": "customers", "outcome": "done", "to": END}),
     ]
-    report = validate_workflow(workflow)
-    assert (
-        _issue(
-            report,
-            ValidationIssueCode.INVALID_CONTEXT_PATH,
-            "nodes[2].request[0].path",
-        )
-        is not None
-    )
+    return "nodes[2].request[0].path"
 
-    # Workflow output
-    from wf_core.models.steps import InputPathBinding as _IPB
+
+def _missing_foreach_output(workflow: Workflow, bad: str) -> str:
+    workflow.output = [
+        InputPathBinding.model_validate({"target": "result", "path": bad})
+    ]
+    return "output[0].path"
+
+
+@pytest.mark.parametrize(
+    "configure_surface",
+    [
+        _missing_foreach_subgraph,
+        _missing_foreach_condition,
+        _missing_foreach_over,
+        _missing_foreach_interrupt,
+        _missing_foreach_output,
+    ],
+    ids=["subgraph", "condition", "foreach", "interrupt", "workflow-output"],
+)
+def test_all_model_surfaces_reject_missing_foreach_id(
+    configure_surface: Callable[[Workflow, str], str],
+) -> None:
+    from wf_core.validation import validate_workflow
 
     workflow = _base_workflow()
-    workflow.output = [_IPB.model_validate({"target": "result", "path": bad})]
+    expected_path = configure_surface(workflow, "context.foreach.missing.item")
     report = validate_workflow(workflow)
     assert (
-        _issue(report, ValidationIssueCode.INVALID_CONTEXT_PATH, "output[0].path")
+        _issue(report, ValidationIssueCode.INVALID_CONTEXT_PATH, expected_path)
         is not None
     )
 

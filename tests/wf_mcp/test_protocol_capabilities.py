@@ -71,7 +71,7 @@ def test_unified_proxy_initialize_capabilities_reflect_local_surface(
         capabilities = asyncio.run(inspect_capabilities())
     except PermissionError as exc:
         pytest.skip(f"stdio MCP transport is not permitted in this environment: {exc}")
- 
+
     # TODO disables most of these + find another way (preferably with _meta) to get these back
     assert capabilities.tools is not None
     # assert capabilities.tools.list_changed is True

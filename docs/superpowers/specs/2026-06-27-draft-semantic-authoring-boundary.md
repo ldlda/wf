@@ -85,8 +85,8 @@ semantic operation produces one patch and consumes one revision.
 clients do not need to know about the internal service split.
 
 The service boundary is intentionally not capability-only. The current draft
-model also represents `end`, `condition`, `interrupt`, `foreach`, `when`,
-`choose`, `match`, and subgraph steps, and core may gain more step kinds. This
+model also represents `end`, `interrupt`, `foreach`, `when`, `choose`, `match`,
+and subgraph steps, and core may gain more step kinds. This
 slice adds semantic operations only where required, but new step-kind helpers
 belong in `WorkflowDraftAuthoringApi` rather than a parallel authoring system.
 

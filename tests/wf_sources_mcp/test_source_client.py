@@ -3,11 +3,10 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
-from mcp import GetPromptResult, ReadResourceResult, ServerResult
+from mcp import GetPromptResult, ReadResourceResult
 from mcp.types import (
     CallToolResult,
     ClientNotification,
-    ClientRequest,
     ListPromptsResult,
     ListResourcesResult,
     ListToolsResult,
@@ -16,10 +15,10 @@ from mcp.types import (
     TextContent,
     Tool,
 )
-from pydantic import TypeAdapter
 
 from wf_sources_mcp.client import McpSourceClient
 from wf_sources_mcp.connections import McpSourceConnection
+from wf_sources_mcp.raw_messages import RawRequest, RawResult
 from wf_sources_mcp.transports import StdioSourceTransport
 
 
@@ -34,7 +33,7 @@ def _connection() -> McpSourceConnection:
 
 class _FakeSession:
     def __init__(self) -> None:
-        self.requests: list[ClientRequest] = []
+        self.requests: list[RawRequest] = []
         self.notifications: list[ClientNotification] = []
 
     async def list_tools(self) -> ListToolsResult:
@@ -101,16 +100,11 @@ class _FakeSession:
 
     async def send_request(
         self,
-        request: ClientRequest,
-        result_type: type[ServerResult] | TypeAdapter[ServerResult],
-    ) -> Any:
-        assert isinstance(result_type, TypeAdapter)
+        request: RawRequest,
+        result_type: type[RawResult],
+    ) -> RawResult:
         self.requests.append(request)
-        return type(
-            "ClientResultModel",
-            (),
-            {"model_dump": lambda _self, **_kwargs: {"ok": True}},
-        )()
+        return result_type.model_validate({"ok": True})
 
     async def send_notification(self, notification: ClientNotification) -> None:
         self.notifications.append(notification)
@@ -158,16 +152,23 @@ async def test_source_client_reads_resources_and_prompts_as_payloads() -> None:
 
 
 @pytest.mark.asyncio
-async def test_source_client_invokes_methods_and_notifications() -> None:
+async def test_source_client_invokes_extension_method() -> None:
     session = _FakeSession()
     source_client = McpSourceClient(session=session, connection=_connection())
 
-    result = await source_client.invoke_method("ping")
-    await source_client.send_notification("notifications/initialized")
+    result = await source_client.invoke_method("test.method", {"value": 1})
 
     assert result == {"ok": True}
-    assert session.requests, "invoke_method should send a request"
-    assert session.notifications, "send_notification should send a notification"
+    assert session.requests[0].method == "test.method"
+
+
+async def test_source_client_sends_extension_notification() -> None:
+    session = _FakeSession()
+    source_client = McpSourceClient(session=session, connection=_connection())
+
+    await source_client.send_notification("test.event", {"value": 1})
+
+    assert session.notifications[0].method == "test.event"
 
 
 @pytest.mark.asyncio

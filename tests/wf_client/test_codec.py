@@ -152,6 +152,9 @@ def test_decode_run_result_returns_typed_domain_boundary() -> None:
 
     assert result.run_id == "run-1"
     assert result.output == {"result": "hello"}
+    assert result.max_steps == 10_000
+    assert result.steps_executed == 1
+    assert result.steps_remaining == 9_999
     assert result.diagnostics == ()
 
 

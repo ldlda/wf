@@ -22,11 +22,14 @@ from wf_core.runtime.scheduler import (
 )
 from wf_core.tokens import END
 
-# Sentinel for ``append_trace()``: copy the named frame's admitted step number
-# (failing closed when unassigned). Interrupt resume passes its stored
-# activation number explicitly instead, so one activation keeps one number
-# across its interrupt and resume-completion entries without a second admission.
-_FROM_FRAME: Any = object()
+
+class _FromFrame:
+    """Sentinel type for resolving a trace step number from its frame."""
+
+
+# Interrupt resume passes its stored activation number explicitly, so one
+# activation keeps one number across interrupt and completion trace entries.
+_FROM_FRAME = _FromFrame()
 
 
 def append_trace(
@@ -40,7 +43,7 @@ def append_trace(
     next_node_id: str,
     output: dict[str, Any],
     state_changes: dict[str, Any],
-    step_number: int | None | Any = _FROM_FRAME,
+    step_number: int | None | _FromFrame = _FROM_FRAME,
 ) -> None:
     """Append one trace entry carrying its admitted step number.
 
@@ -50,7 +53,7 @@ def append_trace(
     ``WorkflowExecutionError``. Pass ``step_number`` explicitly only to reuse a
     persisted activation number (interrupt resume-completion).
     """
-    if step_number is _FROM_FRAME:
+    if isinstance(step_number, _FromFrame):
         frame = run.frames.get(frame_id)
         if frame is None:
             raise WorkflowExecutionError(
@@ -85,7 +88,7 @@ def append_step_result_trace(
     step_type: str,
     next_node_id: str,
     result: StepExecutionResult,
-    step_number: int | None | Any = _FROM_FRAME,
+    step_number: int | None | _FromFrame = _FROM_FRAME,
 ) -> None:
     append_trace(
         run,

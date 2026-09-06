@@ -1766,8 +1766,10 @@ def test_wf_draft_add_control_command_help_is_type_specific() -> None:
     interrupt = runner.invoke(app, ["draft", "add", "interrupt", "--help"])
     foreach = runner.invoke(app, ["draft", "add", "foreach", "--help"])
     end = runner.invoke(app, ["draft", "add", "end", "--help"])
+    removed_join = runner.invoke(app, ["draft", "add", "join", "--help"])
 
     assert interrupt.exit_code == foreach.exit_code == end.exit_code == 0
+    assert removed_join.exit_code != 0
     assert "--request-schema-file" in interrupt.output
     assert "--resume-schema-file" in interrupt.output
     assert "--request" in interrupt.output

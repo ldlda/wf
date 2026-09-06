@@ -52,6 +52,24 @@ def _echo_service(root: Path) -> WfMcpService:
     return service
 
 
+def _unrunnable_service(root: Path) -> WfMcpService:
+    artifact_store = FileWorkflowArtifactStore(root)
+    artifact_store.save_artifact(echo_artifact())
+    artifact_store.save_deployment(
+        WorkflowDeployment(
+            id="echo.unbound",
+            artifact_id="echo",
+            artifact_version=1,
+            bindings=[],
+        )
+    )
+    return WfMcpService(
+        store=FileStore(root / "mcp"),
+        artifact_store=artifact_store,
+        run_store=FileRunStore(root / "mcp"),
+    )
+
+
 def _interrupt_artifact() -> WorkflowArtifact:
     return WorkflowArtifact(
         id="approval",
@@ -160,6 +178,36 @@ async def test_run_deployment_rejects_non_positive_max_steps(tmp_path: Path) -> 
             workflow_input={"text": "hello"},
             max_steps=0,
         )
+
+
+async def test_invalid_budget_wins_over_unrunnable_deployment(tmp_path: Path) -> None:
+    api = WorkflowRunApi(
+        context_from_service(_unrunnable_service(tmp_path / "invalid_unrunnable"))
+    )
+
+    with pytest.raises(ValueError, match="positive"):
+        await api.run_deployment(
+            deployment_id="echo.unbound",
+            workflow_input={"text": "hello"},
+            max_steps=0,
+        )
+
+
+async def test_unrunnable_deployment_reports_requested_budget(tmp_path: Path) -> None:
+    api = WorkflowRunApi(
+        context_from_service(_unrunnable_service(tmp_path / "requested_unrunnable"))
+    )
+
+    result = await api.run_deployment(
+        deployment_id="echo.unbound",
+        workflow_input={"text": "hello"},
+        max_steps=7,
+    )
+
+    assert result["status"] == "unrunnable"
+    assert result["max_steps"] == 7
+    assert result["steps_executed"] == 0
+    assert result["steps_remaining"] == 7
 
 
 async def test_inspect_run_reports_effective_budget(tmp_path: Path) -> None:

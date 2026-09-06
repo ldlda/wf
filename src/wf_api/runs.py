@@ -83,6 +83,9 @@ class WorkflowRunApi:
         max_steps: int | None = None,
     ) -> RunResult:
         trace_values = _trace_range_values(trace_range)
+        limits = (
+            RunLimits(max_steps=max_steps) if max_steps is not None else RunLimits()
+        )
         deployment, artifact, diagnostics, tree = (
             self.deployments.deployment_validation(deployment_id)
         )
@@ -92,12 +95,10 @@ class WorkflowRunApi:
                 artifact=artifact,
                 status="unrunnable",
                 diagnostics=diagnostics,
+                max_steps=limits.max_steps,
             )
 
         plan = raw_plan_from_artifact(artifact)
-        limits = (
-            RunLimits(max_steps=max_steps) if max_steps is not None else RunLimits()
-        )
         run = await self.context.runtime.run_workflow_from_plan(
             plan,
             workflow_input,

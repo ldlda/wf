@@ -2,13 +2,19 @@ from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 from mcp.client.session import ClientSession
+from mcp.types import ClientNotification
 
 from wf_sources_mcp.auth import AuthRecord
 from wf_sources_mcp.catalog import DiscoveredPrompt, DiscoveredResource, DiscoveredTool
 from wf_sources_mcp.connections import McpSourceConnection
+from wf_sources_mcp.raw_messages import (
+    RawResult,
+    raw_notification,
+    raw_request,
+)
 from wf_sources_mcp.sdk import ToolCallResult
 from wf_sources_mcp.sdk.converters import tool_result_to_call_result
 
@@ -134,13 +140,9 @@ class PersistentMcpSession:
         if self.invoke_method_callback is not None:
             return await self.invoke_method_callback(method, params)
         if self.client is not None:
-            from mcp.types import client_request_adapter, server_result_adapter
-
             result = await self.client.send_request(
-                client_request_adapter.validate_python(
-                    {"method": method, "params": params}
-                ),
-                server_result_adapter,
+                raw_request(method, params),
+                RawResult,
             )
             return result.model_dump(by_alias=True, mode="json", exclude_none=True)
         raise RuntimeError("persistent MCP session has no method invoke transport")
@@ -155,13 +157,9 @@ class PersistentMcpSession:
             await self.send_notification_callback(method, params)
             return
         if self.client is not None:
-            from mcp.types import client_notification_adapter
-
-            await self.client.send_notification(
-                client_notification_adapter.validate_python(
-                    {"method": method, "params": params}
-                )
-            )
+            notification = raw_notification(method, params)
+            # MCP 2's annotation has not widened to its generic runtime shape.
+            await self.client.send_notification(cast(ClientNotification, notification))
             return
         raise RuntimeError("persistent MCP session has no notification send transport")
 

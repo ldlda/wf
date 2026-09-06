@@ -20,10 +20,11 @@ from mcp.types import (
     Tool,
     server_result_adapter,
 )
-from pydantic import AnyUrl, TypeAdapter
+from pydantic import AnyUrl
 
 from wf_sources_mcp.auth import AuthRecord
 from wf_sources_mcp.connections import McpSourceConnection
+from wf_sources_mcp.raw_messages import RawRequest, RawResult
 from wf_sources_mcp.runtime import (
     McpRuntimePool,
     PersistentMcpSession,
@@ -574,10 +575,11 @@ async def test_persistent_session_invoke_method_client_fallback() -> None:
     class _MinimalClient:
         async def send_request(
             self,
-            request: ClientRequest,
-            result_type: type[ServerResult] | TypeAdapter[ServerResult],
-        ) -> ServerResult:
-            return server_result_adapter.validate_python({"tools": []})
+            request: RawRequest,
+            result_type: type[RawResult],
+        ) -> RawResult:
+            assert request.method == "test.method"
+            return result_type.model_validate({"extension": True})
 
     session = PersistentMcpSession(
         connection=_connection(),
@@ -585,8 +587,8 @@ async def test_persistent_session_invoke_method_client_fallback() -> None:
         client=_MinimalClient(),  # type: ignore[arg-type, ty:invalid-argument-type]
     )
 
-    result = await session.invoke_method("tools/list")
-    assert result["tools"] == []
+    result = await session.invoke_method("test.method")
+    assert result["extension"] is True
 
 
 @pytest.mark.asyncio
@@ -604,9 +606,10 @@ async def test_persistent_session_send_notification_client_fallback() -> None:
         client=_MinimalClient(),  # type: ignore[arg-type, ty:invalid-argument-type]
     )
 
-    await session.send_notification("notifications/initialized")
+    await session.send_notification("test.event")
 
     assert len(sent) == 1
+    assert sent[0].method == "test.event"
 
 
 @pytest.mark.asyncio

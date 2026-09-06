@@ -1,25 +1,25 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Protocol
+from typing import TYPE_CHECKING, Any, Protocol, cast
 
 from mcp.types import (
     CallToolResult,
     ClientNotification,
-    ClientRequest,
     GetPromptResult,
     ListPromptsResult,
     ListResourcesResult,
     ListToolsResult,
     ReadResourceResult,
-    ServerResult,
-    client_notification_adapter,
-    client_request_adapter,
-    server_result_adapter,
 )
-from pydantic import TypeAdapter
 
 from wf_sources_mcp.connections import McpSourceConnection
+from wf_sources_mcp.raw_messages import (
+    RawRequest,
+    RawResult,
+    raw_notification,
+    raw_request,
+)
 
 if TYPE_CHECKING:
     from wf_sources_mcp.catalog import (
@@ -58,9 +58,9 @@ class McpClientSession(Protocol):
     # BaseSession stuff. not even complete signature, thats crazy
     async def send_request(
         self,
-        request: ClientRequest,
-        result_type: type[ServerResult] | TypeAdapter[ServerResult],
-    ) -> ServerResult: ...
+        request: RawRequest,
+        result_type: type[RawResult],
+    ) -> RawResult: ...
 
     async def send_notification(self, notification: ClientNotification) -> None: ...
 
@@ -138,10 +138,8 @@ class McpSourceClient:
         params: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         result = await self.session.send_request(
-            client_request_adapter.validate_python(
-                {"method": method, "params": params}
-            ),
-            server_result_adapter,
+            raw_request(method, params),
+            RawResult,
         )
         return result.model_dump(by_alias=True, mode="json", exclude_none=True)
 
@@ -150,11 +148,10 @@ class McpSourceClient:
         method: str,
         params: dict[str, Any] | None = None,
     ) -> None:
-        await self.session.send_notification(
-            client_notification_adapter.validate_python(
-                {"method": method, "params": params}
-            )
-        )
+        notification = raw_notification(method, params)
+        # MCP 2's runtime accepts the generic Notification base class, while
+        # its public annotation still names only the standard-method union.
+        await self.session.send_notification(cast(ClientNotification, notification))
 
     async def call_tool(
         self,
