@@ -360,7 +360,7 @@ forbidden_roots = (
     "wf_server",
     "wf_transport_rpc_http",
     "wf_sources_mcp",
-    "httpx",
+    "httpx2",
 )
 loaded = sorted(
     name

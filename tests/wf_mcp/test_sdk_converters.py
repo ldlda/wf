@@ -8,7 +8,7 @@ from wf_mcp.sdk.converters import tool_result_to_call_result, tool_to_discovered
 def test_tool_without_output_schema_exposes_raw_content_schema() -> None:
     tool = Tool(
         name="echo",
-        inputSchema={"type": "object", "properties": {}},
+        input_schema={"type": "object", "properties": {}},
     )
 
     discovered = tool_to_discovered(tool)
@@ -21,8 +21,8 @@ def test_tool_without_output_schema_exposes_raw_content_schema() -> None:
 def test_tool_with_content_only_output_schema_stays_raw() -> None:
     tool = Tool(
         name="echo",
-        inputSchema={"type": "object", "properties": {}},
-        outputSchema={
+        input_schema={"type": "object", "properties": {}},
+        output_schema={
             "type": "object",
             "properties": {
                 "content": {
@@ -58,7 +58,7 @@ def test_tool_result_single_text_content_block_stays_in_content() -> None:
 def test_tool_result_structured_content_is_not_rewritten() -> None:
     result = CallToolResult(
         content=[TextContent(type="text", text="ignored")],
-        structuredContent={"value": "structured"},
+        structured_content={"value": "structured"},
     )
 
     converted = tool_result_to_call_result(result)

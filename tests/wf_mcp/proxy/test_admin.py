@@ -159,7 +159,7 @@ def test_proxy_admin_reload_sends_list_changed_notifications(tmp_path: Path) -> 
 
     asyncio.run(run_proxy())
 
-    methods = [notification.root.method for notification in notifications]
+    methods = [notification.method for notification in notifications]
     assert "notifications/tools/list_changed" in methods
     assert "notifications/resources/list_changed" in methods
     assert "notifications/prompts/list_changed" in methods
@@ -205,5 +205,5 @@ def test_proxy_config_mutation_does_not_notify_before_reload(tmp_path: Path) -> 
 
     asyncio.run(run_proxy())
 
-    methods = [notification.root.method for notification in notifications]
+    methods = [notification.method for notification in notifications]
     assert "notifications/tools/list_changed" not in methods

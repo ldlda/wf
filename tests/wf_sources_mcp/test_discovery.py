@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from typing import Any
 
-import httpx
+import httpx2
 import pytest
-from mcp import McpError
+from mcp import MCPError
 from mcp.types import ErrorData
 
 from wf_authoring import build_async_registry
@@ -134,7 +134,9 @@ class _ToolsOnlyAdapter(_Adapter):
         connection: McpSourceConnection,
         auth: AuthRecord | None,
     ) -> list[DiscoveredResource]:
-        raise McpError(ErrorData(code=-32601, message="Method not found"))
+        raise MCPError.from_error_data(
+            ErrorData(code=-32601, message="Method not found")
+        )
 
     async def list_prompts(
         self,
@@ -143,7 +145,11 @@ class _ToolsOnlyAdapter(_Adapter):
     ) -> list[DiscoveredPrompt]:
         raise ExceptionGroup(
             "unhandled errors in a TaskGroup",
-            [McpError(ErrorData(code=-32601, message="Method not found"))],
+            [
+                MCPError.from_error_data(
+                    ErrorData(code=-32601, message="Method not found")
+                )
+            ],
         )
 
 
@@ -162,11 +168,11 @@ class _HttpOptionalUnsupportedAdapter(_Adapter):
         connection: McpSourceConnection,
         auth: AuthRecord | None,
     ) -> list[DiscoveredResource]:
-        request = httpx.Request("POST", "https://example.test/mcp")
-        response = httpx.Response(400, request=request)
+        request = httpx2.Request("POST", "https://example.test/mcp")
+        response = httpx2.Response(400, request=request)
         raise ExceptionGroup(
             "unhandled errors in a TaskGroup",
-            [httpx.HTTPStatusError("bad request", request=request, response=response)],
+            [httpx2.HTTPStatusError("bad request", request=request, response=response)],
         )
 
     async def list_prompts(
@@ -174,9 +180,9 @@ class _HttpOptionalUnsupportedAdapter(_Adapter):
         connection: McpSourceConnection,
         auth: AuthRecord | None,
     ) -> list[DiscoveredPrompt]:
-        request = httpx.Request("POST", "https://example.test/mcp")
-        response = httpx.Response(404, request=request)
-        raise httpx.HTTPStatusError("not found", request=request, response=response)
+        request = httpx2.Request("POST", "https://example.test/mcp")
+        response = httpx2.Response(404, request=request)
+        raise httpx2.HTTPStatusError("not found", request=request, response=response)
 
 
 async def test_discover_connection_capabilities_collects_all_capability_families() -> (

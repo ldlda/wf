@@ -19,7 +19,7 @@ def test_rewrites_resource_link_content_with_official_mcp_type() -> None:
     assert isinstance(rewritten, mcp_types.ResourceLink)
     assert str(rewritten.uri) == "demo://everything.default/resource/dynamic/text/2"
     assert rewritten.name == "dynamic-text"
-    assert rewritten.mimeType == "text/plain"
+    assert rewritten.mime_type == "text/plain"
     assert str(content.uri) == "demo://resource/dynamic/text/2"
 
 
@@ -40,7 +40,7 @@ def test_rewrites_resource_links_inside_call_tool_result() -> None:
             mcp_types.TextContent(type="text", text="see linked resource"),
             _resource_link("demo://resource/dynamic/text/2"),
         ],
-        structuredContent={"ok": True},
+        structured_content={"ok": True},
         _meta={"source": "fixture"},
     )
 
@@ -50,7 +50,7 @@ def test_rewrites_resource_links_inside_call_tool_result() -> None:
     )
 
     assert rewritten is not result
-    assert rewritten.structuredContent == {"ok": True}
+    assert rewritten.structured_content == {"ok": True}
     assert rewritten.meta == {"source": "fixture"}
     assert rewritten.content[0] is result.content[0]
     rewritten_link = rewritten.content[1]
@@ -70,6 +70,6 @@ def _resource_link(uri: str) -> mcp_types.ResourceLink:
             "type": "resource_link",
             "name": "dynamic-text",
             "uri": uri,
-            "mimeType": "text/plain",
+            "mime_type": "text/plain",
         }
     )

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer
 
 from wf_api import (
     WorkflowAdminApi,
@@ -28,8 +28,8 @@ from .service.workflow_operation_context import context_from_service
 from .tools import register_broker_tools
 
 
-def create_broker_server(service: WfMcpService) -> FastMCP:
-    server = FastMCP(
+def create_broker_server(service: WfMcpService) -> MCPServer:
+    server = MCPServer(
         "wf-mcp-broker",
         instructions=(
             "A broker MCP server over one or more upstream MCP connections. "

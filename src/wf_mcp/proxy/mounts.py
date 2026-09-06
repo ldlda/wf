@@ -9,12 +9,12 @@ from pathlib import Path
 from typing import Any, Generic, TypeVar
 
 import anyio
-import httpx
+import httpx2
 from fastmcp import FastMCP
 from fastmcp.client.transports.config import MCPConfigTransport
 from fastmcp.server.providers.proxy import FastMCPProxy, StatefulProxyClient
 from mcp.client.streamable_http import StreamableHTTPError
-from mcp.shared.exceptions import McpError
+from mcp.shared.exceptions import MCPError
 
 from ..models import BrokerConfig, ConnectionConfig
 from ..proxy_config import broker_config_to_fastmcp_config
@@ -33,8 +33,8 @@ _PROXY_LIST_FAILURES = (
     anyio.ClosedResourceError,
     anyio.EndOfStream,
     anyio.BrokenResourceError,
-    httpx.HTTPError,
-    McpError,
+    httpx2.HTTPError,
+    MCPError,
     StreamableHTTPError,
 )
 logger = logging.getLogger(__name__)

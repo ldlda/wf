@@ -6,10 +6,10 @@ from pathlib import Path
 from typing import Any
 
 import anyio
-import httpx
+import httpx2
 import mcp.types as mcp_types
 import pytest
-from mcp.shared.exceptions import McpError
+from mcp.shared.exceptions import MCPError
 
 from wf_mcp.models import BrokerConfig, ConnectionConfig
 from wf_mcp.proxy import create_proxy_client
@@ -142,17 +142,17 @@ def test_proxy_listing_degrades_when_one_source_has_connection_error(
     ("exc", "expected_log_name"),
     [
         (
-            McpError(
+            MCPError.from_error_data(
                 mcp_types.ErrorData(
                     code=mcp_types.INTERNAL_ERROR,
                     message="connection closed",
                 )
             ),
-            "McpError",
+            "MCPError",
         ),
         (anyio.ClosedResourceError(), "ClosedResourceError"),
         (anyio.EndOfStream(), "EndOfStream"),
-        (httpx.ConnectError("connection refused"), "ConnectError"),
+        (httpx2.ConnectError("connection refused"), "ConnectError"),
     ],
 )
 def test_proxy_listing_degrades_when_session_transport_closes(

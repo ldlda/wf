@@ -5,6 +5,8 @@ import json
 from pathlib import Path
 from typing import Any, cast
 
+from mcp.types import CallToolResult, InputRequiredResult
+
 from wf_artifacts import (
     FileDraftWorkspaceStore,
     FileRunStore,
@@ -35,6 +37,19 @@ from .test_support import (
     input_binding,
     output_binding,
 )
+
+
+def _structured_content(
+    result: CallToolResult | InputRequiredResult,
+) -> dict[str, Any]:
+    """Return completed tool output, narrowing away MRTR interim results.
+
+    Broker admin/workflow tools always complete inline in these tests; an
+    `InputRequiredResult` here would mean the tool unexpectedly asked for
+    mid-call input.
+    """
+    assert isinstance(result, CallToolResult)
+    return cast(dict[str, Any], result.structured_content)
 
 
 def test_load_broker_config_resolves_relative_store_root(tmp_path: Path) -> None:
@@ -94,18 +109,14 @@ def test_create_broker_server_exposes_tools_resources_and_prompts(
     assert "workflow_authoring_guide" in prompt_names
     assert "plan_with_catalog" not in prompt_names
 
-    _content, planner_catalog_raw = asyncio.run(
-        server.call_tool("get_planner_catalog", {})
-    )
-    planner_catalog = cast(dict[str, Any], cast(object, planner_catalog_raw))
+    planner_catalog = asyncio.run(server.call_tool("get_planner_catalog", {}))
+    planner_catalog = _structured_content(planner_catalog)
     planner_names = [node["qualified_name"] for node in planner_catalog["nodes"]]
     assert "demo.personal.echo_tool" in planner_names
     assert "wf.std.runtime_error" in planner_names
 
-    _content, all_sources_payload_raw = asyncio.run(
-        server.call_tool("list_sources", {})
-    )
-    all_sources_payload = cast(dict[str, Any], cast(object, all_sources_payload_raw))
+    all_sources = asyncio.run(server.call_tool("list_sources", {}))
+    all_sources_payload = _structured_content(all_sources)
     all_sources = all_sources_payload["sources"]
     all_source_ids = {source["id"] for source in all_sources}
     assert "wf.admin" in all_source_ids
@@ -150,12 +161,12 @@ def test_broker_refresh_tool_returns_structured_error(tmp_path: Path) -> None:
 
     server = create_broker_server(service)
 
-    _content, structured = asyncio.run(
+    result = asyncio.run(
         server.call_tool(
             "refresh_connection_catalog", {"connection_id": "demo.personal"}
         )
     )
-    assert structured == {
+    assert _structured_content(result) == {
         "connection_id": "demo.personal",
         "refreshed": False,
         "error_type": "PermissionError",
@@ -172,8 +183,8 @@ def test_broker_lists_workflow_artifacts_from_artifact_store(tmp_path: Path) -> 
     )
     server = create_broker_server(service)
 
-    _content, structured = asyncio.run(server.call_tool("list_workflow_artifacts", {}))
-    payload = cast(dict[str, Any], cast(object, structured))
+    result = asyncio.run(server.call_tool("list_workflow_artifacts", {}))
+    payload = _structured_content(result)
 
     nodes = payload["nodes"]
     assert len(nodes) == 1
@@ -191,13 +202,13 @@ def test_broker_inspects_workflow_artifact_from_artifact_store(tmp_path: Path) -
     )
     server = create_broker_server(service)
 
-    _content, structured = asyncio.run(
+    result = asyncio.run(
         server.call_tool(
             "inspect_workflow_artifact",
             {"artifact_id": "summarize_docs", "version": 1},
         )
     )
-    artifact = cast(dict[str, Any], cast(object, structured))
+    artifact = _structured_content(result)
 
     assert artifact["id"] == "summarize_docs"
     assert artifact["version"] == 1
@@ -225,13 +236,13 @@ def test_broker_validates_workflow_deployment_from_artifact_store(
     )
     server = create_broker_server(service)
 
-    _content, structured = asyncio.run(
+    result = asyncio.run(
         server.call_tool(
             "validate_workflow_deployment",
             {"deployment_id": "summarize_docs.personal"},
         )
     )
-    payload = cast(dict[str, Any], cast(object, structured))
+    payload = _structured_content(result)
 
     assert payload["deployment_id"] == "summarize_docs.personal"
     assert payload["artifact_id"] == "summarize_docs"
@@ -247,13 +258,13 @@ def test_broker_saves_workflow_artifact(tmp_path: Path) -> None:
     )
     server = create_broker_server(service)
 
-    _content, structured = asyncio.run(
+    result = asyncio.run(
         server.call_tool(
             "save_workflow_artifact",
             {"artifact": _artifact().model_dump(mode="json")},
         )
     )
-    payload = cast(dict[str, Any], cast(object, structured))
+    payload = _structured_content(result)
     loaded = artifact_store.get_artifact("summarize_docs", 1)
 
     assert payload["artifact_id"] == "summarize_docs"
@@ -271,7 +282,7 @@ def test_broker_creates_workflow_artifact_from_plan(tmp_path: Path) -> None:
     )
     server = create_broker_server(service)
 
-    _content, structured = asyncio.run(
+    result = asyncio.run(
         server.call_tool(
             "create_workflow_artifact_from_plan",
             {
@@ -292,7 +303,7 @@ def test_broker_creates_workflow_artifact_from_plan(tmp_path: Path) -> None:
             },
         )
     )
-    payload = cast(dict[str, Any], cast(object, structured))
+    payload = _structured_content(result)
     loaded = artifact_store.get_artifact("echo", 1)
 
     assert payload["artifact_id"] == "echo"
@@ -311,7 +322,7 @@ def test_broker_saves_and_lists_workflow_deployments(tmp_path: Path) -> None:
     )
     server = create_broker_server(service)
 
-    _content, save_structured = asyncio.run(
+    save_result = asyncio.run(
         server.call_tool(
             "save_workflow_deployment",
             {
@@ -329,11 +340,9 @@ def test_broker_saves_and_lists_workflow_deployments(tmp_path: Path) -> None:
             },
         )
     )
-    save_payload = cast(dict[str, Any], cast(object, save_structured))
-    _content, list_structured = asyncio.run(
-        server.call_tool("list_workflow_deployments", {})
-    )
-    list_payload = cast(dict[str, Any], cast(object, list_structured))
+    save_payload = _structured_content(save_result)
+    list_result = asyncio.run(server.call_tool("list_workflow_deployments", {}))
+    list_payload = _structured_content(list_result)
 
     assert save_payload["deployment_id"] == "summarize_docs.personal"
     assert list_payload["deployments"][0]["id"] == "summarize_docs.personal"
@@ -362,7 +371,7 @@ def test_broker_runs_non_interrupting_workflow_deployment(tmp_path: Path) -> Non
     service.register_specs("demo.personal", echo_tool)
     server = create_broker_server(service)
 
-    _content, structured = asyncio.run(
+    result = asyncio.run(
         server.call_tool(
             "run_workflow_deployment",
             {
@@ -371,7 +380,7 @@ def test_broker_runs_non_interrupting_workflow_deployment(tmp_path: Path) -> Non
             },
         )
     )
-    payload = cast(dict[str, Any], cast(object, structured))
+    payload = _structured_content(result)
 
     assert payload["deployment_id"] == "echo.personal"
     assert payload["artifact_id"] == "echo"
@@ -404,7 +413,7 @@ def test_broker_run_deployment_returns_unrunnable_for_dependency_errors(
     )
     server = create_broker_server(service)
 
-    _content, structured = asyncio.run(
+    result = asyncio.run(
         server.call_tool(
             "run_workflow_deployment",
             {
@@ -413,7 +422,7 @@ def test_broker_run_deployment_returns_unrunnable_for_dependency_errors(
             },
         )
     )
-    payload = cast(dict[str, Any], cast(object, structured))
+    payload = _structured_content(result)
 
     assert payload["status"] == "unrunnable"
     assert payload["output"] is None
@@ -442,7 +451,7 @@ def test_broker_run_deployment_pauses_and_resumes_interrupting_artifacts(
     )
     server = create_broker_server(service)
 
-    _content, structured = asyncio.run(
+    result = asyncio.run(
         server.call_tool(
             "run_workflow_deployment",
             {
@@ -451,14 +460,14 @@ def test_broker_run_deployment_pauses_and_resumes_interrupting_artifacts(
             },
         )
     )
-    payload = cast(dict[str, Any], cast(object, structured))
+    payload = _structured_content(result)
 
     assert payload["status"] == "interrupted"
     assert payload["output"] == {}
     assert isinstance(payload["run_id"], str)
     assert payload["interrupt"]["payload"]["message"] == "send?"
 
-    _content, structured = asyncio.run(
+    resumed = asyncio.run(
         server.call_tool(
             "resume_workflow_run",
             {
@@ -467,7 +476,7 @@ def test_broker_run_deployment_pauses_and_resumes_interrupting_artifacts(
             },
         )
     )
-    resumed = cast(dict[str, Any], cast(object, structured))
+    resumed = _structured_content(resumed)
 
     assert resumed["status"] == "completed"
     assert resumed["outcome"] == "submitted"

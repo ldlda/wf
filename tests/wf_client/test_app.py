@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, cast
 
-import httpx
+import httpx2
 import pytest
 
 import wf_client
@@ -87,7 +87,7 @@ def _app(*, capability_name: str = "app.default.search") -> App:
 def test_from_http_jsonrpc_is_lazy(monkeypatch: pytest.MonkeyPatch) -> None:
     calls: list[str] = []
     monkeypatch.setattr(
-        httpx.AsyncClient,
+        httpx2.AsyncClient,
         "post",
         lambda *args, **kwargs: calls.append("post"),
     )
@@ -108,10 +108,11 @@ def test_package_does_not_export_internal_port_or_codecs() -> None:
 async def test_http_app_translates_connection_failure_to_public_error(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    async def fail_post(*args: object, **kwargs: object) -> httpx.Response:
-        raise httpx.ConnectError("connection refused")
 
-    monkeypatch.setattr(httpx.AsyncClient, "post", fail_post)
+    async def fail_post(*args: object, **kwargs: object) -> httpx2.Response:
+        raise httpx2.ConnectError("connection refused")
+
+    monkeypatch.setattr(httpx2.AsyncClient, "post", fail_post)
     app = App.from_http_jsonrpc("http://unreachable.test/rpc")
 
     with pytest.raises(WorkflowClientError) as raised:
@@ -127,15 +128,16 @@ async def test_http_app_translates_http_and_json_failures(
     monkeypatch: pytest.MonkeyPatch,
     failure: str,
 ) -> None:
-    async def fail_post(*args: object, **kwargs: object) -> httpx.Response:
-        request = httpx.Request("POST", "http://test/rpc")
-        if failure == "http":
-            return httpx.Response(503, request=request)
-        if failure == "json-array":
-            return httpx.Response(200, request=request, json=[])
-        return httpx.Response(200, request=request, content=b"not-json")
 
-    monkeypatch.setattr(httpx.AsyncClient, "post", fail_post)
+    async def fail_post(*args: object, **kwargs: object) -> httpx2.Response:
+        request = httpx2.Request("POST", "http://test/rpc")
+        if failure == "http":
+            return httpx2.Response(503, request=request)
+        if failure == "json-array":
+            return httpx2.Response(200, request=request, json=[])
+        return httpx2.Response(200, request=request, content=b"not-json")
+
+    monkeypatch.setattr(httpx2.AsyncClient, "post", fail_post)
     app = App.from_http_jsonrpc("http://test/rpc")
 
     with pytest.raises(WorkflowClientError) as raised:
@@ -150,16 +152,17 @@ async def test_http_app_translates_http_and_json_failures(
 async def test_http_app_translates_known_workflow_protocol_error(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+
     async def error_post(
         _client: object,
         _url: object,
         *,
         json: dict[str, object],
         **_kwargs: object,
-    ) -> httpx.Response:
-        return httpx.Response(
+    ) -> httpx2.Response:
+        return httpx2.Response(
             200,
-            request=httpx.Request("POST", "http://test/rpc"),
+            request=httpx2.Request("POST", "http://test/rpc"),
             json={
                 "jsonrpc": "2.0",
                 "id": json["id"],
@@ -174,7 +177,7 @@ async def test_http_app_translates_known_workflow_protocol_error(
             },
         )
 
-    monkeypatch.setattr(httpx.AsyncClient, "post", error_post)
+    monkeypatch.setattr(httpx2.AsyncClient, "post", error_post)
     app = App.from_http_jsonrpc("http://test/rpc")
 
     with pytest.raises(WorkflowClientError) as raised:
@@ -201,10 +204,10 @@ async def test_http_app_preserves_unknown_protocol_error_details(
         *,
         json: dict[str, object],
         **_kwargs: object,
-    ) -> httpx.Response:
-        return httpx.Response(
+    ) -> httpx2.Response:
+        return httpx2.Response(
             200,
-            request=httpx.Request("POST", "http://test/rpc"),
+            request=httpx2.Request("POST", "http://test/rpc"),
             json={
                 "jsonrpc": "2.0",
                 "id": json["id"],
@@ -216,7 +219,7 @@ async def test_http_app_preserves_unknown_protocol_error_details(
             },
         )
 
-    monkeypatch.setattr(httpx.AsyncClient, "post", error_post)
+    monkeypatch.setattr(httpx2.AsyncClient, "post", error_post)
     app = App.from_http_jsonrpc("http://test/rpc")
 
     with pytest.raises(ProtocolError) as raised:

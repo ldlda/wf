@@ -215,7 +215,7 @@ def rpc_client_from_target(
 ) -> RpcWorkflowApiClient:
     """Build the remote workflow surface for a resolved RPC target.
 
-    CLI tests patch this project-owned seam instead of monkeypatching `httpx`
+    CLI tests patch this project-owned seam instead of monkeypatching `httpx2`
     internals. The production path still keeps HTTP construction inside the
     transport package.
     """

@@ -29,12 +29,12 @@ downstream_seen: list[str] = []
 
 async def upstream_message_handler(message: object) -> None:
     if isinstance(message, mcp_types.ServerNotification):
-        upstream_seen.append(message.root.method)
+        upstream_seen.append(message.method)
 
 
 async def downstream_message_handler(message: object) -> None:
     if isinstance(message, mcp_types.ServerNotification):
-        downstream_seen.append(message.root.method)
+        downstream_seen.append(message.method)
 
 
 upstream_transport = FastMCPTransport(

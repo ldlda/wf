@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import httpx
+import httpx2
 import pytest
 
 from wf_authoring import NodeReturn
@@ -24,13 +24,15 @@ async def test_call_openapi_operation_maps_success() -> None:
         op for op in load_openapi_operations(FIXTURE) if op.name == "get_pet"
     )
 
-    async def handler(request: httpx.Request) -> httpx.Response:
+    async def handler(request: httpx2.Request) -> httpx2.Response:
         assert request.url.path == "/pets/pet-1"
         assert request.url.params["includeOwner"] == "true"
-        return httpx.Response(200, json={"id": "pet-1", "name": "Fluffy"})
+        return httpx2.Response(200, json={"id": "pet-1", "name": "Fluffy"})
 
     async def run() -> NodeReturn[OpenApiOperationOutput]:
-        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        async with httpx2.AsyncClient(
+            transport=httpx2.MockTransport(handler)
+        ) as client:
             return await call_openapi_operation(
                 app,
                 operation,
@@ -53,12 +55,14 @@ async def test_call_openapi_operation_maps_declared_http_error() -> None:
         op for op in load_openapi_operations(FIXTURE) if op.name == "get_pet"
     )
 
-    async def handler(request: httpx.Request) -> httpx.Response:
+    async def handler(request: httpx2.Request) -> httpx2.Response:
         _ = request
-        return httpx.Response(404, json={"message": "missing"})
+        return httpx2.Response(404, json={"message": "missing"})
 
     async def run() -> NodeReturn[OpenApiOperationOutput]:
-        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        async with httpx2.AsyncClient(
+            transport=httpx2.MockTransport(handler)
+        ) as client:
             return await call_openapi_operation(
                 app,
                 operation,
@@ -81,12 +85,14 @@ async def test_call_openapi_operation_maps_unexpected_status() -> None:
         op for op in load_openapi_operations(FIXTURE) if op.name == "get_pet"
     )
 
-    async def handler(request: httpx.Request) -> httpx.Response:
+    async def handler(request: httpx2.Request) -> httpx2.Response:
         _ = request
-        return httpx.Response(418, json={"message": "teapot"})
+        return httpx2.Response(418, json={"message": "teapot"})
 
     async def run() -> NodeReturn[OpenApiOperationOutput]:
-        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        async with httpx2.AsyncClient(
+            transport=httpx2.MockTransport(handler)
+        ) as client:
             return await call_openapi_operation(
                 app,
                 operation,
@@ -111,11 +117,13 @@ async def test_call_openapi_operation_maps_invalid_request_to_validation_error()
         op for op in load_openapi_operations(FIXTURE) if op.name == "create_pet"
     )
 
-    async def handler(request: httpx.Request) -> httpx.Response:
+    async def handler(request: httpx2.Request) -> httpx2.Response:
         raise AssertionError("invalid request should not be sent")
 
     async def run() -> NodeReturn[OpenApiOperationOutput]:
-        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        async with httpx2.AsyncClient(
+            transport=httpx2.MockTransport(handler)
+        ) as client:
             return await call_openapi_operation(
                 app,
                 operation,
@@ -140,12 +148,14 @@ async def test_call_openapi_operation_maps_invalid_response_to_validation_error(
         op for op in load_openapi_operations(FIXTURE) if op.name == "get_pet"
     )
 
-    async def handler(request: httpx.Request) -> httpx.Response:
+    async def handler(request: httpx2.Request) -> httpx2.Response:
         _ = request
-        return httpx.Response(200, json={"id": "pet-1"})
+        return httpx2.Response(200, json={"id": "pet-1"})
 
     async def run() -> NodeReturn[OpenApiOperationOutput]:
-        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        async with httpx2.AsyncClient(
+            transport=httpx2.MockTransport(handler)
+        ) as client:
             return await call_openapi_operation(
                 app,
                 operation,
@@ -170,16 +180,18 @@ async def test_call_openapi_operation_maps_malformed_json_response_to_validation
         op for op in load_openapi_operations(FIXTURE) if op.name == "get_pet"
     )
 
-    async def handler(request: httpx.Request) -> httpx.Response:
+    async def handler(request: httpx2.Request) -> httpx2.Response:
         _ = request
-        return httpx.Response(
+        return httpx2.Response(
             200,
             headers={"content-type": "application/json"},
             content=b"{not json",
         )
 
     async def run() -> NodeReturn[OpenApiOperationOutput]:
-        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        async with httpx2.AsyncClient(
+            transport=httpx2.MockTransport(handler)
+        ) as client:
             return await call_openapi_operation(
                 app,
                 operation,
@@ -202,12 +214,14 @@ async def test_call_openapi_operation_maps_transport_error() -> None:
         op for op in load_openapi_operations(FIXTURE) if op.name == "get_pet"
     )
 
-    async def handler(request: httpx.Request) -> httpx.Response:
+    async def handler(request: httpx2.Request) -> httpx2.Response:
         _ = request
-        raise httpx.ConnectError("offline")
+        raise httpx2.ConnectError("offline")
 
     async def run() -> NodeReturn[OpenApiOperationOutput]:
-        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        async with httpx2.AsyncClient(
+            transport=httpx2.MockTransport(handler)
+        ) as client:
             return await call_openapi_operation(
                 app,
                 operation,

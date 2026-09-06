@@ -15,7 +15,7 @@ def map_event_to_notifications(event: McpEvent) -> list[mcp_types.ServerNotifica
     notification = _list_changed_notification(event)
     if notification is None:
         return []
-    return [mcp_types.ServerNotification(notification)]
+    return [notification]
 
 
 def _list_changed_notification(

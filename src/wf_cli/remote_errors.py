@@ -9,7 +9,7 @@ import typer
 from wf_cli.context import CliContext
 
 if TYPE_CHECKING:
-    import httpx
+    import httpx2
 
 T = TypeVar("T")
 
@@ -24,11 +24,11 @@ def run_cli_operation(context: CliContext, operation: Coroutine[Any, Any, T]) ->
 
     # HTTP exceptions only matter after a CLI operation starts. Keep the HTTP
     # client stack out of command registration and the `wf --help` path.
-    import httpx
+    import httpx2
 
     try:
         return asyncio.run(operation)
-    except (RuntimeError, httpx.HTTPError) as exc:
+    except (RuntimeError, httpx2.HTTPError) as exc:
         if context.verbose:
             raise
         # Typer 0.26 vendors Click, so external ClickException classes bypass
@@ -37,7 +37,9 @@ def run_cli_operation(context: CliContext, operation: Coroutine[Any, Any, T]) ->
         raise typer.Exit(code=1) from exc
 
 
-def _operation_error_message(exc: RuntimeError | httpx.HTTPError) -> str:
+def _operation_error_message(
+    exc: RuntimeError | httpx2.HTTPError,
+) -> str:
     """Return a stable non-empty message for compact CLI error output."""
     message = str(exc)
     if message:

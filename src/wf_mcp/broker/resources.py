@@ -3,12 +3,12 @@ from __future__ import annotations
 import json
 from dataclasses import asdict
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer
 
 from .service import WfMcpService
 
 
-def register_broker_resources(server: FastMCP, service: WfMcpService) -> None:
+def register_broker_resources(server: MCPServer, service: WfMcpService) -> None:
     """Register broker resource handlers on a FastMCP server."""
 
     @server.resource("wf-mcp://catalog", name="catalog.all")

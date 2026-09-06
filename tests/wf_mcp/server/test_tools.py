@@ -388,21 +388,21 @@ async def test_workflow_tools_have_human_metadata(tmp_path: Path) -> None:
 
         assert list_artifacts.title == "List Workflow Artifacts"
         assert "saved workflow artifacts" in (list_artifacts.description or "")
-        assert "query" in list_artifacts.inputSchema["properties"]
-        assert "kind" in list_artifacts.inputSchema["properties"]
-        assert "cursor" in list_artifacts.inputSchema["properties"]
-        assert "limit" in list_artifacts.inputSchema["properties"]
-        live_check_schema = validate_deployment.inputSchema["properties"]["live_check"]
+        assert "query" in list_artifacts.input_schema["properties"]
+        assert "kind" in list_artifacts.input_schema["properties"]
+        assert "cursor" in list_artifacts.input_schema["properties"]
+        assert "limit" in list_artifacts.input_schema["properties"]
+        live_check_schema = validate_deployment.input_schema["properties"]["live_check"]
         assert "upstream" in live_check_schema.get("description", "")
         assert run_deployment.title == "Run Workflow Deployment"
         assert "deployment_id" in (run_deployment.description or "")
-        assert "trace_range" in run_deployment.inputSchema["properties"]
-        trace_range_schema = run_deployment.inputSchema["properties"]["trace_range"]
+        assert "trace_range" in run_deployment.input_schema["properties"]
+        trace_range_schema = run_deployment.input_schema["properties"]["trace_range"]
         assert "Debug traces" in trace_range_schema.get("description", "")
         assert "null" in [option.get("type") for option in trace_range_schema["anyOf"]]
         assert inspect_run.title == "Inspect Workflow Run"
         assert "trace" in (inspect_run.description or "").lower()
-        read_trace_schema = read_run_trace.inputSchema["properties"]["trace_range"]
+        read_trace_schema = read_run_trace.input_schema["properties"]["trace_range"]
         assert "Debug traces" in read_trace_schema.get("description", "")
 
 
@@ -419,7 +419,7 @@ async def test_create_artifact_from_plan_exposes_plan_as_plain_object(
     async with client:
         tools = await client.list_tools()
         by_name = {tool.name: tool for tool in tools}
-        schema = by_name["wf.workflow.create_artifact_from_plan"].inputSchema
+        schema = by_name["wf.workflow.create_artifact_from_plan"].input_schema
         plan_schema = schema["properties"]["plan"]
 
         assert plan_schema["type"] == "object"
@@ -440,11 +440,11 @@ async def test_draft_tools_expose_plain_object_and_patch_array_schemas(
         tools = await client.list_tools()
         by_name = {tool.name: tool for tool in tools}
 
-        validate_schema = by_name["wf.workflow.validate_draft"].inputSchema
+        validate_schema = by_name["wf.workflow.validate_draft"].input_schema
         validate_draft_schema = validate_schema["properties"]["draft"]
-        create_schema = by_name["wf.workflow.create_artifact_from_draft"].inputSchema
+        create_schema = by_name["wf.workflow.create_artifact_from_draft"].input_schema
         create_draft_schema = create_schema["properties"]["draft"]
-        patch_schema = by_name["wf.workflow.patch_draft"].inputSchema
+        patch_schema = by_name["wf.workflow.patch_draft"].input_schema
         patch_draft_schema = patch_schema["properties"]["draft"]
         patch_patch_schema = patch_schema["properties"]["patch"]
 

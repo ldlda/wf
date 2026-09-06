@@ -93,30 +93,32 @@ def test_server_exposes_upstream_admin_and_workflow_tools() -> None:
             assert "wf.workflow.run_deployment" in names
             call_capability_schema = tools_by_name[
                 "wf.workflow.call_capability"
-            ].outputSchema
+            ].output_schema
             assert call_capability_schema is not None
             assert "source_id" in call_capability_schema["properties"]
             assert "kind" in call_capability_schema["properties"]
             assert "diagnostics" in call_capability_schema["properties"]
             create_workspace_schema = tools_by_name[
                 "wf.workflow.create_draft_workspace"
-            ].outputSchema
+            ].output_schema
             assert create_workspace_schema is not None
             assert "workspace_id" in create_workspace_schema["properties"]
             assert "revision" in create_workspace_schema["properties"]
-            list_sources_schema = tools_by_name["wf.admin.list_sources"].inputSchema
+            list_sources_schema = tools_by_name["wf.admin.list_sources"].input_schema
             assert (
                 "inspect_source"
                 in list_sources_schema["properties"]["limit"]["description"]
             )
-            inspect_source_schema = tools_by_name["wf.admin.inspect_source"].inputSchema
+            inspect_source_schema = tools_by_name[
+                "wf.admin.inspect_source"
+            ].input_schema
             assert (
                 "Exact source id"
                 in inspect_source_schema["properties"]["source_id"]["description"]
             )
             minimal_workspace_input = tools_by_name[
                 "wf.workflow.create_minimal_draft_workspace"
-            ].inputSchema
+            ].input_schema
             minimal_request = _resolve_local_ref(
                 minimal_workspace_input["properties"]["request"],
                 minimal_workspace_input,
@@ -133,7 +135,7 @@ def test_server_exposes_upstream_admin_and_workflow_tools() -> None:
             )
             from_capability_input = tools_by_name[
                 "wf.workflow.create_draft_workspace_from_capability"
-            ].inputSchema
+            ].input_schema
             from_capability_request = _request_schema(from_capability_input)
             assert "capability_name" in from_capability_request["properties"]
             assert "input_schema" in from_capability_request["properties"]
@@ -142,24 +144,24 @@ def test_server_exposes_upstream_admin_and_workflow_tools() -> None:
             assert "output_map" in from_capability_request["properties"]
             set_input_schema = tools_by_name[
                 "wf.workflow.set_step_input_map"
-            ].inputSchema
+            ].input_schema
             set_input_request = _request_schema(set_input_schema)
             assert "merge" in set_input_request["properties"]
             set_bindings_schema = tools_by_name[
                 "wf.workflow.set_step_input_bindings"
-            ].inputSchema
+            ].input_schema
             set_bindings_request = _request_schema(set_bindings_schema)
             assert "bindings" in set_bindings_request["properties"]
             assert "merge" not in set_bindings_request["properties"]
             set_output_bindings_schema = tools_by_name[
                 "wf.workflow.set_step_output_bindings"
-            ].inputSchema
+            ].input_schema
             set_output_bindings_request = _request_schema(set_output_bindings_schema)
             assert "bindings" in set_output_bindings_request["properties"]
             assert "merge" not in set_output_bindings_request["properties"]
             canonical_workflow_output_schema = tools_by_name[
                 "wf.workflow.set_workflow_output_bindings"
-            ].inputSchema
+            ].input_schema
             canonical_workflow_output_request = _request_schema(
                 canonical_workflow_output_schema
             )
@@ -167,11 +169,11 @@ def test_server_exposes_upstream_admin_and_workflow_tools() -> None:
             assert "merge" not in canonical_workflow_output_request["properties"]
             set_workflow_output_schema = tools_by_name[
                 "wf.workflow.set_workflow_output_map"
-            ].inputSchema
+            ].input_schema
             set_workflow_output_request = _request_schema(set_workflow_output_schema)
             assert "output_map" in set_workflow_output_request["properties"]
             assert "merge" in set_workflow_output_request["properties"]
-            bind_schema = tools_by_name["wf.workflow.bind"].inputSchema
+            bind_schema = tools_by_name["wf.workflow.bind"].input_schema
             bind_request = _request_schema(bind_schema)
             assert set(bind_request["required"]) == {
                 "workspace_id",
@@ -185,7 +187,7 @@ def test_server_exposes_upstream_admin_and_workflow_tools() -> None:
             assert bind_request["properties"]["target_path"]["minLength"] == 1
             add_step_schema = tools_by_name[
                 "wf.workflow.add_step_from_capability"
-            ].inputSchema
+            ].input_schema
             add_step_request = _request_schema(add_step_schema)
             assert "capability_name" in add_step_request["properties"]
             assert "bind_outputs" in add_step_request["properties"]
@@ -195,12 +197,12 @@ def test_server_exposes_upstream_admin_and_workflow_tools() -> None:
             assert "timeout_seconds" in add_step_request["properties"]
             update_step_schema = tools_by_name[
                 "wf.workflow.update_capability_step"
-            ].inputSchema
+            ].input_schema
             update_step_request = _request_schema(update_step_schema)
             assert "update" in update_step_request["properties"]
             from_capability_output = tools_by_name[
                 "wf.workflow.create_draft_workspace_from_capability"
-            ].outputSchema
+            ].output_schema
             assert from_capability_output is not None
             assert "wrapper_hints" in from_capability_output["properties"]
             assert "next_actions" in from_capability_output["properties"]
@@ -219,8 +221,8 @@ def test_server_exposes_upstream_admin_and_workflow_tools() -> None:
             validate_deployment = tools_by_name["wf.workflow.validate_deployment"]
             run_deployment = tools_by_name["wf.workflow.run_deployment"]
 
-            validate_output = validate_deployment.outputSchema
-            run_output = run_deployment.outputSchema
+            validate_output = validate_deployment.output_schema
+            run_output = run_deployment.output_schema
 
             assert validate_output is not None
             assert "next_actions" in validate_output["properties"]
@@ -236,7 +238,7 @@ def test_server_exposes_upstream_admin_and_workflow_tools() -> None:
             )
             wrapper_workspace_input = tools_by_name[
                 "wf.workflow.create_wrapper_from_workspace"
-            ].inputSchema
+            ].input_schema
             wrapper_request = wrapper_workspace_input["properties"]["request"]
             assert "kind" not in wrapper_request["properties"]
             assert "artifact_id" in wrapper_request["properties"]

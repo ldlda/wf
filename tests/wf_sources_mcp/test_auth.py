@@ -79,7 +79,7 @@ async def test_mcp_binder_refreshes_oauth_for_http() -> None:
     assert len(refresher.calls) == 1
 
 
-async def test_httpx_oauth_refresher_posts_refresh_token_grant(
+async def test_httpx2_oauth_refresher_posts_refresh_token_grant(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     from pydantic import AnyUrl
@@ -110,7 +110,7 @@ async def test_httpx_oauth_refresher_posts_refresh_token_grant(
             captured_posts.append((url, data))
             return _Response()
 
-    monkeypatch.setattr(mod.httpx, "AsyncClient", _Client)
+    monkeypatch.setattr(mod.httpx2, "AsyncClient", _Client)
 
     token = await HttpxOAuthTokenRefresher().refresh(
         OAuthRefreshTokenAuth(

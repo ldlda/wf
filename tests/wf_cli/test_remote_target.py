@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 from typing import Any, cast
 
-import httpx
+import httpx2
 from typer.testing import CliRunner
 
 import wf_cli.context as cli_context
@@ -328,8 +328,8 @@ def _patch_rpc_client_to_server(monkeypatch, server) -> None:
         return RpcWorkflowApiClient(
             url=url,
             timeout_seconds=timeout_seconds,
-            http_client=httpx.AsyncClient(
-                transport=httpx.ASGITransport(app=create_rpc_app(server, drafts=True)),
+            http_client=httpx2.AsyncClient(
+                transport=httpx2.ASGITransport(app=create_rpc_app(server, drafts=True)),
                 base_url="http://test",
             ),
         )
@@ -530,9 +530,9 @@ def test_wf_remote_source_inspect_formats_expected_rpc_error(
 
 def test_wf_remote_source_list_formats_transport_error(monkeypatch, tmp_path) -> None:
     async def connection_failed(*args: Any, **kwargs: Any) -> dict[str, Any]:
-        raise httpx.ConnectError(
+        raise httpx2.ConnectError(
             "connection refused",
-            request=httpx.Request("POST", "http://test/rpc"),
+            request=httpx2.Request("POST", "http://test/rpc"),
         )
 
     monkeypatch.setattr(RpcSourceAdminClientMixin, "list_sources", connection_failed)

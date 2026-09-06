@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer
 
 from .service import WfMcpService
 
@@ -18,7 +18,7 @@ smallest reusable piece before saving a larger workflow artifact.
 """
 
 
-def register_broker_prompts(server: FastMCP, service: WfMcpService) -> None:
+def register_broker_prompts(server: MCPServer, service: WfMcpService) -> None:
     """Register broker prompt handlers on a FastMCP server."""
 
     @server.prompt(

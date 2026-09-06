@@ -7,9 +7,9 @@ from dataclasses import dataclass, field
 from typing import Any
 
 import anyio
-import httpx
+import httpx2
 from mcp.client.streamable_http import StreamableHTTPError
-from mcp.shared.exceptions import McpError
+from mcp.shared.exceptions import MCPError
 
 from wf_artifacts import (
     DependencyDiagnostic,
@@ -399,8 +399,8 @@ _LIVE_SOURCE_CHECK_FAILURES = (
     anyio.ClosedResourceError,
     anyio.EndOfStream,
     anyio.BrokenResourceError,
-    httpx.HTTPError,
-    McpError,
+    httpx2.HTTPError,
+    MCPError,
     StreamableHTTPError,
 )
 

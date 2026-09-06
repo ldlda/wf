@@ -34,7 +34,7 @@ class FastMcpNotificationContext(Protocol):
 
     async def send_notification(
         self,
-        notification: mcp_types.ServerNotificationType,
+        notification: mcp_types.ServerNotification,
     ) -> None: ...
 
 
@@ -46,4 +46,4 @@ class FastMcpContextNotificationSink:
 
     async def send_event(self, event: McpEvent) -> None:
         for notification in map_event_to_notifications(event):
-            await self._context.send_notification(notification.root)
+            await self._context.send_notification(notification)

@@ -14,11 +14,11 @@ from wf_mcp.notifications import (
 
 class FakeFastMcpContext:
     def __init__(self) -> None:
-        self.sent: list[mcp_types.ServerNotificationType] = []
+        self.sent: list[mcp_types.ServerNotification] = []
 
     async def send_notification(
         self,
-        notification: mcp_types.ServerNotificationType,
+        notification: mcp_types.ServerNotification,
     ) -> None:
         self.sent.append(notification)
 
@@ -32,20 +32,18 @@ def test_maps_capability_change_events_to_mcp_list_changed_notifications() -> No
     resource_notifications = map_event_to_notifications(resource_event)
     prompt_notifications = map_event_to_notifications(prompt_event)
 
-    assert isinstance(tool_notifications[0].root, mcp_types.ToolListChangedNotification)
-    assert tool_notifications[0].root.method == "notifications/tools/list_changed"
+    assert isinstance(tool_notifications[0], mcp_types.ToolListChangedNotification)
+    assert tool_notifications[0].method == "notifications/tools/list_changed"
     assert isinstance(
-        resource_notifications[0].root,
+        resource_notifications[0],
         mcp_types.ResourceListChangedNotification,
     )
-    assert (
-        resource_notifications[0].root.method == "notifications/resources/list_changed"
-    )
+    assert resource_notifications[0].method == "notifications/resources/list_changed"
     assert isinstance(
-        prompt_notifications[0].root,
+        prompt_notifications[0],
         mcp_types.PromptListChangedNotification,
     )
-    assert prompt_notifications[0].root.method == "notifications/prompts/list_changed"
+    assert prompt_notifications[0].method == "notifications/prompts/list_changed"
 
 
 def test_ignores_events_that_do_not_have_an_mcp_notification_projection() -> None:
@@ -65,8 +63,8 @@ def test_recording_notification_sink_projects_events_from_event_bus() -> None:
 
     notifications = sink.list_notifications()
     assert len(notifications) == 2
-    assert notifications[0].root.method == "notifications/tools/list_changed"
-    assert notifications[1].root.method == "notifications/prompts/list_changed"
+    assert notifications[0].method == "notifications/tools/list_changed"
+    assert notifications[1].method == "notifications/prompts/list_changed"
 
 
 def test_fastmcp_context_notification_sink_sends_projected_notifications() -> None:

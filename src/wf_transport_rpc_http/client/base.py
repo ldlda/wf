@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import Any, Protocol
 from uuid import uuid4
 
-import httpx
+import httpx2
 
 
 @dataclass(slots=True)
@@ -48,7 +48,7 @@ class RpcClientTransport:
 
     url: str
     timeout_seconds: float = 30.0
-    http_client: httpx.AsyncClient | None = None
+    http_client: httpx2.AsyncClient | None = None
 
     async def _call(self, method: str, params: dict[str, Any]) -> dict[str, Any]:
         request_id = uuid4().hex
@@ -59,7 +59,7 @@ class RpcClientTransport:
             "params": params,
         }
         if self.http_client is None:
-            async with httpx.AsyncClient(timeout=self.timeout_seconds) as client:
+            async with httpx2.AsyncClient(timeout=self.timeout_seconds) as client:
                 response = await client.post(self.url, json=request)
         else:
             response = await self.http_client.post(self.url, json=request)

@@ -61,17 +61,17 @@ class FakeStatefulClient:
             self.page_open = True
             return CallToolResult(
                 content=[],
-                structuredContent={"content": "opened"},
+                structured_content={"content": "opened"},
             )
         if tool_name == "browser_snapshot" and self.page_open:
             return CallToolResult(
                 content=[],
-                structuredContent={"content": "snapshot"},
+                structured_content={"content": "snapshot"},
             )
         return CallToolResult(
             content=[],
-            structuredContent={"message": "No open page"},
-            isError=True,
+            structured_content={"message": "No open page"},
+            is_error=True,
         )
 
     async def close(self) -> None:

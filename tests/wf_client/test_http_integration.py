@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import httpx
+import httpx2
 import pytest
 from pydantic import BaseModel
 
@@ -17,9 +17,9 @@ async def test_http_app_calls_authors_saves_deploys_and_runs(tmp_path) -> None:
     """Prove the public client lifecycle against the real JSON-RPC ASGI app."""
     server = build_local_static_workflow_server(tmp_path / "store")
     rpc_app = create_rpc_app(server)
-    transport = httpx.ASGITransport(app=rpc_app)
+    transport = httpx2.ASGITransport(app=rpc_app)
 
-    async with httpx.AsyncClient(
+    async with httpx2.AsyncClient(
         transport=transport,
         base_url="http://test",
     ) as http_client:
@@ -103,9 +103,9 @@ async def test_http_app_runs_saved_workflow_artifact_as_native_subgraph(
     """Catch public-client subgraphs losing exact saved-child resolution."""
     server = build_local_static_workflow_server(tmp_path / "store")
     rpc_app = create_rpc_app(server)
-    transport = httpx.ASGITransport(app=rpc_app)
+    transport = httpx2.ASGITransport(app=rpc_app)
 
-    async with httpx.AsyncClient(
+    async with httpx2.AsyncClient(
         transport=transport,
         base_url="http://test",
     ) as http_client:

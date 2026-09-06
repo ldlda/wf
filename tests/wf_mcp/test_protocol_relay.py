@@ -24,7 +24,7 @@ NotificationProbe = Callable[
 def _notification_methods(
     notifications: list[mcp_types.ServerNotification],
 ) -> list[str]:
-    return [notification.root.method for notification in notifications]
+    return [notification.method for notification in notifications]
 
 
 async def _capture_notifications(

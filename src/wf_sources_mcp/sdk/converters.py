@@ -14,7 +14,7 @@ from .protocols import ToolCallResult
 
 def tool_to_discovered(tool: McpTool) -> DiscoveredTool:
     """Convert an MCP SDK tool into the source discovery model."""
-    output_schema = workflow_output_schema_from_mcp_tool_schema(tool.outputSchema)
+    output_schema = workflow_output_schema_from_mcp_tool_schema(tool.output_schema)
     display_name = (
         tool.annotations.title
         if tool.annotations is not None and tool.annotations.title
@@ -24,7 +24,7 @@ def tool_to_discovered(tool: McpTool) -> DiscoveredTool:
         name=tool.name,
         title=display_name,
         description=tool.description,
-        input_schema=tool.inputSchema,
+        input_schema=tool.input_schema,
         output_schema=output_schema,
         outcomes=("ok", "error"),
         metadata=tool.model_dump(by_alias=True, mode="json"),
@@ -55,7 +55,7 @@ def resource_to_discovered(resource: McpResource) -> DiscoveredResource:
         name=local_name,
         title=resource.title,
         description=resource.description,
-        mime_type=resource.mimeType,
+        mime_type=resource.mime_type,
         metadata=resource.model_dump(by_alias=True, mode="json"),
     )
 
@@ -77,14 +77,14 @@ def prompt_to_discovered(prompt: McpPrompt) -> DiscoveredPrompt:
 
 def tool_result_to_call_result(result: McpCallToolResult) -> ToolCallResult:
     """Convert an MCP SDK tool call result into the adapter result model."""
-    if result.structuredContent is not None:
-        output = result.structuredContent
+    if result.structured_content is not None:
+        output = result.structured_content
     else:
         output: dict[str, Any] = {
             "content": [item.model_dump(by_alias=True) for item in result.content]
         }
     return ToolCallResult(
-        outcome="error" if result.isError else "ok",
+        outcome="error" if result.is_error else "ok",
         output=output,
         meta=result.meta or {},
     )

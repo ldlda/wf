@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import httpx
+import httpx2
 
 from wf_mcp.broker.server import build_workflow_server_from_config
 from wf_mcp.models import AuthRecord, BrokerConfig
@@ -17,9 +17,9 @@ async def test_rpc_lists_auth_records(tmp_path) -> None:
         )
     )
     app = create_rpc_app(server)
-    transport = httpx.ASGITransport(app=app)
+    transport = httpx2.ASGITransport(app=app)
 
-    async with httpx.AsyncClient(
+    async with httpx2.AsyncClient(
         transport=transport, base_url="http://test"
     ) as http_client:
         client = RpcWorkflowApiClient(url="http://test/rpc", http_client=http_client)
@@ -44,9 +44,9 @@ async def test_rpc_inspects_auth_record(tmp_path) -> None:
         )
     )
     app = create_rpc_app(server)
-    transport = httpx.ASGITransport(app=app)
+    transport = httpx2.ASGITransport(app=app)
 
-    async with httpx.AsyncClient(
+    async with httpx2.AsyncClient(
         transport=transport, base_url="http://test"
     ) as http_client:
         client = RpcWorkflowApiClient(url="http://test/rpc", http_client=http_client)
@@ -62,9 +62,9 @@ async def test_rpc_saves_auth_record_without_returning_payload(tmp_path) -> None
     config = BrokerConfig(store_root=store.root, connections=[])
     server = build_workflow_server_from_config(config)
     app = create_rpc_app(server)
-    transport = httpx.ASGITransport(app=app)
+    transport = httpx2.ASGITransport(app=app)
 
-    async with httpx.AsyncClient(
+    async with httpx2.AsyncClient(
         transport=transport, base_url="http://test"
     ) as http_client:
         client = RpcWorkflowApiClient(url="http://test/rpc", http_client=http_client)
@@ -92,9 +92,9 @@ async def test_rpc_deletes_auth_record(tmp_path) -> None:
     config = BrokerConfig(store_root=store.root, connections=[])
     server = build_workflow_server_from_config(config)
     app = create_rpc_app(server)
-    transport = httpx.ASGITransport(app=app)
+    transport = httpx2.ASGITransport(app=app)
 
-    async with httpx.AsyncClient(
+    async with httpx2.AsyncClient(
         transport=transport, base_url="http://test"
     ) as http_client:
         client = RpcWorkflowApiClient(url="http://test/rpc", http_client=http_client)

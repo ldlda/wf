@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-import httpx
+import httpx2
 import pytest
 from pydantic import TypeAdapter
 
@@ -33,9 +33,10 @@ from wf_transport_rpc_http.client.sources import RpcSourceAdminClientMixin
 
 
 async def test_rpc_client_preserves_structured_jsonrpc_error() -> None:
-    def handler(request: httpx.Request) -> httpx.Response:
+
+    def handler(request: httpx2.Request) -> httpx2.Response:
         request_id = json.loads(request.content)["id"]
-        return httpx.Response(
+        return httpx2.Response(
             200,
             json={
                 "jsonrpc": "2.0",
@@ -48,7 +49,7 @@ async def test_rpc_client_preserves_structured_jsonrpc_error() -> None:
             },
         )
 
-    http_client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    http_client = httpx2.AsyncClient(transport=httpx2.MockTransport(handler))
     async with http_client:
         client = RpcWorkflowApiClient(url="http://test/rpc", http_client=http_client)
         with pytest.raises(RpcProtocolError) as raised:
@@ -72,7 +73,8 @@ async def test_rpc_client_rejects_malformed_response_envelope(
     jsonrpc: str | None,
     response_id: str,
 ) -> None:
-    def handler(request: httpx.Request) -> httpx.Response:
+
+    def handler(request: httpx2.Request) -> httpx2.Response:
         request_id = json.loads(request.content)["id"]
         payload: dict[str, object] = {
             "id": request_id if response_id == "echo" else response_id,
@@ -80,9 +82,11 @@ async def test_rpc_client_rejects_malformed_response_envelope(
         }
         if jsonrpc is not None:
             payload["jsonrpc"] = jsonrpc
-        return httpx.Response(200, json=payload)
+        return httpx2.Response(200, json=payload)
 
-    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http_client:
+    async with httpx2.AsyncClient(
+        transport=httpx2.MockTransport(handler)
+    ) as http_client:
         client = RpcWorkflowApiClient(url="http://test/rpc", http_client=http_client)
         with pytest.raises(RuntimeError, match="JSON-RPC response"):
             await client.list_capabilities()
@@ -139,8 +143,8 @@ def _constant_plan() -> RawWorkflowPlan:
 async def test_rpc_workflow_client_lists_and_inspects_capabilities(tmp_path) -> None:
     server = build_local_static_workflow_server(tmp_path / "store")
     app = create_rpc_app(server)
-    transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
+    transport = httpx2.ASGITransport(app=app)
+    async with httpx2.AsyncClient(
         transport=transport,
         base_url="http://test",
     ) as http_client:
@@ -169,8 +173,8 @@ async def test_rpc_workflow_client_lists_and_inspects_capabilities(tmp_path) -> 
 async def test_rpc_workflow_client_lists_and_inspects_sources(tmp_path) -> None:
     server = build_local_static_workflow_server(tmp_path / "store")
     app = create_rpc_app(server)
-    transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
+    transport = httpx2.ASGITransport(app=app)
+    async with httpx2.AsyncClient(
         transport=transport,
         base_url="http://test",
     ) as http_client:
@@ -195,8 +199,8 @@ async def test_rpc_workflow_client_reads_admin_state(tmp_path) -> None:
         payload={"ok": True},
     )
     app = create_rpc_app(server)
-    transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
+    transport = httpx2.ASGITransport(app=app)
+    async with httpx2.AsyncClient(
         transport=transport,
         base_url="http://test",
     ) as http_client:
@@ -235,8 +239,8 @@ async def test_rpc_workflow_client_runs_and_reads_trace(tmp_path) -> None:
         }
     )
     app = create_rpc_app(server)
-    transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
+    transport = httpx2.ASGITransport(app=app)
+    async with httpx2.AsyncClient(
         transport=transport,
         base_url="http://test",
     ) as http_client:
@@ -269,8 +273,8 @@ async def test_rpc_workflow_client_runs_and_reads_trace(tmp_path) -> None:
 async def test_rpc_workflow_client_raises_for_rpc_error(tmp_path) -> None:
     server = build_local_static_workflow_server(tmp_path / "store")
     app = create_rpc_app(server)
-    transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
+    transport = httpx2.ASGITransport(app=app)
+    async with httpx2.AsyncClient(
         transport=transport,
         base_url="http://test",
     ) as http_client:
@@ -301,8 +305,8 @@ async def test_rpc_workflow_client_lists_and_inspects_artifacts(tmp_path) -> Non
         source_bindings={},
     )
     app = create_rpc_app(server)
-    transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
+    transport = httpx2.ASGITransport(app=app)
+    async with httpx2.AsyncClient(
         transport=transport, base_url="http://test"
     ) as http_client:
         client = RpcWorkflowApiClient(
@@ -336,8 +340,8 @@ async def test_rpc_workflow_client_lists_inspects_validates_and_deletes_deployme
         }
     )
     app = create_rpc_app(server)
-    transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
+    transport = httpx2.ASGITransport(app=app)
+    async with httpx2.AsyncClient(
         transport=transport, base_url="http://test"
     ) as http_client:
         client = RpcWorkflowApiClient(
@@ -363,8 +367,8 @@ async def test_rpc_workflow_client_lists_inspects_validates_and_deletes_deployme
 async def test_rpc_workflow_client_draft_workspace_lifecycle(tmp_path) -> None:
     server = build_local_static_workflow_server(tmp_path / "store", drafts=True)
     app = create_rpc_app(server, drafts=True)
-    transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
+    transport = httpx2.ASGITransport(app=app)
+    async with httpx2.AsyncClient(
         transport=transport, base_url="http://test"
     ) as http_client:
         client = RpcWorkflowApiClient(
@@ -559,8 +563,8 @@ async def test_rpc_client_sends_exact_replace_document_payload() -> None:
 async def test_rpc_client_builds_capability_free_draft_lifecycle(tmp_path) -> None:
     server = build_local_static_workflow_server(tmp_path / "store", drafts=True)
     app = create_rpc_app(server, drafts=True)
-    transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
+    transport = httpx2.ASGITransport(app=app)
+    async with httpx2.AsyncClient(
         transport=transport,
         base_url="http://test",
     ) as http_client:
@@ -623,8 +627,8 @@ def test_rpc_client_satisfies_draft_surface_static_shape() -> None:
 async def test_rpc_workflow_client_deletes_draft_workspace(tmp_path) -> None:
     server = build_local_static_workflow_server(tmp_path / "store", drafts=True)
     app = create_rpc_app(server, drafts=True)
-    transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
+    transport = httpx2.ASGITransport(app=app)
+    async with httpx2.AsyncClient(
         transport=transport, base_url="http://test"
     ) as http_client:
         client = RpcWorkflowApiClient(
@@ -656,8 +660,8 @@ async def test_rpc_workflow_client_deletes_artifact(tmp_path) -> None:
     )
 
     app = create_rpc_app(server)
-    transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
+    transport = httpx2.ASGITransport(app=app)
+    async with httpx2.AsyncClient(
         transport=transport, base_url="http://test"
     ) as http_client:
         client = RpcWorkflowApiClient(
@@ -694,8 +698,8 @@ async def test_rpc_client_lists_runs(tmp_path) -> None:
     )
 
     app = create_rpc_app(server)
-    transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
+    transport = httpx2.ASGITransport(app=app)
+    async with httpx2.AsyncClient(
         transport=transport,
         base_url="http://test",
     ) as http_client:
@@ -715,8 +719,8 @@ async def test_rpc_client_lists_runs(tmp_path) -> None:
 async def test_rpc_client_creates_artifact_from_plan(tmp_path) -> None:
     server = build_local_static_workflow_server(tmp_path / "store")
     app = create_rpc_app(server)
-    transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
+    transport = httpx2.ASGITransport(app=app)
+    async with httpx2.AsyncClient(
         transport=transport,
         base_url="http://test",
     ) as http_client:
@@ -745,8 +749,8 @@ async def test_rpc_client_creates_artifact_from_plan(tmp_path) -> None:
 async def test_rpc_client_validates_artifact_plan_without_persisting(tmp_path) -> None:
     server = build_local_static_workflow_server(tmp_path / "store")
     app = create_rpc_app(server)
-    transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
+    transport = httpx2.ASGITransport(app=app)
+    async with httpx2.AsyncClient(
         transport=transport, base_url="http://test"
     ) as http_client:
         client = RpcWorkflowApiClient(
@@ -770,8 +774,8 @@ async def test_rpc_client_validates_artifact_plan_without_persisting(tmp_path) -
 async def test_rpc_client_set_workflow_output_map(tmp_path) -> None:
     server = build_local_static_workflow_server(tmp_path / "store", drafts=True)
     app = create_rpc_app(server, drafts=True)
-    transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
+    transport = httpx2.ASGITransport(app=app)
+    async with httpx2.AsyncClient(
         transport=transport, base_url="http://test"
     ) as http_client:
         client = RpcWorkflowApiClient(
@@ -805,8 +809,8 @@ async def test_rpc_client_set_workflow_output_map(tmp_path) -> None:
 async def test_rpc_client_draft_workspace_focused_edit_methods(tmp_path) -> None:
     server = build_local_static_workflow_server(tmp_path / "store", drafts=True)
     app = create_rpc_app(server, drafts=True)
-    transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
+    transport = httpx2.ASGITransport(app=app)
+    async with httpx2.AsyncClient(
         transport=transport, base_url="http://test"
     ) as http_client:
         client = RpcWorkflowApiClient(
@@ -1067,8 +1071,8 @@ async def test_rpc_client_draft_remove_methods(tmp_path) -> None:
 async def test_rpc_client_draft_workspace_add_step_from_capability(tmp_path) -> None:
     server = build_local_static_workflow_server(tmp_path / "store", drafts=True)
     app = create_rpc_app(server, drafts=True)
-    transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
+    transport = httpx2.ASGITransport(app=app)
+    async with httpx2.AsyncClient(
         transport=transport, base_url="http://test"
     ) as http_client:
         client = RpcWorkflowApiClient(

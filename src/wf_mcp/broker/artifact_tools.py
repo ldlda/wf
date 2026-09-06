@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer
 
 from wf_api.models import (
     DeleteDeploymentResult,
@@ -20,7 +20,7 @@ from ..workflow_surface.models import RunDeploymentResult
 from .service import WfMcpService
 
 
-def register_artifact_tools(server: FastMCP, service: WfMcpService) -> None:
+def register_artifact_tools(server: MCPServer, service: WfMcpService) -> None:
     """Register stable MCP tools for saved workflow artifact inspection."""
     handlers = WorkflowSurfaceHandlers(service)
 

@@ -10,7 +10,7 @@ from .models import OpenApiOperation
 
 @dataclass(frozen=True, slots=True)
 class HttpRequestParts:
-    """OpenAPI-shaped request parts ready for `httpx` execution."""
+    """OpenAPI-shaped request parts ready for `httpx2` execution."""
 
     method: str
     url: str
