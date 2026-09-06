@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from json import JSONDecodeError
 from typing import Any, Literal, TypeVar
 
-import httpx
+import httpx2
 
 from wf_api.models import (
     CapabilityCallResult,
@@ -99,7 +99,7 @@ class PublicErrorWorkflowClientPort:
             if known is not None:
                 raise known from exc
             raise ProtocolError(exc.code, exc.message, exc.data) from exc
-        except (httpx.TransportError, httpx.HTTPStatusError, JSONDecodeError) as exc:
+        except (httpx2.HTTPError, JSONDecodeError) as exc:
             raise TransportError(f"{operation} transport failed: {exc}") from exc
         except RuntimeError as exc:
             # The RPC transport uses RuntimeError only when a decoded JSON-RPC

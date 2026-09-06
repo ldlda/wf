@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-import httpx
+import httpx2
 from mcp.client.session import ClientSession
 from mcp.client.stdio import StdioServerParameters, stdio_client
 from mcp.client.streamable_http import streamable_http_client
@@ -42,11 +42,12 @@ async def open_mcp_session(
     duplicate keys) and passes command, args, env, and cwd to
     StdioServerParameters.
 
-    For HTTP transports, creates an httpx.AsyncClient with auth headers and
+    For HTTP transports, creates an httpx2.AsyncClient with auth headers and
     enters streamable_http_client.
 
     Yields an initialized ClientSession. Caller owns the session lifetime.
     """
+
     transport = connection.transport
     if transport is None:
         raise ValueError(f"connection {connection.id!r} requires metadata.transport")
@@ -73,7 +74,7 @@ async def open_mcp_session(
 
     if isinstance(transport, HttpSourceTransport):
         bound = await binder.bind_http_auth(stored_auth)
-        http_client = httpx.AsyncClient(
+        http_client = httpx2.AsyncClient(
             headers=bound.headers or None,
             auth=bound.auth,
         )
@@ -82,11 +83,14 @@ async def open_mcp_session(
             streamable_http_client(
                 str(transport.url),
                 http_client=http_client,
-            ) as (read_stream, write_stream, _get_session_id),
+            ) as (
+                read_stream,
+                write_stream,
+            ),
+            ClientSession(read_stream, write_stream) as session,
         ):
-            async with ClientSession(read_stream, write_stream) as session:
-                await session.initialize()
-                yield session
+            await session.initialize()
+            yield session
         return
 
     raise ValueError(f"unsupported MCP transport {transport.kind!r}")

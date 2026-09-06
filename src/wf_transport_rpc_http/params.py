@@ -2,25 +2,15 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi.datastructures import _Unset
 from fastapi_jsonrpc import Params
 
 
-class _RpcParams(Params):
-    def __init__(self, default: Any = ..., **extra: Any) -> None:
-        super().__init__(default, example=_Unset, **extra)
-
-
 def RpcParams(default: Any = ...) -> Any:
-    """Bind JSON-RPC method params without fastapi-jsonrpc's warning-prone wrapper.
+    """Bind JSON-RPC method params with a zero-arg default.
 
-    ``fastapi_jsonrpc.Params`` currently forwards ``example=Undefined`` into
-    FastAPI's ``Body``. FastAPI treats that as the deprecated ``example``
-    argument being explicitly provided, so every method registration emits a
-    deprecation warning. Keep the upstream subclass so fastapi-jsonrpc still
-    recognises method params, but pass FastAPI's real "unset" sentinel.
-
-    This issue is fixed upstream at https://github.com/smagafurov/fastapi-jsonrpc/pull/101. Remove this wrapper once the next version of fastapi-jsonrpc is released and we upgrade to it.
+    Upstream fixed the ``example``-sentinel warning in fastapi-jsonrpc 4.0, so
+    this is now a plain pass-through. The wrapper stays (in this one file) so
+    the ``params: Model = RpcParams()`` call sites keep working: upstream
+    ``Params`` still requires ``default`` positionally.
     """
-    # TODO
-    return _RpcParams(default)
+    return Params(default)

@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from json import JSONDecodeError
 from typing import Any
 
-import httpx
+import httpx2
 from openapi_core import OpenAPI
 from pydantic import BaseModel, ConfigDict
 
@@ -44,7 +44,7 @@ async def call_openapi_operation(
     config: OpenApiExecutionConfig,
     payload: dict[str, Any],
     *,
-    client: httpx.AsyncClient | None = None,
+    client: httpx2.AsyncClient | None = None,
 ) -> NodeReturn[OpenApiOperationOutput]:
     """Execute one raw OpenAPI operation through generic HTTP machinery."""
     request = build_http_request_parts(
@@ -65,11 +65,11 @@ async def call_openapi_operation(
         )
 
     close_client = client is None
-    active_client = client or httpx.AsyncClient(timeout=config.timeout_seconds)
+    active_client = client or httpx2.AsyncClient(timeout=config.timeout_seconds)
     try:
         try:
             response = await _send_request(active_client, request)
-        except httpx.HTTPError as exc:
+        except httpx2.HTTPError as exc:
             return NodeReturn(
                 outcome="transport_error",
                 output=OpenApiOperationOutput(
@@ -119,9 +119,9 @@ async def call_openapi_operation(
 
 
 async def _send_request(
-    client: httpx.AsyncClient,
+    client: httpx2.AsyncClient,
     request: HttpRequestParts,
-) -> httpx.Response:
+) -> httpx2.Response:
     kwargs: dict[str, Any] = {
         "method": request.method,
         "url": request.url,
@@ -137,7 +137,7 @@ async def _send_request(
     return await client.request(**kwargs)
 
 
-def _response_body(response: httpx.Response) -> tuple[Any, list[str]]:
+def _response_body(response: httpx2.Response) -> tuple[Any, list[str]]:
     """Parse response body while keeping malformed JSON in validation flow."""
     content_type = response.headers.get("content-type", "").lower()
     if not response.content:

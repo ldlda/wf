@@ -31,8 +31,8 @@ async def _fake_stdio_client(params: Any) -> AsyncIterator[tuple[Any, Any]]:
 @asynccontextmanager
 async def _fake_streamable_http_client(
     url: str, *, http_client: Any = None
-) -> AsyncIterator[tuple[Any, Any, Any]]:
-    yield "read", "write", lambda: None
+) -> AsyncIterator[tuple[Any, Any]]:
+    yield "read", "write"
 
 
 @asynccontextmanager
@@ -169,10 +169,10 @@ async def test_http_auth_headers_passed_to_client(
         payload={"token": "secret123"},
     )
 
-    import httpx as _httpx
+    import httpx2 as _httpx2
 
-    captured_clients: list[_httpx.AsyncClient] = []
-    _original_client = _httpx.AsyncClient
+    captured_clients: list[_httpx2.AsyncClient] = []
+    _original_client = _httpx2.AsyncClient
 
     class _CapturingClient(_original_client):  # type: ignore[type-arg]
         def __init__(self, **kwargs: Any) -> None:
@@ -181,10 +181,10 @@ async def test_http_auth_headers_passed_to_client(
 
     import wf_sources_mcp.client.transport as mod
 
-    class _PatchedHttpx:
+    class _Patchedhttpx2:
         AsyncClient = _CapturingClient
 
-    monkeypatch.setattr(mod, "httpx", _PatchedHttpx())
+    monkeypatch.setattr(mod, "httpx2", _Patchedhttpx2())
 
     async with open_mcp_session(connection, auth) as session:
         assert isinstance(session, _FakeSession)
@@ -236,10 +236,10 @@ async def test_http_no_auth_creates_client_with_no_auth_headers(
 ) -> None:
     connection = _http_connection()
 
-    import httpx as _httpx
+    import httpx2 as _httpx2
 
-    captured_clients: list[_httpx.AsyncClient] = []
-    _original_client = _httpx.AsyncClient
+    captured_clients: list[_httpx2.AsyncClient] = []
+    _original_client = _httpx2.AsyncClient
 
     class _CapturingClient(_original_client):  # type: ignore[type-arg]
         def __init__(self, **kwargs: Any) -> None:
@@ -250,8 +250,8 @@ async def test_http_no_auth_creates_client_with_no_auth_headers(
 
     monkeypatch.setattr(
         mod,
-        "httpx",
-        type("_PatchedHttpx", (), {"AsyncClient": _CapturingClient})(),
+        "httpx2",
+        type("_Patchedhttpx2", (), {"AsyncClient": _CapturingClient})(),
     )
 
     async with open_mcp_session(connection, None):
@@ -282,7 +282,7 @@ async def test_open_mcp_session_uses_binder_for_http_headers(
 
     import wf_sources_mcp.client.transport as mod
 
-    monkeypatch.setattr(mod.httpx, "AsyncClient", _CapturingClient)
+    monkeypatch.setattr(mod.httpx2, "AsyncClient", _CapturingClient)
 
     connection = _http_connection()
     auth = StoredAuthRecord(
@@ -332,8 +332,8 @@ async def test_open_mcp_session_refreshes_oauth_record_for_http(
     import wf_sources_mcp.auth as auth_mod
     import wf_sources_mcp.client.transport as transport_mod
 
-    monkeypatch.setattr(auth_mod.httpx, "AsyncClient", _CapturingClient)
-    monkeypatch.setattr(transport_mod.httpx, "AsyncClient", _CapturingClient)
+    monkeypatch.setattr(auth_mod.httpx2, "AsyncClient", _CapturingClient)
+    monkeypatch.setattr(transport_mod.httpx2, "AsyncClient", _CapturingClient)
 
     connection = _http_connection()
     auth = StoredAuthRecord(

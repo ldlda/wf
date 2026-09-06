@@ -10,7 +10,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
-import httpx
+import httpx2
 
 from wf_api.auth import (
     AuthRecord as NeutralAuthRecord,
@@ -180,7 +180,7 @@ class HttpxOAuthTokenRefresher:
             data["client_secret"] = auth.client_secret
         if auth.scopes:
             data["scope"] = " ".join(auth.scopes)
-        async with httpx.AsyncClient(timeout=10.0) as client:
+        async with httpx2.AsyncClient(timeout=10.0) as client:
             response = await client.post(str(auth.token_url), data=data)
             response.raise_for_status()
             payload = response.json()
@@ -198,8 +198,16 @@ class HttpxOAuthTokenRefresher:
 
 @dataclass(frozen=True, slots=True)
 class BoundMcpHttpAuth:
+    """Auth material for MCP HTTP transports.
+
+    The MCP transport stack is httpx2-only: ``auth`` must be an httpx2.Auth
+    (or None). The authlib OAuth login flow in wf_cli stays on httpx by
+    design and never flows into this field; token refresh here is a plain
+    httpx2 POST.
+    """
+
     headers: dict[str, str] = field(default_factory=dict)
-    auth: httpx.Auth | None = None
+    auth: httpx2.Auth | None = None
 
 
 @dataclass(frozen=True, slots=True)
