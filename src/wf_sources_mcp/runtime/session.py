@@ -5,7 +5,6 @@ from dataclasses import dataclass
 from typing import Any
 
 from mcp.client.session import ClientSession
-from pydantic import AnyUrl
 
 from wf_sources_mcp.auth import AuthRecord
 from wf_sources_mcp.catalog import DiscoveredPrompt, DiscoveredResource, DiscoveredTool
@@ -66,7 +65,7 @@ class PersistentMcpSession:
         if self.read_resource_callback is not None:
             return await self.read_resource_callback(uri)
         if self.client is not None:
-            result = await self.client.read_resource(AnyUrl(uri))
+            result = await self.client.read_resource(str(uri))
             return result.model_dump(by_alias=True, mode="json", exclude_none=True)
         raise RuntimeError("persistent MCP session has no resource read transport")
 
@@ -135,12 +134,13 @@ class PersistentMcpSession:
         if self.invoke_method_callback is not None:
             return await self.invoke_method_callback(method, params)
         if self.client is not None:
-            from mcp import ClientResult
-            from mcp.types import ClientRequest
+            from mcp.types import client_request_adapter, server_result_adapter
 
             result = await self.client.send_request(
-                ClientRequest.model_validate({"method": method, "params": params}),
-                ClientResult,
+                client_request_adapter.validate_python(
+                    {"method": method, "params": params}
+                ),
+                server_result_adapter,
             )
             return result.model_dump(by_alias=True, mode="json", exclude_none=True)
         raise RuntimeError("persistent MCP session has no method invoke transport")
@@ -155,10 +155,12 @@ class PersistentMcpSession:
             await self.send_notification_callback(method, params)
             return
         if self.client is not None:
-            from mcp.types import ClientNotification
+            from mcp.types import client_notification_adapter
 
             await self.client.send_notification(
-                ClientNotification.model_validate({"method": method, "params": params})
+                client_notification_adapter.validate_python(
+                    {"method": method, "params": params}
+                )
             )
             return
         raise RuntimeError("persistent MCP session has no notification send transport")

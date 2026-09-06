@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from mcp import McpError
+from mcp import MCPError
 from mcp.types import ErrorData
 
 from wf_mcp.broker import WfMcpService
@@ -33,10 +33,10 @@ class _ToolsOnlyAdapter:
         ]
 
     async def list_resources(self, connection, auth):
-        raise McpError(ErrorData(code=-32601, message="Method not found"))
+        raise MCPError.from_error_data(ErrorData(code=-32601, message="Method not found"))
 
     async def list_prompts(self, connection, auth):
-        raise McpError(ErrorData(code=-32601, message="Method not found"))
+        raise MCPError.from_error_data(ErrorData(code=-32601, message="Method not found"))
 
     async def get_connection_metadata(self, connection, auth):
         return {
@@ -65,7 +65,7 @@ class _WrappedToolsOnlyAdapter(_ToolsOnlyAdapter):
     async def list_resources(self, connection, auth):
         raise ExceptionGroup(
             "unhandled errors in a TaskGroup",
-            [McpError(ErrorData(code=-32601, message="Method not found"))],
+            [MCPError.from_error_data(ErrorData(code=-32601, message="Method not found"))],
         )
 
 

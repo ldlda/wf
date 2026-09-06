@@ -50,10 +50,14 @@ def finalize_tool(
 
 @deprecated("Use pytests tmp_path fixture instead")
 @overload
+
+
 def local_temp_root() -> Path: ...
 
 
 @overload
+
+
 def local_temp_root(root_path: Path) -> Path: ...
 
 

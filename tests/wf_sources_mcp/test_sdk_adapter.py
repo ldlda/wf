@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from typing import Any
 
 import pytest
-from mcp import ClientResult
+from mcp import GetPromptResult, ReadResourceResult, ServerResult
 from mcp.types import (
     CallToolResult,
     ClientNotification,
@@ -18,7 +18,7 @@ from mcp.types import (
     TextContent,
     Tool,
 )
-from pydantic import AnyUrl
+from pydantic import TypeAdapter
 
 from wf_sources_mcp.client import McpSourceClient
 from wf_sources_mcp.connections import McpSourceConnection
@@ -47,7 +47,7 @@ class _FakeSession:
                     name="echo",
                     title="Echo",
                     description="Echo text.",
-                    inputSchema={"type": "object", "properties": {}},
+                    input_schema={"type": "object", "properties": {}},
                 )
             ]
         )
@@ -56,11 +56,11 @@ class _FakeSession:
         return ListResourcesResult(
             resources=[
                 Resource(
-                    uri=AnyUrl("fixture://docs/welcome"),
+                    uri="fixture://docs/welcome",
                     name="resource.welcome",
                     title="Welcome",
                     description="Welcome resource.",
-                    mimeType="text/plain",
+                    mime_type="text/plain",
                 )
             ]
         )
@@ -77,49 +77,39 @@ class _FakeSession:
             ]
         )
 
-    async def read_resource(self, uri: AnyUrl) -> Any:
-        return type(
-            "ReadResourceResult",
-            (),
-            {
-                "model_dump": lambda _self, **_kwargs: {
-                    "contents": [{"uri": str(uri), "text": "hello"}]
-                }
-            },
-        )()
+    async def read_resource(self, uri: str) -> ReadResourceResult:
+        return ReadResourceResult.model_validate(
+            {"contents": [{"uri": str(uri), "text": "hello"}]}
+        )
 
     async def get_prompt(
         self,
         prompt_name: str,
         arguments: dict[str, str] | None = None,
-    ) -> Any:
-        return type(
-            "GetPromptResult",
-            (),
+    ) -> GetPromptResult:
+        return GetPromptResult.model_validate(
             {
-                "model_dump": lambda _self, **_kwargs: {
-                    "messages": [
-                        {
-                            "role": "user",
-                            "content": {
-                                "type": "text",
-                                "text": f"{prompt_name}:{arguments or {}}",
-                            },
-                        }
-                    ]
-                }
-            },
-        )()
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": {
+                            "type": "text",
+                            "text": f"{prompt_name}:{arguments or {}}",
+                        },
+                    }
+                ]
+            }
+        )
 
     async def send_request(
         self,
         request: ClientRequest,
-        result_type: type[ClientResult],
+        result_type: type[ServerResult] | TypeAdapter[ServerResult],
     ) -> Any:
-        assert result_type is ClientResult
+        assert isinstance(result_type, TypeAdapter)
         self.requests.append(request)
         return type(
-            "ClientResultModel",
+            "ServerResultModel",
             (),
             {"model_dump": lambda _self, **_kwargs: {"ok": True}},
         )()
@@ -134,7 +124,7 @@ class _FakeSession:
     ) -> CallToolResult:
         return CallToolResult(
             content=[TextContent(type="text", text="ok")],
-            structuredContent={"tool": tool_name, "payload": payload},
+            structured_content={"tool": tool_name, "payload": payload},
         )
 
 

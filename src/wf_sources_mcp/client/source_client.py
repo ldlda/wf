@@ -3,7 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Protocol
 
-from mcp import ClientResult
 from mcp.types import (
     CallToolResult,
     ClientNotification,
@@ -13,8 +12,12 @@ from mcp.types import (
     ListResourcesResult,
     ListToolsResult,
     ReadResourceResult,
+    ServerResult,
+    client_notification_adapter,
+    client_request_adapter,
+    server_result_adapter,
 )
-from pydantic import AnyUrl
+from pydantic import TypeAdapter
 
 from wf_sources_mcp.connections import McpSourceConnection
 
@@ -43,7 +46,7 @@ class McpClientSession(Protocol):
 
     async def list_prompts(self) -> ListPromptsResult: ...
 
-    async def read_resource(self, uri: AnyUrl) -> ReadResourceResult: ...
+    async def read_resource(self, uri: str) -> ReadResourceResult: ...
 
     async def get_prompt(
         self,
@@ -56,8 +59,8 @@ class McpClientSession(Protocol):
     async def send_request(
         self,
         request: ClientRequest,
-        result_type: type[ClientResult],
-    ) -> ClientResult: ...
+        result_type: type[ServerResult] | TypeAdapter[ServerResult],
+    ) -> ServerResult: ...
 
     async def send_notification(self, notification: ClientNotification) -> None: ...
 
@@ -118,7 +121,7 @@ class McpSourceClient:
         }
 
     async def read_resource(self, uri: str) -> dict[str, Any]:
-        result = await self.session.read_resource(AnyUrl(uri))
+        result = await self.session.read_resource(str(uri))
         return result.model_dump(by_alias=True, mode="json", exclude_none=True)
 
     async def get_prompt(
@@ -135,8 +138,10 @@ class McpSourceClient:
         params: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         result = await self.session.send_request(
-            ClientRequest.model_validate({"method": method, "params": params}),
-            ClientResult,
+            client_request_adapter.validate_python(
+                {"method": method, "params": params}
+            ),
+            server_result_adapter,
         )
         return result.model_dump(by_alias=True, mode="json", exclude_none=True)
 
@@ -146,7 +151,9 @@ class McpSourceClient:
         params: dict[str, Any] | None = None,
     ) -> None:
         await self.session.send_notification(
-            ClientNotification.model_validate({"method": method, "params": params})
+            client_notification_adapter.validate_python(
+                {"method": method, "params": params}
+            )
         )
 
     async def call_tool(

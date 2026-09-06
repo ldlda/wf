@@ -5,7 +5,7 @@ from contextlib import AsyncExitStack
 from typing import Any
 
 import pytest
-from mcp import ClientResult
+from mcp import GetPromptResult, ReadResourceResult, ServerResult
 from mcp.client.session import ClientSession
 from mcp.types import CallToolResult as RawCallToolResult
 from mcp.types import (
@@ -18,8 +18,9 @@ from mcp.types import (
     Resource,
     TextContent,
     Tool,
+    server_result_adapter,
 )
-from pydantic import AnyUrl
+from pydantic import AnyUrl, TypeAdapter
 
 from wf_sources_mcp.auth import AuthRecord
 from wf_sources_mcp.connections import McpSourceConnection
@@ -96,7 +97,7 @@ class _FakeFactory(PersistentSessionFactory):
         self.calls.append((tool_name, payload))
         return RawCallToolResult(
             content=[TextContent(type="text", text="ok")],
-            structuredContent={"echoed": payload["text"]},
+            structured_content={"echoed": payload["text"]},
         )
 
     async def _create_with_stack(
@@ -115,48 +116,38 @@ class _FakeFactory(PersistentSessionFactory):
                 return await factory._call_tool(tool_name, payload)
 
             async def read_resource(self, uri: AnyUrl):
-                return type(
-                    "ReadResourceResult",
-                    (),
-                    {
-                        "model_dump": lambda _self, **_kwargs: {
-                            "contents": [{"uri": str(uri), "text": "resource text"}]
-                        }
-                    },
-                )()
+                return ReadResourceResult.model_validate(
+                    {"contents": [{"uri": str(uri), "text": "resource text"}]}
+                )
 
             async def get_prompt(
                 self,
                 prompt_name: str,
                 arguments: dict[str, str] | None = None,
-            ):
-                return type(
-                    "GetPromptResult",
-                    (),
+            ) -> GetPromptResult:
+                return GetPromptResult.model_validate(
                     {
-                        "model_dump": lambda _self, **_kwargs: {
-                            "messages": [
-                                {
-                                    "role": "user",
-                                    "content": {
-                                        "type": "text",
-                                        "text": f"{prompt_name}:{arguments or {}}",
-                                    },
-                                }
-                            ]
-                        }
-                    },
-                )()
+                        "messages": [
+                            {
+                                "role": "user",
+                                "content": {
+                                    "type": "text",
+                                    "text": f"{prompt_name}:{arguments or {}}",
+                                },
+                            }
+                        ]
+                    }
+                )
 
             async def list_resources(self) -> ListResourcesResult:
                 return ListResourcesResult(
                     resources=[
                         Resource(
-                            uri=AnyUrl("fixture://docs/runtime"),
+                            uri=("fixture://docs/runtime"),
                             name="resource.runtime",
                             title="Runtime Resource",
                             description="Runtime-scoped resource.",
-                            mimeType="text/plain",
+                            mime_type="text/plain",
                         )
                     ]
                 )
@@ -180,7 +171,7 @@ class _FakeFactory(PersistentSessionFactory):
                             name="tool.runtime",
                             title="Runtime Tool",
                             description="Runtime-scoped tool.",
-                            inputSchema={"type": "object"},
+                            input_schema={"type": "object"},
                         )
                     ]
                 )
@@ -205,9 +196,9 @@ class _FakeFactory(PersistentSessionFactory):
             async def send_request(
                 self,
                 request: ClientRequest,
-                result_type: type[ClientResult],
-            ) -> ClientResult:
-                return ClientResult.model_validate(
+                result_type: type[ServerResult],
+            ) -> ServerResult:
+                return server_result_adapter.validate_python(
                     {"jsonrpc": "2.0", "id": 1, "result": {}}
                 )
 
@@ -360,11 +351,9 @@ async def test_persistent_session_factory_routes_resource_reads_through_owner() 
 
     assert factory.created_connections == [connection]
     assert factory.calls == [("echo", {"text": "one"})]
-    assert resource_payload == {
-        "contents": [
-            {"uri": "fixture://docs/welcome", "text": "resource text"},
-        ]
-    }
+    assert resource_payload["contents"] == [
+        {"uri": "fixture://docs/welcome", "text": "resource text"}
+    ]
 
 
 @pytest.mark.asyncio
@@ -564,7 +553,7 @@ async def test_persistent_session_list_tools_client_fallback() -> None:
                     Tool(
                         name="client_tool",
                         description="Client tool",
-                        inputSchema={"type": "object"},
+                        input_schema={"type": "object"},
                     )
                 ]
             )
@@ -582,17 +571,13 @@ async def test_persistent_session_list_tools_client_fallback() -> None:
 
 @pytest.mark.asyncio
 async def test_persistent_session_invoke_method_client_fallback() -> None:
-    from mcp import ClientResult
-
     class _MinimalClient:
         async def send_request(
             self,
             request: ClientRequest,
-            result_type: type[ClientResult],
-        ) -> ClientResult:
-            return ClientResult.model_validate(
-                {"jsonrpc": "2.0", "id": 1, "result": {"tools": []}}
-            )
+            result_type: type[ServerResult] | TypeAdapter[ServerResult],
+        ) -> ServerResult:
+            return server_result_adapter.validate_python({"tools": []})
 
     session = PersistentMcpSession(
         connection=_connection(),
@@ -601,8 +586,7 @@ async def test_persistent_session_invoke_method_client_fallback() -> None:
     )
 
     result = await session.invoke_method("tools/list")
-
-    assert result["result"]["tools"] == []
+    assert result["tools"] == []
 
 
 @pytest.mark.asyncio
